@@ -32,14 +32,17 @@ Alongside the Python package, this repository also contains the documentation fo
 
 1. Install Python (3.9)
 2. Install git (latest)
-3. Run the below
+
+From PowerShell on Windows or `bash` on Linux, call each line below.
 
 ```bash
-$ pip install mkdocs_git_revision_date_plugin
-$ pip install git+https://github.com/mottosso/mkdocs-material-design.git
-$ git clone https://github.com/mottosso/ragdoll.git
-$ cd ragdoll/docs
-$ .\serve.bat  # ./serve.sh on Linux
+pip install mkdocs_git_revision_date_plugin
+pip install git+https://github.com/mottosso/mkdocs-material-design.git
+ git clone https://github.com/mottosso/ragdoll.git
+cd ragdoll/docs
+.\serve.bat
 ```
 
-Documentation should now be accessible at http://localhost:8000
+> On Linux, use `serve.sh` instead of `serve.bat`
+
+Documentation should now be accessible at http://localhost:8000. Whenever you edit any Markdown document under `ragdoll/docs/pages`, the website will automatically be rebuilt and your browser refreshed. It might take a few seconds.

@@ -41,3 +41,5 @@ $ git clone https://github.com/mottosso/ragdoll.git
 $ cd ragdoll/docs
 $ .\serve.bat  # ./serve.sh on Linux
 ```
+
+Documentation should now be accessible at http://localhost:8000

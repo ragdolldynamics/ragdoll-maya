@@ -1,0 +1,322 @@
+{
+    "name": "rdConstraint",
+    "summary": "A relationship between two rigids.",
+    "attributes": {
+        "ragdollId": {
+            "longName": "ragdollId",
+            "shortName": "raid",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "writable": false,
+            "hidden": true,
+            "summary": "Internal identifier for this node in the solver."
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node.",
+            "description": "Saved with scene to keep track of what version of Ragdoll the node was created with."
+        },
+        "currentTime": {
+            "longName": "currentTime",
+            "shortName": "cuti",
+            "type": "time",
+            "default": 0.0,
+            "storable": false,
+            "readable": false,
+            "writable": true,
+            "hidden": true,
+            "summary": "This attribute is meant to be dirtied whenever time changes; it's how a constraint keeps an eye on what Maya is up to. The actual value isn't used."
+        },
+        "nextState": {
+            "longName": "nextState",
+            "shortName": "nest",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "storable": false,
+            "readable": false,
+            "summary": "This attribute is pulled whenever the constraint needs to fetch information from the constraint."
+        },
+        "startState": {
+            "longName": "startState",
+            "shortName": "stst",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "storable": false,
+            "writable": false,
+            "summary": "The scene pulls on this attribute at the start frame to set-up the initial state of the constraint, including its parent and child frames and drive attributes."
+        },
+        "currentState": {
+            "longName": "currentState",
+            "shortName": "cust",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "storable": false,
+            "writable": false,
+            "summary": "The scene pulls this attribute *on every frame* to update itself on attributes that can be animated, such as the linear and angular damping."
+        },
+        "parentRigid": {
+            "longName": "parentRigid",
+            "shortName": "pari",
+            "type": "int",
+            "default": -1,
+            "summary": "One of two constrained rigids, the 'parent'."
+        },
+        "childRigid": {
+            "longName": "childRigid",
+            "shortName": "chri",
+            "type": "int",
+            "default": -1,
+            "summary": "One of two constrained rigids, the 'child'."
+        },
+        "parentFrame": {
+            "longName": "parentFrame",
+            "shortName": "pafr",
+            "type": "matrix",
+            "default": "identity",
+            "summary": "Transform relative the parent that a child is attached.",
+            "description": "If the child rigid was a child of the parent, then this transform represents a point under the parent where the child is connected. The `driveMatrix` attribute is relative this frame. If they are equal, the rigid is driven towards the `restMatrix`."
+        },
+        "childFrame": {
+            "longName": "childFrame",
+            "shortName": "chfr",
+            "type": "matrix",
+            "default": "identity",
+            "summary": "Transform relative the child that a parent is attached.",
+            "description": "The inverse of the `parentFrame`, this attribute establishes a point and orientation within the child that the parent rigid attaches to."
+        },
+        "type": {
+            "longName": "type",
+            "shortName": "type",
+            "type": "enum",
+            "default": 0,
+            "fields": {
+                "Point": 0,
+                "Orient": 1,
+                "Parent": 2,
+                "Hinge": 3,
+                "Socket": 4
+            },
+            "hidden": true,
+            "summary": "Internal attribute used to record which type this constraint was originally intended as.",
+            "description": "Because all 'types' are really just an rdConstraint with various values set, there is no specific type. This is merely intended as a hint for scripts and tools to use."
+        },
+        "limitEnabled": {
+            "longName": "limitEnabled",
+            "shortName": "lien",
+            "type": "bool",
+            "default": false,
+            "animated": true,
+            "summary": "Whether any of the specified limits are enabled or not.",
+            "description": "Think of this as a convenience override for linear (position) and angular (rotation) limits. You can achieve the same effect by setting each limit to a value of 0."
+        },
+        "linearLimitStiffness": {
+            "niceName": "Translate Limit Stiffness",
+            "longName": "linearLimitStiffness",
+            "shortName": "lils",
+            "type": "float",
+            "default": 1000000.0,
+            "min": 0.0,
+            "animated": true,
+            "summary": "Stiffness of contacts with linear limit.",
+            "description": "Whenever the linear limit is hit, this attribute determines how soft/hard to response should be. A low value (e.g. 10) yields a soft appearance, whereas a high (e.g. 1'000'000) yields a metal-versus-marble contact."
+        },
+        "linearLimitDamping": {
+            "niceName": "Translate Limit Damping",
+            "longName": "linearLimitDamping",
+            "shortName": "lild",
+            "type": "float",
+            "default": 10000.0,
+            "min": 0.0,
+            "animated": true,
+            "summary": "Damping factor for contacts with the limit."
+        },
+        "angularLimitStiffness": {
+            "niceName": "Rotate Limit Stiffness",
+            "longName": "angularLimitStiffness",
+            "shortName": "anls",
+            "type": "float",
+            "default": 1000000.0,
+            "min": 0.0,
+            "animated": true,
+            "summary": "Stiffness of contacts with the angular limit.",
+            "description": "A low value makes limits appear soft. Values are relative the mass of your rigid and the amount of force being applied by contacts and other constraints. But with a mass of 1.0 and under normal gravity, the default value should produce a somewhat hard response."
+        },
+        "angularLimitDamping": {
+            "niceName": "Rotate Limit Damping",
+            "longName": "angularLimitDamping",
+            "shortName": "anld",
+            "type": "float",
+            "default": 10000.0,
+            "min": 0.0,
+            "animated": true,
+            "summary": "Damping of contacts with the limit.",
+            "description": "It is an opposing force to whatever direction a contact is applied. A low value produces a springy appearance, whereas a high value resists any and all motion."
+        },
+        "driveEnabled": {
+            "niceName": "Guide Enabled",
+            "longName": "driveEnabled",
+            "shortName": "dren",
+            "type": "bool",
+            "default": false,
+            "animated": true,
+            "summary": "Whether or not to try and follow the `driveMatrix` attribute.",
+            "description": "Drives (a.k.a. Guides) are used to follow an input animation by applying forces relative the delta between your animation and the simulation. The further your animation is from the current state of the simulation, the stronger the force. It's a spring-like force."
+        },
+        "driveStrength": {
+            "longName": "driveStrength",
+            "shortName": "drst",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multipler to `linearDriveStiffness`, `linearDriveDamping`, `angularDriveStiffness` and `angularDriveDamping`.",
+            "description": "This is a convenience attribute to simplify manipulation (and animation) of the overall drive behaviour. The same result can be achieved by manually multiplying these values. The equation is `strength * strength * stiffness` and the same for damping."
+        },
+        "driveMatrix": {
+            "niceName": "Guide Matrix",
+            "longName": "driveMatrix",
+            "shortName": "drma",
+            "type": "matrix",
+            "default": "identity",
+            "animated": true,
+            "summary": "A target position and orientation for the `childRigid`, relative the `parentFrame`.",
+            "description": "The constraint can apply a spring-like force to both parent and child to try and match this matrix as though the `childRigid` was an actual child of the `parentRigid`."
+        },
+        "driveSpringType": {
+            "niceName": "Guide Spring Type",
+            "longName": "driveSpringType",
+            "shortName": "drst",
+            "type": "enum",
+            "fields": {
+                "Force": 0,
+                "Acceleration": 1
+            },
+            "default": 1,
+            "summary": "Whether to use force or acceleration to compute the drive.",
+            "description": "Acceleration takes masses of connected rigids into account and is generally easier to tune."
+        },
+        "linearDriveStiffness": {
+            "niceName": "Translate Guide Stiffness",
+            "longName": "linearDriveStiffness",
+            "shortName": "lids",
+            "type": "float",
+            "min": 0.0,
+            "default": 1000.0,
+            "animated": true,
+            "summary": "Linear stiffness of the drive.",
+            "description": "If you think of the drive as a spring, then the stiffness determines the thickness of the coil of that spring. A thick coil yields a fast, springy motion."
+        },
+        "linearDriveDamping": {
+            "niceName": "Translate Guide Damping",
+            "longName": "linearDriveDamping",
+            "shortName": "lidd",
+            "type": "float",
+            "min": 0.0,
+            "default": 100.0,
+            "animated": true,
+            "summary": "Linear damping of the drive.",
+            "description": "A high value produces a slimy, slow-moving motion."
+        },
+        "angularDriveStiffness": {
+            "niceName": "Rotate Guide Stiffness",
+            "longName": "angularDriveStiffness",
+            "shortName": "ands",
+            "type": "float",
+            "animated": true,
+            "min": 0.0,
+            "default": 10000.0,
+            "summary": "Angular stiffness of the drive."
+        },
+        "angularDriveDamping": {
+            "niceName": "Rotate Guide Damping",
+            "longName": "angularDriveDamping",
+            "shortName": "andd",
+            "type": "float",
+            "min": 0.0,
+            "default": 1000.0,
+            "animated": true,
+            "summary": "Angular damping of the drive."
+        },
+        "disableCollision": {
+            "longName": "disableCollision",
+            "shortName": "dico",
+            "type": "bool",
+            "default": true,
+            "summary": "Disable collision between constrained rigids.",
+            "description": "This is generally desirable, as connected rigids are typically limbs or a character, e.g. upper and lower arm, and you generally want some overlap between these rigids. However unless you disable collisions, the overlap would cause a conflict in the solver, where it wouldn't know whether to keep them connected or split them apart due to their contact. For objects without overlap, this attribute is better left off."
+        },
+        "limitStrength": {
+            "longName": "limitStrength",
+            "shortName": "list",
+            "type": "float",
+            "default": 1.0,
+            "min": 0.0,
+            "animated": true,
+            "summary": "Multiplier for the `linearLimitStiffness`, `linearLimitDamping`, `angularLimitStiffness` and `angularLimitDamping` attributes."
+        },
+        "linearLimit": {
+            "niceName": "Translate Limit",
+            "longName": "linearLimit",
+            "shortName": "lilm",
+            "type": "distance3",
+            "default": [0.0, 0.0, 0.0],
+            "summary": "Amount of positional offset before the limit kicks in."
+        },
+        "angularLimit": {
+            "longName": "angularLimit",
+            "shortName": "anlm",
+            "type": "angle3",
+            "default": [0.0, 0.0, 0.0],
+            "summary": "Amount of rotational offset before the limit kicks in."
+        },
+        "drawConnection": {
+            "longName": "drawConnection",
+            "shortName": "drco",
+            "type": "bool",
+            "default": true,
+            "summary": "Visualise the connection between the `parentRigid` and `childRigid`."
+        },
+        "drawLimit": {
+            "longName": "drawLimit",
+            "shortName": "drli",
+            "type": "bool",
+            "default": true,
+            "summary": "Visualise the limit of this constraint."
+        },
+        "drawParentFrame": {
+            "longName": "drawParentFrame",
+            "shortName": "",
+            "type": "bool",
+            "default": true,
+            "summary": "Visualise the `parentFrame` attribute."
+        },
+        "drawChildFrame": {
+            "longName": "drawChildFrame",
+            "shortName": "drcf",
+            "type": "bool",
+            "default": true,
+            "summary": "Visualise the `childFrame` attribute."
+        },
+        "drawDrive": {
+            "longName": "drawDrive",
+            "shortName": "drdr",
+            "type": "bool",
+            "default": true,
+            "summary": "Visualise the drive."
+        },
+        "drawScale": {
+            "longName": "drawScale",
+            "shortName": "drsc",
+            "type": "double",
+            "default": 1.0,
+            "summary": "The scale at which to visualise things."
+        }
+    }
+}

@@ -1,0 +1,83 @@
+// 
+// 
+// dividers.scss
+//
+//
+
+.divider{
+	position: relative;
+	svg {
+		background: none !important;
+		height: 6vw;
+		&:not([class*='bg']){
+			path{
+				fill: $primary;
+			}
+		}
+	}
+
+	&:not(:first-child){
+		top: 1px;
+	}
+	&:first-child{
+		bottom: 1px;
+	}
+	&.divider-vertical{
+		height: 100vh;
+		width: 6rem;
+		top: 0;
+		left: 1px;
+		svg{
+			height: 100vh;
+			width: 6rem;
+		}
+	}
+}
+
+section.bg-primary {
+  svg {
+    path {
+      fill: $primary-3 !important;
+    }
+  }
+}
+
+section.bg-primary-2 {
+  svg {
+    path {
+      fill: #000 !important;
+    }
+  }
+}
+
+section.bg-primary-3 {
+  svg {
+    path {
+      fill: #000 !important;
+    }
+  }
+}
+
+#examples {
+  svg {
+    path {
+      fill: $primary-3 !important;
+    }
+  }
+}
+
+#home {
+  svg {
+    path {
+      fill: $primary-2 !important;
+    }
+  }
+}
+
+section.has-divider{
+	padding: 0;
+	.container{
+		padding-top: $default-section-padding;
+		padding-bottom: $default-section-padding;
+	}
+}

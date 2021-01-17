@@ -1,0 +1,64 @@
+{% import "partials/language.html" as lang %}
+<!DOCTYPE html>
+<html lang="{{ lang.t('language') }}" class="no-js">
+  <head>
+    {% block site_meta %}
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <title>Ragdoll Dynamics | Real-time physics for Autodesk Maya 2020</title>
+      
+      {% if page and page.meta.description %}
+        <meta name="description" content="{{ page.meta.description | first }}">
+      {% elif config.site_description %}
+        <meta name="description" content="{{ config.site_description }}">
+      {% endif %}
+      {% if page.canonical_url %}
+        <link rel="canonical" href="{{ page.canonical_url }}">
+      {% endif %}
+
+      <link rel="preconnect" href="https://fonts.gstatic.com">
+
+      <link rel="apple-touch-icon" sizes="120x120" href="/assets/images/apple-touch-icon.png?v=2">
+
+      <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png?v=2">
+
+      <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png?v=2">
+
+      <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg?v=2" color="#202020">
+
+      <meta name="msapplication-TileColor" content="#2b5797">
+
+      <link rel="manifest" href="/site.webmanifest?v=2">
+      <meta name="theme-color" content="#ffffff">
+      <noscript><meta http-equiv="refresh" content="0; url={{ config.no_javascript_url }}" /></noscript>
+      <meta name="generator" content="mkdocs-{{ mkdocs_version }}, mkdocs-ragdoll-1.0.0">
+    {% endblock %}
+
+    {% block libs %}
+    {% endblock %}
+
+    {% block styles %}
+      <link href="{{ base_url }}/assets/css/loaders/loader-typing.css" rel="stylesheet" type="text/css" media="all" />
+      <link href="{{ base_url }}/assets/css/theme.css" rel="stylesheet" type="text/css" media="all" />
+    {% endblock %}
+
+    {% block fonts %}
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;700&display=swap" rel="stylesheet">
+    {% endblock %}
+
+    {% for path in extra_css %}
+      <link rel="stylesheet" href="{{ path }}">
+    {% endfor %}
+
+    {% block extrahead %}{% endblock %}
+  </head>
+
+  <body data-smooth-scroll-offset="73" id="page">
+    {% include "partials/header.html" %}
+
+    {{ page.content }}
+
+    {% include "partials/footer.html" %}
+    {% include "partials/scripts.html" %}
+  </body>
+</html>

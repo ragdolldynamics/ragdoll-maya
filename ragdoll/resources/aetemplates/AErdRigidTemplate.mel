@@ -1,0 +1,62 @@
+//AErdRigidTemplate.mel
+
+global proc AErdRigidTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "General" -collapse false;
+            editorTemplate -addControl "enabled";
+            editorTemplate -addControl "kinematic";
+            editorTemplate -addControl "collide";
+            editorTemplate -addControl "mass";
+            editorTemplate -addControl "friction";
+            editorTemplate -addControl "restitution";
+            editorTemplate -addControl "stickiness";
+            editorTemplate -addControl "thickness";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Shape" -collapse false;
+            editorTemplate -label "Type" -addControl "shapeType";
+            editorTemplate -label "Extents" -addControl "shapeExtents";
+            editorTemplate -label "Length" -addControl "shapeLength";
+            editorTemplate -label "Radius" -addControl "shapeRadius";
+            editorTemplate -label "Offset" -addControl "shapeOffset";
+            editorTemplate -label "Rotation" -addControl "shapeRotation";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Matrices" -collapse true;
+            editorTemplate -addControl "restMatrix";
+            editorTemplate -addControl "inputMatrix";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Advanced" -collapse true;
+            editorTemplate -addControl "enableCCD";
+            editorTemplate -addControl "airDensity";
+            editorTemplate -label "Translate Damping" -addControl "linearDamping";
+            editorTemplate -label "Rotate Damping" -addControl "angularDamping";
+            editorTemplate -addControl "angularMass";
+            editorTemplate -addControl "centerOfMass";
+            editorTemplate -addControl "positionIterations";
+            editorTemplate -addControl "velocityIterations";
+            editorTemplate -addControl "sleepThreshold";
+            editorTemplate -addControl "maxContactImpulse";
+            editorTemplate -addControl "maxDepenetrationVelocity";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Visualisation" -collapse true;
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "drawShaded";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+    editorTemplate -suppress "localPosition";
+    editorTemplate -suppress "localScale";
+}

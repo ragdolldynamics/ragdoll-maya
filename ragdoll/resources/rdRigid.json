@@ -1,0 +1,414 @@
+{
+    "name": "rdRigid",
+    "summary": "Shape and transform of a single rigid body.",
+    "attributes": {
+        "ragdollId": {
+            "longName": "ragdollId",
+            "shortName": "raid",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "writable": false,
+            "hidden": true,
+            "summary": "Internal identifier for this node in the solver."
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node.",
+            "description": "Saved with scene to keep track of what version of Ragdoll the node was created with."
+        },
+        "enabled": {
+            "longName": "enabled",
+            "shortName": "enab",
+            "type": "bool",
+            "default": true,
+            "summary": "Whether or not to include this node in the simulation. A value of False is the same as the node not existing in the first place."
+        },
+        "nextState": {
+            "longName": "nextState",
+            "shortName": "nest",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "storable": false,
+            "readable": false,
+            "summary": "This attribute is pulled whenever the rigid needs to know its position and orientation from the solver."
+        },
+        "startState": {
+            "longName": "startState",
+            "shortName": "stst",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "writable": false,
+            "summary": "The scene pulls on this attribute at the start frame to set-up the initial state of the rigid, including its rest position and shape properties."
+        },
+        "currentState": {
+            "longName": "currentState",
+            "shortName": "cust",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "writable": false,
+            "summary": "The scene pulls this attribute *on every frame* to update itself on attributes that can be animated, such as the linear and angular damping."
+        },
+        "currentTime": {
+            "longName": "currentTime",
+            "shortName": "cuti",
+            "type": "time",
+            "default": 0.0,
+            "storable": false,
+            "readable": false,
+            "writable": true,
+            "hidden": true,
+            "summary": "This attribute is meant to be dirtied whenever time changes; it's how a rigid keeps an eye on what Maya is up to. The actual value isn't used."
+        },
+        "outputMatrix": {
+            "longName": "outputMatrix",
+            "shortName": "ouma",
+            "type": "matrix",
+            "default": "identity",
+            "storable": false,
+            "writable": false,
+            "affectsWorldSpace": true,
+            "affectsAppearance": true,
+            "summary": "The primary output from each Rigid, and from Ragdoll overall. The final position and orientation following the simulation at the current time step."
+        },
+        "outputTranslate": {
+            "longName": "outputTranslate",
+            "shortName": "outr",
+            "type": "double3",
+            "default": [0.0, 0.0, 0.0],
+            "hidden": true,
+            "storable": false,
+            "summary": "The translation part of the `outputMatrix`, that's all it is."
+        },
+        "outputRotate": {
+            "longName": "outputRotate",
+            "shortName": "ouro",
+            "type": "angle3",
+            "hidden": true,
+            "storable": false,
+            "summary": "The rotation part in Euler format of the `outputMatrix`."
+        },
+        "rotateOrder": {
+            "longName": "rotateOrder",
+            "shortName": "roor",
+            "type": "enum",
+            "default": 0,
+            "fields": {
+                "xyz": 0,
+                "yzx": 1,
+                "zxy": 2,
+                "xzy": 3,
+                "yxz": 4,
+                "zyx": 5
+            },
+            "summary": "Input attribute such that the output matrix and rotation respects the chosen rotate order of the target transform."
+        },
+        "rotatePivot": {
+            "longName": "rotatePivot",
+            "shortName": "ropi",
+            "type": "double3",
+            "default": [0.0, 0.0, 0.0],
+            "storable": false,
+            "hidden": true,
+            "summary": "Input attribute to properly format the outputMatrix and friends."
+        },
+        "rotatePivotTranslate": {
+            "longName": "rotatePivotTranslate",
+            "shortName": "ropt",
+            "type": "double3",
+            "default": [0.0, 0.0, 0.0],
+            "storable": false,
+            "hidden": true,
+            "summary": "Input attribute for the formatting of outputMatrix."
+        },
+        "jointOrient": {
+            "longName": "jointOrient",
+            "shortName": "joor",
+            "type": "angle3",
+            "default": [0.0, 0.0, 0.0],
+            "storable": false,
+            "hidden": true,
+            "summary": "Input attribute for the formatting of outputMatrix."
+        },
+        "restMatrix": {
+            "longName": "restMatrix",
+            "shortName": "rema",
+            "type": "matrix",
+            "default": "identity",
+            "summary": "Starting position and orientation of a rigid in the simulation.",
+            "description": "This attribute is typically initialised with wherever the chosen Maya transform is located at the time of creating the rigid. It is also the attribute manipulated when setting the initial state."
+        },
+        "inputMatrix": {
+            "longName": "inputMatrix",
+            "shortName": "inma",
+            "type": "matrix",
+            "default": "identity",
+            "animated": true,
+            "summary": "Passive position and orientation, this may be animated."
+        },
+        "inputParentInverseMatrix": {
+            "longName": "inputParentInverseMatrix",
+            "shortName": "ipim",
+            "type": "matrix",
+            "default": "identity",
+            "animated": true,
+            "summary": "Used to cancel out any Maya parent prior to outputting the outputMatrix."
+        },
+        "inputMesh": {
+            "longName": "inputMesh",
+            "shortName": "inme",
+            "type": "mesh",
+            "hidden": true,
+            "readable": false,
+            "summary": "Polygonal input to the `Mesh` shape type."
+        },
+        "inputCurve": {
+            "longName": "inputCurve",
+            "shortName": "incu",
+            "type": "nurbsCurve",
+            "hidden": true,
+            "readable": false,
+            "summary": "NURBS input to the `Mesh` shape type."
+        },
+        "inputForce": {
+            "longName": "inputForce",
+            "shortName": "info",
+            "type": "int",
+            "default": 0,
+            "array": true,
+            "hidden": true,
+            "storable": false,
+            "writable": false,
+            "summary": "An array attribute with references to all forces that act upon this rigid."
+        },
+        "outputMesh": {
+            "longName": "outputMesh",
+            "shortName": "oume",
+            "type": "mesh",
+            "writable": false,
+            "summary": "Polygonal version of the rigid, for rendering and export."
+        },
+        "color": {
+            "longName": "color",
+            "shortName": "colo",
+            "type": "float3",
+            "usedAsColor": true,
+            "summary": "Color of the rigid when drawn in the viewport, used for vertex color when used as polygons."
+        },
+        "kinematic": {
+            "longName": "kinematic",
+            "shortName": "kine",
+            "niceName": "Passive",
+            "type": "bool",
+            "default": false,
+            "keyable": true,
+            "animated": true,
+            "summary": "Whether this rigid should be affected by contacts, constraints and forces."
+        },
+        "collide": {
+            "longName": "collide",
+            "shortName": "coll",
+            "type": "bool",
+            "default": true,
+            "keyable": true,
+            "summary": "Whether this rigid should collide with other rigids.",
+            "description": "This can be useful in areas of many overlapping rigids that aren't necessarily constrained, such as a shoulder or hip."
+        },
+        "mass": {
+            "longName": "mass",
+            "shortName": "mass",
+            "type": "float",
+            "keyable": true,
+            "min": 0.01,
+            "default": 1.0,
+            "summary": "The 'weight' of a rigid.",
+            "description": "Except 'weight' is technically the result of mass and gravity, and a rigid still has mass even when there isn't any gravity. This attribute is mostly relevant when two active rigids interact, think of a pool table where one of the balls is heavier than another. On the other hand, dropping a feather from high on up onto a static ground yields an identical result to dropping much heavier bowling ball. The ground being static will not move regardless and the speed at which your rigid falls to the ground is independent of its mass given there is no actual air in the simulation to apply counterforce like in the real world."
+        },
+        "angularMass": {
+            "longName": "angularMass",
+            "shortName": "amas",
+            "niceName": "Rotation Mass",
+            "type": "float3",
+            "default": [-1.0, -1.0, -1.0],
+            "summary": "Like mass, but for changes in orientation."
+        },
+        "centerOfMass": {
+            "longName": "centerOfMass",
+            "shortName": "coms",
+            "default": [0.0, 0.0, 0.0],
+            "type": "float3",
+            "summary": "The point at which a rigid may be balanced.",
+            "description": "Or put another way, the point whereby the weight of a rigid is equal in all directions."
+        },
+        "friction": {
+            "longName": "friction",
+            "shortName": "fric",
+            "type": "float",
+            "keyable": true,
+            "min": 0.0,
+            "default": 0.8,
+            "summary": "The resistance at which two rigids rub against each other.",
+            "description": "A value of 0 creates an appearance of ice, whereas a value of 1.0 represents 100% friction, no sliding allowed. The value may exceed 1.0, but it is unclear what happens. Use at your own risk."
+        },
+        "restitution": {
+            "longName": "restitution",
+            "shortName": "rest",
+            "niceName": "Bounciness",
+            "type": "float",
+            "keyable": true,
+            "min": 0.0,
+            "default": 0.1,
+            "summary": "The 'bounciness' of a rigid body.",
+            "description": "Bounce is an opposite force applied whenever two rigids come into contact. The bounce is however also dependent on the `rdScene.bounceThresholdVelocity` which determines how strong a contact must be in order for an opposing force to be added. Without a threshold, a rigid would bounce at increasingly small intervals into infinity. However, for high-frequency bounces, like a billiard ball bouncing on a marble floor, don't forget to increase your substeps so as to capture the very small and fast motion happening towards the end of its bounce lifetime."
+        },
+        "shapeType": {
+            "longName": "shapeType",
+            "shortName": "shty",
+            "type": "enum",
+            "default": 1,
+            "keyable": true,
+            "fields": {
+                "Box": 0,
+                "Sphere": 1,
+                "Cylinder": 3,
+                "Mesh": 4
+            },
+            "summary": "Shape used for collision detection and automatic computation of `centerOfMass` and `angularMass`.",
+            "description": "The 'Mesh' option converts any input to `inputMesh` or `inputCurve` to a suitable physical representation called 'Convex Hull'. As the name implies, the hull cannot be concave. To model concave shapes, like a torus, use multiple rigids and parent them together to form a compound shape."
+        },
+        "shapeExtents": {
+            "longName": "shapeExtents",
+            "shortName": "shex",
+            "type": "float3",
+            "default": [1.0, 1.0, 1.0],
+            "keyable": true,
+            "min": [0.0, 0.0, 0.0],
+            "summary": "The dimensions of the 'Box' `shapeType`."
+        },
+        "shapeLength": {
+            "longName": "shapeLength",
+            "shortName": "shle",
+            "type": "float",
+            "keyable": true,
+            "default": 1.0,
+            "min": 0.0,
+            "summary": "Length of the 'Capsule' and 'Cylinder' `shapeType`."
+        },
+        "shapeRadius": {
+            "longName": "shapeRadius",
+            "shortName": "shra",
+            "type": "float",
+            "keyable": true,
+            "min": 0.0,
+            "default": 1.0,
+            "summary": "Radius of the 'Sphere', 'Capsule' and 'Cylinder' `shapeType`."
+        },
+        "shapeOffset": {
+            "longName": "shapeOffset",
+            "shortName": "shof",
+            "type": "double3",
+            "default": [0.0, 0.0, 0.0],
+            "keyable": true,
+            "summary": "Position of a shape relative the rigid.",
+            "description": "Think of the shape as being a child of the rigid, and this is its child position. It'll be in the orientation of the parent, as you would expect."
+        },
+        "shapeRotation": {
+            "longName": "shapeRotation",
+            "shortName": "shro",
+            "type": "angle3",
+            "summary": "Rotation of the shape relative the rigid."
+        },
+        "thickness": {
+            "longName": "thickness",
+            "shortName": "thic",
+            "type": "float",
+            "default": 0.0,
+            "keyable": true,
+            "min": 0.0,
+            "summary": "Additional offset from the surface of a shape.",
+            "description": "Think of this as the shape being extruded by this amount along the surface normals. It's meant to create some padding between two rigids that collide and can help stabilise complex or strong contacts."
+        },
+        "airDensity": {
+            "longName": "airDensity",
+            "shortName": "aide",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "min": 0.0,
+            "summary": "Multiplier of both `linearDamping` and `angularDamping`.",
+            "description": "The two damping attributes are typically used together, but can also be used separately in which case this attribute could be left at 1.0 and forgotten."
+        },
+        "linearDamping": {
+            "longName": "linearDamping",
+            "shortName": "lida",
+            "niceName": "Translate Damping",
+            "type": "float",
+            "animated": true,
+            "default": 0.5,
+            "min": 0.0,
+            "summary": "Resistance in the opposite direction of travel for a rigid.",
+            "description": "This creates an underwater look, or at high-enough values resembles honey or eventually cement."
+        },
+        "angularDamping": {
+            "longName": "angularDamping",
+            "shortName": "anda",
+            "niceName": "Rotate Damping",
+            "animated": true,
+            "type": "float",
+            "default": 1.0,
+            "min": 0.0,
+            "summary": "Resistance along the opposite direction of rotation for a rigid.",
+            "description": "Like `linearDamping` but along the rotation axes."
+        },
+        "positionIterations": {
+            "longName": "positionIterations",
+            "shortName": "poit",
+            "type": "int",
+            "min": 0,
+            "default": 8,
+            "summary": "Accuracy of non-intersecting constraints and contacts.",
+            "description": "If the drive (guide) strength isn't strong enough, increase this value."
+        },
+        "velocityIterations": {
+            "longName": "velocityIterations",
+            "shortName": "veit",
+            "type": "int",
+            "min": 0,
+            "default": 1,
+            "summary": "Accuracy of intersecting constraints and contacts.",
+            "description": "If intersecting bodies are being depenetrated too violently, increase the number of velocity iterations. More velocity iterations will drive the relative exit velocity of the intersecting objects closer to the correct value given the restitution."
+        },
+        "maxContactImpulse": {
+            "longName": "maxContactImpulse",
+            "shortName": "mxci",
+            "type": "float",
+            "default": -1.0,
+            "min": -1.0,
+            "summary": "How strong contact forces are allowed to be.",
+            "description": "A value of -1 means 'infinite' and anything less can help produce soft collisions."
+        },
+        "maxDepenetrationVelocity": {
+            "longName": "maxDepenetrationVelocity",
+            "shortName": "mxdv",
+            "type": "float",
+            "default": -1.0,
+            "min": -1.0,
+            "summary": "How quickly two intersecting rigids are allowed to de-intersect.",
+            "description": "This can help avoid explosions and maintain a soft appearance."
+        },
+        "drawShaded": {
+            "longName": "drawShaded",
+            "shortName": "drsh",
+            "type": "bool",
+            "default": true,
+            "summary": "Whether to draw this rigid shaded or wireframe-only."
+        }
+    }
+}

@@ -1,0 +1,312 @@
+{
+    "name": "rdScene",
+    "summary": "Collection of all rigids, constraints and forces that can interact with each other.",
+    "attributes": {
+        "ragdollId": {
+            "longName": "ragdollId",
+            "shortName": "raid",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "writable": false,
+            "hidden": true,
+            "summary": "Internal identifier for this node in the solver."
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node.",
+            "description": "Saved with scene to keep track of what version of Ragdoll the node was created with."
+        },
+        "enabled": {
+            "longName": "enabled",
+            "shortName": "enab",
+            "type": "bool",
+            "default": true,
+            "keyable": true,
+            "animated": true,
+            "summary": "State of the solver.",
+            "description": "An enabled solver will update whenever time changes."
+        },
+        "solverType": {
+            "longName": "solverType",
+            "shortName": "soty",
+            "type": "enum",
+            "items": ["PGS", "TGS"],
+            "default": 1,
+            "summary": "The type of solver used for simulation.",
+            "description": "Projected Gauss-Seidel (PGS) or Temporal Gauss-Seidel (TGS), TGS is generally does a better job at guided simulation such as full-body dynamics, whereas PGS does a better job at many unconstrained objects like brick wall destruction."
+        },
+        "timeMultiplier": {
+            "longName": "timeMultiplier",
+            "shortName": "timu",
+            "type": "float",
+            "default": 1.0,
+            "min": 0.0,
+            "summary": "Speed up or slow down the passage of time with this attribute.",
+            "description": "This value is multiplied with the normal passing of time, for slow-motion use a value less than 1.0 such as 0.5 for a 50% reduction in speed."
+        },
+        "inputActive": {
+            "longName": "inputActive",
+            "shortName": "inac",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every rigid part of this scene.",
+            "description": "This attribute tracks which rigid to account for during simulation. It is dirtied whenever time changes which in turn causes connected rigids to pull on it for latest updated position and orientation."
+        },
+        "inputActiveStart": {
+            "longName": "inputActiveStart",
+            "shortName": "inas",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every rigid part of this scene.",
+            "description": "Like `inputActive` except this attribute is only dirtied on the start frame, to cause rigids to provide their initial state."
+        },
+        "inputConstraint": {
+            "longName": "inputConstraint",
+            "shortName": "incs",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every constraint in the scene."
+        },
+        "inputConstraintStart": {
+            "longName": "inputConstraintStart",
+            "shortName": "incs",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every constraint in the scene."
+        },
+        "inputSlice": {
+            "longName": "inputSlice",
+            "shortName": "insl",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every slice in the scene."
+        },
+        "inputSliceStart": {
+            "longName": "inputSliceStart",
+            "shortName": "inst",
+            "type": "int",
+            "default": 0,
+            "storable": true,
+            "readable": true,
+            "writable": true,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An input connection to every slice in the scene."
+        },
+        "outputObjects": {
+            "longName": "outputObjects",
+            "shortName": "ouob",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "readable": true,
+            "writable": false,
+            "array": true,
+            "usesArrayDataBuilder": true,
+            "summary": "An output connection to every rigid updated by this scene."
+        },
+        "outputChanged": {
+            "longName": "outputChanged",
+            "shortName": "ouch",
+            "type": "int",
+            "default": 0,
+            "storable": false,
+            "readable": true,
+            "writable": false,
+            "summary": "An auxiliary output connection to any object interested in updates from this scene."
+        },
+        "inputMatrix": {
+            "longName": "inputMatrix",
+            "shortName": "inma",
+            "type": "matrix",
+            "default": "identity",
+            "summary": "An offset for all rigid bodies in the scene.",
+            "description": "(Not yet implemented) This can be used to move a simulation away from the origin and account for animation happening very far away. It can also be used to cancel out animation, by parenting the scene to an animated node."
+        },
+        "currentTime": {
+            "longName": "currentTime",
+            "shortName": "cuti",
+            "type": "time",
+            "default": 0.0,
+            "animated": true,
+            "storable": false,
+            "readable": false,
+            "writable": true,
+            "summary": "Ragdoll's knowledge of time.",
+            "description": "This is typically connected automatically and needn't be touched, but it is technically possible to animate this and achieve complex slow-motion or time-related effects."
+        },
+        "startTime": {
+            "longName": "startTime",
+            "shortName": "stti",
+            "type": "time",
+            "default": 0.0,
+            "summary": "Time at which to start simulating.",
+            "description": "Ragdoll will keep rigids at their `restMatrix` until simulation starts."
+        },
+        "substeps": {
+            "longName": "substeps",
+            "shortName": "subs",
+            "type": "int",
+            "min": 0,
+            "keyable": true,
+            "default": 4,
+            "summary": "Divide changes in time by this many.",
+            "description": "Ragdoll simulates once per frame (or generally once per change in time, including sub-frame changes), but multiples the number of steps taken by this amount for greater accuracy at a (possible) cost to performance."
+        },
+        "gravity": {
+            "longName": "gravity",
+            "shortName": "grav",
+            "type": "distance3",
+            "default": [0.0, -98.6, 0.0],
+            "keyable": true,
+            "summary": "Default gravity, in Maya's current distance unit (typically centimeters).",
+            "description": "Because native Maya shapes are generally quite small - e.g. 1 centimeter for a polyCube - the default gravity is less than the realistic 986.0 cm/s2. If your characters are real-world scaled - e.g. 2 meters tall - then gravity should be closer to 986.0 instead."
+        },
+        "airDensity": {
+            "longName": "airDensity",
+            "shortName": "aide",
+            "type": "float",
+            "default": 1.0,
+            "keyable": true,
+            "summary": "Global multiplier to the `linearDamping` and `angularDamping` of every rigid part of this scene.",
+            "description": "This is a convenience attribute to the same attribute found in the `rdRigid` node for global effects, like the whole scene turning into honey."
+        },
+        "useGround": {
+            "longName": "useGround",
+            "shortName": "usgr",
+            "type": "bool",
+            "default": true,
+            "keyable": true,
+            "summary": "Automatically add a static ground shape to this scene.",
+            "description": "This has a very similar effect to making your own plane and turning that into a Passive Rigid. The ground responds to changes in translation of the scene, but cannot be animated."
+        },
+        "groundFriction": {
+            "longName": "groundFriction",
+            "shortName": "grfr",
+            "type": "float",
+            "default": 0.5,
+            "keyable": true,
+            "summary": "Friction of the ground."
+        },
+        "groundRestitution": {
+            "niceName": "Ground Bounciness",
+            "longName": "groundRestitution",
+            "shortName": "grre",
+            "type": "float",
+            "keyable": true,
+            "default": 0.5,
+            "summary": "Bounciness of the ground plane."
+        },
+        "bounceThresholdVelocity": {
+            "longName": "bounceThresholdVelocity",
+            "shortName": "botv",
+            "type": "float",
+            "default": 1.0,
+            "summary": "How strong must a collision be in order to be considered for bounce?",
+            "description": "To achieve a typical bouncing ball animation, lower this value significantly and increase the number of substeps by a lot. A lower value generally leads to rigids being unable to ever come to rest, but values too large can result in rigids unrealistically coming to rest prematurely."
+        },
+        "enableCCD": {
+            "longName": "enableCCD",
+            "shortName": "eccd",
+            "type": "bool",
+            "default": false,
+            "summary": "Continuous collision detection is used to detect collisions that happen *between* frames.",
+            "description": "For example, a bullet being fired from the scene at frame 1 and ends up behind a character on frame 2 would normally not be picked up by normal collision detection. CCD fixes that, at slight cost to performance."
+        },
+        "numThreads": {
+            "longName": "numThreads",
+            "shortName": "nuth",
+            "type": "int",
+            "default": -1,
+            "summary": "Number of threads to use internally whilst simulating.",
+            "description": "Ragdoll automatically divides a scene into 'islands' each frame based on the proximity to rigid bodies in your simulation. Rigids that are far away from each other and unlikely to come into contact are put into separate islands, each island being suitable for simulation in a separate thread. For single-character simulations or simulations where characters interact it is generally faster to leave this at -1 (meaning 'no threads')."
+        },
+        "drawShapes": {
+            "longName": "drawShapes",
+            "shortName": "drsh",
+            "type": "bool",
+            "default": false,
+            "summary": "Draw all shapes in this scene.",
+            "description": "Debugging attribute for visualising shapes external to their corresponding rigid."
+        },
+        "drawConstraints": {
+            "longName": "drawConstraints",
+            "shortName": "drco",
+            "type": "bool",
+            "default": false,
+            "summary": "Draw all constraints in this scene."
+        },
+        "drawVelocities": {
+            "longName": "drawVelocities",
+            "shortName": "drve",
+            "type": "bool",
+            "default": false,
+            "summary": "Draw an arrow representing velocity for each rigids in this scene."
+        },
+        "drawTrajectories": {
+            "longName": "drawTrajectories",
+            "shortName": "drtj",
+            "type": "bool",
+            "default": false,
+            "summary": "Draw a line over time from the center of mass for each rigid in the scene."
+        },
+        "drawForces": {
+            "longName": "drawForces",
+            "shortName": "drfo",
+            "type": "bool",
+            "default": false,
+            "summary": "Draw all forces in this scene."
+        },
+        "drawVelocityScale": {
+            "longName": "drawVelocityScale",
+            "shortName": "dvsc",
+            "type": "float",
+            "default": 1.0,
+            "summary": "Scale velocity arrows by this amount."
+        },
+        "drawLimitScale": {
+            "longName": "drawLimitScale",
+            "shortName": "dlsc",
+            "type": "float",
+            "default": 1.0,
+            "summary": "Scale limits by this amount."
+        },
+        "drawLineWidth": {
+            "longName": "drawLineWidth",
+            "shortName": "dlwh",
+            "type": "float",
+            "default": 1.0,
+            "summary": "Scale lines by this amount."
+        }
+    }
+}

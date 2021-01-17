@@ -1,0 +1,338 @@
+{
+    "activeRigid": {
+        "label": "Active Rigid",
+        "icon": "rigid.png",
+        "summary": "Customise the creation of a new rigid body.",
+        "description": "The rigid body, this outputs the translate and rotate channels that typically plug into your animation control. It lives as a shape, underneath your control, and is accessible via the Channel Box.<br><br>Rigids either output or input a transform. The *active* rigid outputs a transform, passing information from solver into your Maya scene.",
+        "media": [
+            {
+                "label": "Basics",
+                "description": "Turn any native Maya polygon or NURBS object into a rigid by selecting it and clicking 'Active Rigid'.",
+                "fname": "rigid.gif"
+            },
+            {
+                "label": "Multiple Selection",
+                "description": "When two or more objects are selected - whether it be polygons, NURBS or joints - they'll all be turned into rigids.",
+                "fname": "rigid_multiselect.gif"
+            },
+            {
+                "label": "Blend Existing Animation",
+                "description": "If the selected node(s) are animated, the animation can be used as a target for the subsequent simulation using the 'Blend' option.",
+                "fname": "rigid_blend.gif"
+            },
+            {
+                "label": "Blend and Edit",
+                "description": "Once turned into rigids, your original animation remains intact and can be edited just like before. You can also blend between the original input and final simulation via the `blendSimulation` node.",
+                "fname": "rigid_blendedit.gif"
+            }
+        ],
+        "options": [
+            "solver",
+            "createRigidType",
+            "initialShape",
+            "autoConnect",
+            "existingAnimation",
+            "autoOrient",
+            "computeMass",
+            "rigidSelect"
+        ]
+    },
+    "passiveRigid": {
+        "label": "Passive Rigid",
+        "icon": "collider.png",
+        "summary": "Customise the creation of a new passive rigid body.",
+        "description": "The passive rigid body feeds data from your animation control to Ragdoll, rather than the other way around like the Active Rigid. It's used to pass animation straight into the solver, without modifying it with forces or contacts. That also means passive rigids can travel straight through other rigids if not careful. You can think of a Passive Rigid as a physical object of infinite mass; nothing gets in its way.",
+        "media": [
+            {
+                "label": "Basics",
+                "description": "Turn any polygonal, NURBS surface or joint into a rigid which can be animated but isn't affected by the simulation.",
+                "fname": "rigid_passive.gif"
+            }
+        ],
+        "options": [
+            "solver",
+            "initialShape"
+        ]
+    },
+    "soft": {
+        "label": "Soft",
+        "enable": false
+    },
+    "cloth": {
+        "label": "Cloth",
+        "enable": false
+    },
+    "muscle": {
+        "label": "Muscle",
+        "icon": "muscle.png",
+        "summary": "Make a muscle from the selected anchor points.",
+        "description": "The muscle is a regular Active Rigid with two additional Point Constraints added to either end. The benefit is simply less clicks required.",
+        "options": [
+            "muscleAimAxis",
+            "muscleUpAxis",
+            "muscleFlex",
+            "muscleRadius"
+        ]
+    },
+    "fluid": {
+        "label": "Fluid",
+        "enable": false
+    },
+    "constraint": {
+        "label": "Constraint",
+        "icon": "constraint.png",
+        "summary": "Constrain one rigid to another.",
+        "description": "These are the primary way in which to achieve a desired motion or behavior of a rigid. They establish a relationship between exactly two rigid bodies and either limit the motion of a child relative some parent, and/or drive a child rigid into some position and orientation of a parent rigid.<br><br>Constraints can be made to the scene itself, in which case you can think of it as a worldspace constraint. This is mostly used/useful for guided simulation in worldspace. The same effect can however be achieved by constraining to any Passive Rigid, as the Scene is technically just a passive rigid with some additional attributes.",
+        "options": [
+            "constraintType",
+            "maintainOffset",
+            "autoOrient",
+            "constraintGuideStrength"
+        ]
+    },
+    "point": {
+        "label": "Point",
+        "icon": "point_constraint.png",
+        "summary": "Constraint the position of two rigid bodies."
+    },
+    "orient": {
+        "label": "Orient",
+        "icon": "orient_constraint.png",
+        "summary": "Constrain the orientation of two rigid bodies.",
+        "description": "Constrain the orientation of two rigid bodies. This doesn't have a physical equivalent, as you can't have something rotate the same as another object without also having some sort of positional relationship."
+    },
+    "parent": {
+        "label": "Parent",
+        "icon": "parent_constraint.png",
+        "summary": "Constrain both the position and orientation of two rigid bodies.",
+        "description": "Constrain both the position and orientation of two rigid bodies. Useful for when you need multiple shapes for a single rigid."
+    },
+    "hinge": {
+        "label": "Hinge",
+        "icon": "hinge_constraint.png",
+        "summary": "A special kind of Socket Constraint",
+        "description": "A special kind of Socket Constraint where the X-axis (a.k.a. 'twist') is rotated 90 degrees. This constraint is especially well suited for hinge-like appendages, like elbows and knees."
+    },
+    "socket": {
+        "label": "Socket",
+        "icon": "socket_constraint.png",
+        "summary": "Constraint the position and limit the orientation between two rigid bodies.",
+        "description": "Constraint the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
+    },
+    "convertRigid": {
+        "label": "Convert Rigid",
+        "icon": "convert.png",
+        "summary": "Convert selected Rigid to a different type.",
+        "description": "This turns an Active Rigid into a Passive Rigid, or vice versa. Convert to a Passive means (1) the `.kinematic` attribute is set to True, (2) connections to translate/rotate channels are broken and (3) the `rdRigid.inputMatrix` is connected to the parent transform `.worldMatrix` attribute. This is how animation is passed into Ragdoll.<br><br>The opposite is true for conversion to an Active Rigid, in which case Ragdoll is in charge of feeding the translate/rotate channels.",
+        "options": [
+            "convertRigidType"
+        ]
+    },
+    "convertConstraint": {
+        "label": "Convert Constraint",
+        "icon": "convert.png",
+        "summary": "Convert selected Constraint to a different type.",
+        "options": [
+            "convertConstraintType"
+        ]
+    },
+    "kinematic": {
+        "label": "Passive",
+        "icon": "kinematic.png",
+        "summary": "Animate a passive rigid body with an external transform.",
+        "description": "Create a new Maya transform and use the world matrix as input for 'kinematic' a.k.a. 'passive' animation. This is the same as creating or converting to a Passive Rigid, except it allows for the `rdRigid.kinematic` attribute to be *animated*. This can be used to transition from animation into simulation and vice versa."
+    },
+    "guide": {
+        "label": "Guide",
+        "icon": "control.png",
+        "summary": "Animate an active rigid body with an external transform.",
+        "description": "Create a new Maya transform and use the world matrix as input to 'drive' a.k.a. 'guide' a rigid dynamically. This is the same as what a Dynamic Control and a blended Active Rigid uses, except as a separate transform. There can be multiple guides to a single rigid, where each can fight for control over the final position, or where you the animator can blend between them."
+    },
+    "motor": {
+        "label": "Motor",
+        "enable": false
+    },
+    "actuator": {
+        "label": "Actuator",
+        "enable": false
+    },
+    "trigger": {
+        "label": "Trigger",
+        "enable": false
+    },
+    "push": {
+        "label": "Push",
+        "icon": "magnet.png",
+        "summary": "Push rigids away from a point in space.",
+        "description": "This forces applies a force facing away from a point in space. It can be used for things like explosions."
+    },
+    "pull": {
+        "label": "Pull",
+        "icon": "magnet2.png",
+        "summary": "Pull rigids towards a point in space.",
+        "description": "This is technically the same as 'Push', except the opposite. Instead of pushing rigids away from a point in space, rigids are pull towards it. This can be used for effects like black holes, or to simply nudge a rigid in some specific direction."
+    },
+    "directional": {
+        "label": "Directional",
+        "icon": "uniformforce.png",
+        "summary": "Like gravity, except in any arbitrary direction.",
+        "description": "Gravity is computed deep within the solver and isn't technically applied as an external force, but apart form that this force replicates gravity in addition to letting you control the direction."
+    },
+    "wind": {
+        "label": "Wind",
+        "icon": "turbulence.png",
+        "summary": "Create a force similar to wind, with editable turbulence.",
+        "description": "Wind is a complex phenomena. This force applies an iterative, 3D Perlin noise field to rigid bodies and is a great representation of how wind looks and acts in the real world. Use 'Visualiser' to get a sense of how it looks."
+    },
+    "visualiser": {
+        "label": "Visualiser",
+        "icon": "slice.png",
+        "summary": "Visualise 3D forces with a 2D slice, much like an MRI.",
+        "description": "This creates a 2-dimensonal representation of either all or selected 3-dimensional forces. The slice can be moved and scaled just like any normal Maya transform, and the amount and length of samples can be manipulated (and even animated) interactively to get a fine-grained understanding of what your forces do to each rigid. Hint: Create *multiple* slices at various strategic locations in your scene to get an even greater understanding at specific areas."
+    },
+    "assignToSelected": {
+        "label": "Assign to Selected",
+        "summary": "Assign force to the selected rigids.",
+        "description": "Forces are typically assigned to all existing rigids when created, or to the currently selected rigids. This command lets you add forces to rigids manually. Forces can be removed by breaking their connection to each other."
+    },
+    "particles": {
+        "label": "Particles",
+        "enable": false
+    },
+    "character": {
+        "label": "Character",
+        "summary": "Generate a character from the selected joint hierarchy.",
+        "icon": "ragdoll.png",
+        "options": [
+            "characterCopy",
+            "characterControl",
+            "characterNormalise",
+            "characterLabels",
+            "characterStopBehaviour"
+        ],
+        "description": "An auto-rigger, designed to produce an animatable character from a skeleton hierarchy."
+    },
+    "trajectory": {
+        "label": "Trajectory",
+        "enable": false,
+        "icon": "trajectory.png"
+    },
+    "momentOfInertia": {
+        "label": "Moment of Inertia",
+        "enable": false
+    },
+    "centerOfMass": {
+        "label": "Center of Mass",
+        "enable": false,
+        "icon": "com.png"
+    },
+    "createDynamicControl": {
+        "label": "Create Dynamic Control",
+        "icon": "dynamic_control.png",
+        "summary": "Create a new <b>dynamic</b> control from the currently selected <i>regular</i> control(s).",
+        "options": [
+            "dynamicControlShapeType",
+            "dynamicControlAutoBlend",
+            "dynamicControlBlendMethod",
+            "dynamicControlAutoInfluence",
+            "dynamicControlAutoMultiplier"
+        ],
+        "description": "Turn your regular character animation control into a rigid body, where the input animation is used as a dynamic guide for the simulation. The animation remains editable and the final result can be switched or blended between."
+    },
+    "multiplyRigids": {
+        "label": "Multiply Selected Rigids",
+        "icon": "rigid_multiplier.png",
+        "summary": "Multiply keyable attributes on multiple rigid at once.",
+        "options": [],
+        "description": "Perform bulk-edits of many rigid attributes at once, from a single attribute source. For example, edit the `Translate Damping` of all rigid in an entire character, from a single top-level node."
+    },
+    "multiplyConstraints": {
+        "label": "Multiply Selected Constraints",
+        "icon": "constraint_multiplier.png",
+        "summary": "Multiply keyable attributes on multiple constraints at once.",
+        "options": [],
+        "description": "Like Multiply Rigid, except for constraints."
+    },
+    "bakeSimulation": {
+        "label": "Bake Simulation",
+        "enable": false
+    },
+    "exportPhysics": {
+        "label": "Export Physics",
+        "enable": false
+    },
+    "importPhysics": {
+        "label": "Import Physics",
+        "enable": false
+    },
+    "editConstraintFrames": {
+        "label": "Edit Constraint Frames",
+        "icon": "frame.png",
+        "summary": "Edit the parent and child frames using a native Maya transform.",
+        "description": "Create editable transforms for the parent and child frames for the selected constraint, or constraint under the selected transform. The parent frame represents the position and orientation the child rigid is connected, and vice versa."
+    },
+    "duplicateSelected": {
+        "label": "Duplicate Selected",
+        "icon": "duplicate.png",
+        "summary": "Create a new rigid, using the selected rigid as a template for position, orientation and shape."
+    },
+    "transferAttributes": {
+        "label": "Transfer Attributes",
+        "icon": "transfer_attributes.png",
+        "summary": "Copy attributes from one rigid body to another.",
+        "description": "Copy attributes from the first selected rigid to the second selected rigid, like shape extents and constraint frames. This can be used to mirror one rigid across a character."
+    },
+    "convertToPolygons": {
+        "label": "Convert to Polygons",
+        "icon": "convert.png",
+        "summary": "Convert selected rigids and controls into polygons.",
+        "description": "(Unstable) Convert the selected <code>rdRigid</code> and <code>rdControl</code> nodes into geometry that can be exported to another application, and rendered with shadows in the viewport. NOTE: This may crash your scene, use at your own risk."
+    },
+    "normaliseShapes": {
+        "label": "Normalise shapes",
+        "summary": "Resize shapes within a hierarchy to avoid some being too different.",
+        "description": "Resize shapes across the selected hierarchy such that no shape is overly sized relative another. This is mostly intended for use with the Character command, to automatically generate a suitable skeleton. It is however not very good at the moment (!)."
+    },
+    "setInitialState": {
+        "label": "Set Initial State",
+        "icon": "initial_state.png",
+        "summary": "Re-establish the starting position and orientation of selected rigids.",
+        "description": "You can edit the position and orientation of an active rigid, but the changes won't take effect until you set the initial state. This records the position of the rigid bodies, wherever they are, at any time, as the starting position and orientation the next time you hit play."
+    },
+    "deleteAllPhysics": {
+        "label": "Delete All Physics",
+        "icon": "delete.png",
+        "summary": "Clear the Maya scene of anything related to Ragdoll.",
+        "description": "Clear the Maya scene of anything related to Ragdoll. This can be useful for getting a clean slate, or to debug whether the problem you are experiencing is related to Ragdoll."
+    },
+    "globalPreferences": {
+        "label": "Ragdoll Preferences",
+        "icon": "system.png",
+        "summary": "Edit global Ragdoll preferences, like the scale at which Ragdoll draws things.",
+        "description": "Edit the scale of manipulators and visual elements of Ragdoll, especially constriants. If you work at a scale other than Maya's currently set units, this command is your friend.",
+        "options": [
+            "scale",
+            "cacheMedia",
+            "autoHideShapeAttributes",
+            "globalsValidations",
+            "validateEvaluationMode",
+            "validateRotatePivot"
+        ]
+    },
+    "selectRigids": {
+        "label": "Select Rigids",
+        "icon": "rigid.png",
+        "summary": "Select all rigids, or filter rigids from selection.",
+        "description": "Either select some hierarchy of nodes and use this to isolate only the rigids in that hierarchy, or deselect everything and then call it to select every single rigid in the scene."
+    },
+    "selectConstraints": {
+        "label": "Select Constraints",
+        "icon": "constraint.png",
+        "summary": "Select all constraints, or filter constraints from selection.",
+        "description": "Either select some hierarchy of nodes and use this to isolate only the constraints in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+    },
+    "ragdoll": {
+        "icon": "logo.png",
+        "summary": "View your version, and eventually look for updates and tutorials. Not yet though."
+    }
+}

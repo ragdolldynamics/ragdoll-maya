@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+mkdocs-ragdoll = mkdocs_ragdoll.plugin:MenuGeneratorPlugin
+

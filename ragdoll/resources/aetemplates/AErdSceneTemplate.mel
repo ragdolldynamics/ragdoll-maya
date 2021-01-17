@@ -1,0 +1,54 @@
+//AErdSceneTemplate.mel
+
+global proc AErdSceneTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "General" -collapse false;
+            editorTemplate -addControl "startTime";
+            editorTemplate -addControl "substeps";
+            editorTemplate -addControl "gravity";
+            editorTemplate -addControl "airDensity";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Ground" -collapse false;
+            editorTemplate -label "Enabled" -addControl "useGround";
+            editorTemplate -label "Friction" -addControl "groundFriction";
+            editorTemplate -label "Restitution" -addControl "groundRestitution";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Time Attributes" -collapse true;
+            editorTemplate -addControl "timeMultiplier";
+            editorTemplate -addControl "spaceMultiplier";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Advanced" -collapse true;
+            editorTemplate -addControl "solverType";
+            editorTemplate -addControl "bounceThresholdVelocity";
+            editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
+            editorTemplate -addControl "threadCount";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Visualisation" -collapse true;
+            // editorTemplate -label "Shapes" -addControl "drawShapes";
+            editorTemplate -label "Constraints" -addControl "drawConstraints";
+            editorTemplate -label "Velocities" -addControl "drawVelocities";
+            editorTemplate -label "Trajectories" -addControl "drawTrajectories";
+            editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";
+            editorTemplate -label "Limit Scale" -addControl "drawLimitScale";
+            editorTemplate -label "Line Width" -addControl "drawLineWidth";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "currentTime";
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+    editorTemplate -suppress "localPosition";
+    editorTemplate -suppress "localScale";
+}

@@ -1,0 +1,305 @@
+{
+    "firstLaunch": {
+        "name": "firstLaunch",
+        "type": "Boolean",
+        "default": true,
+        "help": "This was the first time Ragdoll was installed"
+    },
+    "firstLaunch2": {
+        "name": "firstLaunch2",
+        "type": "Boolean",
+        "default": true,
+        "help": "This was the first time Ragdoll was launched, since licencing was implemented."
+    },
+    "upgradeOnSceneOpen": {
+        "name": "upgradeOnSceneOpen",
+        "type": "Boolean",
+        "default": true,
+        "help": "Whether or not to check for upgradable nodes on scene-open."
+    },
+    "scale": {
+        "name": "scale",
+        "label": "Gizmo Scale",
+        "type": "Float",
+        "default": 1.0,
+        "min": 0.01,
+        "max": 10.0,
+        "help": "Scale at which to draw viewport widgets, like constraints."
+    },
+    "cacheMedia": {
+        "name": "cacheMedia",
+        "type": "Enum",
+        "items": ["Off", "On", "All"],
+        "default": "Off",
+        "help": "Cache clips in the timeline, for immediate feedback when scroll.<br>- <b>Off</b> Fast, interactive but no scrubbing.<br>- <b>On</b> Slow scrubbing support.<br>- <b>All</b> Interactive scrubbing at the expense of RAM.<"
+    },
+    "initialShape": {
+        "name": "initialShape",
+        "type": "Enum",
+        "default": "Auto",
+        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
+        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
+    },
+    "solver": {
+        "name": "solver",
+        "type": "Enum",
+        "default": "Create new solver",
+        "items": ["Create new solver"],
+        "help": "Select which solver to use"
+    },
+    "color": {
+        "name": "color",
+        "type": "Color",
+        "default": "#da8f7e",
+        "help": "Initial color used, can be changed later."
+    },
+    "computeMass": {
+        "name": "computeMass",
+        "type": "Boolean",
+        "default": false,
+        "help": "Use the volume of the shape to determine its mass. Use with caution, as large differences (10x or more) in mass amongst rigids that interact can cause instability."
+    },
+    "createRigidType": {
+        "name": "createRigidType",
+        "label": "Rigid Type",
+        "type": "Enum",
+        "default": "Active",
+        "items": ["Active", "Passive"],
+        "help": "How to solve this rigid.<br>- <b>Active</b>  : Simulate this node<br>- <b>Passive</b> : Animate this node"
+    },
+    "shapeExtents": {
+        "name": "shapeExtents",
+        "type": "Double3",
+        "default": [1, 1, 1],
+        "help": "The XYZ scale of the Box shape type"
+    },
+    "shapeLength": {
+        "name": "shapeLength",
+        "type": "Float",
+        "default": 1,
+        "help": "The length of the capsule and cylinder shape types"
+    },
+    "shapeRadius": {
+        "name": "shapeRadius",
+        "type": "Float",
+        "default": 1,
+        "help": "The length of the capsule and cylinder shape types"
+    },
+    "convertRigidType": {
+        "name": "convertRigidType",
+        "label": "Rigid Type",
+        "type": "Enum",
+        "default": "Auto",
+        "items": ["Opposite", "Active", "Passive"],
+        "help": "Convert a rigid from active to kinematic or vice versa. 'Opposite' turns passive into active and vice versa automatically."
+    },
+    "rigidSelect": {
+        "name": "rigidSelect",
+        "label": "Select",
+        "type": "Boolean",
+        "default": true,
+        "help": "Automatically select newly created rigid body."
+    },
+    "limitOrientation": {
+        "name": "limitOrientation",
+        "type": "Enum",
+        "default": "Neighbour",
+        "items": ["Neighbour", "Joint Orient"],
+        "help": "Whether to compute an orientation based on neighbouring node in the hierarchy, or to use the jointOrient attribute (if one exists)."
+    },
+    "autoConnect": {
+        "name": "autoConnect",
+        "type": "Enum",
+        "items": ["Nothing", "Joints Only", "All"],
+        "default": "Joints Only",
+        "help": "Automatically add a Socket Constraint between selected nodes"
+    },
+    "autoOrient": {
+        "name": "autoOrient",
+        "type": "Boolean",
+        "default": true,
+        "help": "Orient constraint automatically by aiming towards the immediate child. Otherwise use the local orientation of the node."
+    },
+    "existingAnimation": {
+        "name": "existingAnimation",
+        "type": "Enum",
+        "items": ["Abort", "Overwrite", "Blend"],
+        "default": "Blend",
+        "help": "If the target node has animation, what should I do?<br>- <b>Abort</b>: Do nothing<br>- <b>Overwrite</b>: Replace your animation with simulation<br>- <b>Blend</b>: Follow original animation dynamically"
+    },
+    "constraintType": {
+        "name": "constraintType",
+        "type": "Enum",
+        "default": "Point",
+        "items": ["Point", "Orient", "Hinge", "Parent", "Socket"],
+        "help": "The type of constraint created."
+    },
+    "constraintGuideStrength": {
+        "name": "constraintGuideStrength",
+        "label": "Guide Strength",
+        "type": "Float",
+        "default": 1.0,
+        "min": 0.0,
+        "max": 3.0,
+        "help": "Include some guide strength with this constraint."
+    },
+    "convertConstraintType": {
+        "name": "convertConstraintType",
+        "type": "Enum",
+        "default": "Point",
+        "items": ["Point", "Orient", "Hinge", "Parent", "Socket"],
+        "help": "The type of constraint to convert to."
+    },
+    "maintainOffset": {
+        "name": "maintainOffset",
+        "type": "Boolean",
+        "default": true,
+        "help": "Keep rigids where they are, or snap them together. Offsets can be manipulated with the Edit Constraint Frames menu item."
+    },
+    "characterCopy": {
+        "name": "characterCopy",
+        "label": "Copy",
+        "type": "Boolean",
+        "default": true,
+        "help": "Turn a copy of the selected hierarchy into a character, rather than the hierarchy itself."
+    },
+    "characterControl": {
+        "name": "characterControl",
+        "label": "Control",
+        "type": "Boolean",
+        "default": true,
+        "help": "Create an additional control hierarchy from generated character."
+    },
+    "characterStopBehaviour": {
+        "name": "characterStopBehaviour",
+        "label": "Stop Behaviour",
+        "type": "Enum",
+        "default": "Inclusive",
+        "items": ["Inclusive", "Exclusive"],
+        "help": "Whether to include the joint with a 'Stop' label in the generated character or not."
+    },
+    "characterSkipBehaviour": {
+        "name": "characterSkipBehaviour",
+        "label": "Skip Behaviour",
+        "type": "Enum",
+        "default": "Inclusive",
+        "items": ["Inclusive", "Exclusive"],
+        "help": "Whether to include the joint with a 'Skip' label in the generated character or not."
+    },
+    "characterLabels": {
+        "name": "characterLabels",
+        "label": "Labels",
+        "type": "Separator",
+        "default": ""
+    },
+    "characterNormalise": {
+        "name": "characterNormalise",
+        "label": "Normalise Shapes",
+        "type": "Boolean",
+        "default": false,
+        "help": "Make sure shapes are relatively evenly sized. This can help prevent 'stick-figures' which are tougher to control."
+    },
+    "muscleAimAxis": {
+        "name": "muscleAimAxis",
+        "label": "Aim Axis",
+        "type": "Enum",
+        "default": "X",
+        "items": ["X", "Y", "Z"],
+        "help": "Which axis to treat as aim for the resulting muscle."
+    },
+    "muscleUpAxis": {
+        "name": "muscleUpAxis",
+        "label": "Up Axis",
+        "type": "Enum",
+        "default": "Y",
+        "items": ["X", "Y", "Z"],
+        "help": "Which axis to treat as the up-axis for the resulting muscle."
+    },
+    "muscleFlex": {
+        "name": "muscleFlex",
+        "label": "Flex",
+        "type": "Float",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.75,
+        "help": "How much to allow the muscle to contract, from not-at-all to all-the-way."
+    },
+    "muscleRadius": {
+        "name": "muscleRadius",
+        "label": "Radius",
+        "type": "Float",
+        "min": 0.0,
+        "max": 10.0,
+        "default": 1.0,
+        "help": "Capsule radius, how thick of a muscle to make."
+    },
+    "dynamicControlShapeType": {
+        "name": "dynamicControlShapeType",
+        "label": "Shape Type",
+        "type": "Enum",
+        "items": ["Mesh", "Capsule"],
+        "default": "Capsule",
+        "help": "The initial shape to represent the selected control.<br>- <b>Mesh</b>: Suitable for NURBS controls that *wrap* around the model<br>- <b>Capsule</b>: Suitable for flat controls, e.g. a circle or square."
+    },
+    "dynamicControlLastForLength": {
+        "name": "dynamicControlLastForLength",
+        "label": "Last For Length",
+        "type": "Boolean",
+        "default": false,
+        "depends": ["dynamicControlShapeType"],
+        "help": "Do not turn the last selected node into a dynamic control, use it to determine length and direction of the previous control."
+    },
+    "dynamicControlAutoBlend": {
+        "name": "dynamicControlAutoBlend",
+        "label": "Auto Blend",
+        "type": "Boolean",
+        "default": true,
+        "help": "Add a `blendSimulation` attribute to blend between animation and simulation."
+    },
+    "dynamicControlAutoInfluence": {
+        "name": "dynamicControlAutoInfluence",
+        "label": "Auto Influence",
+        "type": "Boolean",
+        "default": true,
+        "help": "Use blended animation as input to the simulation."
+    },
+    "dynamicControlAutoMultiplier": {
+        "name": "dynamicControlAutoMultiplier",
+        "label": "Auto Multiplier",
+        "type": "Boolean",
+        "default": true,
+        "help": "Automatically add a constraint multiplier to the dynamic control root."
+    },
+    "dynamicControlBlendMethod": {
+        "name": "dynamicControlBlendMethod",
+        "label": "Blend Method",
+        "type": "Enum",
+        "items": ["From Root", "Each Control"],
+        "default": "From Root",
+        "help": "Blend simulation from the root control, or per-control."
+    },
+    "globalsValidations": {
+        "name": "globalsValidations",
+        "label": "Validations",
+        "type": "Separator",
+        "default": "Various pre-flight checks to ensure Ragdoll is performing optimally."
+    },
+    "validateEvaluationMode": {
+        "name": "validateEvaluationMode",
+        "type": "Boolean",
+        "default": true,
+        "help": "Check whether Maya is evaluating in Parallel or Serial whenever creating a new scene, as DG is slow and error-prone."
+    },
+    "validateRotatePivot": {
+        "name": "validateRotatePivot",
+        "type": "Boolean",
+        "default": true,
+        "help": "Check whether the selected transform has a non-zero rotatePivot; they are unsupported and will be zeroed out."
+    },
+    "autoHideShapeAttributes": {
+        "name": "autoHideShapeAttributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Rid the Channel Box of attributes unrelated to the currently selected shape type (requires Maya restart)."
+    }
+}

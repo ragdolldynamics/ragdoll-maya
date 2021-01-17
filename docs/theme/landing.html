@@ -1,0 +1,69 @@
+<!-- 
+
+The landing page.
+
+Here we'll strip almost everything, making room for visuals and images
+
+-->
+
+{% extends "base.html" %}
+
+{% block site_meta %}
+{{ super() }}
+<link href="https://fonts.googleapis.com/css?family=Roboto:400,500|Source+Code+Pro" rel="stylesheet">
+{% endblock %}
+
+{% block site_nav %}
+  {% if nav %}
+    <div class="md-sidebar md-sidebar--primary landing" data-md-component="navigation">
+      <div class="md-sidebar__scrollwrap">
+        <div class="md-sidebar__inner">
+          {% include "partials/nav.html" %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  {% if page.toc %}
+    <div class="md-sidebar md-sidebar--secondary landing" data-md-component="toc">
+      <div class="md-sidebar__scrollwrap">
+        <div class="md-sidebar__inner">
+          {% include "partials/toc.html" %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block htmltitle %}
+    <title>{{ config.site_name }}</title>
+{% endblock %}
+
+<!-- Expand space reserved for article to the edges
+ ________________________________________
+|         |                  |           |
+|     [---|                  |---]       |
+|         |                  |           |
+|         |                  |           |
+|         |                  |           |
+|         |                  |           |
+|         |                  |           |
+|         |                  |           |
+|         |                  |           |
+|     [---|                  |---]       |
+|_________|__________________|___________|
+
+-->
+
+{% block styles %}
+{{ super() }}
+<style type="text/css">
+  .md-content {
+      margin-left: 0px;
+      margin-right: 0px;
+  }
+  .md-typeset .md-content__button {
+      display: none;
+  }
+</style>
+<link rel="stylesheet" href="landing.css">
+{% endblock %}

@@ -1,0 +1,7 @@
+# Python 2/3
+*.pyc
+*__pycache__
+
+# Website builds
+docs/site
+web/site

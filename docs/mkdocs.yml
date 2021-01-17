@@ -1,0 +1,93 @@
+---
+site_name: Learn Ragdoll
+site_description: The real-time physics solver for Maya
+site_author: mottosso
+site_url: https://learn.ragdolldynamics.com
+
+# Repository
+# repo_name: mottosso/ragdoll
+# repo_url: https://github.com/mottosso/ragdoll
+
+ragdoll_version: "2021.01.15"
+copyright: "Copyright &copy; 2020 mottosso"
+
+# Page tree
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - Download: download.md
+  - Examples: examples.md
+  - Menu Reference: menu.md
+  - Node Reference: nodes.md
+  - API Reference: api.md
+  - Release History:
+    - 2021.01.15: releases/2021.01.15.md
+    - 2021.01.14: releases/2021.01.14.md
+    - 2021.01.04: releases/2021.01.04.md
+    - 2020.12.18: releases/2020.12.18.md
+    - 2020.12.07: releases/2020.12.07.md
+    - 2020.12.01: releases/2020.12.01.md
+    - 2020.11.24: releases/2020.11.24.md
+    - 2020.11.23: releases/2020.11.23.md
+    - 2020.11.22: releases/2020.11.22.md
+    - 2020.11.17: releases/2020.11.17.md
+    - 2020.11.16: releases/2020.11.16.md
+    - 2020.11.10: releases/2020.11.10.md
+  - Licencing: licencing.md
+  # - About: about.md
+
+docs_dir: pages
+
+theme:
+  name: material
+  logo: ragdoll_full.png
+  logo: ragdoll_silhouette_black_512.png
+  custom_dir: theme
+  palette:
+    primary: "white"
+    accent: "white"
+
+extra_css:
+  - extra.css
+  # Landing page includes additional CSS from landing.html
+
+# Options
+extra:
+  feature:
+    tabs: true
+
+extra_javascript:
+  - "extra.js"
+
+markdown_extensions:
+  - codehilite:
+      guess_lang: false
+      use_pygments: true
+      noclasses: true
+      pygments_style: monokai
+  - markdown.extensions.extra
+  - markdown.extensions.admonition
+  - markdown.extensions.def_list
+  - markdown.extensions.footnotes
+  - markdown.extensions.meta
+  - markdown.extensions.toc
+  - pymdownx.arithmatex
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - git-revision-date
+  - mkdocs-ragdoll

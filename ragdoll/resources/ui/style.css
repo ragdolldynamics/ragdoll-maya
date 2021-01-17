@@ -1,0 +1,138 @@
+SplashScreen, SplashScreen:hover, SplashScreen:pressed {
+    background: #555;
+    border: none;
+}
+
+SplashScreen #serial {
+    padding: 7px;
+}
+
+#PlayerButton {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#PlayerButton:hover, #TimelineButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#PlayerButton:checked, #TimelineButton:checked {
+    background: #333;
+}
+
+#PlayerButton:checked:hover, #TimelineButton:checked:hover {
+    background: #555;
+}
+
+Player {
+    background: black;
+}
+
+Player QLabel {
+    color: white;
+}
+
+Player #overlay #background {
+    background: black;
+}
+
+Player #title {
+    font-size: 17px;
+}
+
+#TimelineSpacing {
+    min-width: 80px;
+    max-width: 80px;
+}
+
+Options #Description {
+    font-size: 14px;
+}
+
+Timeline Clip QLabel {
+    margin-right: 2px;
+    border: 3px solid transparent;
+    border-right: 3px solid #222;
+    border-bottom: 3px solid #222;
+    border: 2px solid #222;
+}
+
+Timeline Clip[playing=true] QLabel {
+    border-top: 2px solid #94CEE9;
+}
+
+Timeline QSlider {
+    background: transparent;
+}
+
+Timeline QSlider::groove:horizontal {
+    background: transparent;
+}
+
+Timeline QSlider::handle:horizontal {
+    width: 0px;
+    border-left: 2px solid #ff2222;
+    border-right: 2px solid #880000;
+    background: #dd3333;
+    
+    /* Crop timeline */
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#TimelineButton {
+    min-width: 55px;
+    max-width: 55px;
+    min-height: 55px;
+    margin: 10px;
+    border-radius: 0;
+}
+
+#Hint {
+    color: white;
+}
+
+Options #Foreground {
+    background: #333;
+}
+
+HelpPage {
+    background: black;
+}
+
+HelpPage QLabel {
+    color: #eee;
+    font-size: 12px;
+}
+
+HelpPage #back {
+    background: transparent;
+}
+
+HelpPage #back:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+HelpPage #title {
+    font-size: 21px;
+}
+
+HelpPage #summary {
+    font-weight: bold;
+}
+
+HelpPage #scroll,
+HelpPage #body {
+    background: transparent;
+}
+
+HelpPage #title,
+HelpPage #summary,
+HelpPage #description {
+    padding: 3px;
+}
+
+HelpPage #optionsTitle,
+HelpPage #mediaTitle {
+    min-width: 100px;
+    font-weight: bold;
+}

@@ -23,3 +23,21 @@ All Maya integration and user-facing tooling is stored in this repository. It's 
 | ragdoll | The Ragdoll Python package
 | web     | Source for https://ragdolldynamics.com
 | docs    | Source for https://learn.ragdolldynamics.com
+
+<br>
+
+### Contributing to Documentation
+
+Alongside the Python package, this repository also contains the documentation for Ragdoll, which you can build and preview locally prior to making a contribution.
+
+1. Install Python (3.9)
+2. Install git (latest)
+3. Run the below
+
+```bash
+$ pip install mkdocs_git_revision_date_plugin
+$ pip install git+https://github.com/mottosso/mkdocs-material-design.git
+$ git clone https://github.com/mottosso/ragdoll.git
+$ cd ragdoll/docs
+$ .\serve.bat  # ./serve.sh on Linux
+```

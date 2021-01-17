@@ -3,7 +3,7 @@
 These provide low-level access to node creation and scenegraph
 manipulation and are meant for use in automation, pipeline and rigging.
 
-These do not depend on scene selection.
+These do not depend on scene selection, user preferences or Maya state.
 
 """
 

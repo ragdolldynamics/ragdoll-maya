@@ -4,6 +4,7 @@ These combine several API functions to create more high-level functionality
 
 """
 
+import sys
 import logging
 
 from maya import cmds
@@ -331,6 +332,7 @@ def create_dynamic_control(chain,
                            auto_blend=True,
                            auto_influence=True,
                            auto_multiplier=True,
+                           auto_initial_state=False,
                            central_blend=True,
                            use_capsules=False):
     """Turn selected animation controls dynamic
@@ -477,6 +479,9 @@ def create_dynamic_control(chain,
             if auto_influence:
                 _auto_influence(mod, rigid, blend)
 
+            if auto_initial_state:
+                _auto_initial_state(mod, rigid, blend)
+
             pair_blends += [blend]
 
         if central_blend:
@@ -520,6 +525,24 @@ def create_dynamic_control(chain,
             mult["linearDriveDamping"].keyable = False
 
         return mult
+
+    def _auto_initial_state(mod, rigid, blend):
+        anim = mod.create_node("composeMatrix", name="matrixFromAnimation")
+        mod.connect(blend["inTranslate"], anim["inputTranslate"])
+        mod.connect(blend["inRotate"], anim["inputRotate"])
+
+        initial_state = mod.create_node("decomposeMatrix", name="initialState")
+        parent = rigid.parent().parent()
+
+        if parent is not None:
+            matrix = parent["worldMatrix"][0]
+            commands._set_matrix(initial_state["inputMatrix"], matrix)
+
+        mult = mod.create_node("multMatrix", name="animatedInitialState")
+        mod.connect(anim["outputMatrix"], mult["matrixIn"][0])
+        mod.connect(initial_state["inputMatrix"], mult["matrixIn"][1])
+
+        mod.connect(mult["matrixSum"], rigid["restMatrix"])
 
     new_rigids = []
     new_constraints = []

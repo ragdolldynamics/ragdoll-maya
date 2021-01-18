@@ -119,23 +119,6 @@
         "summary": "Constraint the position and limit the orientation between two rigid bodies.",
         "description": "Constraint the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
-    "convertRigid": {
-        "label": "Convert Rigid",
-        "icon": "convert.png",
-        "summary": "Convert selected Rigid to a different type.",
-        "description": "This turns an Active Rigid into a Passive Rigid, or vice versa. Convert to a Passive means (1) the `.kinematic` attribute is set to True, (2) connections to translate/rotate channels are broken and (3) the `rdRigid.inputMatrix` is connected to the parent transform `.worldMatrix` attribute. This is how animation is passed into Ragdoll.<br><br>The opposite is true for conversion to an Active Rigid, in which case Ragdoll is in charge of feeding the translate/rotate channels.",
-        "options": [
-            "convertRigidType"
-        ]
-    },
-    "convertConstraint": {
-        "label": "Convert Constraint",
-        "icon": "convert.png",
-        "summary": "Convert selected Constraint to a different type.",
-        "options": [
-            "convertConstraintType"
-        ]
-    },
     "kinematic": {
         "label": "Passive",
         "icon": "kinematic.png",

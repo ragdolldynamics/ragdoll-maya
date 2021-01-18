@@ -47,22 +47,6 @@ The top part of the menu contain commands to create new rigids.
 {{ menu.muscle.media }}
 
 <br>
-
-### Convert Rigid
-
-{{ menu.convertRigid.description }}
-{{ menu.convertRigid.options }}
-{{ menu.convertRigid.media }}
-
-<br>
-
-### Convert Constraint
-
-{{ menu.convertConstraint.description }}
-{{ menu.convertConstraint.options }}
-{{ menu.convertConstraint.media }}
-
-<br>
 <img class="hero-image" src=/car5.png>
 <br>
 

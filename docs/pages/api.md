@@ -160,7 +160,7 @@ api.duplicate(rigid)
 
 Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables.
 
-> Added `Ragdoll 2021.01.20`
+> Added `Ragdoll 2021.01.14`
 
 | Variable                  | Description | Default
 |:--------------------------|:------------|:--------

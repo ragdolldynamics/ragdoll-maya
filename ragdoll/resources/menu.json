@@ -220,7 +220,19 @@
             "dynamicControlAutoInfluence",
             "dynamicControlAutoMultiplier"
         ],
-        "description": "Turn your regular character animation control into a rigid body, where the input animation is used as a dynamic guide for the simulation. The animation remains editable and the final result can be switched or blended between."
+        "description": "Turn your regular character animation control into a rigid body, where the input animation is used as a dynamic guide for the simulation. The animation remains editable and the final result can be switched or blended between.",
+        "media": [
+            {
+                "label": "Basics",
+                "description": "Turn any FK hierarchy into a dynamic chain.",
+                "fname": "dynamic_control_1.gif"
+            },
+            {
+                "label": "Every other control",
+                "description": "Skip some FK controls, for a simplified dynamic hierarchy.",
+                "fname": "dynamic_control_2.gif"
+            }
+        ]
     },
     "multiplyRigids": {
         "label": "Multiply Selected Rigids",

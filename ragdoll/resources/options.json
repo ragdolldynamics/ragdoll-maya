@@ -100,6 +100,13 @@
         "default": true,
         "help": "Automatically select newly created rigid body."
     },
+    "constraintSelect": {
+        "name": "constraintSelect",
+        "label": "Select",
+        "type": "Boolean",
+        "default": true,
+        "help": "Automatically select newly created constraint."
+    },
     "limitOrientation": {
         "name": "limitOrientation",
         "type": "Enum",

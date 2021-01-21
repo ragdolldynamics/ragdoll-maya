@@ -34,6 +34,7 @@ import os
 import sys
 import copy
 import json
+import time
 import logging
 import functools
 import contextlib
@@ -74,6 +75,11 @@ __.previousvars = {
     "MAYA_SCRIPT_PATH": os.getenv("MAYA_SCRIPT_PATH", ""),
     "XBMLANGPATH": os.getenv("XBMLANGPATH", ""),
 }
+
+
+# Recording-related data
+_command_to_menuitem = {}
+_recorded_commands = []
 
 
 def _print_exception():
@@ -199,6 +205,19 @@ def uninstall():
             sys.modules.pop(module)
 
 
+class RagdollGuiLogHandler(MayaGuiLogHandler):
+    """Gather errors and warnings for the Message Board"""
+
+    history = []
+
+    def emit(self, record):
+        if record.levelno > logging.INFO:
+            RagdollGuiLogHandler.history.append(record)
+            update_menu()
+
+        return super(RagdollGuiLogHandler, self).emit(record)
+
+
 def install_logger():
     fmt = logging.Formatter(
         "ragdoll.%(funcName)s() - %(message)s"
@@ -211,7 +230,7 @@ def install_logger():
 
     # This one works like logging.StreamHandler,
     # except it also colors the Command Line nicely
-    handler = MayaGuiLogHandler()
+    handler = RagdollGuiLogHandler()
 
     handler.setFormatter(fmt)
     log.addHandler(handler)
@@ -331,15 +350,18 @@ def install_menu():
                         tearOff=True,
                         parent="MayaWindow")
 
-    def item(key, command=None, option=None, label=None):
-
+    def item(key, command=None, option=None, label=None, visible=True):
         opts = __.menuitems[key]
 
         kwargs = {
             "label": opts.get("label", label or key),
             "enable": opts.get("enable", True),
             "echoCommand": True,
-            "image": "bad.png"
+            "image": "bad.png",
+            "visible": visible,
+
+            # These show up in the Maya "Help Line" on hover
+            "annotation": opts.get("summary", ""),
         }
 
         if command:
@@ -350,6 +372,9 @@ def install_menu():
             script += "ri.%s()" % command.__name__
             kwargs["command"] = script
 
+            # Create a reverse-mapping for recording
+            _command_to_menuitem[command.__name__] = key
+
         if "icon" in opts:
             icon = _resource(os.path.join("icons", opts["icon"]))
             kwargs["image"] = icon
@@ -357,12 +382,12 @@ def install_menu():
         if "checkbox" in opts:
             kwargs["checkBox"] = True
 
-        path = cmds.menuItem(**kwargs)
+        opts["path"] = cmds.menuItem(**kwargs)
 
         if option:
             cmds.menuItem(command=option, optionBox=True)
 
-        return path
+        return opts["path"]
 
     @contextlib.contextmanager
     def submenu(label, icon=None):
@@ -381,6 +406,12 @@ def install_menu():
 
     def divider(label=None):
         cmds.menuItem(divider=True, dividerLabel=label)
+
+    item("showMessages",
+         command=show_messageboard,
+
+         # Programatically displayed during logging
+         visible=False)
 
     divider("Create")
 
@@ -478,6 +509,35 @@ def uninstall_menu():
         cmds.deleteUI(__.menu, menu=True)
 
     __.menu = None
+
+
+def show_messageboard():
+    win = ui.MessageBoard(RagdollGuiLogHandler.history, parent=ui.MayaWindow())
+    win.show()
+
+    # Auto-clear on show, message has been received
+    RagdollGuiLogHandler.history[:] = []
+    update_menu()
+
+
+def update_menu():
+    count = len(RagdollGuiLogHandler.history)
+
+    label = (
+        "Ragdoll (%d)" % count
+        if count else "Ragdoll"
+    )
+
+    menu_item = __.menuitems["showMessages"]
+    menu_kwargs = {
+        "visible": True if count else False,
+        "label": "%s (%d)" % (menu_item["label"], count),
+        "edit": True,
+    }
+
+    # Help the user understand there's a problem somewhere
+    cmds.menu(__.menu, edit=True, label=label)
+    cmds.menuItem(menu_item["path"], **menu_kwargs)
 
 
 """
@@ -641,10 +701,116 @@ def warn_about_pivot():
         ),
         call_to_action="What would you like to do?",
         actions=[
+
+            # Happens automatically by commands.py
+            # Take it or leave it, doesn't work otherwise
             ("Zero out rotatePivot", lambda: True),
+
             ("Cancel", lambda: False)
         ]
     )
+
+
+@no_standalone
+def validate_playbackspeed():
+    play_every_frame = cmds.optionVar(query="timeSliderPlaySpeed") == 0.0
+
+    if not play_every_frame:
+        return ui.warn(
+            option="validatePlaybackSpeed",
+            title="Play every frame",
+            message=(
+                "Ensure your playback speed is set to 'Play every frame' "
+                "to avoid frame drops, these can break a simulation and "
+                "generally causes odd things to happen."
+            ),
+            call_to_action="Go to Maya Preferences to change this.",
+            actions=[
+                ("Ok", lambda: True)
+            ]
+        )
+
+
+def _replay(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+
+        # Hint to the recorder that we're playing back this
+        # command, and that it shouldn't be recorded
+        kwargs["_replay"] = True
+
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def _replayable(func):
+    """Enable replay of this command
+
+    The animator can save a series of commands as a script,
+    and recall these later with optional customisations on e.g.
+    options and selection.
+
+    """
+
+    def _append(root, command):
+        with cmdx.DagModifier() as mod:
+            if not root.has_attr("_ragdollHistory"):
+                mod.add_attr(root, cmdx.String("_ragdollHistory"))
+                mod.do_it()
+
+            history = root["_ragdollHistory"].read() or "[]"
+
+            try:
+                history = json.loads(history)
+
+            except Exception:
+                log.warning(
+                    "Malformatted Ragdoll history on %s, clearing"
+                    % root
+                )
+                history = []
+
+            history.append(command)
+            mod.set_attr(root["_ragdollHistory"], json.dumps(history))
+
+    def _record(selection):
+        key = _command_to_menuitem[func.__name__]
+        item = __.menuitems[key]
+        opt = item.get("options", [])
+
+        command = {
+            "command": func.__name__,
+
+            # For posterity and UI
+            "time": time.time(),
+
+            # Include explicitly passed selection, in case
+            # the call is being made from a script.
+            # Questionable whether we should record these at all (?)
+            "selection": [
+                node.shortest_path()
+                for node in selection
+            ],
+
+            # Store options at the time of calling
+            "options": {
+                key: options.read(key)
+                for key in opt
+            }
+        }
+
+        _append(selection[0], command)
+
+    @functools.wraps(func)
+    def wrapper(selection=None, **kwargs):
+        selection = selection or cmdx.selection()
+
+        if not kwargs.get("_replay") and selection:
+            _record(selection)
+
+        return func(selection, **kwargs)
+
+    return wrapper
 
 
 def _filtered_selection(node_type):
@@ -686,6 +852,9 @@ def create_scene(selection=None):
             if warn_about_dg() is Cancelled:
                 return
 
+    if options.read("validatePlaybackSpeed"):
+        validate_playbackspeed()
+
     return commands.create_scene()
 
 
@@ -716,8 +885,14 @@ def has_valid_rotatepivot(transform):
         return True
 
 
+def _opt(key, override=None):
+    override = override or {}
+    return override.get(key) or options.read(key)
+
+
+@_replayable
 @commands.with_undo_chunk
-def create_active_rigid(selection=None, passive=False):
+def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
     created = []
@@ -735,19 +910,16 @@ def create_active_rigid(selection=None, passive=False):
     if selection[0].isA(cmdx.kShape):
         if selection[0].type() == "rdRigid":
             # The user meant to convert the selection
-            return convert_rigid(selection, passive)
+            return convert_rigid(selection, opts)
 
     elif selection[0].isA(cmdx.kTransform):
         if selection[0].shape("rdRigid"):
             # The user meant to convert the selection
-            return convert_rigid(selection, passive)
+            return convert_rigid(selection, opts)
 
     previous = None
-    select = options.read("rigidSelect")
-
-    if passive is None:
-        # Use persistent value
-        passive = options.read("createRigidType") == "Passive"
+    select = _opt("rigidSelect", opts)
+    passive = _opt("createRigidType", opts) == "Passive"
 
     scene = _find_current_scene()
 
@@ -766,10 +938,10 @@ def create_active_rigid(selection=None, passive=False):
             "Abort": commands.Abort,
             "Overwrite": commands.Overwrite,
             "Blend": commands.Blend,
-        }.get(options.read("existingAnimation"), "Overwrite")
+        }.get(_opt("existingAnimation", opts), "Overwrite")
 
         kwargs = {
-            "compute_mass": options.read("computeMass"),
+            "compute_mass": _opt("computeMass", opts),
             "passive": passive,
             "existing": existing,
         }
@@ -786,8 +958,8 @@ def create_active_rigid(selection=None, passive=False):
             continue
 
         # Apply optionvars
-        initial_shape = options.read("initialShape")
-        auto_connect = options.read("autoConnect")
+        initial_shape = _opt("initialShape", opts)
+        auto_connect = _opt("autoConnect", opts)
 
         if initial_shape != "Auto":
             # Overtake the automatic mechanism from commands.py
@@ -821,7 +993,7 @@ def create_active_rigid(selection=None, passive=False):
                         previous, rigid, scene
                     )
 
-                    if options.read("autoOrient"):
+                    if _opt("autoOrient", opts):
                         commands.orient(con)
 
         if isinstance(rigid, list):
@@ -843,8 +1015,9 @@ def create_active_rigid(selection=None, passive=False):
         return log.warning("Nothing happened, that was unexpected")
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_passive_rigid(selection=None):
+def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
         with cmdx.DagModifier() as mod:
@@ -853,7 +1026,8 @@ def create_passive_rigid(selection=None):
 
         cmds.select(transform.path())
 
-    return create_rigid(selection, passive=True)
+    opts["createRigidType"] = "Passive"
+    return _replay(create_active_rigid)(selection, **opts)
 
 
 @commands.with_undo_chunk
@@ -880,7 +1054,7 @@ def _axis_to_vector(axis="x"):
 
 
 @commands.with_undo_chunk
-def create_muscle(selection=None):
+def create_muscle(selection=None, **opts):
     try:
         a, b = selection or cmdx.selection()
     except ValueError:
@@ -905,10 +1079,10 @@ def create_muscle(selection=None):
             mod.set_attr(scene["gravity"], 0)
 
     kwargs = {
-        "up_axis": _axis_to_vector(options.read("muscleUpAxis")),
-        "aim_axis": _axis_to_vector(options.read("muscleAimAxis")),
-        "flex": options.read("muscleFlex"),
-        "radius": options.read("muscleRadius"),
+        "up_axis": _axis_to_vector(_opt("muscleUpAxis", opts)),
+        "aim_axis": _axis_to_vector(_opt("muscleAimAxis", opts)),
+        "flex": _opt("muscleFlex", opts),
+        "radius": _opt("muscleRadius", opts),
     }
 
     muscle, root, tip = tools.make_muscle(a, b, scene, **kwargs)
@@ -919,7 +1093,7 @@ def create_muscle(selection=None):
 
 def _validate_hierarchy(hierarchy, tolerance=0.01):
     """Check for unsupported features in hierarchy of `root`"""
-    locked = []
+    # locked = []
     negative_scaled = []
     positive_scaled = []
 
@@ -934,8 +1108,8 @@ def _validate_hierarchy(hierarchy, tolerance=0.01):
             continue
 
         # Locked channels
-        if commands._is_locked(joint):
-            locked += [joint]
+        # if commands._is_locked(joint):
+        #     locked += [joint]
 
         tm = joint.transform(cmdx.sWorld)
         if any(value < 0 - tolerance for value in tm.scale()):
@@ -944,16 +1118,16 @@ def _validate_hierarchy(hierarchy, tolerance=0.01):
         if any(value > 1 + tolerance for value in tm.scale()):
             positive_scaled += [joint]
 
-    if locked:
-        message = []
-        for joint in locked:
-            message += ["  - Locked: %s" % joint]
+    # if locked:
+    #     message = []
+    #     for joint in locked:
+    #         message += ["  - Locked: %s" % joint]
 
-        report["issues"] += [
-            "\n%s"
-            "\n%d joint(s) in the selected hierarchy was locked"
-            % ("\n".join(message), len(locked))
-        ]
+    #     report["issues"] += [
+    #         "\n%s"
+    #         "\n%d joint(s) in the selected hierarchy was locked"
+    #         % ("\n".join(message), len(locked))
+    #     ]
 
     if negative_scaled:
         message = []
@@ -988,8 +1162,9 @@ def _validate_hierarchy(hierarchy, tolerance=0.01):
     return report
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_character(selection=None):
+def create_character(selection=None, **opts):
     scene = _find_current_scene()
     root = selection or cmdx.selection()
 
@@ -1015,13 +1190,13 @@ def create_character(selection=None):
     report = _validate_hierarchy(hierarchy)
 
     if report["issues"]:
-        map(log.warning, report["issues"])
+        list(map(log.warning, report["issues"]))
         return log.warning("%d issue(s) was found" % len(report["issues"]))
 
     kwargs = {
-        "copy": options.read("characterCopy"),
-        "control": options.read("characterControl"),
-        "normalise_shapes": options.read("characterNormalise"),
+        "copy": _opt("characterCopy", opts),
+        "control": _opt("characterControl", opts),
+        "normalise_shapes": _opt("characterNormalise", opts),
     }
 
     tools.create_character(root, scene, **kwargs)
@@ -1054,8 +1229,9 @@ def _find_rigid(node, autocreate=False):
 
 
 @commands.with_undo_chunk
-def create_constraint(selection=None, constraint_type=None, select=False):
-    constraint_type = constraint_type or options.read("constraintType")
+def create_constraint(selection=None, **opts):
+    select = _opt("constraintSelect", opts)
+    constraint_type = _opt("constraintType", opts)
     selection = selection or cmdx.selection()
 
     if selection and selection[0].type() == "rdConstraint":
@@ -1081,7 +1257,7 @@ def create_constraint(selection=None, constraint_type=None, select=False):
         "parent": parent,
         "child": child,
         "scene": scene,
-        "maintain_offset": options.read("maintainOffset"),
+        "maintain_offset": _opt("maintainOffset", opts),
     }
 
     if constraint_type == "Point":
@@ -1104,7 +1280,7 @@ def create_constraint(selection=None, constraint_type=None, select=False):
             "Unrecognised constraint type '%s'" % constraint_type
         )
 
-    guide_strength = options.read("constraintGuideStrength")
+    guide_strength = _opt("constraintGuideStrength", opts)
     if guide_strength > 0:
         with cmdx.DagModifier() as mod:
             mod.set_attr(con["driveStrength"], guide_strength)
@@ -1213,38 +1389,38 @@ def convert_to_socket(node):
     return kSuccess
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_point_constraint(selection=None):
-    options.write("constraintType", "Point")
-    return create_constraint(selection)
+def create_point_constraint(selection=None, **opts):
+    return create_constraint(selection, **{"constraintType": "Point"})
+
+
+@_replayable
+@commands.with_undo_chunk
+def create_orient_constraint(selection=None, **opts):
+    return create_constraint(selection, **{"constraintType": "Orient"})
+
+
+@_replayable
+@commands.with_undo_chunk
+def create_parent_constraint(selection=None, **opts):
+    return create_constraint(selection, **{"constraintType": "Parent"})
+
+
+@_replayable
+@commands.with_undo_chunk
+def create_hinge_constraint(selection=None, **opts):
+    return create_constraint(selection, **{"constraintType": "Hinge"})
+
+
+@_replayable
+@commands.with_undo_chunk
+def create_socket_constraint(selection=None, **opts):
+    return create_constraint(selection, **{"constraintType": "Socket"})
 
 
 @commands.with_undo_chunk
-def create_orient_constraint(selection=None):
-    options.write("constraintType", "Orient")
-    return create_constraint(selection)
-
-
-@commands.with_undo_chunk
-def create_parent_constraint(selection=None):
-    options.write("constraintType", "Parent")
-    return create_constraint(selection)
-
-
-@commands.with_undo_chunk
-def create_hinge_constraint(selection=None):
-    options.write("constraintType", "Hinge")
-    return create_constraint(selection)
-
-
-@commands.with_undo_chunk
-def create_socket_constraint(selection=None):
-    options.write("constraintType", "Socket")
-    return create_constraint(selection)
-
-
-@commands.with_undo_chunk
-def set_initial_state(selection=None):
+def set_initial_state(selection=None, **opts):
     rigids = []
     selection = selection or cmdx.selection()
 
@@ -1267,8 +1443,9 @@ def set_initial_state(selection=None):
     return kSuccess
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_driven_control(selection=None):
+def create_driven_control(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
 
@@ -1309,8 +1486,9 @@ def create_driven_control(selection=None):
     return kSuccess
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_kinematic_control(selection=None):
+def create_kinematic_control(selection=None, **opts):
     controls = []
 
     for node in selection or cmdx.selection():
@@ -1507,8 +1685,9 @@ def delete_all_physics(selection=None):
         return log.warning("No Ragdoll physics found")
 
 
+@_replayable
 @commands.with_undo_chunk
-def create_dynamic_control(selection=None):
+def create_dynamic_control(selection=None, **opts):
     chain = selection or cmdx.selection(type="transform")
 
     if not chain or len(chain) < 2:
@@ -1521,18 +1700,18 @@ def create_dynamic_control(selection=None):
     report = _validate_hierarchy(chain)
 
     if report["issues"]:
-        map(log.warning, report["issues"])
+        list(map(log.warning, report["issues"]))
         return log.warning("%d issue(s) was found" % len(report["issues"]))
 
     scene = _find_current_scene()
 
     kwargs = {
-        "use_capsules": options.read("dynamicControlShapeType") == "Capsule",
-        "auto_blend": options.read("dynamicControlAutoBlend"),
-        "auto_influence": options.read("dynamicControlAutoInfluence"),
-        "auto_multiplier": options.read("dynamicControlAutoMultiplier"),
+        "use_capsules": _opt("dynamicControlShapeType", opts) == "Capsule",
+        "auto_blend": _opt("dynamicControlAutoBlend", opts),
+        "auto_influence": _opt("dynamicControlAutoInfluence", opts),
+        "auto_multiplier": _opt("dynamicControlAutoMultiplier", opts),
         "central_blend": (
-            options.read("dynamicControlBlendMethod") == "From Root"
+            _opt("dynamicControlBlendMethod", opts) == "From Root"
         ),
     }
 
@@ -1593,6 +1772,8 @@ def normalise_shapes(selection=None):
         root = root.parent()
 
     commands.normalise_shapes(root)
+
+    return True
 
 
 def multiply_rigids(selection=None):

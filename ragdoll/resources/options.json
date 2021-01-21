@@ -303,6 +303,12 @@
         "default": true,
         "help": "Check whether the selected transform has a non-zero rotatePivot; they are unsupported and will be zeroed out."
     },
+    "validatePlaybackSpeed": {
+        "name": "validatePlaybackSpeed",
+        "type": "Boolean",
+        "default": true,
+        "help": "Make sure Maya's playback speed is set to 'Play every frame'."
+    },
     "autoHideShapeAttributes": {
         "name": "autoHideShapeAttributes",
         "type": "Boolean",

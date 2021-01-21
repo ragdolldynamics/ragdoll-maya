@@ -1,4 +1,11 @@
 {
+    "showMessages": {
+        "label": "Show Messages",
+        "icon": "messageboard.png",
+        "summary": "Display warnings and errors in the Message Board",
+        "description": "The message board provides information about warnings and critical errors that have occurred during the current Maya session. They are indicated by the (1) number of the Ragdoll menu."
+    },
+
     "activeRigid": {
         "label": "Active Rigid",
         "icon": "rigid.png",
@@ -311,7 +318,8 @@
             "autoHideShapeAttributes",
             "globalsValidations",
             "validateEvaluationMode",
-            "validateRotatePivot"
+            "validateRotatePivot",
+            "validatePlaybackSpeed"
         ]
     },
     "selectRigids": {

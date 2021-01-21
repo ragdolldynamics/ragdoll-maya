@@ -1727,3 +1727,54 @@ def warn(option, title, message, call_to_action, actions):
             return func()
 
     return False
+
+
+class MessageBoard(QtWidgets.QDialog):
+    def __init__(self, records, parent=None):
+        super(MessageBoard, self).__init__(parent)
+        self.setWindowTitle("Ragdoll Message Board")
+        self.setMinimumWidth(px(600))
+        self.setMinimumHeight(px(300))
+
+        panels = {
+            "body": QtWidgets.QWidget(),
+            "footer": QtWidgets.QWidget(),
+        }
+
+        widgets = {
+            "board": QtWidgets.QListWidget(),
+            "close": QtWidgets.QPushButton("Close"),
+        }
+
+        count = 1
+        for index, record in enumerate(records):
+            if index < len(records) - 1:
+                next_record = records[index + 1]
+
+                if next_record.msg == record.msg:
+                    count += 1
+                    continue
+
+            msg = "%s" % record.msg
+
+            if count > 1:
+                msg += " (%d)" % count
+
+            widgets["board"].addItem(msg)
+            count = 1
+
+        layout = QtWidgets.QVBoxLayout(panels["body"])
+        layout.addWidget(widgets["board"])
+
+        layout = QtWidgets.QHBoxLayout(panels["footer"])
+        layout.addWidget(widgets["close"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(panels["body"])
+        layout.addWidget(panels["footer"])
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        widgets["close"].clicked.connect(self.close)
+
+        self._panels = panels
+        self._widgets = widgets

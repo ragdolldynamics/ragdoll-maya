@@ -277,12 +277,18 @@ def _connect_active_blend(mod, rigid):
             dst = pair_blend[pair_attr]
             mod.connect(src, dst)
 
-    mod.connect(pair_blend["outTranslateX"], transform["translateX"])
-    mod.connect(pair_blend["outTranslateY"], transform["translateY"])
-    mod.connect(pair_blend["outTranslateZ"], transform["translateZ"])
-    mod.connect(pair_blend["outRotateX"], transform["rotateX"])
-    mod.connect(pair_blend["outRotateY"], transform["rotateY"])
-    mod.connect(pair_blend["outRotateZ"], transform["rotateZ"])
+    for src, dst in (("outTranslateX", "translateX"),
+                     ("outTranslateY", "translateY"),
+                     ("outTranslateZ", "translateZ"),
+                     ("outRotateX", "rotateX"),
+                     ("outRotateY", "rotateY"),
+                     ("outRotateZ", "rotateZ")):
+
+        if transform[dst].locked:
+            log.warning("%s skipped, channel locked" % transform[dst].path())
+            continue
+
+        mod.connect(pair_blend[src], transform[dst])
 
     con = rigid.sibling(type="rdConstraint")
 
@@ -340,14 +346,27 @@ def _connect_active_blend(mod, rigid):
 
 
 def _connect_active_exclusive(mod, rigid):
+    """Ragdoll takes exclusive control over a transform
+
+    E.g. a lone box or unkeyed control. This is most performant and yields
+    the most simple network. It does however not support keying once connected.
+
+    """
+
     transform = rigid.parent()
 
-    mod.connect(rigid["outputTranslateX"], transform["translateX"])
-    mod.connect(rigid["outputTranslateY"], transform["translateY"])
-    mod.connect(rigid["outputTranslateZ"], transform["translateZ"])
-    mod.connect(rigid["outputRotateX"], transform["rotateX"])
-    mod.connect(rigid["outputRotateY"], transform["rotateY"])
-    mod.connect(rigid["outputRotateZ"], transform["rotateZ"])
+    for src, dst in (("outputTranslateX", "translateX"),
+                     ("outputTranslateY", "translateY"),
+                     ("outputTranslateZ", "translateZ"),
+                     ("outputRotateX", "rotateX"),
+                     ("outputRotateY", "rotateY"),
+                     ("outputRotateZ", "rotateZ")):
+
+        if transform[dst].locked:
+            log.warning("%s skipped, channel locked" % transform[dst].path())
+            continue
+
+        mod.connect(rigid[src], transform[dst])
 
     # Remove unsupported additional transforms
     for channel in ("rotatePivot",
@@ -1335,9 +1354,9 @@ def _attach_bodies(parent, child, scene):
     return con
 
 
-def _is_locked(node):
-    attrs = ("tx", "ty", "tz", "rx", "ry", "rz")
-    return (any(not node[a].editable for a in attrs))
+def _is_locked(node, channels="tr"):
+    attrs = [chan + ax for chan in channels for ax in "xyz"]
+    return any(not node[a].editable for a in attrs)
 
 
 @with_undo_chunk

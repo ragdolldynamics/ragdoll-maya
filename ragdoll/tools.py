@@ -4,7 +4,6 @@ These combine several API functions to create more high-level functionality
 
 """
 
-import sys
 import logging
 
 from maya import cmds
@@ -528,14 +527,15 @@ def create_dynamic_control(chain,
 
     def _auto_initial_state(mod, rigid, blend):
         anim = mod.create_node("composeMatrix", name="matrixFromAnimation")
-        mod.connect(blend["inTranslate"], anim["inputTranslate"])
-        mod.connect(blend["inRotate"], anim["inputRotate"])
+        mod.connect(blend["inTranslate1"], anim["inputTranslate"])
+        mod.connect(blend["inRotate1"], anim["inputRotate"])
 
         initial_state = mod.create_node("decomposeMatrix", name="initialState")
         parent = rigid.parent().parent()
 
         if parent is not None:
-            matrix = parent["worldMatrix"][0]
+            mod.do_it()
+            matrix = parent["worldMatrix"][0].as_matrix()
             commands._set_matrix(initial_state["inputMatrix"], matrix)
 
         mult = mod.create_node("multMatrix", name="animatedInitialState")

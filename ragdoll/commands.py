@@ -394,6 +394,9 @@ def create_scene():
         # Record for backwards compatibility
         mod.set_attr(scene["version"], _version())
 
+        # Tag for automated deletion
+        mod.add_attr(tm, cmdx.Boolean("_ragdollExclusive", default=True))
+
     return scene
 
 
@@ -1961,31 +1964,22 @@ def delete_all_physics():
 
     """
 
-    all_physics = []
-    for node_type in ("rdScene",
-                      "rdRigid",
-                      "rdConstraint",
-                      "rdControl",
-                      "rdForce",
-                      "rdSlice"):
-        all_physics += cmds.ls(type=node_type)
+    # Programmatically figure out what nodes are ours
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    all_physics = cmdx.ls(type=all_nodetypes)
+    count = len(all_physics)
 
-    # Remove transforms too
-    all_physics += [
-        str(scene.parent()) for scene in cmdx.ls(type="rdScene")
-    ]
+    suspects = []
 
-    # Remove custom attributes
+    # Exclusive transforms
+    for node in all_physics:
+        suspects += [node.parent()]
+
+    if all_physics:
+        cmds.delete(map(str, all_physics))
+
+    # Remove transforms and custom attributes
     with cmdx.DagModifier() as mod:
-        suspects = []
-
-        # Dynamic Controls
-        for rigid in cmdx.ls(type="rdRigid"):
-            suspects += [rigid.parent()]
-
-        for ctrl in cmdx.ls(type="rdControl"):
-            suspects += [ctrl]
-
         for suspect in suspects:
             if "_ragdollAttributes" in suspect:
                 # Get rid of any attributes we made on the
@@ -2004,12 +1998,8 @@ def delete_all_physics():
             # Was the transform created exclusively for this node?
             if "_ragdollExclusive" in suspect:
                 mod.delete_node(suspect)
-                mod.delete_attr(suspect["_ragdollExclusive"])
 
-    if all_physics:
-        count = len(all_physics)
-        cmds.delete(all_physics)
-        return count
+    return count
 
 
 def normalise_shapes(root, max_delta=0.25):

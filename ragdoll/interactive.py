@@ -78,8 +78,7 @@ __.previousvars = {
 
 
 # Recording-related data
-_command_to_menuitem = {}
-_recorded_commands = []
+_recorded_actions = []
 
 
 def _print_exception():
@@ -106,7 +105,13 @@ def _on_scene_open(*args):
         _evaluate_need_to_upgrade()
 
 
-def no_standalone(func):
+def _graphical(func):
+    """Wrapper for functions that rely on being displayed
+
+    Mostly for CI. These are simply ignored.
+
+    """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         if _is_standalone():
@@ -118,7 +123,7 @@ def no_standalone(func):
 def _selected_channels():
     """Get currently selected attributes from the channelbox
 
-    From here: http://forums.cgsociety.org/showthread.php
+    Reference: http://forums.cgsociety.org/showthread.php
                       ?f=89&t=892246&highlight=main+channelbox
 
     """
@@ -143,6 +148,8 @@ def _selected_channels():
                              selectedOutputAttributes=True,
                              query=True) or []
 
+    # Returned attributes are shortest possible,
+    # e.g. 'tx' instead of 'translateX'
     return attrs
 
 
@@ -165,6 +172,7 @@ def install():
     install_plugin()
     licence.install(RAGDOLL_AUTO_SERIAL)
     options.install()
+    cmdx.install()
 
     if not _is_standalone():
         install_callbacks()
@@ -198,6 +206,8 @@ def uninstall():
 
     # Call last, for Maya to properly unload and clean up
     uninstall_plugin()
+
+    cmdx.uninstall()
 
     # Erase all trace
     for module in sys.modules.copy():
@@ -373,7 +383,7 @@ def install_menu():
             kwargs["command"] = script
 
             # Create a reverse-mapping for recording
-            _command_to_menuitem[command.__name__] = key
+            __.actiontokey[command.__name__] = key
 
         if "icon" in opts:
             icon = _resource(os.path.join("icons", opts["icon"]))
@@ -520,6 +530,26 @@ def show_messageboard():
     update_menu()
 
 
+def replay(actions):
+    this = sys.modules[__name__]
+
+    for action in actions:
+        func = getattr(this, action["action"])
+
+        # Avoid recursion
+        func = this._replay(func)
+
+        options = action["options"]
+        cmds.select(action["selection"])
+        func(**options)
+
+
+def show_replayer():
+    win = ui.Replayer(_recorded_actions, parent=ui.MayaWindow())
+    win.replay_clicked.connect(replay)
+    win.show()
+
+
 def update_menu():
     count = len(RagdollGuiLogHandler.history)
 
@@ -661,7 +691,7 @@ def _find_current_scene(autocreate=True):
     return scene
 
 
-@no_standalone
+@_graphical
 def warn_about_dg():
     def ignore():
         return True
@@ -689,7 +719,7 @@ def warn_about_dg():
     )
 
 
-@no_standalone
+@_graphical
 def warn_about_pivot():
     return ui.warn(
         option="validateRotatePivot",
@@ -711,24 +741,26 @@ def warn_about_pivot():
     )
 
 
-@no_standalone
+@_graphical
 def validate_playbackspeed():
     play_every_frame = cmds.optionVar(query="timeSliderPlaySpeed") == 0.0
 
-    if not play_every_frame:
-        return ui.warn(
-            option="validatePlaybackSpeed",
-            title="Play every frame",
-            message=(
-                "Ensure your playback speed is set to 'Play every frame' "
-                "to avoid frame drops, these can break a simulation and "
-                "generally causes odd things to happen."
-            ),
-            call_to_action="Go to Maya Preferences to change this.",
-            actions=[
-                ("Ok", lambda: True)
-            ]
-        )
+    if play_every_frame:
+        return True
+
+    return ui.warn(
+        option="validatePlaybackSpeed",
+        title="Play every frame",
+        message=(
+            "Ensure your playback speed is set to 'Play every frame' "
+            "to avoid frame drops, these can break a simulation and "
+            "generally causes odd things to happen."
+        ),
+        call_to_action="Go to Maya Preferences to change this.",
+        actions=[
+            ("Ok", lambda: True)
+        ]
+    )
 
 
 def _replay(func):
@@ -744,7 +776,7 @@ def _replay(func):
 
 
 def _replayable(func):
-    """Enable replay of this command
+    """Enable replay of this action
 
     The animator can save a series of commands as a script,
     and recall these later with optional customisations on e.g.
@@ -752,7 +784,7 @@ def _replayable(func):
 
     """
 
-    def _append(root, command):
+    def _append(root, action):
         with cmdx.DagModifier() as mod:
             if not root.has_attr("_ragdollHistory"):
                 mod.add_attr(root, cmdx.String("_ragdollHistory"))
@@ -770,16 +802,16 @@ def _replayable(func):
                 )
                 history = []
 
-            history.append(command)
+            history.append(action)
             mod.set_attr(root["_ragdollHistory"], json.dumps(history))
 
     def _record(selection):
-        key = _command_to_menuitem[func.__name__]
+        key = __.actiontokey[func.__name__]
         item = __.menuitems[key]
         opt = item.get("options", [])
 
-        command = {
-            "command": func.__name__,
+        action = {
+            "name": func.__name__,
 
             # For posterity and UI
             "time": time.time(),
@@ -799,14 +831,21 @@ def _replayable(func):
             }
         }
 
-        _append(selection[0], command)
+        _recorded_actions.append(action)
+        _append(selection[0], action)
 
     @functools.wraps(func)
     def wrapper(selection=None, **kwargs):
         selection = selection or cmdx.selection()
 
         if not kwargs.get("_replay") and selection:
-            _record(selection)
+
+            try:
+                _record(selection)
+            except Exception:
+                # This *cannot* cause function to not get called
+                import traceback
+                traceback.print_exc()
 
         return func(selection, **kwargs)
 
@@ -859,6 +898,8 @@ def create_scene(selection=None):
 
 
 def has_valid_rotatepivot(transform):
+    """Ragdoll currently does not support any custom pivot or axis"""
+
     if not options.read("validateRotatePivot"):
         return True
 
@@ -916,6 +957,12 @@ def create_active_rigid(selection=None, **opts):
         if selection[0].shape("rdRigid"):
             # The user meant to convert the selection
             return convert_rigid(selection, opts)
+
+    report = _validate_transforms(selection)
+
+    if report["issues"]:
+        list(map(log.warning, report["issues"]))
+        return log.warning("%d issue(s) was found" % len(report["issues"]))
 
     previous = None
     select = _opt("rigidSelect", opts)
@@ -1036,7 +1083,8 @@ def create_link(*args):
 
     scene = _find_current_scene()
     for node in cmdx.selection():
-        assert node.isA(cmdx.kJoint), "%s must be a joint" % node
+        if not node.isA(cmdx.kJoint):
+            return log.error("%s must be a joint" % node)
 
         link = commands.create_link(node, scene)
         links += [link]
@@ -1060,13 +1108,15 @@ def create_muscle(selection=None, **opts):
     except ValueError:
         return log.warning("Select root and tip anchors of new muscle")
 
-    assert all(node.isA(cmdx.kTransform) for node in (a, b)), (
-        "Select two transforms for root and tip anchors of muscle"
-    )
+    if not all(node.isA(cmdx.kTransform) for node in (a, b)):
+        return log.error(
+            "Select two transforms for root and tip anchors of muscle"
+        )
 
-    assert all(node.parent() for node in (a, b)), (
-        "Anchors must have a parent, see muscle documentation for details"
-    )
+    if not all(node.parent() for node in (a, b)):
+        return log.error(
+            "Anchors must have a parent, see muscle documentation for details"
+        )
 
     new_scene = not cmdx.ls(type="rdScene")
     scene = _find_current_scene()
@@ -1091,9 +1141,8 @@ def create_muscle(selection=None, **opts):
     return kSuccess
 
 
-def _validate_hierarchy(hierarchy, tolerance=0.01):
-    """Check for unsupported features in hierarchy of `root`"""
-    # locked = []
+def _validate_transforms(nodes, tolerance=0.01):
+    """Check for unsupported features in nodes of `root`"""
     negative_scaled = []
     positive_scaled = []
 
@@ -1101,44 +1150,24 @@ def _validate_hierarchy(hierarchy, tolerance=0.01):
         "issues": []
     }
 
-    for joint in hierarchy:
-
-        # Tip joints don't count
-        if not joint.child(type="joint"):
-            continue
-
-        # Locked channels
-        # if commands._is_locked(joint):
-        #     locked += [joint]
-
-        tm = joint.transform(cmdx.sWorld)
+    for node in nodes:
+        tm = node.transform(cmdx.sWorld)
         if any(value < 0 - tolerance for value in tm.scale()):
-            negative_scaled += [joint]
+            negative_scaled += [node]
 
         if any(value > 1 + tolerance for value in tm.scale()):
-            positive_scaled += [joint]
-
-    # if locked:
-    #     message = []
-    #     for joint in locked:
-    #         message += ["  - Locked: %s" % joint]
-
-    #     report["issues"] += [
-    #         "\n%s"
-    #         "\n%d joint(s) in the selected hierarchy was locked"
-    #         % ("\n".join(message), len(locked))
-    #     ]
+            positive_scaled += [node]
 
     if negative_scaled:
         message = []
-        for joint in negative_scaled:
+        for node in negative_scaled:
             message += [
-                "  - Scaled: %s" % joint
+                "  - Scaled: %s" % node
             ]
 
         report["issues"] += [
             "\n%s"
-            "\n%d joint(s) has negative scale" % (
+            "\n%d node(s) has negative scale" % (
                 "\n".join(message),
                 len(negative_scaled),
             )
@@ -1146,14 +1175,14 @@ def _validate_hierarchy(hierarchy, tolerance=0.01):
 
     if positive_scaled:
         message = []
-        for joint in positive_scaled:
+        for node in positive_scaled:
             message += [
-                "  - Scaled: %s" % joint
+                "  - Scaled: %s" % node
             ]
 
         report["issues"] += [
             "\n%s"
-            "\n%d joint(s) were scaled" % (
+            "\n%d node(s) were scaled" % (
                 "\n".join(message),
                 len(positive_scaled),
             )
@@ -1187,7 +1216,7 @@ def create_character(selection=None, **opts):
         if joint.child(type="joint")
     ]
 
-    report = _validate_hierarchy(hierarchy)
+    report = _validate_transforms(hierarchy)
 
     if report["issues"]:
         list(map(log.warning, report["issues"]))
@@ -1697,7 +1726,7 @@ def create_dynamic_control(selection=None, **opts):
             "The first selection will be passive (i.e. animated)."
         )
 
-    report = _validate_hierarchy(chain)
+    report = _validate_transforms(chain)
 
     if report["issues"]:
         list(map(log.warning, report["issues"]))
@@ -1920,16 +1949,16 @@ def _Arg(var, label=None, callback=None):
 
 def _Window(key, command):
     parent = ui.MayaWindow()
-    opts = __.menuitems[key]
-    args = map(_Arg, opts.get("options", []))
+    menuitem = __.menuitems[key]
+    args = map(_Arg, menuitem.get("options", []))
 
     win = ui.Options(
         key,
         args,
         command=repeatable(command),
-        icon=_resource("icons", opts["icon"]),
-        description=opts["summary"],
-        media=opts.get("media", []),
+        icon=_resource("icons", menuitem["icon"]),
+        description=menuitem["summary"],
+        media=menuitem.get("media", []),
         parent=parent
     )
 

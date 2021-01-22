@@ -5,6 +5,7 @@ __ = type("internal", (object,), {})
 __.installed = False
 __.menu = None
 __.menuitems = {}
+__.actiontokey = {}
 __.optionvars = {}
 __.xbmlangpath = "xbmlangpath"
 __.aetemplates = "aetemplates"

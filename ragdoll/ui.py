@@ -1778,3 +1778,122 @@ class MessageBoard(QtWidgets.QDialog):
 
         self._panels = panels
         self._widgets = widgets
+
+
+class Replayer(QtWidgets.QDialog):
+    replay_clicked = QtCore.Signal(object)
+
+    def __init__(self, actions, parent=None):
+        super(Replayer, self).__init__(parent)
+        self.setWindowTitle("Ragdoll Replay")
+        self.setMinimumWidth(px(600))
+        self.setMinimumHeight(px(300))
+
+        panels = {
+            "body": QtWidgets.QWidget(),
+            "footer": QtWidgets.QWidget(),
+        }
+
+        widgets = {
+            "sequence": QtWidgets.QListWidget(),
+            "selection": QtWidgets.QWidget(),
+            "sidepanel": QtWidgets.QWidget(),
+            "replayAll": QtWidgets.QPushButton("Replay All"),
+            "replaySelected": QtWidgets.QPushButton("Replay Selected"),
+            "close": QtWidgets.QPushButton("Close"),
+        }
+
+        for index, action in enumerate(actions):
+            key = __.actiontokey[action["name"]]
+            menuitem = __.menuitems[key]
+
+            label = menuitem["label"]
+            icon = _resource("icons", menuitem["icon"])
+            icon = QtGui.QIcon(icon)
+
+            item = QtWidgets.QListWidgetItem(icon, label)
+            widgets["sequence"].addItem(item)
+
+        layout = QtWidgets.QHBoxLayout(panels["body"])
+        layout.addWidget(widgets["sequence"])
+        layout.addWidget(widgets["sidepanel"], 1)
+
+        layout = QtWidgets.QHBoxLayout(panels["footer"])
+        layout.addWidget(widgets["replayAll"])
+        layout.addWidget(widgets["replaySelected"])
+        layout.addWidget(widgets["close"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(panels["body"])
+        layout.addWidget(panels["footer"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        widgets["sidepanel"].setMinimumWidth(px(300))
+
+        widgets["replayAll"].clicked.connect(
+            self.on_replay_all_clicked)
+        widgets["replaySelected"].clicked.connect(
+            self.on_replay_selected_clicked)
+        widgets["close"].clicked.connect(self.close)
+        widgets["sequence"].currentRowChanged.connect(self.on_action_changed)
+
+        self._actions = actions
+        self._panels = panels
+        self._widgets = widgets
+
+    def on_replay_all_clicked(self):
+        self.replay_clicked.emit(self._actions)
+
+    def on_replay_selected_clicked(self):
+        self.replay_clicked.emit(self._actions)
+
+    def on_action_changed(self, index):
+        self._widgets["sidepanel"].deleteLater()
+
+        action = self._actions[index]
+        key = __.actiontokey[action["name"]]
+        menuitem = __.menuitems[key]
+
+        def _Arg(opt):
+            import copy
+            var = __.optionvars[opt]
+            var = copy.deepcopy(var)  # Allow edits to internal lists etc.
+
+            cls = getattr(qargparse, var.pop("type"))
+            arg = cls(**var)
+            return arg
+
+        args = map(_Arg, menuitem.get("options", []))
+
+        parser = qargparse.QArgumentParser(args, style={
+            "comboboxFillWidth": False,
+
+            # We'll defer these to the footer
+            "useTooltip": False,
+        })
+
+        icon = _resource("icons", menuitem["icon"])
+        parser.setIcon(icon)
+        parser.setDescription(menuitem["summary"])
+
+        selection = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(selection)
+
+        for sel in action["selection"]:
+            line = QtWidgets.QLineEdit()
+            line.setText(sel)
+            line.setEnabled(False)
+            layout.addWidget(line)
+
+        sidepanel = QtWidgets.QWidget()
+        sidepanel.setMinimumWidth(px(300))
+
+        layout = QtWidgets.QVBoxLayout(sidepanel)
+        layout.addWidget(selection)
+        layout.addWidget(parser)
+
+        layout = self._panels["body"].layout()
+        layout.addWidget(sidepanel, 1)
+
+        self._widgets["sidepanel"] = sidepanel

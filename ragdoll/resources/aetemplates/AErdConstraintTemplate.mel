@@ -40,7 +40,7 @@ global proc AErdConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "drawParentFrame";
             editorTemplate -addControl "drawChildFrame";
             editorTemplate -addControl "drawLimit";
-            editorTemplate -label "Draw Goal" -addControl "drawDrive";
+            editorTemplate -addControl "drawDrive";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

@@ -44,6 +44,8 @@ ENABLE_PEP8 = True
 
 # Support undo/redo
 ENABLE_UNDO = not SAFE_MODE
+
+# Required
 ENABLE_PLUG_REUSE = True
 
 if PY3:
@@ -110,6 +112,7 @@ AngleType = om.MAngle
 ColorType = om.MColor
 
 ExistError = type("ExistError", (RuntimeError,), {})
+LockedError = type("LockedError", (ValueError,), {})
 DoNothing = None
 
 # Reusable objects, for performance
@@ -4437,6 +4440,20 @@ class _BaseModifier(object):
         if isinstance(dst, Plug):
             dst = dst._mplug
 
+        assert isinstance(src, om.MPlug), "%s must be of type MPlug" % src
+        assert isinstance(dst, om.MPlug), "%s must be of type MPlug" % dst
+
+        if dst.isLocked:
+            # Modifier can't perform this connect, but wouldn't
+            # tell you about it until you `doIt()`. Bad.
+            path = dst.partialName(
+                includeNodeName=False,
+                useLongNames=True,
+                useFullAttributePath=False
+            )
+
+            raise LockedError("Channel locked, cannot connect '%s'" % path)
+
         if force:
             # Disconnect any plug connected to `other`
             disconnected = False
@@ -4686,6 +4703,11 @@ class DagModifier(_BaseModifier):
 
     if ENABLE_PEP8:
         create_node = createNode
+
+
+class HashableTime(om.MTime):
+    def __hash__(self):
+        return hash(self.value)
 
 
 # Convenience functions
@@ -5878,8 +5900,12 @@ def install():
     tempdir = tempfile.gettempdir()
     tempfname = os.path.join(tempdir, unique_plugin)
 
-    # Rename ourselves..
-    shutil.copy(__file__, tempfname)
+    # We can't know whether we're a .pyc or .py file,
+    # but we need to copy the .py file *only*
+    fname = os.path.splitext(__file__)[0] + ".py"
+
+    # Copy *and overwrite*
+    shutil.copy(fname, tempfname)
 
     # Now we're guaranteed to not interfere
     # with other versions of cmdx. Win!

@@ -9,7 +9,6 @@ import types
 import logging
 import operator
 import traceback
-import contextlib
 import collections
 from functools import wraps
 
@@ -45,8 +44,6 @@ ENABLE_PEP8 = True
 
 # Support undo/redo
 ENABLE_UNDO = not SAFE_MODE
-
-# Required
 ENABLE_PLUG_REUSE = True
 
 if PY3:
@@ -5784,20 +5781,19 @@ Distance4Attribute = Distance4
 # --------------------------------------------------------
 
 
+# E.g. ragdoll.vendor.cmdx => ragdoll_vendor_cmdx_plugin.py
+unique_plugin = "cmdx_%s_plugin.py" % __version__.replace(".", "_")
+
 # Support for multiple co-existing versions of apiundo.
-# NOTE: This is important for vendoring, as otherwise a vendored apiundo
-# could register e.g. cmds.apiUndo() first, causing a newer version
-# to inadvertently use this older command (or worse yet, throwing an
-# error when trying to register it again).
-command = "_cmdxApiUndo_%s" % __version__.replace(".", "_")
+unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
 
 # This module is both a Python module and Maya plug-in.
 # Data is shared amongst the two through this "module"
-name = "_cmdxShared_"
-if name not in sys.modules:
-    sys.modules[name] = types.ModuleType(name)
+unique_shared = "cmdx_%s_shared" % __version__.replace(".", "_")
+if unique_shared not in sys.modules:
+    sys.modules[unique_shared] = types.ModuleType(unique_shared)
 
-shared = sys.modules[name]
+shared = sys.modules[unique_shared]
 shared.undo = None
 shared.redo = None
 shared.undos = {}
@@ -5816,7 +5812,7 @@ def commit(undo, redo=lambda: None):
     if not ENABLE_UNDO:
         return
 
-    if not hasattr(cmds, command):
+    if not hasattr(cmds, unique_command):
         install()
 
     # Precautionary measure.
@@ -5838,18 +5834,56 @@ def commit(undo, redo=lambda: None):
     shared.redos[shared.redo] = redo
 
     # Let Maya know that something is undoable
-    getattr(cmds, command)()
+    getattr(cmds, unique_command)()
 
 
 def install():
-    """Load this shared as a plug-in
+    """Load this module as a plug-in
 
-    Call this prior to using the shared
+    Inception time! :)
+
+    In order to facilitate undo, we need a custom command registered
+    with Maya's native plug-in system. To do that, we need a dedicated
+    file. We *could* register ourselves as that file, but what we need
+    is a unique instance of said command per distribution of cmdx.
+
+    Per distribution? Yes, because cmdx.py can be vendored with any
+    library, and we don't want cmdx.py from one vendor to interfere
+    with one from another.
+
+    Maya uses (pollutes) global memory in two ways that
+    matter to us here.
+
+    1. Plug-ins are referenced by name, not path. So there can only be
+        one "cmdx.py" for example. That's why we can't load this module
+        as-is but must instead write a new file somewhere, with a name
+        unique to this particular distribution.
+    2. Commands are referenced via the native `cmds` module, and there can
+        only be 1 command of any given name. So we can't just register e.g.
+        `cmdxUndo` if we want to support multiple versions of cmdx being
+        registered at once. Instead, we'll generate a unique name per
+        distribution of cmdx, like the plug-in itself.
+
+    We can't leverage things like sys.modules[__name__] or even
+    the __name__ variable, because the way Maya loads Python modules
+    as plug-ins is to copy/paste the text itself and call that. So there
+    *is* no __name__. Instead, we'll rely on each version being unique
+    and consistent.
 
     """
 
-    if ENABLE_UNDO:
-        cmds.loadPlugin(__file__, quiet=True)
+    import shutil
+    import tempfile
+
+    tempdir = tempfile.gettempdir()
+    tempfname = os.path.join(tempdir, unique_plugin)
+
+    # Rename ourselves..
+    shutil.copy(__file__, tempfname)
+
+    # Now we're guaranteed to not interfere
+    # with other versions of cmdx. Win!
+    cmds.loadPlugin(tempfname, quiet=True)
 
     self.installed = True
 
@@ -5865,9 +5899,9 @@ def uninstall():
         shared.redo = None
         shared.undos.clear()
         shared.redos.clear()
-        sys.modules.pop(name, None)
+        sys.modules.pop(unique_shared, None)
 
-        cmds.unloadPlugin(os.path.basename(__file__))
+        cmds.unloadPlugin(unique_plugin)
 
     self.installed = False
 
@@ -5898,13 +5932,13 @@ class _apiUndo(om.MPxCommand):
 
 def initializePlugin(plugin):
     om.MFnPlugin(plugin).registerCommand(
-        command,
+        unique_command,
         _apiUndo
     )
 
 
 def uninitializePlugin(plugin):
-    om.MFnPlugin(plugin).deregisterCommand(command)
+    om.MFnPlugin(plugin).deregisterCommand(unique_command)
 
 
 # --------------------------------------------------------

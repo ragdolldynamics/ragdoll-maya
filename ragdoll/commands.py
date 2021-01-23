@@ -277,18 +277,7 @@ def _connect_active_blend(mod, rigid):
             dst = pair_blend[pair_attr]
             mod.connect(src, dst)
 
-    for src, dst in (("outTranslateX", "translateX"),
-                     ("outTranslateY", "translateY"),
-                     ("outTranslateZ", "translateZ"),
-                     ("outRotateX", "rotateX"),
-                     ("outRotateY", "rotateY"),
-                     ("outRotateZ", "rotateZ")):
-
-        if transform[dst].locked:
-            log.warning("%s skipped, channel locked" % transform[dst].path())
-            continue
-
-        mod.connect(pair_blend[src], transform[dst])
+    _connect_transform(mod, pair_blend, transform)
 
     con = rigid.sibling(type="rdConstraint")
 
@@ -355,18 +344,7 @@ def _connect_active_exclusive(mod, rigid):
 
     transform = rigid.parent()
 
-    for src, dst in (("outputTranslateX", "translateX"),
-                     ("outputTranslateY", "translateY"),
-                     ("outputTranslateZ", "translateZ"),
-                     ("outputRotateX", "rotateX"),
-                     ("outputRotateY", "rotateY"),
-                     ("outputRotateZ", "rotateZ")):
-
-        if transform[dst].locked:
-            log.warning("%s skipped, channel locked" % transform[dst].path())
-            continue
-
-        mod.connect(rigid[src], transform[dst])
+    _connect_transform(mod, rigid, transform)
 
     # Remove unsupported additional transforms
     for channel in ("rotatePivot",
@@ -462,13 +440,7 @@ def create_rigid(node,
         shape = node.shape(type=("mesh", "nurbsCurve"))
 
     time = cmdx.encode("time1")
-    start_time = scene["startTime"]
-
-    if start_time._mplug.asMTime() == cmdx.currentTime():
-        rest = transform["worldMatrix"][0].asMatrix()
-    else:
-        with cmdx.Context(start_time):
-            rest = transform["worldMatrix"][0].asMatrix()
+    rest = transform["worldMatrix"][0].asMatrix()
 
     with cmdx.DagModifier() as mod:
         rigid = _rdrigid(mod, "rRigid", parent=transform)
@@ -954,6 +926,45 @@ def reorient(con):
         _set_matrix(con["childFrame"], child_frame)
 
 
+def _connect_transform(mod, node, transform):
+    attributes = {}
+
+    if node.type() == "rdRigid":
+        attributes = {
+            "outputTranslateX": "translateX",
+            "outputTranslateY": "translateY",
+            "outputTranslateZ": "translateZ",
+            "outputRotateX": "rotateX",
+            "outputRotateY": "rotateY",
+            "outputRotateZ": "rotateZ",
+        }
+
+    elif node.type() == "pairBlend":
+        attributes = {
+            "outTranslateX": "translateX",
+            "outTranslateY": "translateY",
+            "outTranslateZ": "translateZ",
+            "outRotateX": "rotateX",
+            "outRotateY": "rotateY",
+            "outRotateZ": "rotateZ",
+        }
+
+    else:
+        raise TypeError(
+            "I don't know how to connect type '%s'"
+            % type(node)
+        )
+
+    failed = []
+    for src, dst in attributes.items():
+        try:
+            mod.connect(node[src], transform[dst])
+        except ValueError:
+            failed += [dst]
+
+    return failed
+
+
 @with_undo_chunk
 def convert_rigid(rigid, passive=None):
     if isinstance(rigid, string_types):
@@ -984,15 +995,13 @@ def convert_rigid(rigid, passive=None):
             mod.set_attr(rigid["kinematic"], False)
             mod.disconnect(rigid["inputMatrix"])
 
+            # The user will expect a newly-turned rigid to collide
+            mod.set_attr(rigid["collide"], True)
+
             # Make sure inputMatrix has been disconnected
             mod.doIt()
 
-            mod.connect(rigid["outputTranslateX"], node["translateX"])
-            mod.connect(rigid["outputTranslateY"], node["translateY"])
-            mod.connect(rigid["outputTranslateZ"], node["translateZ"])
-            mod.connect(rigid["outputRotateX"], node["rotateX"])
-            mod.connect(rigid["outputRotateY"], node["rotateY"])
-            mod.connect(rigid["outputRotateZ"], node["rotateZ"])
+            _connect_transform(mod, rigid, node)
 
             mat = node["worldMatrix"][0].asMatrix()
             cmds.setAttr(rigid["restMatrix"].path(), mat, type="matrix")

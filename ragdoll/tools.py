@@ -355,17 +355,6 @@ def create_dynamic_control(chain,
     def _add_pairblend(mod, rigid):
         """Put a pairBlend between rigid and transform"""
         transform = rigid.parent()
-
-        if transform["translateX"].connection(type="pairBlend"):
-            return log.warning(
-                "%s skipped, already connected to a pairBlend" % transform
-            )
-
-        if not transform["translateX"].connection(type="rdRigid"):
-            return log.warning(
-                "%s skipped, already connected to a rigid" % transform
-            )
-
         constraint = rigid.sibling(type="rdConstraint")
 
         pair_blend = mod.create_node("pairBlend")
@@ -388,12 +377,7 @@ def create_dynamic_control(chain,
             dst = pair_blend[dst]
             mod.connect(src, dst)
 
-        mod.connect(pair_blend["outTranslateX"], transform["translateX"])
-        mod.connect(pair_blend["outTranslateY"], transform["translateY"])
-        mod.connect(pair_blend["outTranslateZ"], transform["translateZ"])
-        mod.connect(pair_blend["outRotateX"], transform["rotateX"])
-        mod.connect(pair_blend["outRotateY"], transform["rotateY"])
-        mod.connect(pair_blend["outRotateZ"], transform["rotateZ"])
+        commands._connect_transform(mod, pair_blend, transform)
 
         if not central_blend:
             if not transform.has_attr("blendSimulation"):
@@ -551,11 +535,10 @@ def create_dynamic_control(chain,
 
     parent = root
     parent_rigid = parent.shape(type="rdRigid")
-    do_nothing = None
 
     with cmdx.DagModifier() as mod:
         if parent_rigid is None:
-            parent_rigid = commands.create_rigid(parent, scene, passive=True)
+            parent_rigid = commands.create_passive_rigid(parent, scene)
 
             mod.set_attr(parent_rigid["drawShaded"], False)
 
@@ -594,11 +577,12 @@ def create_dynamic_control(chain,
 
             # Handle overlapping controllers, like branches
             if child_rigid is None:
-                child_rigid = commands.create_rigid(child, scene)
+                child_rigid = commands.create_active_rigid(child, scene)
                 mod.set_attr(child_rigid["drawShaded"], False)
+
             else:
-                child_rigid = commands.convert_rigid(
-                    child_rigid, passive=False)
+                child_rigid = commands.convert_rigid(child_rigid,
+                                                     passive=False)
 
             con = commands.socket_constraint(
                 previous_rigid, child_rigid, scene
@@ -660,8 +644,9 @@ def create_dynamic_control(chain,
             new_rigids += [child_rigid]
             new_constraints += [con]
 
-        with cmdx.DGModifier() as mod:
-            _auto_blend(mod, new_rigids, root) if auto_blend else do_nothing
+        if auto_blend:
+            with cmdx.DGModifier() as mod:
+                _auto_blend(mod, new_rigids, root)
 
         if auto_multiplier and new_rigids and new_constraints:
             _add_multiplier(new_constraints, root)

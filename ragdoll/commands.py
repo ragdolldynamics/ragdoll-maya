@@ -334,18 +334,7 @@ def _connect_active_blend(mod, rigid):
     _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
 
 
-def _connect_active_exclusive(mod, rigid):
-    """Ragdoll takes exclusive control over a transform
-
-    E.g. a lone box or unkeyed control. This is most performant and yields
-    the most simple network. It does however not support keying once connected.
-
-    """
-
-    transform = rigid.parent()
-
-    _connect_transform(mod, rigid, transform)
-
+def _remove_pivots(mod, transform):
     # Remove unsupported additional transforms
     for channel in ("rotatePivot",
                     "rotatePivotTranslate",
@@ -372,6 +361,20 @@ def _connect_active_exclusive(mod, rigid):
 
     if "jointOrient" in transform:
         mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+
+
+def _connect_active_exclusive(mod, rigid):
+    """Ragdoll takes exclusive control over a transform
+
+    E.g. a lone box or unkeyed control. This is most performant and yields
+    the most simple network. It does however not support keying once connected.
+
+    """
+
+    transform = rigid.parent()
+
+    _connect_transform(mod, rigid, transform)
+    _remove_pivots(mod, transform)
 
 
 @with_undo_chunk
@@ -519,16 +522,19 @@ def create_rigid(node,
                 mod.set_attr(rigid["mass"], geometry.mass())
 
     # Make the connections
-    try:
-        with cmdx.DagModifier() as mod:
+
+    with cmdx.DagModifier() as mod:
+        try:
             if passive:
                 _connect_passive(mod, rigid)
             else:
                 _connect_active(mod, rigid, existing=existing)
-    except Exception:
-        with cmdx.DagModifier() as mod:
+
+            mod.do_it()
+
+        except Exception:
             mod.delete_node(rigid)
-        raise
+            raise
 
     return rigid
 

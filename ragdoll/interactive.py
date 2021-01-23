@@ -958,11 +958,8 @@ def create_active_rigid(selection=None, **opts):
             # The user meant to convert the selection
             return convert_rigid(selection, opts)
 
-    report = _validate_transforms(selection)
-
-    if report["issues"]:
-        list(map(log.warning, report["issues"]))
-        return log.warning("%d issue(s) was found" % len(report["issues"]))
+    if not _validate_transforms(selection):
+        return
 
     previous = None
     select = _opt("rigidSelect", opts)
@@ -1145,10 +1142,8 @@ def _validate_transforms(nodes, tolerance=0.01):
     """Check for unsupported features in nodes of `root`"""
     negative_scaled = []
     positive_scaled = []
-
-    report = {
-        "issues": []
-    }
+    axes = []
+    issues = []
 
     for node in nodes:
         tm = node.transform(cmdx.sWorld)
@@ -1158,37 +1153,42 @@ def _validate_transforms(nodes, tolerance=0.01):
         if any(value > 1 + tolerance for value in tm.scale()):
             positive_scaled += [node]
 
-    if negative_scaled:
-        message = []
-        for node in negative_scaled:
-            message += [
-                "  - Scaled: %s" % node
-            ]
+        axis = node["rotateAxis"].read()
+        if (any(abs(value) > tolerance for value in axis)):
+            axes += [node]
 
-        report["issues"] += [
-            "\n%s"
-            "\n%d node(s) has negative scale" % (
-                "\n".join(message),
-                len(negative_scaled),
-            )
-        ]
+    issues += [
+        "%d node(s) has negative scale\n%s" % (
+            len(negative_scaled),
+            "\n".join(" - %s" % node for node in negative_scaled),
+        )
+    ]
 
-    if positive_scaled:
-        message = []
-        for node in positive_scaled:
-            message += [
-                "  - Scaled: %s" % node
-            ]
+    issues += [
+        "%d node(s) were scaled\n%s" % (
+            len(positive_scaled),
+            "\n".join(" - %s" % node for node in positive_scaled),
+        )
+    ]
 
-        report["issues"] += [
-            "\n%s"
-            "\n%d node(s) were scaled" % (
-                "\n".join(message),
-                len(positive_scaled),
-            )
-        ]
+    issues += [
+        "%d node(s) had a custom rotate axis\n%s" % (
+            len(axes),
+            "\n".join(" - %s" % node for node in axes),
+        )
+    ]
 
-    return report
+    if issues:
+        for issue in issues:
+            log.warning(issue)
+
+        log.warning("%d %s" % (
+            len(issues),
+            "issue was found" if len(issues) == 1 else
+            "issues were found"
+        ))
+
+    return False if issues else True
 
 
 @_replayable
@@ -1216,11 +1216,8 @@ def create_character(selection=None, **opts):
         if joint.child(type="joint")
     ]
 
-    report = _validate_transforms(hierarchy)
-
-    if report["issues"]:
-        list(map(log.warning, report["issues"]))
-        return log.warning("%d issue(s) was found" % len(report["issues"]))
+    if not _validate_transforms(hierarchy):
+        return
 
     kwargs = {
         "copy": _opt("characterCopy", opts),
@@ -1726,11 +1723,8 @@ def create_dynamic_control(selection=None, **opts):
             "The first selection will be passive (i.e. animated)."
         )
 
-    report = _validate_transforms(chain)
-
-    if report["issues"]:
-        list(map(log.warning, report["issues"]))
-        return log.warning("%d issue(s) was found" % len(report["issues"]))
+    if not _validate_transforms(chain):
+        return
 
     scene = _find_current_scene()
 

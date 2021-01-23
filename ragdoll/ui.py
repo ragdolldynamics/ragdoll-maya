@@ -1795,7 +1795,7 @@ class Replayer(QtWidgets.QDialog):
         }
 
         widgets = {
-            "sequence": QtWidgets.QListWidget(),
+            "queue": QtWidgets.QListWidget(),
             "selection": QtWidgets.QWidget(),
             "sidepanel": QtWidgets.QWidget(),
             "replayAll": QtWidgets.QPushButton("Replay All"),
@@ -1812,10 +1812,10 @@ class Replayer(QtWidgets.QDialog):
             icon = QtGui.QIcon(icon)
 
             item = QtWidgets.QListWidgetItem(icon, label)
-            widgets["sequence"].addItem(item)
+            widgets["queue"].addItem(item)
 
         layout = QtWidgets.QHBoxLayout(panels["body"])
-        layout.addWidget(widgets["sequence"])
+        layout.addWidget(widgets["queue"])
         layout.addWidget(widgets["sidepanel"], 1)
 
         layout = QtWidgets.QHBoxLayout(panels["footer"])
@@ -1836,7 +1836,7 @@ class Replayer(QtWidgets.QDialog):
         widgets["replaySelected"].clicked.connect(
             self.on_replay_selected_clicked)
         widgets["close"].clicked.connect(self.close)
-        widgets["sequence"].currentRowChanged.connect(self.on_action_changed)
+        widgets["queue"].currentRowChanged.connect(self.on_action_changed)
 
         self._actions = actions
         self._panels = panels

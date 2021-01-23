@@ -6,6 +6,7 @@ import logging
 import datetime
 
 from PySide2 import QtCore, QtWidgets, QtGui
+from maya.OpenMayaUI import MQtUtil
 import shiboken2
 
 from . import options, licence, __
@@ -101,12 +102,23 @@ def _with_entered_exited_signals(cls):
     return WidgetHoverFactory
 
 
+def hide_menuitem(item):
+    ptr = MQtUtil.findMenuItem(item)
+    item = shiboken2.wrapInstance(long(ptr), QtWidgets.QAction)
+    item.setVisible(False)
+
+
+def show_menuitem(item):
+    ptr = MQtUtil.findMenuItem(item)
+    item = shiboken2.wrapInstance(long(ptr), QtWidgets.QAction)
+    item.setVisible(True)
+
+
 def MayaWindow():
     """Fetch Maya window, along with whatever DPI it's got cooking"""
 
     # This will never change during the lifetime of this Python session
     if not self._maya_window:
-        from maya.OpenMayaUI import MQtUtil
         ptr = MQtUtil.mainWindow()
 
         if ptr is not None:

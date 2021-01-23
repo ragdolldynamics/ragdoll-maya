@@ -349,10 +349,6 @@ def uninstall_pyragdoll():
 
 
 def install_menu():
-    # In case a double-install is attempted (doh!)
-    if cmds.menu("MayaWindow|Ragdoll", query=True, exists=True):
-        __.menu = "MayaWindow|Ragdoll"
-
     if __.menu:
         uninstall_menu()
 
@@ -361,17 +357,16 @@ def install_menu():
                         parent="MayaWindow")
 
     def item(key, command=None, option=None, label=None, visible=True):
-        opts = __.menuitems[key]
+        menuitem = __.menuitems[key]
 
         kwargs = {
-            "label": opts.get("label", label or key),
-            "enable": opts.get("enable", True),
+            "label": menuitem.get("label", label or key),
+            "enable": menuitem.get("enable", True),
             "echoCommand": True,
             "image": "bad.png",
-            "visible": visible,
 
             # These show up in the Maya "Help Line" on hover
-            "annotation": opts.get("summary", ""),
+            "annotation": menuitem.get("summary", ""),
         }
 
         if command:
@@ -385,19 +380,23 @@ def install_menu():
             # Create a reverse-mapping for recording
             __.actiontokey[command.__name__] = key
 
-        if "icon" in opts:
-            icon = _resource(os.path.join("icons", opts["icon"]))
+        if "icon" in menuitem:
+            icon = _resource(os.path.join("icons", menuitem["icon"]))
             kwargs["image"] = icon
 
-        if "checkbox" in opts:
+        if "checkbox" in menuitem:
             kwargs["checkBox"] = True
 
-        opts["path"] = cmds.menuItem(**kwargs)
+        menuitem["path"] = cmds.menuItem(**kwargs)
 
         if option:
             cmds.menuItem(command=option, optionBox=True)
 
-        return opts["path"]
+        if not visible:
+            # The cmds.menuItem(visible=) flag was introduced in Maya 2019
+            ui.hide_menuitem(menuitem["path"])
+
+        return menuitem["path"]
 
     @contextlib.contextmanager
     def submenu(label, icon=None):
@@ -560,10 +559,12 @@ def update_menu():
 
     menu_item = __.menuitems["showMessages"]
     menu_kwargs = {
-        "visible": True if count else False,
         "label": "%s (%d)" % (menu_item["label"], count),
         "edit": True,
     }
+
+    change_visibility = ui.show_menuitem if count else ui.hide_menuitem
+    change_visibility(menu_item["path"])
 
     # Help the user understand there's a problem somewhere
     cmds.menu(__.menu, edit=True, label=label)
@@ -1157,26 +1158,29 @@ def _validate_transforms(nodes, tolerance=0.01):
         if (any(abs(value) > tolerance for value in axis)):
             axes += [node]
 
-    issues += [
-        "%d node(s) has negative scale\n%s" % (
-            len(negative_scaled),
-            "\n".join(" - %s" % node for node in negative_scaled),
-        )
-    ]
+    if negative_scaled:
+        issues += [
+            "%d node(s) has negative scale\n%s" % (
+                len(negative_scaled),
+                "\n".join(" - %s" % node for node in negative_scaled),
+            )
+        ]
 
-    issues += [
-        "%d node(s) were scaled\n%s" % (
-            len(positive_scaled),
-            "\n".join(" - %s" % node for node in positive_scaled),
-        )
-    ]
+    if positive_scaled:
+        issues += [
+            "%d node(s) were scaled\n%s" % (
+                len(positive_scaled),
+                "\n".join(" - %s" % node for node in positive_scaled),
+            )
+        ]
 
-    issues += [
-        "%d node(s) had a custom rotate axis\n%s" % (
-            len(axes),
-            "\n".join(" - %s" % node for node in axes),
-        )
-    ]
+    if axes:
+        issues += [
+            "%d node(s) had a custom rotate axis\n%s" % (
+                len(axes),
+                "\n".join(" - %s" % node for node in axes),
+            )
+        ]
 
     if issues:
         for issue in issues:

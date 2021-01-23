@@ -987,10 +987,10 @@ def convert_rigid(rigid, passive=None):
             mod.set_attr(rigid["kinematic"], True)
 
             for plug in node["translate"]:
-                mod.disconnect(plug)
+                mod.disconnect(plug, destination=False)
 
             for plug in node["rotate"]:
-                mod.disconnect(plug)
+                mod.disconnect(plug, destination=False)
 
             mod.doIt()
 
@@ -999,7 +999,7 @@ def convert_rigid(rigid, passive=None):
         # Convert passive --> active
         elif not passive:
             mod.set_attr(rigid["kinematic"], False)
-            mod.disconnect(rigid["inputMatrix"])
+            mod.disconnect(rigid["inputMatrix"], destination=False)
 
             # The user will expect a newly-turned rigid to collide
             mod.set_attr(rigid["collide"], True)
@@ -2000,38 +2000,40 @@ def delete_all_physics():
 
     # Programmatically figure out what nodes are ours
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    all_physics = cmdx.ls(type=all_nodetypes)
+    all_physics = cmds.ls(type=all_nodetypes)
     count = len(all_physics)
 
     suspects = []
 
     # Exclusive transforms
     for node in all_physics:
-        suspects += [node.parent()]
+        suspects += [cmds.listRelatives(node, parent=True)[0]]
 
     if all_physics:
-        cmds.delete(map(str, all_physics))
+        cmds.delete(all_physics)
 
     # Remove transforms and custom attributes
-    with cmdx.DagModifier() as mod:
-        for suspect in suspects:
-            if "_ragdollAttributes" in suspect:
-                # Get rid of any attributes we made on the
-                # original controls
-                attrs = suspect["_ragdollAttributes"].read()
-                for attr in attrs.split(" "):
-                    try:
-                        mod.delete_attr(suspect[attr])
-                    except cmdx.ExistError:
-                        # Already cleaned up by the user
-                        continue
+    for suspect in suspects:
+        attrs = suspect + "._ragdollAttributes"
 
-                # Clean up after yourself
-                mod.delete_attr(suspect["_ragdollAttributes"])
+        # Was the transform created exclusively for this node?
+        if cmds.objExists(suspect + "._ragdollExclusive"):
+            log.debug("Deleting %s" % suspect)
+            cmds.delete(suspect)
 
-            # Was the transform created exclusively for this node?
-            if "_ragdollExclusive" in suspect:
-                mod.delete_node(suspect)
+        # No? Then let's erase Ragdoll attributes from it
+        elif cmds.objExists(attrs):
+            # Get rid of any attributes we made on the original nodes
+            for attr in filter(None, cmds.getAttr(attrs).split(" ")):
+                try:
+                    log.debug("Deleting %s.%s" % (suspect, attr))
+                    cmds.deleteAttr("%s.%s" % (suspect, attr))
+                except cmdx.ExistError:
+                    # Already cleaned up by the user
+                    continue
+
+            # Clean up after yourself
+            cmds.deleteAttr(attrs)
 
     return count
 

@@ -160,7 +160,9 @@ def add_rigid(mod, rigid, scene):
         "%s already a member of %s" % (rigid, scene)
     )
 
+    time = cmdx.encode("time1")
     index = scene["outputObjects"].next_available_index()
+    mod.connect(time["outTime"], rigid["currentTime"])
     mod.connect(scene["outputObjects"][index], rigid["nextState"])
     mod.connect(rigid["startState"], scene["inputActiveStart"][index])
     mod.connect(rigid["currentState"], scene["inputActive"][index])
@@ -174,8 +176,10 @@ def add_constraint(mod, con, scene):
         "%s already a member of %s" % (con, scene)
     )
 
+    time = cmdx.encode("time1")
     index = scene["inputConstraintStart"].next_available_index()
 
+    mod.connect(time["outTime"], con["currentTime"])
     mod.connect(con["startState"], scene["inputConstraintStart"][index])
     mod.connect(con["currentState"], scene["inputConstraint"][index])
 
@@ -295,8 +299,6 @@ def _connect_active_blend(mod, rigid):
         mod.set_attr(con["driveStrength"], 1.0)
         mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
 
-        time = cmdx.encode("time1")
-        mod.connect(time["outTime"], con["currentTime"])
         mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(rigid["ragdollId"], con["childRigid"])
 
@@ -442,13 +444,11 @@ def create_rigid(node,
         transform = node
         shape = node.shape(type=("mesh", "nurbsCurve"))
 
-    time = cmdx.encode("time1")
     rest = transform["worldMatrix"][0].asMatrix()
 
     with cmdx.DagModifier() as mod:
         rigid = _rdrigid(mod, "rRigid", parent=transform)
 
-        mod.connect(time["outTime"], rigid["currentTime"])
         mod.connect(transform["parentInverseMatrix"][0],
                     rigid["inputParentInverseMatrix"])
 
@@ -1049,7 +1049,6 @@ def create_absolute_control(rigid, reference=None):
     if isinstance(rigid, string_types):
         rigid = cmdx.encode(rigid)
 
-    time = cmdx.encode("time1")
     tmat = rigid.transform(cmdx.sWorld)
 
     scene = rigid["nextState"].connection()
@@ -1072,7 +1071,6 @@ def create_absolute_control(rigid, reference=None):
                               name="rAbsoluteConstraint1",
                               parent=rigid.parent())
 
-        mod.connect(time["outTime"], con["currentTime"])
         mod.connect(rigid["ragdollId"], con["childRigid"])
 
         mod.set_attr(con["driveEnabled"], True)
@@ -1342,7 +1340,6 @@ def _attach_bodies(parent, child, scene):
     assert parent.type() == "rdRigid", parent.type()
     assert child.type() == "rdRigid", child.type()
 
-    time = cmdx.encode("time1")
     name = "rConstraint"
     transform = child.parent()
 
@@ -1359,7 +1356,6 @@ def _attach_bodies(parent, child, scene):
 
         mod.set_attr(con["drawScale"], _scale_from_rigid(child))
 
-        mod.connect(time["outTime"], con["currentTime"])
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(child["ragdollId"], con["childRigid"])
 
@@ -1993,24 +1989,40 @@ def delete_all_physics():
     """Nuke it from orbit
 
     Return to simpler days, days before physics, with this one command.
-    This will delete anything related to Ragdoll from your scenes, including
-    any attributes added (polluted) onto your animation controls.
 
     """
 
-    # Programmatically figure out what nodes are ours
-    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    all_physics = cmds.ls(type=all_nodetypes)
-    count = len(all_physics)
+    return delete_physics(cmds.ls())
 
+
+def delete_physics(nodes):
+    """Delete Ragdoll from anything related to `nodes`
+
+    This will delete anything related to Ragdoll from your scenes, including
+    any attributes added (polluted) onto your animation controls.
+
+    Arguments:
+        nodes (list, optional): Delete physics from these nodes,
+            leave empty for *all* nodes
+
+    """
+
+    # Translate cmdx instances, if any
+    nodes = list(map(str, nodes))
+
+    # Filter by our types
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    nodes = cmds.ls(nodes, type=all_nodetypes)
+
+    # Programmatically figure out what nodes are ours
     suspects = []
 
     # Exclusive transforms
-    for node in all_physics:
+    for node in nodes:
         suspects += [cmds.listRelatives(node, parent=True)[0]]
 
-    if all_physics:
-        cmds.delete(all_physics)
+    if nodes:
+        cmds.delete(nodes)
 
     # Remove transforms and custom attributes
     for suspect in suspects:
@@ -2035,7 +2047,7 @@ def delete_all_physics():
             # Clean up after yourself
             cmds.deleteAttr(attrs)
 
-    return count
+    return len(nodes)
 
 
 def normalise_shapes(root, max_delta=0.25):

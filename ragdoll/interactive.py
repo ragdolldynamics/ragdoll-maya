@@ -488,14 +488,6 @@ def install_menu():
              multiply_constraints,
              multiply_constraints_options)
 
-        with submenu("Quick Select", icon="select.png"):
-            item("selectRigids",
-                 select_rigids,
-                 select_rigids_options)
-            item("selectConstraints",
-                 select_constraints,
-                 select_constraints_options)
-
     with submenu("Rigging", icon="rigging.png"):
         item("editConstraintFrames", edit_constraint_frames)
         item("duplicateSelected", duplicate_selected)
@@ -504,8 +496,16 @@ def install_menu():
         item("normaliseShapes", normalise_shapes)
         item("setInitialState", set_initial_state)
 
+    with submenu("Select", icon="select.png"):
+        item("selectRigids",
+             select_rigids,
+             select_rigids_options)
+        item("selectConstraints",
+             select_constraints,
+             select_constraints_options)
+
     with submenu("System", icon="system.png"):
-        item("deleteAllPhysics", delete_all_physics)
+        item("deleteAllPhysics", delete_physics, delete_physics_options)
         item("globalPreferences", global_preferences)
 
     divider()
@@ -1674,7 +1674,7 @@ def assign_force(selection=None):
 
 
 @commands.with_undo_chunk
-def duplicate_selected(selection=None):
+def duplicate_selected(selection=None, **opts):
     selection = cmdx.selection()
     cmds.select(deselect=True)
 
@@ -1704,15 +1704,33 @@ def duplicate_selected(selection=None):
 
 
 @commands.with_undo_chunk
-def delete_all_physics(selection=None):
-    count = commands.delete_all_physics()
+def delete_physics(selection=None, **opts):
+    if _opt("deleteFromSelection", opts):
+        selection = selection or cmdx.selection(type="dagNode")
+
+        if not selection:
+            count = commands.delete_all_physics()
+
+        else:
+            shapes = []
+            for node in selection:
+                shapes += node.shapes()
+
+            shapes = filter(None, shapes)
+            shapes = list(shapes) + selection
+            shapes = filter(lambda shape: shape.isA(cmdx.kShape), shapes)
+
+            count = commands.delete_physics(shapes)
+
+    else:
+        count = commands.delete_all_physics()
 
     if count:
         log.info("Deleted %d Ragdoll nodes", count)
         return kSuccess
 
     else:
-        return log.warning("No Ragdoll physics found")
+        return log.warning("Nothing deleted")
 
 
 @_replayable
@@ -1737,6 +1755,8 @@ def create_dynamic_control(selection=None, **opts):
         "auto_blend": _opt("dynamicControlAutoBlend", opts),
         "auto_influence": _opt("dynamicControlAutoInfluence", opts),
         "auto_multiplier": _opt("dynamicControlAutoMultiplier", opts),
+        "auto_initial_state": _opt("dynamicControlAutoInitialState", opts),
+        "auto_world_constraint": _opt("dynamicControlAutoWorldspace", opts),
         "central_blend": (
             _opt("dynamicControlBlendMethod", opts) == "From Root"
         ),
@@ -2073,6 +2093,10 @@ def select_rigids_options(*args):
 
 def select_constraints_options(*args):
     return _Window("selectConstraints", select_constraints)
+
+
+def delete_physics_options(*args):
+    return _Window("deleteAllPhysics", delete_physics)
 
 
 # Backwards compatibility

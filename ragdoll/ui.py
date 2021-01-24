@@ -1364,6 +1364,7 @@ class SplashScreen(QtWidgets.QDialog):
             "expiryDate": QtWidgets.QLabel(),
             "serial": QtWidgets.QLineEdit(),
             "activate": QtWidgets.QPushButton("Activate"),
+            "deactivate": QtWidgets.QPushButton("Deactivate"),
             "activateOffline": QtWidgets.QPushButton("Activate Offline"),
             "continue": QtWidgets.QPushButton("Continue"),
         }
@@ -1416,6 +1417,7 @@ class SplashScreen(QtWidgets.QDialog):
 
         layout = QtWidgets.QHBoxLayout(panels["buttons"])
         layout.addWidget(widgets["activate"])
+        layout.addWidget(widgets["deactivate"])
         layout.addWidget(widgets["activateOffline"])
         layout.addWidget(widgets["continue"])
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1435,8 +1437,10 @@ class SplashScreen(QtWidgets.QDialog):
 
         widgets["serial"].textChanged.connect(self.on_serial_changed)
         widgets["activate"].clicked.connect(self.on_activate_clicked)
+        widgets["deactivate"].clicked.connect(self.on_deactivate_clicked)
         widgets["continue"].clicked.connect(self.on_continue_clicked)
         widgets["activateOffline"].setEnabled(False)
+        widgets["deactivate"].hide()
 
         # Free-floating
         panels["body"].show()
@@ -1482,7 +1486,10 @@ class SplashScreen(QtWidgets.QDialog):
                 self.on_trial(data["trialDays"])
 
             elif data["trialDays"] < 1:
-                self.on_expired(data["trialDays"])
+                if data["magicDays"] > 0:
+                    self.on_magic(data["magicDays"])
+                else:
+                    self.on_expired(data["trialDays"])
 
             elif data["isVerified"]:
                 self.on_verified()
@@ -1543,9 +1550,7 @@ class SplashScreen(QtWidgets.QDialog):
         status = licence.deactivate()
 
         if status == licence.STATUS_OK:
-            self._widgets["serial"].setPlaceholderText(
-                "Enter your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
-            )
+            pass
 
         elif status == licence.STATUS_ALREADY_ACTIVATED:
             pass
@@ -1606,6 +1611,14 @@ class SplashScreen(QtWidgets.QDialog):
     def on_expired(self, trial_days):
         log.info("Ragdoll is expired")
 
+        self._widgets["activate"].show()
+        self._widgets["activate"].setEnabled(False)
+        self._widgets["deactivate"].hide()
+        self._widgets["serial"].setText("")
+        self._widgets["serial"].setPlaceholderText(
+            "Enter your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
+        )
+
         status = _resource("ui", "mode_red.png")
         status = QtGui.QPixmap(status)
         status = status.scaledToWidth(px(15), QtCore.Qt.SmoothTransformation)
@@ -1624,17 +1637,8 @@ class SplashScreen(QtWidgets.QDialog):
     def on_activated(self):
         log.info("Ragdoll is activated")
 
-        button = self._widgets["activate"]
-
-        try:
-            button.clicked.disconnect(self.on_activate_clicked)
-            button.clicked.connect(self.on_deactivate_clicked)
-        except RuntimeError:
-            # Already connected, nothing has actually changed
-            return
-
-        button.setText("Deactivate")
-        button.setEnabled(True)
+        self._widgets["activate"].hide()
+        self._widgets["deactivate"].show()
 
         status = _resource("ui", "mode_green.png")
         status = QtGui.QPixmap(status)
@@ -1656,10 +1660,11 @@ class SplashScreen(QtWidgets.QDialog):
     def on_deactivated(self):
         log.info("Ragdoll is deactivated")
 
-        button = self._widgets["activate"]
-        button.setText("Activate")
-        button.clicked.disconnect(self.on_deactivate_clicked)
-        button.clicked.connect(self.on_activate_clicked)
+        self._widgets["activate"].show()
+        self._widgets["deactivate"].hide()
+        self._widgets["serial"].setPlaceholderText(
+            "Enter your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
+        )
 
         offline = self._widgets["activateOffline"]
         offline.setText("Activate Offline")

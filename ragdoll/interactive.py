@@ -550,6 +550,10 @@ def show_replayer():
 
 
 def update_menu():
+    # Only attempt once the menu has actually been installed
+    if not __.menu:
+        return
+
     count = len(RagdollGuiLogHandler.history)
 
     label = (

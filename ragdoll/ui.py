@@ -1032,7 +1032,7 @@ class Options(QtWidgets.QMainWindow):
 
         widgets["Hint"].setParent(panels["Footer"])
         widgets["Hint"].move(px(80), px(9))
-        widgets["Hint"].setFixedWidth(px(300))
+        widgets["Hint"].setFixedWidth(px(350))
         widgets["Hint"].setFixedHeight(px(75))
         widgets["Hint"].setWordWrap(True)
         widgets["Hint"].setAlignment(QtCore.Qt.AlignTop)
@@ -1288,7 +1288,8 @@ class Options(QtWidgets.QMainWindow):
         )
 
     def on_entered(self, arg):
-        self._widgets["Hint"].setText(arg["help"])
+        text = markdown.markdown(arg["help"])
+        self._widgets["Hint"].setText(text)
 
     def on_exited(self, arg=None):
         default = self._widgets["Hint"].property("defaultText")

@@ -9,6 +9,7 @@ STATUS_ALREADY_ACTIVATED = 26  # No action needed
 STATUS_INET = 4                # Connection to the server failed.
 STATUS_INET_DELAYED = 21       # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5               # Maximum number of activations reached
+STATUS_TRIAL_EXPIRED = 30               # Maximum number of activations reached
 
 log = logging.getLogger("ragdoll")
 binding = None
@@ -54,6 +55,11 @@ def install(key=None):
         log.warning(
             "Couldn't figure out licencing, "
             "this is a bug. Tell someone."
+        )
+
+    elif status == STATUS_TRIAL_EXPIRED:
+        log.warning(
+            "Ragdoll trial has expired, head into the chat and tell someone!"
         )
 
     else:

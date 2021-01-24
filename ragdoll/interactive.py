@@ -770,7 +770,7 @@ def _replay(func):
 
         # Hint to the recorder that we're playing back this
         # command, and that it shouldn't be recorded
-        kwargs["_replay"] = True
+        kwargs["_replaying"] = True
 
         return func(*args, **kwargs)
     return wrapper
@@ -837,16 +837,15 @@ def _replayable(func):
 
     @functools.wraps(func)
     def wrapper(selection=None, **kwargs):
-        selection = selection or cmdx.selection()
-
-        if not kwargs.get("_replay") and selection:
-
-            try:
-                _record(selection)
-            except Exception:
-                # This *cannot* cause function to not get called
-                import traceback
-                traceback.print_exc()
+        if not kwargs.get("_replaying") and not _is_standalone():
+            selection = selection or cmdx.selection()
+            if selection:
+                try:
+                    _record(selection)
+                except Exception:
+                    # This *cannot* cause function to not get called
+                    import traceback
+                    traceback.print_exc()
 
         return func(selection, **kwargs)
 
@@ -929,7 +928,7 @@ def has_valid_rotatepivot(transform):
 
 def _opt(key, override=None):
     override = override or {}
-    return override.get(key) or options.read(key)
+    return override.get(key, options.read(key))
 
 
 @_replayable
@@ -1316,6 +1315,7 @@ def create_constraint(selection=None, **opts):
             mod.set_attr(con["driveStrength"], guide_strength)
 
     if select:
+        print("I'm selecting, because opts: %s" % opts)
         cmds.select(con.path(), replace=True)
 
     log.info("Constrained %s to %s" % (child, parent))
@@ -1422,31 +1422,36 @@ def convert_to_socket(node):
 @_replayable
 @commands.with_undo_chunk
 def create_point_constraint(selection=None, **opts):
-    return create_constraint(selection, **{"constraintType": "Point"})
+    opts = dict(opts, **{"constraintType": "Point"})
+    return create_constraint(selection, **opts)
 
 
 @_replayable
 @commands.with_undo_chunk
 def create_orient_constraint(selection=None, **opts):
-    return create_constraint(selection, **{"constraintType": "Orient"})
+    opts = dict(opts, **{"constraintType": "Orient"})
+    return create_constraint(selection, **opts)
 
 
 @_replayable
 @commands.with_undo_chunk
 def create_parent_constraint(selection=None, **opts):
-    return create_constraint(selection, **{"constraintType": "Parent"})
+    opts = dict(opts, **{"constraintType": "Parent"})
+    return create_constraint(selection, **opts)
 
 
 @_replayable
 @commands.with_undo_chunk
 def create_hinge_constraint(selection=None, **opts):
-    return create_constraint(selection, **{"constraintType": "Hinge"})
+    opts = dict(opts, **{"constraintType": "Hinge"})
+    return create_constraint(selection, **opts)
 
 
 @_replayable
 @commands.with_undo_chunk
 def create_socket_constraint(selection=None, **opts):
-    return create_constraint(selection, **{"constraintType": "Socket"})
+    opts = dict(opts, **{"constraintType": "Socket"})
+    return create_constraint(selection, **opts)
 
 
 @commands.with_undo_chunk

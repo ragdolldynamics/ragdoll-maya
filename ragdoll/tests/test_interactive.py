@@ -134,11 +134,12 @@ def test_create_constraint():
     commands.create_rigid(sphere1, scene)
 
     cmds.select(str(cube1), str(sphere1))
-    assert_true(interactive.create_point_constraint())
-    assert_true(interactive.create_orient_constraint())
-    assert_true(interactive.create_parent_constraint())
-    assert_true(interactive.create_hinge_constraint())
-    assert_true(interactive.create_socket_constraint())
+    opts = {"constraintSelect": False}
+    assert_true(interactive.create_point_constraint(**opts))
+    assert_true(interactive.create_orient_constraint(**opts))
+    assert_true(interactive.create_parent_constraint(**opts))
+    assert_true(interactive.create_hinge_constraint(**opts))
+    assert_true(interactive.create_socket_constraint(**opts))
 
     assert_equals(len(cmds.ls(type="rdRigid")), 2)
     assert_equals(len(cmds.ls(type="rdScene")), 1)
@@ -240,8 +241,8 @@ def test_dynamic_control():
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
 
-    # Two sockets, and one absolute for the root
-    assert_equals(len(cmds.ls(type="rdConstraint")), 2)
+    # Two local and two worldspace guides
+    assert_equals(len(cmds.ls(type="rdConstraint")), 4)
 
 
 def test_save():

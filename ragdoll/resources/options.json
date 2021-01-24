@@ -285,6 +285,20 @@
         "default": "From Root",
         "help": "Blend simulation from the root control, or per-control."
     },
+    "dynamicControlAutoWorldspace": {
+        "name": "dynamicControlAutoWorldspace",
+        "label": "Auto Worldspace",
+        "type": "Boolean",
+        "default": true,
+        "help": "Include worldspace guide constraints with the generated dynamic controls."
+    },
+    "dynamicControlAutoInitialState": {
+        "name": "dynamicControlAutoInitialState",
+        "label": "Auto Initial State",
+        "type": "Boolean",
+        "default": false,
+        "help": "Use the first frame of the *animation* as initial state of the *simulation*. Bear in mind this isn't fool-proof and generates a pure kinematic representation of the original hierarchy and cannot account for complex relationships like constraints and IK."
+    },
     "globalsValidations": {
         "name": "globalsValidations",
         "label": "Validations",
@@ -314,5 +328,11 @@
         "type": "Boolean",
         "default": true,
         "help": "Rid the Channel Box of attributes unrelated to the currently selected shape type (requires Maya restart)."
+    },
+    "deleteFromSelection": {
+        "name": "deleteFromSelection",
+        "type": "Boolean",
+        "default": false,
+        "help": "Limit deletion to selection-only, rather than the whole scene."
     }
 }

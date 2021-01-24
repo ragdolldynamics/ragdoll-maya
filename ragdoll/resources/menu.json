@@ -225,7 +225,9 @@
             "dynamicControlAutoBlend",
             "dynamicControlBlendMethod",
             "dynamicControlAutoInfluence",
-            "dynamicControlAutoMultiplier"
+            "dynamicControlAutoMultiplier",
+            "dynamicControlAutoWorldspace",
+            "dynamicControlAutoInitialState"
         ],
         "description": "Turn your regular character animation control into a rigid body, where the input animation is used as a dynamic guide for the simulation. The animation remains editable and the final result can be switched or blended between.",
         "media": [
@@ -305,7 +307,10 @@
         "label": "Delete All Physics",
         "icon": "delete.png",
         "summary": "Clear the Maya scene of anything related to Ragdoll.",
-        "description": "Clear the Maya scene of anything related to Ragdoll. This can be useful for getting a clean slate, or to debug whether the problem you are experiencing is related to Ragdoll."
+        "description": "Clear the Maya scene of anything related to Ragdoll. This can be useful for getting a clean slate, or to debug whether the problem you are experiencing is related to Ragdoll.",
+        "options": [
+            "deleteFromSelection"
+        ]
     },
     "globalPreferences": {
         "label": "Ragdoll Preferences",

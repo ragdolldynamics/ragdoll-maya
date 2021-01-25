@@ -114,15 +114,23 @@ def uninstall():
 def reset():
     """Remove all persistent optionvars"""
 
-    count = 0
+    total = 0
+    changed = 0
+    previous = {}
     for key in cmds.optionVar(list=True):
         if key.startswith("ragdoll"):
+            previous[key] = cmds.optionVar(query=key)
             cmds.optionVar(remove=key)
-            count += 1
+            total += 1
 
     install()
 
     for key in __.optionvars:
-        log.info("Resetting %s = %s" % (key, read(key)))
+        prev = previous.get(_optionvarkey(key), "")
+        new = read(key)
 
-    log.info("Resetted %d optionvars" % count)
+        if prev != new:
+            changed += 1
+            log.info("Resetting %s (%s = %s)" % (key, prev, new))
+
+    log.info("Resetted %d/%d optionvars" % (changed, total))

@@ -144,11 +144,12 @@ def _proxy(attr, target, name=None, nice_name=None):
 def _record_attr(node, attr):
     """Keep track of attributes added outside of our own Ragdoll nodes"""
 
-    with cmdx.DagModifier() as mod:
-        if not node.has_attr("_ragdollAttributes"):
-            mod.add_attr(node, cmdx.String("_ragdollAttributes"))
-            mod.do_it()
+    if not node.has_attr("_ragdollAttributes"):
+        cmds.addAttr(node.path(),
+                     longName="_ragdollAttributes",
+                     dataType="string")
 
+    with cmdx.DagModifier() as mod:
         current = node["_ragdollAttributes"].read()
         attributes = " ".join([current, attr]) if current else attr
         mod.set_attr(node["_ragdollAttributes"], attributes)

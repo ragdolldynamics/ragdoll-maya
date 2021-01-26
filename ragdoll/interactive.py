@@ -793,11 +793,12 @@ def _replayable(func):
     """
 
     def _append(root, action):
-        with cmdx.DagModifier() as mod:
-            if not root.has_attr("_ragdollHistory"):
-                mod.add_attr(root, cmdx.String("_ragdollHistory"))
-                mod.do_it()
+        if not root.has_attr("_ragdollHistory"):
+            cmds.addAttr(root.path(),
+                         longName="_ragdollHistory",
+                         dataType="string")
 
+        with cmdx.DagModifier() as mod:
             history = root["_ragdollHistory"].read() or "[]"
 
             try:

@@ -333,6 +333,7 @@ def create_dynamic_control(chain,
                            auto_multiplier=True,
                            auto_initial_state=True,
                            auto_world_constraint=True,
+                           auto_key=False,
                            central_blend=True,
                            use_capsules=False):
     """Turn selected animation controls dynamic
@@ -345,6 +346,7 @@ def create_dynamic_control(chain,
             additional control
         auto_influence (bool): Use blended animation as input to the simulation
         auto_multiplier (bool): Add a multiplier to the root
+        auto_key (bool): Put keyframes on translate/rotate
         use_capsules (bool): Let the default shape be a capsule
 
     """
@@ -397,18 +399,23 @@ def create_dynamic_control(chain,
         mod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
         mod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
 
-        # Generate default animation curves, it's expected since you can no
-        # longer see whether channels are keyed or not, now being green.
-        time = cmdx.currentTime()
-        for curve, src, dst in (("animCurveTL", "translateX", "inTranslateX1"),
-                                ("animCurveTL", "translateY", "inTranslateY1"),
-                                ("animCurveTL", "translateZ", "inTranslateZ1"),
-                                ("animCurveTA", "rotateX", "inRotateX1"),
-                                ("animCurveTA", "rotateY", "inRotateY1"),
-                                ("animCurveTA", "rotateZ", "inRotateZ1")):
-            curve = mod.create_node(curve)
-            curve.key(time, transform[src].read())
-            mod.connect(curve["output"], pair_blend[dst])
+        mod.do_it()
+
+        if auto_key:
+            # Generate default animation curves, it's expected since you can no
+            # longer see whether channels are keyed or not, now being green.
+            time = cmdx.currentTime()
+            for curve, src, dst in (("animCurveTL", "tx", "inTranslateX1"),
+                                    ("animCurveTL", "ty", "inTranslateY1"),
+                                    ("animCurveTL", "tz", "inTranslateZ1"),
+                                    ("animCurveTA", "rx", "inRotateX1"),
+                                    ("animCurveTA", "ry", "inRotateY1"),
+                                    ("animCurveTA", "rz", "inRotateZ1")):
+                curve = mod.create_node(curve)
+                curve.key(time, transform[src].read())
+                mod.connect(curve["output"], pair_blend[dst])
+
+            mod.do_it()
 
         # Transfer existing animation/connections
         for src, dst in transform.data.get("priorConnections", {}).items():

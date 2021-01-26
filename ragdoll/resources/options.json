@@ -289,7 +289,7 @@
         "name": "dynamicControlAutoWorldspace",
         "label": "Auto Worldspace",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Include worldspace guide constraints with the generated dynamic controls."
     },
     "dynamicControlAutoInitialState": {

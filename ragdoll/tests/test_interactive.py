@@ -230,19 +230,45 @@ def test_create_character():
     assert_equals(len(cmds.ls(type="rdConstraint")), 3)
 
 
-def test_dynamic_control():
+def test_dynamic_control(**opts):
     new()
 
     hierarchy = create_arm()
     a, b, c = map(str, hierarchy[:3])
     cmds.select(a, b, c)
-    assert_true(interactive.create_dynamic_control())
+    assert_true(interactive.create_dynamic_control(selection=None, **opts))
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
 
-    # Two local and two worldspace guides
-    assert_equals(len(cmds.ls(type="rdConstraint")), 4)
+    # Two local constraints
+    assert_equals(len(cmds.ls(type="rdConstraint")), 2)
+
+
+def test_dynamic_control_opt1_mesh():
+    test_dynamic_control(dynamicControlShapeType="Mesh")
+
+
+def test_dynamic_control_opt2_auto_blend():
+    test_dynamic_control(dynamicControlAutoBlend=False)
+
+
+def test_dynamic_control_opt3_blend_method():
+    test_dynamic_control(dynamicControlBlendMethod="Each Control")
+
+
+def test_dynamic_control_opt4_auto_influence():
+    test_dynamic_control(dynamicControlAutoInfluence=False)
+
+
+def test_dynamic_control_opt5_auto_multiplier():
+    test_dynamic_control(dynamicControlAutoMultiplier=False)
+
+
+def test_dynamic_control_with_delete_all():
+    test_dynamic_control()
+    interactive.delete_physics()
+    test_dynamic_control()
 
 
 def test_save():
@@ -282,6 +308,12 @@ def manual():
         test_create_force,
         test_create_character,
         test_dynamic_control,
+        test_dynamic_control_opt1_mesh,
+        test_dynamic_control_opt2_auto_blend,
+        test_dynamic_control_opt3_blend_method,
+        test_dynamic_control_opt4_auto_influence,
+        test_dynamic_control_opt5_auto_multiplier,
+        test_dynamic_control_with_delete_all,
         test_save,
         test_normalise_shapes,
     )

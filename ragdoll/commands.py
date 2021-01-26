@@ -122,6 +122,8 @@ def with_undo_chunk(func):
 
 
 def _proxy(attr, target, name=None, nice_name=None):
+    """Create a proxy attribute for `name` on `target`"""
+    assert isinstance(attr, cmdx.Plug)
     name = name or attr.name()
 
     if target.has_attr(name):
@@ -139,20 +141,17 @@ def _proxy(attr, target, name=None, nice_name=None):
     cmds.addAttr(target.path(), **kwargs)
 
 
-def _record_attr(node, name):
+def _record_attr(node, attr):
     """Keep track of attributes added outside of our own Ragdoll nodes"""
-
-    # This segfaults on 2019, unsure why
-    if cmds.about(version=True).startswith("2019"):
-        return
 
     with cmdx.DagModifier() as mod:
         if not node.has_attr("_ragdollAttributes"):
             mod.add_attr(node, cmdx.String("_ragdollAttributes"))
             mod.do_it()
 
-        previous = node["_ragdollAttributes"].read()
-        mod.set_attr(node["_ragdollAttributes"], " ".join([previous, name]))
+        current = node["_ragdollAttributes"].read()
+        attributes = " ".join([current, attr]) if current else attr
+        mod.set_attr(node["_ragdollAttributes"], attributes)
 
 
 def add_rigid(mod, rigid, scene):
@@ -2019,7 +2018,7 @@ def delete_physics(nodes):
 
     # Exclusive transforms
     for node in nodes:
-        suspects += [cmds.listRelatives(node, parent=True)[0]]
+        suspects += [cmds.listRelatives(node, parent=True, fullPath=True)[0]]
 
     if nodes:
         cmds.delete(nodes)
@@ -2035,14 +2034,13 @@ def delete_physics(nodes):
 
         # No? Then let's erase Ragdoll attributes from it
         elif cmds.objExists(attrs):
+
             # Get rid of any attributes we made on the original nodes
             for attr in filter(None, cmds.getAttr(attrs).split(" ")):
-                try:
-                    log.debug("Deleting %s.%s" % (suspect, attr))
-                    cmds.deleteAttr("%s.%s" % (suspect, attr))
-                except cmdx.ExistError:
-                    # Already cleaned up by the user
-                    continue
+                attr = "%s.%s" % (suspect, attr)
+                if cmds.objExists(attr):
+                    log.debug("Deleting %s" % attr)
+                    cmds.deleteAttr(attr)
 
             # Clean up after yourself
             cmds.deleteAttr(attrs)

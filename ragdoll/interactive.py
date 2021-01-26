@@ -188,6 +188,8 @@ def install():
 
 
 def uninstall():
+    uninstall_logger()
+
     if "RAGDOLL_DO_NOT_LOAD_BINDING" not in os.environ:
         return log.error(
             "Can't uninstall this, the Python bindings are loaded. "
@@ -199,7 +201,6 @@ def uninstall():
 
     uninstall_callbacks()
     uninstall_menu()
-    uninstall_logger()
     options.uninstall()
 
     uninstall_pyragdoll()
@@ -1758,6 +1759,11 @@ def create_dynamic_control(selection=None, **opts):
 
     if not _validate_transforms(chain):
         return
+
+    # Protect against accidental duplicates
+    for link in chain[1:]:
+        if link.shape("rdRigid") is not None:
+            return log.warning("Already a dynamic control: '%s'" % link)
 
     scene = _find_current_scene()
 

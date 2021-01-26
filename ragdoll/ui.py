@@ -1750,6 +1750,7 @@ def warn(option, title, message, call_to_action, actions):
 class MessageBoard(QtWidgets.QDialog):
     def __init__(self, records, parent=None):
         super(MessageBoard, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Ragdoll Message Board")
         self.setMinimumWidth(px(600))
         self.setMinimumHeight(px(300))

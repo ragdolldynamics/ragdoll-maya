@@ -111,6 +111,11 @@ def uninstall():
     pass
 
 
+def save():
+    # Ragdoll's preferences are Maya's native "optionVar"
+    cmds.savePrefs(general=True)
+
+
 def reset():
     """Remove all persistent optionvars"""
 

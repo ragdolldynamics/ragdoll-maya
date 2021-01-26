@@ -507,6 +507,8 @@ def install_menu():
     with submenu("System", icon="system.png"):
         item("deleteAllPhysics", delete_physics, delete_physics_options)
         item("globalPreferences", global_preferences)
+        item("savePreferences", save_preferences)
+        item("resetPreferences", reset_preferences)
 
     divider()
 
@@ -2013,6 +2015,16 @@ def global_preferences(*args):
     scale.changed.connect(callback)
 
     return window
+
+
+def save_preferences(*args):
+    options.save()
+    log.info("Successfully saved Ragdoll preferences")
+
+
+def reset_preferences(*args):
+    options.reset()
+    log.info("Successfully reset Ragdoll preferences")
 
 
 def create_rigid_options(*args):

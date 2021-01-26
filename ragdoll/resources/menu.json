@@ -327,6 +327,18 @@
             "validatePlaybackSpeed"
         ]
     },
+    "savePreferences": {
+        "label": "Save Preferences",
+        "icon": "save.png",
+        "summary": "Save Ragdoll preferences to disk.",
+        "description": "Ragdoll preferences are stored alongside Maya's preferences. So clearing those would also clear Ragdoll's preferences."
+    },
+    "resetPreferences": {
+        "label": "Reset Preferences",
+        "icon": "load.png",
+        "summary": "Restore Ragdoll preferences to their default values.",
+        "description": "This doesn't save preferences, something to keep in mind."
+    },
     "selectRigids": {
         "label": "Select Rigids",
         "icon": "rigid.png",

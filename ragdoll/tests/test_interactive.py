@@ -164,9 +164,6 @@ def test_create_kinematic_control():
     assert_equals(len(cmds.ls(type="rdConstraint")), 0)  # No constraint here
     assert_equals(len(cmds.ls(type="rdControl")), 1)
 
-    control = cmdx.ls(type="rdControl")[0]
-    assert "kinematic" in control
-
 
 def test_create_driven_control():
     new()

@@ -283,18 +283,16 @@ def create_character(root,
             mod.connect(root["matrix"], rigid["inputMatrix"])
 
         # Absolute control on hip
-        _, _, con = commands.create_absolute_control(rigid, reference=root)
+        ref, _, con = commands.create_absolute_control(rigid, reference=root)
 
         with cmdx.DagModifier() as mod:
-            mod.set_attr(con["driveStrength"], 0)  # Default to off
+            mod.set_attr(root["driveStrength"], 0)  # Default to off
 
         # Forward the kinematic attribute to the root guide
-        if "kinematic" in root:
-            with cmdx.DGModifier() as mod:
-                mod.delete_attr(root["kinematic"])
-
-        commands._proxy(rigid["kinematic"], root)
-        commands._record_attr(root, "kinematic")
+        root_proxies = commands.UserAttributes(rigid, root)
+        root_proxies.add_divider("Ragdoll")
+        root_proxies.add("kinematic")
+        root_proxies.do_it()
 
         with cmdx.DagModifier() as mod:
             for reference, joint in zip(root.descendents(type="joint"),
@@ -308,14 +306,13 @@ def create_character(root,
                 commands.create_active_control(reference, rigid)
 
                 mod.set_attr(rigid["kinematic"], False)
-
-                if "kinematic" in reference:
-                    mod.delete_attr(reference["kinematic"])
-                    mod.do_it()
+                mod.do_it()
 
                 # Forward kinematics from children too
-                commands._proxy(rigid["kinematic"], reference)
-                commands._record_attr(reference, "kinematic")
+                reference_proxies = commands.UserAttributes(rigid, reference)
+                reference_proxies.add_divider("Ragdoll")
+                reference_proxies.add("kinematic")
+                reference_proxies.do_it()
 
                 mod.connect(reference["worldMatrix"][0], rigid["inputMatrix"])
 
@@ -424,16 +421,9 @@ def create_dynamic_control(chain,
 
         commands._connect_transform(mod, pair_blend, transform)
 
-        if transform.has_attr("Ragdoll"):
-            mod.delete_attr(transform["Ragdoll"])
-            mod.do_it()
-        mod.add_attr(transform, cmdx.Divider("Ragdoll"))
-
         # Proxy commands below aren't part of the modifier, and thus
         # needs to happen after it's done its thing.
         mod.do_it()
-
-        commands._record_attr(transform, "Ragdoll")
 
         if not central_blend:
             if not transform.has_attr("blendSimulation"):
@@ -452,10 +442,15 @@ def create_dynamic_control(chain,
             mod.connect(transform["blendSimulation"], pair_blend["weight"])
 
         # Forward some convenience attributes
-        commands._proxy(rigid["mass"], transform)
-        commands._record_attr(transform, "mass")
+        transform_proxies = commands.UserAttributes(rigid, transform)
+        transform_proxies.add_divider("Ragdoll")
+        transform_proxies.add("mass")
+        transform_proxies.do_it()
 
         if constraint:
+            constraint_proxies = commands.UserAttributes(
+                constraint, transform)
+
             if central_blend:
                 mod.connect(pair_blend["weight"], constraint["visibility"])
                 mod.connect(pair_blend["weight"], rigid["visibility"])
@@ -466,13 +461,12 @@ def create_dynamic_control(chain,
                             rigid["visibility"])
 
             # Forward some convenience attributes
-            commands._proxy(constraint["angularDriveStiffness"],
-                            transform, nice_name="Stiffness")
-            commands._proxy(constraint["angularDriveDamping"],
-                            transform, nice_name="Damping")
+            constraint_proxies.add("angularDriveStiffness",
+                                   nice_name="Stiffness")
+            constraint_proxies.add("angularDriveDamping",
+                                   nice_name="Damping")
 
-            commands._record_attr(transform, "angularDriveStiffness")
-            commands._record_attr(transform, "angularDriveDamping")
+            constraint_proxies.do_it()
 
         rigid.data["pairBlend"] = pair_blend
 
@@ -609,11 +603,13 @@ def create_dynamic_control(chain,
                 ("driveStrength", "%sStrength", "%s Strength"),
             )
 
+            proxies = commands.UserAttributes(mult, parent)
             for attr, key, nice in attrs:
-                commands._proxy(mult[attr], parent,
-                                name=key % name,
-                                nice_name=nice % name)
-                commands._record_attr(parent, key % name)
+                proxies.add(attr,
+                            long_name=key % name.lower(),
+                            nice_name=nice % name)
+
+            proxies.do_it()
 
         return mult
 
@@ -695,15 +691,6 @@ def create_dynamic_control(chain,
             mod.set_attr(parent_rigid["shapeRotation"], geo.shape_rotation)
             mod.set_attr(parent_rigid["shapeOffset"], geo.shape_offset)
             mod.set_attr(parent_rigid["shapeExtents"], geo.extents)
-
-            transform = parent_rigid.parent()
-
-            if transform.has_attr("Ragdoll"):
-                mod.delete_attr(transform["Ragdoll"])
-                mod.do_it()
-
-            mod.add_attr(transform, cmdx.Divider("Ragdoll"))
-            commands._record_attr(transform, "Ragdoll")
 
             if use_capsules:
                 mod.set_attr(parent_rigid["shapeType"],

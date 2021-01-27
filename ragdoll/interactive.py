@@ -234,11 +234,6 @@ def install_logger():
         "ragdoll.%(funcName)s() - %(message)s"
     )
 
-    # NOTE: This affects logging outside of Ragdoll as well,
-    # how else can we avoid all-caps "WARNING" level names?
-    logging.addLevelName(logging.INFO, "Info")
-    logging.addLevelName(logging.WARNING, "Warning")
-
     # This one works like logging.StreamHandler,
     # except it also colors the Command Line nicely
     handler = RagdollGuiLogHandler()

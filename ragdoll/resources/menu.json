@@ -225,9 +225,7 @@
             "dynamicControlAutoBlend",
             "dynamicControlBlendMethod",
             "dynamicControlAutoInfluence",
-            "dynamicControlAutoMultiplier",
-            "dynamicControlAutoWorldspace",
-            "dynamicControlAutoInitialState"
+            "dynamicControlAutoMultiplier"
         ],
         "description": "Turn your regular character animation control into a rigid body, where the input animation is used as a dynamic guide for the simulation. The animation remains editable and the final result can be switched or blended between.",
         "media": [

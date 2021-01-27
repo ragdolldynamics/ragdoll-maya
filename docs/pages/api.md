@@ -158,7 +158,12 @@ api.duplicate(rigid)
 
 ## Environment Variables
 
-Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables.
+Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables. For example, to manually load the Ragdoll plug-in and Maya menu, set `RAGDOLL_NO_AUTOLOAD=1` and then call:
+
+```py
+import ragdoll.interactive
+ragdoll.interactive.install()
+```
 
 > Added `Ragdoll 2021.01.14`
 

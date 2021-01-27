@@ -2,7 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
-- [2021.01.24 - Worldspace Dynamic Control](/releases/2021.01.24)
+- [2021.01.27 - Message Board](/releases/2021.01.27)
 - [2021.01.17 - Hotfix](/releases/2021.01.17)
 - [2021.01.15 - Dynamic Control 3.0](/releases/2021.01.15)
 - [2021.01.14 - Multiplier Nodes](/releases/2021.01.14)

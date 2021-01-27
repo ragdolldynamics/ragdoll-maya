@@ -135,6 +135,123 @@ def _record_attr(node, attr):
         mod.set_attr(node["_ragdollAttributes"], attributes)
 
 
+class UserAttributes(object):
+    """User attributes appear on the original controllers
+     __________________
+    |                  |
+    |      leftArm_ctl |
+    |                  |
+    | Translate X  0.0 |
+    | Translate Y  0.0 |
+    | Translate Z  0.0 |
+    |    Rotate X  0.0 |
+    |    Rotate Y  0.0 |
+    |    Rotate Z  0.0 |
+    |                  |
+    |          Ragdoll |
+    |        Mass  0.0 |  <----- User Attributes
+    |    Strength  0.0 |
+    |__________________|
+
+    Arguments:
+        source (cmdx.DagNode): Original node, e.g. an rdRigid
+        target (cmdx.DagNode): Typically the animation control
+
+    """
+
+    def __init__(self, source, target):
+        self._source = source
+        self._target = target
+        self._added = []
+
+    def do_it(self):
+        if not self._added:
+            pass
+
+        added = []
+
+        while self._added:
+            attr = self._added.pop(0)
+
+            if isinstance(attr, cmdx._AbstractAttribute):
+                if self._target.has_attr(attr["name"]):
+                    cmds.deleteAttr("%s.%s" % (self._target, attr["name"]))
+
+                with cmdx.DagModifier() as mod:
+                    mod.add_attr(self._target, attr)
+
+                attr = attr["name"]
+
+            else:
+                attr, long_name, nice_name = attr
+                name = long_name or attr
+
+                if self._target.has_attr(name):
+                    cmds.deleteAttr("%s.%s" % (self._target, name))
+
+                if cmdx.__maya_version__ == 2019:
+                    self.proxy_2019(attr, long_name, nice_name)
+                else:
+                    self.proxy(attr, long_name, nice_name)
+
+            added += [attr]
+
+        # Record it
+        if not cmds.objExists("%s.%s" % (self._target, "_ragdollAttributes")):
+            cmds.addAttr(self._target.path(),
+                         longName="_ragdollAttributes",
+                         dataType="string")
+
+        previous = self._target["_ragdollAttributes"].read()
+        new = " ".join(added)
+        attributes = " ".join([previous, new]) if previous else new
+
+        cmds.setAttr(
+            "%s._ragdollAttributes" % self._target,
+            attributes,
+            type="string"
+        )
+
+    def proxy(self, attr, long_name=None, nice_name=None):
+        """Create a proxy attribute for `name` on `target`"""
+        name = long_name or attr
+
+        kwargs = {
+            "longName": name,
+        }
+
+        if nice_name is not None:
+            kwargs["niceName"] = nice_name
+
+        kwargs["proxy"] = self._source[attr].path()
+        cmds.addAttr(self._target.path(), **kwargs)
+
+    def proxy_2019(self, attr, long_name=None, nice_name=None):
+        """Maya 2019 doesn't play well with proxy attributes"""
+
+        name = long_name or attr
+        default = cmds.getAttr("%s.%s" % (self._source, attr))
+
+        kwargs = {
+            "longName": name,
+            "defaultValue": default,
+            "keyable": True,
+        }
+
+        if nice_name is not None:
+            kwargs["niceName"] = nice_name
+
+        cmds.addAttr(self._target.path(), **kwargs)
+        cmds.connectAttr("%s.%s" % (self._target, name),
+                         "%s.%s" % (self._source, attr))
+
+    def add(self, attr, long_name=None, nice_name=None):
+        self._added.append((attr, long_name, nice_name))
+
+    def add_divider(self, label):
+        self._added.append(cmdx.Divider(label))
+
+
 def add_rigid(mod, rigid, scene):
     assert rigid["startState"].connection() != scene, (
         "%s already a member of %s" % (rigid, scene)
@@ -949,102 +1066,6 @@ def _connect_transform(mod, node, transform):
             failed += [dst]
 
     return failed
-
-
-class UserAttributes(object):
-    """User attributes appear on the original controllers"""
-
-    def __init__(self, source, target):
-        self._source = source
-        self._target = target
-        self._added = []
-
-    def do_it(self):
-        if not self._added:
-            pass
-
-        added = []
-
-        while self._added:
-            attr = self._added.pop(0)
-
-            if isinstance(attr, cmdx._AbstractAttribute):
-                if self._target.has_attr(attr["name"]):
-                    cmds.deleteAttr("%s.%s" % (self._target, attr["name"]))
-
-                with cmdx.DagModifier() as mod:
-                    mod.add_attr(self._target, attr)
-
-                attr = attr["name"]
-
-            else:
-                attr, long_name, nice_name = attr
-                name = long_name or attr
-
-                if self._target.has_attr(name):
-                    cmds.deleteAttr("%s.%s" % (self._target, name))
-
-                if cmdx.__maya_version__ == 2019:
-                    self.proxy_2019(attr, long_name, nice_name)
-                else:
-                    self.proxy(attr, long_name, nice_name)
-
-            added += [attr]
-
-        # Record it
-        if not cmds.objExists("%s.%s" % (self._target, "_ragdollAttributes")):
-            cmds.addAttr(self._target.path(),
-                         longName="_ragdollAttributes",
-                         dataType="string")
-
-        previous = self._target["_ragdollAttributes"].read()
-        new = " ".join(added)
-        attributes = " ".join([previous, new]) if previous else new
-
-        cmds.setAttr(
-            "%s._ragdollAttributes" % self._target,
-            attributes,
-            type="string"
-        )
-
-    def proxy(self, attr, long_name=None, nice_name=None):
-        """Create a proxy attribute for `name` on `target`"""
-        name = long_name or attr
-
-        kwargs = {
-            "longName": name,
-        }
-
-        if nice_name is not None:
-            kwargs["niceName"] = nice_name
-
-        kwargs["proxy"] = self._source[attr].path()
-        cmds.addAttr(self._target.path(), **kwargs)
-
-    def proxy_2019(self, attr, long_name=None, nice_name=None):
-        """Maya 2019 doesn't play well with proxy attributes"""
-
-        name = long_name or attr
-        default = cmds.getAttr("%s.%s" % (self._source, attr))
-
-        kwargs = {
-            "longName": name,
-            "defaultValue": default,
-            "keyable": True,
-        }
-
-        if nice_name is not None:
-            kwargs["niceName"] = nice_name
-
-        cmds.addAttr(self._target.path(), **kwargs)
-        cmds.connectAttr("%s.%s" % (self._target, name),
-                         "%s.%s" % (self._source, attr))
-
-    def add(self, attr, long_name=None, nice_name=None):
-        self._added.append((attr, long_name, nice_name))
-
-    def add_divider(self, label):
-        self._added.append(cmdx.Divider(label))
 
 
 @with_undo_chunk

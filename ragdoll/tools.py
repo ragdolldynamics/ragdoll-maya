@@ -735,6 +735,11 @@ def create_dynamic_control(chain,
             previous = children[index - 1] if index > 0 else None
             subsequent = children[index + 1] if index < count - 1 else None
 
+            # Joints are special, the user expects it to face in the
+            # direction of its immediate joint child, if any
+            if not subsequent and child.type() == "joint":
+                subsequent = child.child(type="joint")
+
             aim = None
             up = None
 

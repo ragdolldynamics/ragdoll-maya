@@ -3,6 +3,12 @@
 global proc AErdRigidTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
+        editorTemplate -beginLayout "Output Attributes" -collapse true;
+            editorTemplate -addControl "outputTranslate";
+            editorTemplate -addControl "outputRotate";
+            editorTemplate -addControl "outputScale";
+        editorTemplate -endLayout;
+
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
             editorTemplate -addControl "kinematic";

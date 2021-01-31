@@ -291,7 +291,7 @@
         "description": "(Unstable) Convert the selected <code>rdRigid</code> and <code>rdControl</code> nodes into geometry that can be exported to another application, and rendered with shadows in the viewport. NOTE: This may crash your scene, use at your own risk."
     },
     "normaliseShapes": {
-        "label": "Normalise shapes",
+        "label": "Normalise Shapes",
         "summary": "Resize shapes within a hierarchy to avoid some being too different.",
         "description": "Resize shapes across the selected hierarchy such that no shape is overly sized relative another. This is mostly intended for use with the Character command, to automatically generate a suitable skeleton. It is however not very good at the moment (!)."
     },
@@ -322,6 +322,8 @@
             "globalsValidations",
             "validateEvaluationMode",
             "validateRotatePivot",
+            "validateRotateAxis",
+            "validateScale",
             "validatePlaybackSpeed"
         ]
     },

@@ -31,7 +31,7 @@ Z = "Z"
 BoxShape = 0
 SphereShape = 1
 CapsuleShape = 2
-CylinderShape = 3
+CylinderShape = 2
 ConvexHullShape = 4
 MeshShape = 4  # Alias
 
@@ -180,7 +180,7 @@ class UserAttributes(object):
                 with cmdx.DagModifier() as mod:
                     mod.add_attr(self._target, attr)
 
-                attr = attr["name"]
+                name = attr["name"]
 
             else:
                 attr, long_name, nice_name = attr
@@ -194,7 +194,7 @@ class UserAttributes(object):
                 else:
                     self.proxy(attr, long_name, nice_name)
 
-            added += [attr]
+            added += [name]
 
         # Record it
         if not cmds.objExists("%s.%s" % (self._target, "_ragdollAttributes")):
@@ -482,10 +482,13 @@ def create_scene():
 
     with cmdx.DagModifier() as mod:
         tm = mod.create_node("transform", name=_unique_name("rScene"))
-        scene = mod.create_node("rdScene",
-                                name=_unique_name("rSceneShape"),
-                                parent=tm)
 
+        # Not yet supported
+        tm["scale"].locked = True
+        tm["scale"].keyable = False
+        tm["scale"].keyable = False
+
+        scene = _rdscene(mod, "rSceneShape", parent=tm)
         mod.connect(tm["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
@@ -539,7 +542,7 @@ def create_rigid(node,
     else:
         # Supported shapes, in order of preference
         transform = node
-        shape = node.shape(type=("mesh", "nurbsCurve"))
+        shape = node.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
 
     rest = transform["worldMatrix"][0].asMatrix()
 
@@ -573,31 +576,35 @@ def create_rigid(node,
     #
     #
     with cmdx.DagModifier() as mod:
-        if shape and shape.type() == "mesh":
-            mod.connect(shape["outMesh"], rigid["inputMesh"])
-
-            mod.set_attr(rigid["shapeType"], MeshShape)
-
+        if shape:
             bbox = shape.bounding_box
-            mod.set_attr(rigid["shapeExtentsX"], bbox.width)
-            mod.set_attr(rigid["shapeExtentsY"], bbox.height)
-            mod.set_attr(rigid["shapeExtentsZ"], bbox.depth)
+            extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+            center = cmdx.Vector(bbox.center)
 
-            _shapetype_from_mesh(mod, shape, rigid)
+            mod.set_attr(rigid["shapeOffset"], center)
+            mod.set_attr(rigid["shapeExtents"], extents)
+            mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
+            mod.set_attr(rigid["shapeLength"], extents.y)
 
-        elif shape and shape.type() == "nurbsCurve":
-            mod.connect(shape["local"], rigid["inputCurve"])
-            mod.set_attr(rigid["shapeType"], MeshShape)
+            if shape.type() == "mesh":
+                mod.connect(shape["outMesh"], rigid["inputMesh"])
+                mod.set_attr(rigid["shapeType"], MeshShape)
 
-            bbox = shape.bounding_box
-            mod.set_attr(rigid["shapeExtentsX"], bbox.width)
-            mod.set_attr(rigid["shapeExtentsY"], bbox.height)
-            mod.set_attr(rigid["shapeExtentsZ"], bbox.depth)
+            elif shape.type() == "nurbsCurve":
+                mod.connect(shape["local"], rigid["inputCurve"])
+                mod.set_attr(rigid["shapeType"], MeshShape)
+
+            elif shape.type() == "nurbsSurface":
+                mod.connect(shape["local"], rigid["inputSurface"])
+                mod.set_attr(rigid["shapeType"], MeshShape)
+
+            # In case the shape is connected to a common
+            # generator, like polyCube or polyCylinder
+            _shapeattributes_from_generator(mod, shape, rigid)
 
         elif transform.isA(cmdx.kJoint):
             mod.set_attr(rigid["shapeType"], CapsuleShape)
 
-        if transform.isA(cmdx.kJoint):
             # Orient inner shape to wherever the joint is pointing
             # as opposed to whatever its jointOrient is facing
             geometry = infer_geometry(transform)
@@ -606,20 +613,20 @@ def create_rigid(node,
             mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
             mod.set_attr(rigid["shapeLength"], geometry.length)
             mod.set_attr(rigid["shapeRadius"], geometry.radius)
-
-            # Facilitate swapping shape to e.g. box
             mod.set_attr(rigid["shapeExtents"], geometry.extents)
 
-            if compute_mass:
-                # Establish a sensible default mass, also taking into
-                # consideration that joints must be comparable to meshes.
-                # Mass unit is kg, whereas lengths are in centimeters
-
-                # If radius is 0, it's unlikely expected to be used for volume
-                mod.set_attr(rigid["mass"], geometry.mass())
+        if compute_mass:
+            # Establish a sensible default mass, also taking into
+            # consideration that joints must be comparable to meshes.
+            # Mass unit is kg, whereas lengths are in centimeters
+            mod.set_attr(rigid["mass"], (
+                extents.x *
+                extents.y *
+                extents.z *
+                0.01
+            ))
 
     # Make the connections
-
     with cmdx.DagModifier() as mod:
         try:
             if passive:
@@ -848,6 +855,12 @@ hinge_constraint = _make_constraint(convert_to_hinge)
 socket_constraint = _make_constraint(convert_to_socket)
 
 
+def _unscaled(mat):
+    tm = cmdx.Tm(mat)
+    tm.setScale((1, 1, 1))
+    return tm.asMatrix()
+
+
 def _reset_constraint(mod, con,
                       maintain_offset=True):
     """Reset a constraint
@@ -886,8 +899,8 @@ def _reset_constraint(mod, con,
 
     # Align constraint to whatever the local transformation is
     if maintain_offset and parent_rigid and child_rigid:
-        child_matrix = child_rigid["restMatrix"].asMatrix()
-        parent_matrix = parent_rigid["restMatrix"].asMatrix()
+        child_matrix = _unscaled(child_rigid["restMatrix"].asMatrix())
+        parent_matrix = _unscaled(parent_rigid["restMatrix"].asMatrix())
         parent_frame = child_matrix * parent_matrix.inverse()
 
         # Drive to where you currently are
@@ -896,6 +909,18 @@ def _reset_constraint(mod, con,
 
         _set_matrix(con["parentFrame"], parent_frame)
         _set_matrix(con["childFrame"], cmdx.Mat4())
+
+
+def _apply_scale(mat):
+    tm = cmdx.Tm(mat)
+    scale = tm.scale()
+    translate = tm.translation()
+    translate.x *= scale.x
+    translate.y *= scale.y
+    translate.z *= scale.z
+    tm.setTranslation(translate)
+    tm.setScale((1, 1, 1))
+    return tm.asMatrix()
 
 
 @with_undo_chunk
@@ -927,11 +952,11 @@ def orient(con, aim=None, up=None):
         # the user won't be expecting anything out of it.
         return
 
-    # Rather than ask the node for where it is, which could trigger
-    # an evaluation, we fetch an input matrix that isn't computed
-    # by Ragdoll
-    child_matrix = child_rigid["restMatrix"].asMatrix()
-    parent_matrix = parent_rigid["restMatrix"].asMatrix()
+    # Rather than ask the node for where it is, which could
+    # trigger an evaluation, we fetch an input matrix that
+    # isn't computed by Ragdoll
+    child_matrix = _unscaled(child_rigid["restMatrix"].asMatrix())
+    parent_matrix = _unscaled(parent_rigid["restMatrix"].asMatrix())
 
     con_tm = con.transform(cmdx.sWorld)
 
@@ -1040,6 +1065,9 @@ def _connect_transform(mod, node, transform):
             "outputRotateX": "rotateX",
             "outputRotateY": "rotateY",
             "outputRotateZ": "rotateZ",
+            "outputScaleX": "scaleX",
+            "outputScaleY": "scaleY",
+            "outputScaleZ": "scaleZ",
         }
 
     elif node.type() == "pairBlend":
@@ -1097,6 +1125,7 @@ def convert_rigid(rigid, passive=None):
         elif not passive:
             mod.set_attr(rigid["kinematic"], False)
             mod.disconnect(rigid["inputMatrix"], destination=False)
+            mod.disconnect(rigid["restMatrix"], destination=False)
 
             # The user will expect a newly-turned rigid to collide
             mod.set_attr(rigid["collide"], True)
@@ -1112,17 +1141,23 @@ def convert_rigid(rigid, passive=None):
     return rigid
 
 
-def _rdcontrol(mod, name, parent=None):
+def _rdscene(mod, name, parent=None):
     name = _unique_name(name)
-    ctrl = mod.create_node("rdControl", name=name, parent=parent)
-    mod.set_attr(ctrl["color"], ControlColor)  # Default blue
-    return ctrl
+    node = mod.create_node("rdScene", name=name, parent=parent)
+    return node
 
 
 def _rdrigid(mod, name, parent=None):
     name = _unique_name(name)
     node = mod.create_node("rdRigid", name=name, parent=parent)
     return node
+
+
+def _rdcontrol(mod, name, parent=None):
+    name = _unique_name(name)
+    ctrl = mod.create_node("rdControl", name=name, parent=parent)
+    mod.set_attr(ctrl["color"], ControlColor)  # Default blue
+    return ctrl
 
 
 def _rdconstraint(mod, name, parent=None):
@@ -1159,7 +1194,9 @@ def create_absolute_control(rigid, reference=None):
             reference = mod.create_node("transform", name=name)
             mod.set_attr(reference["translate"], tmat.translation())
             mod.set_attr(reference["rotate"], tmat.rotation())
-            mod.set_attr(reference["scale"], rigid.parent()["scale"])
+            mod.set_attr(reference["scale"], tmat.scale())
+            mod.lock_attr(reference["scale"])
+            mod.keyable_attr(reference["scale"], False)
 
         ctrl = _rdcontrol(mod, "rAbsoluteControl1", reference)
         mod.connect(rigid["ragdollId"], ctrl["rigid"])
@@ -1306,6 +1343,12 @@ def create_active_control(reference, rigid):
         mod.set_attr(con["angularDriveStiffness"], 10000.0)
         mod.set_attr(con["angularDriveDamping"], 1000.0)
 
+        mod.keyable_attr(con["driveStrength"])
+        mod.keyable_attr(con["linearDriveStiffness"])
+        mod.keyable_attr(con["linearDriveDamping"])
+        mod.keyable_attr(con["angularDriveStiffness"])
+        mod.keyable_attr(con["angularDriveDamping"])
+
     forwarded = (
         "driveStrength",
         "linearDriveStiffness",
@@ -1321,12 +1364,6 @@ def create_active_control(reference, rigid):
         # Expose on constraint node itself
         con[attr].keyable = True
         reference_proxies.add(attr)
-
-    con["driveStrength"].keyable = True
-    con["linearDriveStiffness"].keyable = True
-    con["linearDriveDamping"].keyable = True
-    con["angularDriveStiffness"].keyable = True
-    con["angularDriveDamping"].keyable = True
 
     reference_proxies.do_it()
 
@@ -1346,9 +1383,13 @@ def create_kinematic_control(rigid, reference=None):
             reference = mod.create_node("transform", name="rPassive1")
 
             tmat = rigid.transform(cmdx.sWorld)
-            reference["scale"].keyable = False
+
             mod.set_attr(reference["translate"], tmat.translation())
             mod.set_attr(reference["rotate"], tmat.rotation())
+            mod.set_attr(reference["scale"], tmat.scale())
+
+            mod.lock_attr(reference["scale"], True)
+            mod.keyable_attr(reference["scale"], False)
 
         ctrl = mod.create_node("rdControl",
                                name="rPassiveShape1",
@@ -1387,31 +1428,63 @@ def _next_available_index(attr, start_index=0):
     return 0
 
 
-def _shapetype_from_mesh(mod, shape, rigid):
+def _shapeattributes_from_generator(mod, shape, rigid):
     """Look at `shape` history for a e.g. polyCube or polySphere"""
 
-    assert "inMesh" in shape, "shape not a mesh"
+    gen = None
 
-    if shape["inMesh"].connected:
-        other = shape["inMesh"].connection()
+    if "inMesh" in shape and shape["inMesh"].connected:
+        gen = shape["inMesh"].connection()
 
-        if other.type() == "polyCube":
-            mod.set_attr(rigid["shapeType"], BoxShape)
-            mod.set_attr(rigid["shapeExtentsX"], other["width"])
-            mod.set_attr(rigid["shapeExtentsY"], other["height"])
-            mod.set_attr(rigid["shapeExtentsZ"], other["depth"])
+    elif "create" in shape and shape["create"].connected:
+        gen = shape["create"].connection()
 
-        elif other.type() == "polySphere":
-            mod.set_attr(rigid["shapeType"], SphereShape)
-            mod.set_attr(rigid["shapeRadius"], other["radius"])
+    else:
+        return
 
-        elif other.type() == "polyCylinder" and other["roundCap"]:
-            mod.set_attr(rigid["shapeType"], CylinderShape)
-            mod.set_attr(rigid["shapeRadius"], other["radius"])
-            mod.set_attr(rigid["shapeLength"], other["height"])
+    if gen.type() == "polyCube":
+        mod.set_attr(rigid["shapeType"], BoxShape)
+        mod.set_attr(rigid["shapeExtentsX"], gen["width"])
+        mod.set_attr(rigid["shapeExtentsY"], gen["height"])
+        mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
 
-            # Align with Maya's cylinder/capsule axis
-            rigid["shapeRotation", cmdx.Degrees] = (0, 0, 90)
+    elif gen.type() == "polySphere":
+        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "polyCylinder" and gen["roundCap"]:
+        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["height"])
+
+        # Align with Maya's cylinder/capsule axis
+        # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
+        mod.set_attr(rigid["shapeRotation"], map(cmdx.radians, (
+            (0, 0, 90) if gen["axisY"] else
+            (0, 90, 0) if gen["axisZ"] else
+            (0, 0, 0)
+        )))
+
+    elif gen.type() == "makeNurbCircle":
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "makeNurbSphere":
+        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "makeNurbCone":
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
+
+    elif gen.type() == "makeNurbCylinder":
+        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
+        mod.set_attr(rigid["shapeRotation"], map(cmdx.radians, (
+            (0, 0, 90) if gen["axisY"] else
+            (0, 90, 0) if gen["axisZ"] else
+            (0, 0, 0)
+        )))
 
 
 def _scale_from_rigid(rigid):
@@ -1598,13 +1671,99 @@ def edit_constraint_frames(con):
         parent_frame_tm = cmdx.Tm(con["parentFrame"].asMatrix())
         child_frame_tm = cmdx.Tm(con["childFrame"].asMatrix())
 
-        mod.set_attr(parent_frame["translate"], parent_frame_tm.translation())
+        parent_scale = parent_rigid["worldMatrix"][0].asMatrix()
+        parent_scale = cmdx.Tm(parent_scale).scale()
+        child_scale = child_rigid["worldMatrix"][0].asMatrix()
+        child_scale = cmdx.Tm(child_scale).scale()
+
+        parent_translate = parent_frame_tm.translation()
+        child_translate = child_frame_tm.translation()
+
+        # Compensate for scale
+        parent_translate = cmdx.divide_vectors(parent_translate, parent_scale)
+        child_translate = cmdx.divide_vectors(child_translate, child_scale)
+
+        mod.set_attr(parent_frame["translate"], parent_translate)
         mod.set_attr(parent_frame["rotate"], parent_frame_tm.rotation())
-        mod.set_attr(child_frame["translate"], child_frame_tm.translation())
+        mod.set_attr(child_frame["translate"], child_translate)
         mod.set_attr(child_frame["rotate"], child_frame_tm.rotation())
 
         mod.connect(parent_frame["matrix"], con["parentFrame"])
         mod.connect(child_frame["matrix"], con["childFrame"])
+
+    # Compensate for a scaled Maya transform hierarchy
+    #
+    #                      ___asset___________________________________
+    #                     |                                           |
+    #  ______________     |                                           |
+    # |              |    |                                           |
+    # | rigid        |    |   __________                              |
+    # |              |    |  |          |                             |
+    # |  outputScale o----o->o          |                             |
+    # |______________|    |  |          |                             |
+    #                     |  |          |                             |
+    #  ____________       |  | multiply |                             |
+    # |            |      |  |          |                             |
+    # | transform  |      |  |          |       __________________    |
+    # |            |      |  |          |      |                  |   |
+    # |  translate o------o->o__________o----->o                  |   |
+    # |     rotate o------o------------------->o                  |   |
+    # |            |      |                    |                  |   |
+    # |            |      |                    |  scaledTranslate o---o----->
+    # |            |      |                    |           rotate o---o----->
+    # |____________|      |                    |__________________|   |
+    #                     |                                           |
+    #                     |___________________________________________|
+    #
+    def cancel_scale_asset():
+        with cmdx.DGModifier() as mod:
+            mult = mod.create_node("multiplyDivide")
+            compose = mod.create_node("composeMatrix")
+            mod.connect(mult["output"], compose["inputTranslate"])
+            mod.connect(compose["outputMatrix"], con["parentFrame"])
+
+        name = _unique_name("cancelScale")
+        nodes = [mult.path(), compose.path()]
+        asset = cmds.container(name=name, addNode=nodes, type="dagContainer")
+
+        cmds.container(asset, edit=True, publishName="inputTranslate")
+        cmds.container(asset, edit=True, publishName="inputRotate")
+        cmds.container(asset, edit=True, publishName="inputScale")
+        cmds.container(asset, edit=True, publishName="outputMatrix")
+
+        for binding in (("%s.input1" % mult, "inputTranslate"),
+                        ("%s.input2" % mult, "inputScale"),
+                        ("%s.inputRotate" % compose, "inputRotate"),
+                        ("%s.outputMatrix" % compose, "outputMatrix")):
+            cmds.container(asset, edit=True, bindAttr=binding)
+
+        asset = cmdx.encode(asset)
+        asset["hiddenInOutliner"] = True
+
+        return asset
+
+    with cmdx.DagModifier() as mod:
+        parent_cancel = cancel_scale_asset()
+        child_cancel = cancel_scale_asset()
+
+        mod.connect(child_frame["translate"], child_cancel["inputTranslate"])
+        mod.connect(child_frame["rotate"], child_cancel["inputRotate"])
+        mod.connect(child_rigid["outputScale"], child_cancel["inputScale"])
+
+        mod.connect(parent_frame["translate"], parent_cancel["inputTranslate"])
+        mod.connect(parent_frame["rotate"], parent_cancel["inputRotate"])
+
+        # Worldspace constraints are to the scene
+        if parent_rigid.type() != "rdScene":
+            mod.connect(parent_rigid["outputScale"],
+                        parent_cancel["inputScale"])
+
+        mod.connect(child_cancel["outputMatrix"], con["childFrame"])
+        mod.connect(parent_cancel["outputMatrix"], con["parentFrame"])
+
+        # Cleanup
+        mod.parent(parent_cancel, parent_frame)
+        mod.parent(child_cancel, child_frame)
 
     return parent_frame, child_frame
 
@@ -1840,7 +1999,9 @@ def infer_geometry(root, parent=None, children=None):
             parent_geometry = parent.data.get("_rdGeometry")
             return parent_geometry
 
-    root_pos = root.transform(cmdx.sWorld).translation()
+    root_tm = root.transform(cmdx.sWorld)
+    root_pos = root_tm.translation()
+    root_scale = root_tm.scale()
 
     # There is a lot we can gather from the childhood
     if children:
@@ -1925,7 +2086,14 @@ def infer_geometry(root, parent=None, children=None):
 
             if shape:
                 bbox = shape.bounding_box
-                radius = sorted([bbox.width, bbox.height, bbox.depth])
+
+                # Bounding box is independent of global scale
+                bbox = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+                bbox.x *= root_scale.x
+                bbox.y *= root_scale.y
+                bbox.z *= root_scale.z
+
+                radius = sorted([bbox.x, bbox.y, bbox.z])
 
                 # A bounding box will be either flat or long
                 # That means 2/3 axes will be similar, and one
@@ -1961,13 +2129,32 @@ def infer_geometry(root, parent=None, children=None):
         geometry.extents = size
 
     # Compute final shape matrix with these ingredients
-    root_tm = root.transform(cmdx.sWorld)
     shape_tm = cmdx.Tm(translate=root_pos, rotate=geometry.orient)
     shape_tm.translateBy(offset, cmdx.sPostTransform)
     shape_tm = cmdx.Tm(shape_tm.asMatrix() * root_tm.asMatrix().inverse())
 
     geometry.shape_offset = shape_tm.translation()
     geometry.shape_rotation = shape_tm.rotation()
+
+    # Take root_scale into account
+    if abs(root_scale.x) > 0:
+        geometry.radius /= root_scale.x
+        geometry.extents.x /= root_scale.x
+    else:
+        geometry.radius = 0
+        geometry.extents.x = 0
+
+    if abs(root_scale.y) > 0:
+        geometry.length /= root_scale.y
+        geometry.extents.y /= root_scale.y
+    else:
+        geometry.length = 0
+        geometry.extents.y = 0
+
+    if abs(root_scale.z) > 0:
+        geometry.extents.z /= root_scale.z
+    else:
+        geometry.extents.z = 0
 
     # Store for subsequent accesses
     root.data["_rdGeometry"] = geometry
@@ -2100,11 +2287,11 @@ def delete_physics(nodes):
     nodes = cmds.ls(nodes, type=all_nodetypes)
 
     # Programmatically figure out what nodes are ours
-    suspects = []
+    suspects = set()
 
     # Exclusive transforms
     for node in nodes:
-        suspects += [cmds.listRelatives(node, parent=True, fullPath=True)[0]]
+        suspects.update(cmds.listRelatives(node, parent=True, fullPath=True))
 
     if nodes:
         cmds.delete(nodes)
@@ -2118,7 +2305,7 @@ def delete_physics(nodes):
             log.debug("Deleting %s" % suspect)
             cmds.delete(suspect)
 
-        # No? Then let's erase Ragdoll attributes from it
+        # No? Then let's erase User Attributes from it
         elif cmds.objExists(attrs):
 
             # Get rid of any attributes we made on the original nodes

@@ -4511,12 +4511,30 @@ class _BaseModifier(object):
             "template": template,
         }
 
+        # Extras
+        self._lockAttrs = []
+        self._keyableAttrs = []
+
+    @record_history
+    def lockAttr(self, plug, value=True):
+        assert isinstance(plug, (Plug, om.MPlug)), "%s was not a plug" % plug
+        self._lockAttrs.append((plug, value))
+
+    @record_history
+    def keyableAttr(self, plug, value=True):
+        assert isinstance(plug, (Plug, om.MPlug)), "%s was not a plug" % plug
+        self._keyableAttrs.append((plug, value))
+
     def doIt(self):
         if (not self.isContext) and self._opts["undoable"]:
             commit(self._modifier.undoIt, self._modifier.doIt)
 
         try:
             self._modifier.doIt()
+
+            # Do these last, they manage undo on their own
+            self._doLockAttrs()
+            self._doKeyableAttrs()
 
         except RuntimeError:
 
@@ -4525,8 +4543,8 @@ class _BaseModifier(object):
                 self.undoIt()
 
             raise ModifierError(self._history)
-        else:
 
+        else:
             # Facilitate multiple calls to doIt, whereby only
             # the latest, actually-performed actions are reported
             self._history[:] = []
@@ -4535,6 +4553,22 @@ class _BaseModifier(object):
 
     def undoIt(self):
         self._modifier.undoIt()
+
+    def _doLockAttrs(self):
+        while self._lockAttrs:
+            plug, value = self._lockAttrs.pop(0)
+            elements = plug if plug.isArray or plug.isCompound else [plug]
+
+            for el in elements:
+                cmds.setAttr(el.path(), lock=value)
+
+    def _doKeyableAttrs(self):
+        while self._keyableAttrs:
+            plug, value = self._keyableAttrs.pop(0)
+            elements = plug if plug.isArray or plug.isCompound else [plug]
+
+            for el in elements:
+                cmds.setAttr(el.path(), keyable=value)
 
     @record_history
     def createNode(self, type, name=None):
@@ -4788,6 +4822,8 @@ class _BaseModifier(object):
         set_attr = setAttr
         delete_attr = deleteAttr
         reset_attr = resetAttr
+        lock_attr = lockAttr
+        keyable_attr = keyableAttr
 
 
 class DGModifier(_BaseModifier):

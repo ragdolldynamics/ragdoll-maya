@@ -85,7 +85,7 @@ Download and have a go!
         <code>0.40 mb</code>
     </div>
     <h3>Example 8 | Driving</h3>
-    <p>A late night drive on a busy dirt road.</p>
+    <p>A late night drive on a busy country road.</p>
     <a class="example-button" href=https://files.ragdolldynamics.com/share/xKLUBNZu>Download</a>
 </div>
 <p></p>

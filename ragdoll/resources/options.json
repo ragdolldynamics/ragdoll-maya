@@ -323,6 +323,18 @@
         "default": true,
         "help": "Make sure Maya's playback speed is set to 'Play every frame'."
     },
+    "validateRotateAxis": {
+        "name": "validateRotateAxis",
+        "type": "Boolean",
+        "default": true,
+        "help": "Let the user know of a Ragdoll limitation, that a custom rotate axis are unsupported."
+    },
+    "validateScale": {
+        "name": "validateScale",
+        "type": "Boolean",
+        "default": true,
+        "help": "Let the user know of a Ragdoll limitation, that scale is unsupported."
+    },
     "autoHideShapeAttributes": {
         "name": "autoHideShapeAttributes",
         "type": "Boolean",

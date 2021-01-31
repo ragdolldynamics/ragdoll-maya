@@ -2,7 +2,7 @@
     <img class="hero-image" src=/yoga12.png>
 </div>
 
-Ragdoll is a **real-time physics solver** for Maya, similar the native nCloth and nHair solvers except it works on *transforms* rather than points. That makes it better equipt for integrate with your existing animation controls and doesn't require translating from points like people did in the 90's.
+Ragdoll is a **real-time physics solver** for Maya, similar the native nCloth and nHair solvers except it works on *transforms* rather than points. That makes it better equipt to integrate with your existing animation controls and doesn't require translating from points like people did in the 90's.
 
 This domain contains Ragdoll learning resources, for a more general overview see the [**Product Page**](https://ragdolldynamics.com).
 

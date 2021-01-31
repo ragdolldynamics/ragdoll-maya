@@ -105,7 +105,7 @@ def _on_scene_open(*args):
         _evaluate_need_to_upgrade()
 
 
-def _graphical(func):
+def requires_ui(func):
     """Wrapper for functions that rely on being displayed
 
     Mostly for CI. These are simply ignored.
@@ -492,6 +492,12 @@ def install_menu():
         item("normaliseShapes", normalise_shapes)
         item("setInitialState", set_initial_state)
 
+    with submenu("System", icon="system.png"):
+        item("deleteAllPhysics", delete_physics, delete_physics_options)
+        item("globalPreferences", global_preferences)
+        item("savePreferences", save_preferences)
+        item("resetPreferences", reset_preferences)
+
     with submenu("Select", icon="select.png"):
         item("selectRigids",
              select_rigids,
@@ -499,12 +505,6 @@ def install_menu():
         item("selectConstraints",
              select_constraints,
              select_constraints_options)
-
-    with submenu("System", icon="system.png"):
-        item("deleteAllPhysics", delete_physics, delete_physics_options)
-        item("globalPreferences", global_preferences)
-        item("savePreferences", save_preferences)
-        item("resetPreferences", reset_preferences)
 
     divider()
 
@@ -694,8 +694,8 @@ def _find_current_scene(autocreate=True):
     return scene
 
 
-@_graphical
-def warn_about_dg():
+@requires_ui
+def validate_evaluation_mode():
     def ignore():
         return True
 
@@ -722,29 +722,7 @@ def warn_about_dg():
     )
 
 
-@_graphical
-def warn_about_pivot():
-    return ui.warn(
-        option="validateRotatePivot",
-        title="Custom Rotate Pivot Found",
-        message=(
-            "Non-zero rotate pivots were found. These are currently "
-            "unsupported and need to be zeroed out, "
-            "see Script Editor for details."
-        ),
-        call_to_action="What would you like to do?",
-        actions=[
-
-            # Happens automatically by commands.py
-            # Take it or leave it, doesn't work otherwise
-            ("Zero out rotatePivot", lambda: True),
-
-            ("Cancel", lambda: False)
-        ]
-    )
-
-
-@_graphical
+@requires_ui
 def validate_playbackspeed():
     play_every_frame = cmds.optionVar(query="timeSliderPlaySpeed") == 0.0
 
@@ -841,15 +819,18 @@ def _replayable(func):
     @functools.wraps(func)
     def wrapper(selection=None, **kwargs):
         if not kwargs.get("_replaying") and not _is_standalone():
-            selection = selection or cmdx.selection()
-            if selection:
+            sel = selection or cmdx.selection()
+            if sel:
                 try:
-                    _record(selection)
+                    _record(sel)
                 except Exception:
                     # This *cannot* cause function to not get called
                     import traceback
                     traceback.print_exc()
 
+        # Pass the original selection into the target
+        # function, to let it handle selection types
+        # e.g. joints versus transforms
         return func(selection, **kwargs)
 
     return wrapper
@@ -890,9 +871,8 @@ def create_scene(selection=None):
     if options.read("validateEvaluationMode"):
         mode = cmds.evaluationManager(query=True, mode=True)
 
-        if mode[0] == 'off':
-            if warn_about_dg() is Cancelled:
-                return
+        if mode[0] == 'off' and not validate_evaluation_mode():
+            return
 
     if options.read("validatePlaybackSpeed"):
         validate_playbackspeed()
@@ -900,6 +880,7 @@ def create_scene(selection=None):
     return commands.create_scene()
 
 
+@requires_ui
 def has_valid_rotatepivot(transform):
     """Ragdoll currently does not support any custom pivot or axis"""
 
@@ -923,7 +904,24 @@ def has_valid_rotatepivot(transform):
         for plug in nonzero:
             log.warning("%s was not zero" % plug.path())
 
-        return warn_about_pivot()
+        return ui.warn(
+            option="validateRotatePivot",
+            title="Custom Rotate Pivot Found",
+            message=(
+                "Non-zero rotate pivots were found. These are currently "
+                "unsupported and need to be zeroed out, "
+                "see Script Editor for details."
+            ),
+            call_to_action="What would you like to do?",
+            actions=[
+
+                # Happens automatically by commands.py
+                # Take it or leave it, doesn't work otherwise
+                ("Zero out rotatePivot", lambda: True),
+
+                ("Cancel", lambda: False)
+            ]
+        )
 
     else:
         return True
@@ -941,7 +939,7 @@ def create_active_rigid(selection=None, **opts):
 
     created = []
     converted = []
-    selection = selection or cmdx.selection()
+    selection = selection or cmdx.selection(type="dagNode")
 
     if not selection:
         return log.warning(
@@ -967,7 +965,6 @@ def create_active_rigid(selection=None, **opts):
     previous = None
     select = _opt("rigidSelect", opts)
     passive = _opt("createRigidType", opts) == "Passive"
-
     scene = _find_current_scene()
 
     for index, node in enumerate(selection):
@@ -1149,6 +1146,9 @@ def _validate_transforms(nodes, tolerance=0.01):
     issues = []
 
     for node in nodes:
+        if not node.isA(cmdx.kTransform):
+            continue
+
         tm = node.transform(cmdx.sWorld)
         if any(value < 0 - tolerance for value in tm.scale()):
             negative_scaled += [node]
@@ -1160,7 +1160,7 @@ def _validate_transforms(nodes, tolerance=0.01):
         if (any(abs(value) > tolerance for value in axis)):
             axes += [node]
 
-    if negative_scaled:
+    if negative_scaled and options.read("validateScale"):
         issues += [
             "%d node(s) has negative scale\n%s" % (
                 len(negative_scaled),
@@ -1168,15 +1168,7 @@ def _validate_transforms(nodes, tolerance=0.01):
             )
         ]
 
-    if positive_scaled:
-        issues += [
-            "%d node(s) were scaled\n%s" % (
-                len(positive_scaled),
-                "\n".join(" - %s" % node for node in positive_scaled),
-            )
-        ]
-
-    if axes:
+    if axes and options.read("validateRotateAxis"):
         issues += [
             "%d node(s) had a custom rotate axis\n%s" % (
                 len(axes),
@@ -1201,7 +1193,7 @@ def _validate_transforms(nodes, tolerance=0.01):
 @commands.with_undo_chunk
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
-    root = selection or cmdx.selection()
+    root = selection or cmdx.selection(type="joint")
 
     if not root or root[0].type() != "joint":
         return log.warning("Select root joint from which to create character")

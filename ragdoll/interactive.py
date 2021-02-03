@@ -488,7 +488,10 @@ def install_menu():
         item("editConstraintFrames", edit_constraint_frames)
         item("duplicateSelected", duplicate_selected)
         item("transferAttributes", transfer_selected)
-        item("convertToPolygons", convert_to_polygons)
+
+        if RAGDOLL_DEVELOPER:
+            item("convertToPolygons", convert_to_polygons)
+
         item("normaliseShapes", normalise_shapes)
         item("setInitialState", set_initial_state)
 

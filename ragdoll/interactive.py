@@ -502,12 +502,12 @@ def install_menu():
         item("resetPreferences", reset_preferences)
 
     with submenu("Select", icon="select.png"):
-        item("selectRigids",
-             select_rigids,
-             select_rigids_options)
+        item("selectRigids", select_rigids, select_rigids_options)
         item("selectConstraints",
              select_constraints,
              select_constraints_options)
+        item("selectScenes", select_scenes, select_scenes_options)
+        item("selectControls", select_controls, select_controls_options)
 
     divider()
 
@@ -1867,23 +1867,21 @@ def multiply_constraints(selection=None):
     return True
 
 
-def select_rigids(selection=None):
-    selection = cmds.ls(selection=True)
+def select_type(typ):
+    def select(selection=None):
+        selection = cmds.ls(selection=True)
 
-    if selection:
-        cmds.select(cmds.ls(selection, type="rdRigid"))
-    else:
-        cmds.select(cmds.ls(type="rdRigid"))
+        if selection:
+            cmds.select(cmds.ls(selection, type=typ))
+        else:
+            cmds.select(cmds.ls(type=typ))
+    return select
 
 
-def select_constraints(selection=None):
-    selection = cmds.ls(selection=True)
-
-    if selection:
-        cmds.select(cmds.ls(selection, type="rdConstraint"))
-    else:
-        cmds.select(cmds.ls(type="rdConstraint"))
-
+select_rigids = select_type("rdRigid")
+select_constraints = select_type("rdConstraint")
+select_scenes = select_type("rdScene")
+select_controls = select_type("rdControl")
 
 #
 # User Interface
@@ -2105,12 +2103,16 @@ def create_dynamic_control_options(*args):
     return _Window("createDynamicControl", create_dynamic_control)
 
 
-def select_rigids_options(*args):
-    return _Window("selectRigids", select_rigids)
+def _st_options(key, typ):
+    def select(*args):
+        return _Window(key, select_type(typ))
+    return select
 
 
-def select_constraints_options(*args):
-    return _Window("selectConstraints", select_constraints)
+select_rigids_options = _st_options("selectRigids", "rdRigid")
+select_constraints_options = _st_options("selectConstraints", "rdControl")
+select_scenes_options = _st_options("selectScenes", "rdScene")
+select_controls_options = _st_options("selectControls", "rdControl")
 
 
 def delete_physics_options(*args):

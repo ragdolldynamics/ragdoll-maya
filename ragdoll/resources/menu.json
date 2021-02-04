@@ -351,6 +351,18 @@
         "summary": "Select all constraints, or filter constraints from selection.",
         "description": "Either select some hierarchy of nodes and use this to isolate only the constraints in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
     },
+    "selectScenes": {
+        "label": "Select Scenes",
+        "icon": "logo.png",
+        "summary": "Select all scenes, or filter scenes from selection.",
+        "description": "Either select some hierarchy of nodes and use this to isolate only the scenes in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+    },
+    "selectControls": {
+        "label": "Select Controls",
+        "icon": "control.png",
+        "summary": "Select all controls, or filter controls from selection.",
+        "description": "Either select some hierarchy of nodes and use this to isolate only the controls in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+    },
     "ragdoll": {
         "icon": "logo.png",
         "summary": "View your version, and eventually look for updates and tutorials. Not yet though."

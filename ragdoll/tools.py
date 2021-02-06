@@ -610,16 +610,8 @@ def create_dynamic_control(chain,
             mult.rename(commands._unique_name("r%sMultiplier" % name))
 
             # Forward some convenience attributes
-            attrs = (
-                ("driveStrength", "%sStrength", "%s Strength"),
-            )
-
             proxies = commands.UserAttributes(mult, parent)
-            for attr, key, nice in attrs:
-                proxies.add(attr,
-                            long_name=key % name.lower(),
-                            nice_name=nice % name)
-
+            proxies.add("driveStrength", nice_name="Strength Multiplier")
             proxies.do_it()
 
         return mult

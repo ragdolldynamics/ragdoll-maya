@@ -202,6 +202,9 @@ Tables
 }
 
 .md-typeset table:not([class]) {
+  /* Fill the width */
+  display: table;
+
   width: 100%;
   border-collapse: collapse;
   box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
@@ -213,7 +216,7 @@ Tables
 
 .md-typeset table:not([class]) td {
     border-top: none;
-    padding: 0.7rem 0.5rem; 
+    padding: 0.4rem 0.5rem; 
 }
 
 .md-typeset table:not([class]) td {
@@ -230,6 +233,9 @@ Tables
 }
 
 .md-typeset .md-typeset__table {
+  /* Fill the width */
+    display: inherit;
+
     padding: 0.5rem 0.5rem;
 }
 

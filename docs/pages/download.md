@@ -107,7 +107,7 @@ You should now see a new `Ragdoll` menu.
     - Maya 2018-2021
 
 ??? question "What are my licensing options?"
-    - `Trial` - 60 days of non-commercial use, no strings attached
+    - `Trial` - 30 days of non-commercial use, no strings attached
     - `NodeLocked` - Any number of users, one machine per licence
     - `Floating` - Any number of machines, one user per licence
     - `Headless` - A cost-effective alternative for distributed simulations

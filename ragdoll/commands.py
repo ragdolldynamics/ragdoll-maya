@@ -380,7 +380,9 @@ def _connect_active_blend(mod, rigid):
 
     _connect_transform(mod, pair_blend, transform)
 
-    mod.connect(rigid["outputScale"], transform["scale"])
+    mod.connect(rigid["outputScaleX"], transform["scaleX"])
+    mod.connect(rigid["outputScaleY"], transform["scaleY"])
+    mod.connect(rigid["outputScaleZ"], transform["scaleZ"])
 
     con = rigid.sibling(type="rdConstraint")
 

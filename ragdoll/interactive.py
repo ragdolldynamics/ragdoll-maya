@@ -506,8 +506,8 @@ def install_menu():
         item("selectConstraints",
              select_constraints,
              select_constraints_options)
-        item("selectScenes", select_scenes, select_scenes_options)
         item("selectControls", select_controls, select_controls_options)
+        item("selectScenes", select_scenes, select_scenes_options)
 
     divider()
 
@@ -1877,10 +1877,21 @@ def select_type(typ):
     return select
 
 
-select_rigids = select_type("rdRigid")
-select_constraints = select_type("rdConstraint")
-select_scenes = select_type("rdScene")
-select_controls = select_type("rdControl")
+def select_rigids(selection=None):
+    return select_type("rdRigid")(selection)
+
+
+def select_constraints(selection=None):
+    return select_type("rdConstraint")(selection)
+
+
+def select_controls(selection=None):
+    return select_type("rdControl")(selection)
+
+
+def select_scenes(selection=None):
+    return select_type("rdScene")(selection)
+
 
 #
 # User Interface

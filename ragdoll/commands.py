@@ -380,6 +380,8 @@ def _connect_active_blend(mod, rigid):
 
     _connect_transform(mod, pair_blend, transform)
 
+    mod.connect(rigid["outputScale"], transform["scale"])
+
     con = rigid.sibling(type="rdConstraint")
 
     if not con:
@@ -387,10 +389,6 @@ def _connect_active_blend(mod, rigid):
         assert scene is not None, "%s was unconnected" % rigid
 
         con = _rdconstraint(mod, "rGuideConstraint", parent=transform)
-        mod.set_attr(con["angularLimitX"], 0)  # Free
-        mod.set_attr(con["angularLimitY"], 0)
-        mod.set_attr(con["angularLimitZ"], 0)
-
         mod.set_attr(con["limitEnabled"], False)
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["driveStrength"], 1.0)
@@ -899,8 +897,8 @@ def _reset_constraint(mod, con,
 
     # Align constraint to whatever the local transformation is
     if maintain_offset and parent_rigid and child_rigid:
-        child_matrix = _unscaled(child_rigid["restMatrix"].asMatrix())
-        parent_matrix = _unscaled(parent_rigid["restMatrix"].asMatrix())
+        child_matrix = child_rigid["restMatrix"].asMatrix()
+        parent_matrix = parent_rigid["restMatrix"].asMatrix()
         parent_frame = child_matrix * parent_matrix.inverse()
 
         # Drive to where you currently are
@@ -955,8 +953,8 @@ def orient(con, aim=None, up=None):
     # Rather than ask the node for where it is, which could
     # trigger an evaluation, we fetch an input matrix that
     # isn't computed by Ragdoll
-    child_matrix = _unscaled(child_rigid["restMatrix"].asMatrix())
-    parent_matrix = _unscaled(parent_rigid["restMatrix"].asMatrix())
+    child_matrix = child_rigid["restMatrix"].asMatrix()
+    parent_matrix = parent_rigid["restMatrix"].asMatrix()
 
     con_tm = con.transform(cmdx.sWorld)
 
@@ -1117,6 +1115,9 @@ def convert_rigid(rigid, passive=None):
             for plug in node["rotate"]:
                 mod.disconnect(plug, destination=False)
 
+            for plug in node["scale"]:
+                mod.disconnect(plug, destination=False)
+
             mod.doIt()
 
             mod.connect(node["worldMatrix"][0], rigid["inputMatrix"])
@@ -1194,8 +1195,9 @@ def create_absolute_control(rigid, reference=None):
             reference = mod.create_node("transform", name=name)
             mod.set_attr(reference["translate"], tmat.translation())
             mod.set_attr(reference["rotate"], tmat.rotation())
-            mod.set_attr(reference["scale"], tmat.scale())
-            mod.lock_attr(reference["scale"])
+
+            # Just mirror whatever the rigid is doing
+            mod.connect(rigid["outputWorldScale"], reference["scale"])
             mod.keyable_attr(reference["scale"], False)
 
         ctrl = _rdcontrol(mod, "rAbsoluteControl1", reference)
@@ -1488,10 +1490,13 @@ def _shapeattributes_from_generator(mod, shape, rigid):
 
 
 def _scale_from_rigid(rigid):
+    rest_tm = cmdx.Tm(rigid["restMatrix"].asMatrix())
+    scale = sum(rest_tm.scale()) / 3.0
+
     if rigid.parent().type() == "joint":
-        return rigid["shapeLength"].read() * 0.25
+        return rigid["shapeLength"].read() * 0.25 * scale
     else:
-        return sum(rigid["shapeExtents"].read()) / 3
+        return sum(rigid["shapeExtents"].read()) / 3.0 * scale
 
 
 def _attach_bodies(parent, child, scene):
@@ -1671,17 +1676,8 @@ def edit_constraint_frames(con):
         parent_frame_tm = cmdx.Tm(con["parentFrame"].asMatrix())
         child_frame_tm = cmdx.Tm(con["childFrame"].asMatrix())
 
-        parent_scale = parent_rigid["worldMatrix"][0].asMatrix()
-        parent_scale = cmdx.Tm(parent_scale).scale()
-        child_scale = child_rigid["worldMatrix"][0].asMatrix()
-        child_scale = cmdx.Tm(child_scale).scale()
-
         parent_translate = parent_frame_tm.translation()
         child_translate = child_frame_tm.translation()
-
-        # Compensate for scale
-        parent_translate = cmdx.divide_vectors(parent_translate, parent_scale)
-        child_translate = cmdx.divide_vectors(child_translate, child_scale)
 
         mod.set_attr(parent_frame["translate"], parent_translate)
         mod.set_attr(parent_frame["rotate"], parent_frame_tm.rotation())
@@ -1690,80 +1686,6 @@ def edit_constraint_frames(con):
 
         mod.connect(parent_frame["matrix"], con["parentFrame"])
         mod.connect(child_frame["matrix"], con["childFrame"])
-
-    # Compensate for a scaled Maya transform hierarchy
-    #
-    #                      ___asset___________________________________
-    #                     |                                           |
-    #  ______________     |                                           |
-    # |              |    |                                           |
-    # | rigid        |    |   __________                              |
-    # |              |    |  |          |                             |
-    # |  outputScale o----o->o          |                             |
-    # |______________|    |  |          |                             |
-    #                     |  |          |                             |
-    #  ____________       |  | multiply |                             |
-    # |            |      |  |          |                             |
-    # | transform  |      |  |          |       __________________    |
-    # |            |      |  |          |      |                  |   |
-    # |  translate o------o->o__________o----->o                  |   |
-    # |     rotate o------o------------------->o                  |   |
-    # |            |      |                    |                  |   |
-    # |            |      |                    |  scaledTranslate o---o----->
-    # |            |      |                    |           rotate o---o----->
-    # |____________|      |                    |__________________|   |
-    #                     |                                           |
-    #                     |___________________________________________|
-    #
-    def cancel_scale_asset():
-        with cmdx.DGModifier() as mod:
-            mult = mod.create_node("multiplyDivide")
-            compose = mod.create_node("composeMatrix")
-            mod.connect(mult["output"], compose["inputTranslate"])
-            mod.connect(compose["outputMatrix"], con["parentFrame"])
-
-        name = _unique_name("cancelScale")
-        nodes = [mult.path(), compose.path()]
-        asset = cmds.container(name=name, addNode=nodes, type="dagContainer")
-
-        cmds.container(asset, edit=True, publishName="inputTranslate")
-        cmds.container(asset, edit=True, publishName="inputRotate")
-        cmds.container(asset, edit=True, publishName="inputScale")
-        cmds.container(asset, edit=True, publishName="outputMatrix")
-
-        for binding in (("%s.input1" % mult, "inputTranslate"),
-                        ("%s.input2" % mult, "inputScale"),
-                        ("%s.inputRotate" % compose, "inputRotate"),
-                        ("%s.outputMatrix" % compose, "outputMatrix")):
-            cmds.container(asset, edit=True, bindAttr=binding)
-
-        asset = cmdx.encode(asset)
-        asset["hiddenInOutliner"] = True
-
-        return asset
-
-    with cmdx.DagModifier() as mod:
-        parent_cancel = cancel_scale_asset()
-        child_cancel = cancel_scale_asset()
-
-        mod.connect(child_frame["translate"], child_cancel["inputTranslate"])
-        mod.connect(child_frame["rotate"], child_cancel["inputRotate"])
-        mod.connect(child_rigid["outputScale"], child_cancel["inputScale"])
-
-        mod.connect(parent_frame["translate"], parent_cancel["inputTranslate"])
-        mod.connect(parent_frame["rotate"], parent_cancel["inputRotate"])
-
-        # Worldspace constraints are to the scene
-        if parent_rigid.type() != "rdScene":
-            mod.connect(parent_rigid["outputScale"],
-                        parent_cancel["inputScale"])
-
-        mod.connect(child_cancel["outputMatrix"], con["childFrame"])
-        mod.connect(parent_cancel["outputMatrix"], con["parentFrame"])
-
-        # Cleanup
-        mod.parent(parent_cancel, parent_frame)
-        mod.parent(child_cancel, child_frame)
 
     return parent_frame, child_frame
 

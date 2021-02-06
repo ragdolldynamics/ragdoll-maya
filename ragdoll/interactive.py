@@ -1313,7 +1313,6 @@ def create_constraint(selection=None, **opts):
             mod.set_attr(con["driveStrength"], guide_strength)
 
     if select:
-        print("I'm selecting, because opts: %s" % opts)
         cmds.select(con.path(), replace=True)
 
     log.info("Constrained %s to %s" % (child, parent))

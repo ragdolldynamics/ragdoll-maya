@@ -526,7 +526,7 @@ def create_dynamic_control(chain,
             return
 
         # Pair blend directly feeds into the drive matrix
-        compose = mod.create_node("composeMatrix", name="matrixFromPairBlend")
+        compose = mod.create_node("composeMatrix", name="animationToMatrix")
         mod.connect(blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(blend["inRotate1"], compose["inputRotate"])
 
@@ -547,6 +547,17 @@ def create_dynamic_control(chain,
         mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
         mult["matrixIn"][1] = parent_transform_matrix
         mult["matrixIn"][2] = parent_rigid_matrix
+
+        # Satisfy the curiosity of anyone browsing the node network
+        mult["notes"] = cmdx.String()
+        mult["notes"] = (
+            "Two of the inputs are coming from initialisation\n"
+            "[1] = %(rig)s['inputParentInverseMatrix'].asMatrix().inverse()\n"
+            "[2] = %(pari)s['restMatrix'].asMatrix().inverse()" % dict(
+                rig=rigid.name(namespace=False),
+                pari=parent_rigid.name(namespace=False),
+            )
+        )
 
         mod.connect(mult["matrixSum"], constraint["driveMatrix"])
 

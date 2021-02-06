@@ -7,6 +7,12 @@ global proc AErdRigidTemplate(string $nodeName) {
             editorTemplate -addControl "outputTranslate";
             editorTemplate -addControl "outputRotate";
             editorTemplate -addControl "outputScale";
+
+            editorTemplate -beginLayout "Worldspace" -collapse true;
+                editorTemplate -addControl "outputWorldTranslate";
+                editorTemplate -addControl "outputWorldRotate";
+                editorTemplate -addControl "outputWorldScale";
+            editorTemplate -endLayout;
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "General" -collapse false;

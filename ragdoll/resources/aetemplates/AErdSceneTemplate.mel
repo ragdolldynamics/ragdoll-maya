@@ -31,6 +31,7 @@ global proc AErdSceneTemplate(string $nodeName) {
         editorTemplate -beginLayout "Visualisation" -collapse true;
             // editorTemplate -label "Shapes" -addControl "drawShapes";
             editorTemplate -label "Constraints" -addControl "drawConstraints";
+            editorTemplate -label "Drives" -addControl "drawDrives";
             editorTemplate -label "Velocities" -addControl "drawVelocities";
             editorTemplate -label "Trajectories" -addControl "drawTrajectories";
             editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";

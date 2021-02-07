@@ -332,7 +332,7 @@
     "validateScale": {
         "name": "validateScale",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Let the user know of a Ragdoll limitation, that scale is unsupported."
     },
     "autoHideShapeAttributes": {

@@ -140,7 +140,6 @@ As of `Ragdoll {{ config.ragdoll_version }}` these are the current known limitat
 
 - Cannot unload the plug-in once loaded, must restart Maya. Otherwise, expect hard-crashes upon re-loading the plug-in.
 - Must visit start frame on scene open
-- Poor support for the `scale` attribute
 - Poor support for any `rotateAxis` other than `XYZ`
 - Attributes `jointOrient`, `rotatePivot` and `rotatePivotTranslate` will be zeroed out
-- When weight painting rigid joints, cannot right-click "Select influence"
+- When weight painting rigid joints, cannot right-click "Select influence" (see [workaround](https://forums.ragdolldynamics.com/t/swing-physics-test/40/2))

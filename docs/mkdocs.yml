@@ -70,12 +70,12 @@ markdown_extensions:
       use_pygments: true
       noclasses: true
       pygments_style: monokai
-  - markdown.extensions.extra
-  - markdown.extensions.admonition
-  - markdown.extensions.def_list
-  - markdown.extensions.footnotes
-  - markdown.extensions.meta
-  - markdown.extensions.toc
+  - extra
+  - admonition
+  - def_list
+  - footnotes
+  - meta
+  - toc
   - pymdownx.arithmatex
   - pymdownx.betterem
   - pymdownx.caret

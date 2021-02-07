@@ -165,7 +165,6 @@
             "longName": "inputMesh",
             "shortName": "inme",
             "type": "mesh",
-            "hidden": true,
             "readable": false,
             "summary": "Polygonal input to the `Mesh` shape type."
         },
@@ -173,7 +172,13 @@
             "longName": "inputCurve",
             "shortName": "incu",
             "type": "nurbsCurve",
-            "hidden": true,
+            "readable": false,
+            "summary": "NURBS input to the `Mesh` shape type."
+        },
+        "inputSurface": {
+            "longName": "inputSurface",
+            "shortName": "incu",
+            "type": "nurbsSurface",
             "readable": false,
             "summary": "NURBS input to the `Mesh` shape type."
         },

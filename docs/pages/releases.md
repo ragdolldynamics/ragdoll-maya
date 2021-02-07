@@ -2,7 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
-- [2021.02.06 - Scale](/releases/2021.02.06)
+- [2021.02.07 - Scale](/releases/2021.02.07)
 - [2021.01.27 - Message Board](/releases/2021.01.27)
 - [2021.01.17 - Hotfix](/releases/2021.01.17)
 - [2021.01.15 - Dynamic Control 3.0](/releases/2021.01.15)

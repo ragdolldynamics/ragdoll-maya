@@ -72,3 +72,55 @@ However it is important to keep in mind that in the real world, there is no such
 <div class="hboxlayout justify-center">
     <a href="/nodes/rdConstraint" class="button blue">Full Reference</a>
 </div>
+
+<br>
+
+### Control
+
+A placeholder for drawing a rigid under a different transform.
+
+This node is cosmetic only. It helps you spot the rigid and rigid orientation in the viewport for a standalone controller, like a `Guide`. It also draws the node with a special icon in the outliner. But that's about it!
+
+<br>
+
+<img class="small-node-header" src=https://user-images.githubusercontent.com/2152766/107141604-cd0dc100-6921-11eb-9aa2-f9d55c458ef4.png>
+
+<div class="hboxlayout justify-center">
+    <a href="/nodes/rdControl" class="button blue">Full Reference</a>
+</div>
+
+<br>
+
+### Constraint Multiplier
+
+Multiply one or more attributes of one or more *constraints*.
+
+This node enables you to animate one attribute that affect many attributes, like `Translate Guide Stiffness` across an entire character or limb.
+
+<br>
+
+<img class="small-node-header" src=https://user-images.githubusercontent.com/2152766/107141752-d9dee480-6922-11eb-9e8b-74ede169db12.png>
+
+{{ node.rdConstraintMultiplier.keyableAttributes }}
+
+<div class="hboxlayout justify-center">
+    <a href="/nodes/rdConstraintMultiplier" class="button blue">Full Reference</a>
+</div>
+
+<br>
+
+### Rigid Multiplier
+
+Multiply one or more attributes of one or more *rigids*.
+
+This node enables you to animate one attribute that affect many attributes, like `Air Density` across an entire character or limb.
+
+<br>
+
+<img class="small-node-header" src=https://user-images.githubusercontent.com/2152766/107142315-f7fa1400-6925-11eb-8250-45c95d651c97.png>
+
+{{ node.rdRigidMultiplier.keyableAttributes }}
+
+<div class="hboxlayout justify-center">
+    <a href="/nodes/rdRigidMultiplier" class="button blue">Full Reference</a>
+</div>

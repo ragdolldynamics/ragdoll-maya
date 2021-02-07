@@ -1,0 +1,45 @@
+{
+    "name": "rdControl",
+    "summary": "Placeholder node.",
+    "attributes": {
+        "rigid": {
+            "longName": "rigid",
+            "shortName": "rigi",
+            "type": "int",
+            "default": -1,
+            "hidden": true,
+            "storable": false,
+            "summary": "Reference to rigid this control represents."
+        },
+        "drawShaded": {
+            "longName": "drawShaded",
+            "shortName": "drsh",
+            "type": "bool",
+            "default": false,
+            "summary": "Whether or not to draw wireframe or shaded."
+        },
+        "color": {
+            "longName": "color",
+            "shortName": "colo",
+            "type": "float3",
+            "usedAsColor": true,
+            "default": [0.443, 0.705, 0.952],
+            "summary": "Color of the surface and wireframe."
+        },
+        "outputMesh": {
+            "longName": "outputMesh",
+            "shortName": "oume",
+            "type": "mesh",
+            "writable": false,
+            "summary": "Polygonal output, for rendering, shadows and export."
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node."
+        }
+    }
+}

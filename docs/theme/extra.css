@@ -684,6 +684,20 @@ div.tabs button.active p {
   padding-top: 10px;
 }
 
+.node-header {
+  max-height: 300px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.small-node-header {
+  max-height: 200px !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media only screen and (max-width: 60em) {
   .hboxlayout {
     flex-direction: column;

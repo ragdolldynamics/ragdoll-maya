@@ -1,0 +1,109 @@
+{
+    "name": "rdConstraintMultiplier",
+    "summary": "Multiplier attributes for rdConstraint.",
+    "attributes": {
+        "currentTime": {
+            "longName": "currentTime",
+            "shortName": "cuti",
+            "type": "time",
+            "default": 0.0,
+            "storable": false,
+            "readable": false,
+            "writable": true,
+            "hidden": true,
+            "summary": "This attribute is meant to be dirtied whenever time changes; it's how a rigid keeps an eye on what Maya is up to. The actual value isn't used."
+        },
+        "linearDriveStiffness": {
+            "longName": "linearDriveStiffness",
+            "shortName": "lids",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.linearDriveStiffness`"
+        },
+        "linearDriveDamping": {
+            "longName": "linearDriveDamping",
+            "shortName": "lidd",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.linearDriveDamping`"
+        },
+
+        "angularDriveStiffness": {
+            "longName": "angularDriveStiffness",
+            "shortName": "ands",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.angularDriveStiffness`"
+        },
+
+        "angularDriveDamping": {
+            "longName": "angularDriveDamping",
+            "shortName": "andd",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.angularDriveDamping`"
+        },
+
+        "limitStrength": {
+            "longName": "limitStrength",
+            "shortName": "lstr",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.limitStrength`"
+        },
+        "driveStrength": {
+            "longName": "driveStrength",
+            "shortName": "dstr",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.driveStrength`"
+        },
+        "linearLimitStiffness": {
+            "longName": "linearLimitStiffness",
+            "shortName": "lils",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.linearLimitStiffness`"
+        },
+        "linearLimitDamping": {
+            "longName": "linearLimitDamping",
+            "shortName": "lild",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.linearLimitDamping`"
+        },
+        "angularLimitStiffness": {
+            "longName": "angularLimitStiffness",
+            "shortName": "anls",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.angularLimitStiffness`"
+        },
+        "angularLimitDamping": {
+            "longName": "angularLimitDamping",
+            "shortName": "anld",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdConstraint.angularLimitDamping`"
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node.",
+            "description": "Saved with scene to keep track of what version of Ragdoll the node was created with."
+        }
+    }
+}

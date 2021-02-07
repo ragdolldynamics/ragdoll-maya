@@ -1,0 +1,39 @@
+{
+    "name": "rdRigidMultiplier",
+    "summary": "Multiplier attributes for rdRigid.",
+    "attributes": {
+        "airDensity": {
+            "longName": "airDensity",
+            "shortName": "aide",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdRigid.airDensity`"
+        },
+        "linearDamping": {
+            "longName": "linearDamping",
+            "shortName": "lida",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdRigid.linearDamping`"
+        },
+        "angularDamping": {
+            "longName": "angularDamping",
+            "shortName": "anda",
+            "type": "float",
+            "default": 1.0,
+            "animated": true,
+            "summary": "Multiplier for `rdRigid.angularDamping`"
+        },
+        "version": {
+            "longName": "version",
+            "shortName": "vers",
+            "type": "int",
+            "default": 0,
+            "hidden": true,
+            "summary": "Version of Ragdoll used to create this node.",
+            "description": "Saved with scene to keep track of what version of Ragdoll the node was created with."
+        }
+    }
+}

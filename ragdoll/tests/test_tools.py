@@ -71,10 +71,10 @@ def test_character():
     if os.name == "posix":
         assert_almost_equals(result["tx"].read(), -3.592, 3)
         assert_almost_equals(result["ty"].read(), 1.000, 3)
-        assert_almost_equals(result["tz"].read(), -8.433, 3)
+        assert_almost_equals(result["tz"].read(), -8.438, 3)
     else:
         assert_almost_equals(result["tx"].read(), -3.593, 3)
-        assert_almost_equals(result["ty"].read(), 1.00, 3)
+        assert_almost_equals(result["ty"].read(), 1.000, 3)
         assert_almost_equals(result["tz"].read(), -8.434, 3)
 
 

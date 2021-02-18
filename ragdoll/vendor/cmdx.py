@@ -10,6 +10,7 @@ import logging
 import operator
 import traceback
 import collections
+import contextlib
 from functools import wraps
 
 from maya import cmds
@@ -184,6 +185,15 @@ def withTiming(text="{func}() {time:.2f} ns"):
 
         return func_wrapper
     return timings_decorator
+
+
+@contextlib.contextmanager
+def _undo_chunk(name):
+    try:
+        cmds.undoInfo(chunkName=name, openChunk=True)
+        yield
+    finally:
+        cmds.undoInfo(chunkName=name, closeChunk=True)
 
 
 def protected(func):
@@ -4533,8 +4543,9 @@ class _BaseModifier(object):
             self._modifier.doIt()
 
             # Do these last, they manage undo on their own
-            self._doLockAttrs()
-            self._doKeyableAttrs()
+            with _undo_chunk("lockAttrs"):
+                self._doLockAttrs()
+                self._doKeyableAttrs()
 
         except RuntimeError:
 

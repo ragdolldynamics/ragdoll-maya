@@ -1285,6 +1285,7 @@ def create_constraint(selection=None, **opts):
         "child": child,
         "scene": scene,
         "maintain_offset": _opt("maintainOffset", opts),
+        "standalone": _opt("constraintStandalone", opts),
     }
 
     if constraint_type == "Point":

@@ -654,7 +654,8 @@ def create_passive_rigid(node, scene):
 @with_undo_chunk
 def convert_to_point(con,
                      maintain_offset=True,
-                     auto_orient=True):
+                     auto_orient=True,
+                     standalone=False):
 
     if isinstance(con, string_types):
         con = cmdx.encode(con)
@@ -664,7 +665,8 @@ def convert_to_point(con,
                           con,
                           maintain_offset=maintain_offset)
 
-        mod.rename(con, _unique_name("rPointConstraint"))
+        node = con.parent() if standalone else con
+        mod.rename(node, _unique_name("rPointConstraint"))
         mod.set_attr(con["type"], PointConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -684,7 +686,8 @@ def convert_to_point(con,
 @with_undo_chunk
 def convert_to_orient(con,
                       maintain_offset=True,
-                      auto_orient=True):
+                      auto_orient=True,
+                      standalone=False):
 
     if isinstance(con, string_types):
         con = cmdx.encode(con)
@@ -694,7 +697,8 @@ def convert_to_orient(con,
                           con,
                           maintain_offset=maintain_offset)
 
-        mod.rename(con, _unique_name("rOrientConstraint"))
+        node = con.parent() if standalone else con
+        mod.rename(node, _unique_name("rOrientConstraint"))
         mod.set_attr(con["type"], OrientConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -713,7 +717,8 @@ def convert_to_orient(con,
 @with_undo_chunk
 def convert_to_hinge(con,
                      maintain_offset=True,
-                     auto_orient=True):
+                     auto_orient=True,
+                     standalone=False):
 
     if isinstance(con, string_types):
         con = cmdx.encode(con)
@@ -733,7 +738,8 @@ def convert_to_hinge(con,
                           con,
                           maintain_offset=maintain_offset)
 
-        mod.rename(con, _unique_name("rHingeConstraint"))
+        node = con.parent() if standalone else con
+        mod.rename(node, _unique_name("rHingeConstraint"))
         mod.set_attr(con["type"], HingeConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -756,7 +762,8 @@ def convert_to_hinge(con,
 @with_undo_chunk
 def convert_to_socket(con,
                       maintain_offset=True,
-                      auto_orient=True):
+                      auto_orient=True,
+                      standalone=False):
 
     if isinstance(con, string_types):
         con = cmdx.encode(con)
@@ -766,7 +773,8 @@ def convert_to_socket(con,
                           con,
                           maintain_offset=maintain_offset)
 
-        mod.rename(con, _unique_name("rSocketConstraint"))
+        node = con.parent() if standalone else con
+        mod.rename(node, _unique_name("rSocketConstraint"))
         mod.set_attr(con["type"], SocketConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -795,7 +803,8 @@ def convert_to_socket(con,
 @with_undo_chunk
 def convert_to_parent(con,
                       maintain_offset=True,
-                      auto_orient=True):
+                      auto_orient=True,
+                      standalone=False):
     """A constraint with no degrees of freedom"""
 
     if isinstance(con, string_types):
@@ -806,7 +815,8 @@ def convert_to_parent(con,
                           con,
                           maintain_offset=maintain_offset)
 
-        mod.rename(con, _unique_name("rParentConstraint"))
+        node = con.parent() if standalone else con
+        mod.rename(node, _unique_name("rParentConstraint"))
         mod.set_attr(con["type"], ParentConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -828,7 +838,8 @@ def _make_constraint(convert_function):
              child,
              scene,
              maintain_offset=True,
-             auto_orient=True):
+             auto_orient=True,
+             standalone=False):
 
         if isinstance(parent, string_types):
             parent = cmdx.encode(parent)
@@ -836,11 +847,12 @@ def _make_constraint(convert_function):
         if isinstance(child, string_types):
             child = cmdx.encode(parent)
 
-        con = _attach_bodies(parent, child, scene)
+        con = _attach_bodies(parent, child, scene, standalone)
 
         kwargs = {
             "maintain_offset": maintain_offset,
             "auto_orient": auto_orient,
+            "standalone": standalone,
         }
 
         return convert_function(con, **kwargs)
@@ -958,7 +970,7 @@ def orient(con, aim=None, up=None):
     child_matrix = child_rigid["restMatrix"].asMatrix()
     parent_matrix = parent_rigid["restMatrix"].asMatrix()
 
-    con_tm = con.transform(cmdx.sWorld)
+    child_tm = child_rigid.transform(cmdx.sWorld)
 
     # Try and aim towards the first child of the same type in the
     # hierarchy of the constraint. This assumes constraints are
@@ -970,13 +982,13 @@ def orient(con, aim=None, up=None):
     #     o--------o first-child
     #
     if aim is None:
-        transform = con.parent()
+        transform = child_rigid.parent()
 
         # First child of same type, skipping over anything in between
         child = transform.descendent(type=transform.type())
 
         if not child:
-            aim = cmdx.Tm(con_tm)
+            aim = cmdx.Tm(child_tm)
             aim.translateBy(cmdx.Vector(1, 0, 0), cmdx.sPreTransform)
             aim = aim.translation()
         else:
@@ -993,7 +1005,7 @@ def orient(con, aim=None, up=None):
     if up is None:
         up = parent_rigid.transform(cmdx.sWorld).translation()
 
-    origin = con_tm.translation()
+    origin = child_tm.translation()
     orient = orient_from_positions(origin, aim, up)
     mat = cmdx.Tm(translate=origin, rotate=orient).asMatrix()
 
@@ -1501,15 +1513,24 @@ def _scale_from_rigid(rigid):
         return sum(rigid["shapeExtents"].read()) / 3.0 * scale
 
 
-def _attach_bodies(parent, child, scene):
+def _attach_bodies(parent, child, scene, standalone):
     assert parent.type() == "rdRigid", parent.type()
     assert child.type() == "rdRigid", child.type()
 
     name = "rConstraint"
-    transform = child.parent()
 
     with cmdx.DagModifier() as mod:
-        con = _rdconstraint(mod, name, parent=transform)
+
+        if standalone:
+            transform = mod.create_node("transform", name)
+            mod.lock_attr(transform["translate"])
+            mod.lock_attr(transform["rotate"])
+            mod.lock_attr(transform["scale"])
+
+        else:
+            transform = child.parent()
+
+        con = _rdconstraint(mod, name + "Shape", parent=transform)
 
         mod.set_attr(con["disableCollision"], True)
         mod.set_attr(con["angularLimitX"], 0)  # Free

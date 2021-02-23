@@ -94,6 +94,7 @@
             "constraintType",
             "maintainOffset",
             "autoOrient",
+            "constraintStandalone",
             "constraintGuideStrength"
         ]
     },

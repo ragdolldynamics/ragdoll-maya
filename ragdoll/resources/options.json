@@ -346,5 +346,12 @@
         "type": "Boolean",
         "default": false,
         "help": "Limit deletion to selection-only, rather than the whole scene."
+    },
+    "constraintStandalone": {
+        "name": "constraintStandalone",
+        "label": "Standalone",
+        "type": "Boolean",
+        "default": false,
+        "help": "Give constraints their own transform at the root of the outliner."
     }
 }

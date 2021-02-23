@@ -426,20 +426,18 @@ def create_dynamic_control(chain,
         mod.do_it()
 
         if not central_blend:
-            if not transform.has_attr("blendSimulation"):
-                mod.add_attr(transform, cmdx.Double(
-                    "blendSimulation",
+            if not transform.has_attr("simulated"):
+                mod.add_attr(transform, cmdx.Boolean(
+                    "simulated",
                     keyable=True,
-                    min=0.0,
-                    max=1.0,
-                    default=1.0)
+                    default=True)
                 )
 
-                commands._record_attr(transform, "blendSimulation")
+                commands._record_attr(transform, "simulated")
 
                 mod.do_it()
 
-            mod.connect(transform["blendSimulation"], pair_blend["weight"])
+            mod.connect(transform["simulated"], pair_blend["weight"])
 
         # Forward some convenience attributes
         transform_proxies = commands.UserAttributes(rigid, transform)
@@ -455,9 +453,9 @@ def create_dynamic_control(chain,
                 mod.connect(pair_blend["weight"], constraint["visibility"])
                 mod.connect(pair_blend["weight"], rigid["visibility"])
             else:
-                mod.connect(transform["blendSimulation"],
+                mod.connect(transform["simulated"],
                             constraint["visibility"])
-                mod.connect(transform["blendSimulation"],
+                mod.connect(transform["simulated"],
                             rigid["visibility"])
 
             # Forward some convenience attributes
@@ -485,24 +483,22 @@ def create_dynamic_control(chain,
 
         if central_blend:
             # Blend everything from the root
-            if not root.has_attr("blendSimulation"):
-                mod.add_attr(root, cmdx.Double(
-                    "blendSimulation",
+            if not root.has_attr("simulated"):
+                mod.add_attr(root, cmdx.Boolean(
+                    "simulated",
                     keyable=True,
-                    min=0.0,
-                    max=1.0,
-                    default=1.0)
+                    default=True)
                 )
 
-                commands._record_attr(root, "blendSimulation")
+                commands._record_attr(root, "simulated")
 
                 mod.do_it()
 
             for pair_blend in pair_blends:
-                mod.connect(root["blendSimulation"], pair_blend["weight"])
+                mod.connect(root["simulated"], pair_blend["weight"])
 
             # Include root rigid in hiding
-            mod.connect(root["blendSimulation"], parent_rigid["visibility"])
+            mod.connect(root["simulated"], parent_rigid["visibility"])
 
     def _auto_influence(mod, rigid, blend):
         """Treat incoming animation as guide constraint
@@ -657,7 +653,7 @@ def create_dynamic_control(chain,
             if central_blend:
                 mod.connect(blend["weight"], con["visibility"])
             else:
-                mod.connect(transform["blendSimulation"], con["visibility"])
+                mod.connect(transform["simulated"], con["visibility"])
 
         con["driveStrength"].keyable = True
         con["linearDriveStiffness"].keyable = True

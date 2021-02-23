@@ -1532,6 +1532,7 @@ def _attach_bodies(parent, child, scene, standalone):
 
         con = _rdconstraint(mod, name + "Shape", parent=transform)
 
+        mod.set_attr(con["standalone"], standalone)
         mod.set_attr(con["disableCollision"], True)
         mod.set_attr(con["angularLimitX"], 0)  # Free
         mod.set_attr(con["angularLimitY"], 0)

@@ -320,6 +320,7 @@
             "scale",
             "cacheMedia",
             "autoHideShapeAttributes",
+            "ogsReset",
             "globalsValidations",
             "validateEvaluationMode",
             "validateRotatePivot",

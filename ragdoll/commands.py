@@ -68,6 +68,8 @@ Abort = 0
 Overwrite = 1
 Blend = 2
 
+QuaternionInterpolation = 1
+
 # Python 2 backwards compatibility
 try:
     string_types = basestring,
@@ -315,37 +317,50 @@ def _connect_passive(mod, rigid):
 def _connect_active(mod, rigid, existing=Overwrite):
     transform = rigid.parent()
 
+    if existing == Overwrite:
+        _connect_transform(mod, rigid, transform)
+
+    elif existing == Blend:
+        _connect_active_blend(mod, rigid)
+
+    else:  # Abort
+        raise ValueError(
+            "%s has incoming connections to translate and/or rotate"
+            % rigid
+        )
+
+    return True
+
+
+def _connect_active_blend(mod, rigid, existing=Overwrite):
+    r"""Constrain rigid to original animation
+
+     ______
+    |\     \
+    | \_____\                /
+    | |     | . . . . . . - o -
+    \ |     |              /
+     \|_____|
+
+    """
+
+    transform = rigid.parent()
+
+    # Preserve animation, if any, as soft constraints
     is_connected = any(
         transform[attr].connected for attr in ("tx", "ty", "tz",
                                                "rx", "ry", "rz"))
 
-    if is_connected:
-        if existing == Blend:
-            return _connect_active_blend(mod, rigid)
-
-        elif existing == Overwrite:
-            return _connect_active_exclusive(mod, rigid)
-
-        else:
-            raise ValueError(
-                "%s has incoming connections to translate and/or rotate"
-                % rigid
-            )
-    else:
-        return _connect_active_exclusive(mod, rigid)
-
-
-def _connect_active_blend(mod, rigid):
-    """Put a pairBlend between rigid and transform"""
-    transform = rigid.parent()
-
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
-        dgmod.set_attr(pair_blend["rotInterpolation"], 1)  # Quaternion
+        dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
 
         # Establish initial values, before keyframes
-        dgmod.set_attr(pair_blend["inTranslate1"], transform["translate"])
-        dgmod.set_attr(pair_blend["inRotate1"], transform["rotate"])
+        # Use transform, rather than translate/rotate directly,
+        # to account for e.g. jointOrient.
+        tm = transform.transform()
+        dgmod.set_attr(pair_blend["inTranslate1"], tm.translation())
+        dgmod.set_attr(pair_blend["inRotate1"], tm.rotation())
 
     pair_blend["translateXMode"].hide()
     pair_blend["translateYMode"].hide()
@@ -380,50 +395,53 @@ def _connect_active_blend(mod, rigid):
 
     _connect_transform(mod, pair_blend, transform)
 
-    mod.connect(rigid["outputScaleX"], transform["scaleX"])
-    mod.connect(rigid["outputScaleY"], transform["scaleY"])
-    mod.connect(rigid["outputScaleZ"], transform["scaleZ"])
+    scene = rigid["startState"].connection(type="rdScene")
+    assert scene is not None, "%s was unconnected, this is a bug" % rigid
 
-    con = rigid.sibling(type="rdConstraint")
+    con = _rdconstraint(mod, "rGuideConstraint", parent=transform)
 
-    if not con:
-        scene = rigid["startState"].connection(type="rdScene")
-        assert scene is not None, "%s was unconnected" % rigid
+    mod.set_attr(con["limitEnabled"], False)
+    mod.set_attr(con["driveEnabled"], True)
+    mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
 
-        con = _rdconstraint(mod, "rGuideConstraint", parent=transform)
-        mod.set_attr(con["limitEnabled"], False)
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["driveStrength"], 1.0)
-        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
+    # Follow animation, if any
+    mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
 
-        mod.connect(scene["ragdollId"], con["parentRigid"])
-        mod.connect(rigid["ragdollId"], con["childRigid"])
+    mod.connect(scene["ragdollId"], con["parentRigid"])
+    mod.connect(rigid["ragdollId"], con["childRigid"])
 
-        # Add to scene
-        add_constraint(mod, con, scene)
+    mod.keyable_attr(con["driveStrength"])
 
-        mod.do_it()
-
-        con["linearDriveStiffness"].keyable = True
-        con["linearDriveDamping"].keyable = True
-        con["angularDriveStiffness"].keyable = True
-        con["angularDriveDamping"].keyable = True
+    # Add to scene
+    add_constraint(mod, con, scene)
 
     # Automatically hide con when blend is 0
     mod.connect(pair_blend["weight"], con["visibility"])
 
     # Pair blend directly feeds into the drive matrix
     with cmdx.DGModifier() as dgmod:
-        compose = dgmod.create_node("composeMatrix")
+        compose = dgmod.create_node("composeMatrix", name="makeMatrix")
 
         # Account for node being potentially parented somewhere
-        mult = dgmod.create_node("multMatrix")
+        mult = dgmod.create_node("multMatrix", name="makeWorldspace")
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
     mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
-    mod.connect(transform["parentMatrix"][0], mult["matrixIn"][1])
+
+    # Keep the modified history shallow
+    mod.do_it()
+
+    # Reproduce a parent hierarchy, but don't
+    # connect it as it could lead to a cycle
+    _set_matrix(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
+
+    # Support soft manipulation
     mod.connect(mult["matrixSum"], con["driveMatrix"])
+
+    # Support hard manipulation
+    # For e.g. transitioning between active and passive
+    mod.connect(mult["matrixSum"], rigid["inputMatrix"])
 
     # Keep channel box clean
     mod.set_attr(compose["isHistoricallyInteresting"], False)
@@ -431,6 +449,8 @@ def _connect_active_blend(mod, rigid):
     mod.do_it()
 
     _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
+
+    return con
 
 
 def _remove_pivots(mod, transform):
@@ -460,20 +480,6 @@ def _remove_pivots(mod, transform):
 
     if "jointOrient" in transform:
         mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
-
-
-def _connect_active_exclusive(mod, rigid):
-    """Ragdoll takes exclusive control over a transform
-
-    E.g. a lone box or unkeyed control. This is most performant and yields
-    the most simple network. It does however not support keying once connected.
-
-    """
-
-    transform = rigid.parent()
-
-    _connect_transform(mod, rigid, transform)
-    _remove_pivots(mod, transform)
 
 
 @with_undo_chunk
@@ -519,6 +525,8 @@ def create_rigid(node,
         scene (DagNode): Ragdoll scene to which the new rigid is added
         compute_mass (bool): Whether to automatically compute the mass
             based on shape volume
+        existing (int): What to do about existing connections to translate
+            and rotate channels.
 
     """
 
@@ -549,6 +557,7 @@ def create_rigid(node,
     with cmdx.DagModifier() as mod:
         rigid = _rdrigid(mod, "rRigid", parent=transform)
 
+        mod.connect(transform["worldMatrix"][0], rigid["restMatrix"])
         mod.connect(transform["parentInverseMatrix"][0],
                     rigid["inputParentInverseMatrix"])
 
@@ -560,7 +569,7 @@ def create_rigid(node,
 
     # Copy current transformation (Matrix-type unsupported by modifier,
     # hence no undo. We'll resort to cmds for this..)
-    cmds.setAttr(rigid["restMatrix"].path(), tuple(rest), type="matrix")
+    cmds.setAttr(rigid["cachedRestMatrix"].path(), tuple(rest), type="matrix")
     cmds.setAttr(rigid["inputMatrix"].path(), tuple(rest), type="matrix")
 
     # Transfer geometry into rigid, if any
@@ -584,7 +593,9 @@ def create_rigid(node,
             mod.set_attr(rigid["shapeOffset"], center)
             mod.set_attr(rigid["shapeExtents"], extents)
             mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
-            mod.set_attr(rigid["shapeLength"], extents.y)
+
+            # Account for flat shapes, like a circle
+            mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
 
             if shape.type() == "mesh":
                 mod.connect(shape["outMesh"], rigid["inputMesh"])
@@ -632,11 +643,13 @@ def create_rigid(node,
             if passive:
                 _connect_passive(mod, rigid)
             else:
+                _remove_pivots(mod, transform)
                 _connect_active(mod, rigid, existing=existing)
 
             mod.do_it()
 
         except Exception:
+            mod.undo_it()
             mod.delete_node(rigid)
             raise
 
@@ -911,8 +924,8 @@ def _reset_constraint(mod, con,
 
     # Align constraint to whatever the local transformation is
     if maintain_offset and parent_rigid and child_rigid:
-        child_matrix = child_rigid["restMatrix"].asMatrix()
-        parent_matrix = parent_rigid["restMatrix"].asMatrix()
+        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
+        parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
         parent_frame = child_matrix * parent_matrix.inverse()
 
         # Drive to where you currently are
@@ -967,8 +980,8 @@ def orient(con, aim=None, up=None):
     # Rather than ask the node for where it is, which could
     # trigger an evaluation, we fetch an input matrix that
     # isn't computed by Ragdoll
-    child_matrix = child_rigid["restMatrix"].asMatrix()
-    parent_matrix = parent_rigid["restMatrix"].asMatrix()
+    child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
+    parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
 
     child_tm = child_rigid.transform(cmdx.sWorld)
 
@@ -1077,9 +1090,6 @@ def _connect_transform(mod, node, transform):
             "outputRotateX": "rotateX",
             "outputRotateY": "rotateY",
             "outputRotateZ": "rotateZ",
-            "outputScaleX": "scaleX",
-            "outputScaleY": "scaleY",
-            "outputScaleZ": "scaleZ",
         }
 
     elif node.type() == "pairBlend":
@@ -1098,14 +1108,8 @@ def _connect_transform(mod, node, transform):
             % type(node)
         )
 
-    failed = []
     for src, dst in attributes.items():
-        try:
-            mod.connect(node[src], transform[dst])
-        except ValueError:
-            failed += [dst]
-
-    return failed
+        mod.try_connect(node[src], transform[dst])
 
 
 @with_undo_chunk
@@ -1140,7 +1144,6 @@ def convert_rigid(rigid, passive=None):
         elif not passive:
             mod.set_attr(rigid["kinematic"], False)
             mod.disconnect(rigid["inputMatrix"], destination=False)
-            mod.disconnect(rigid["restMatrix"], destination=False)
 
             # The user will expect a newly-turned rigid to collide
             mod.set_attr(rigid["collide"], True)
@@ -1149,9 +1152,6 @@ def convert_rigid(rigid, passive=None):
             mod.doIt()
 
             _connect_transform(mod, rigid, node)
-
-            mat = node["worldMatrix"][0].asMatrix()
-            cmds.setAttr(rigid["restMatrix"].path(), mat, type="matrix")
 
     return rigid
 
@@ -1504,7 +1504,8 @@ def _shapeattributes_from_generator(mod, shape, rigid):
 
 
 def _scale_from_rigid(rigid):
-    rest_tm = cmdx.Tm(rigid["restMatrix"].asMatrix())
+    rest_tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
+
     scale = sum(rest_tm.scale()) / 3.0
 
     if rigid.parent().type() == "joint":
@@ -1518,6 +1519,7 @@ def _attach_bodies(parent, child, scene, standalone):
     assert child.type() == "rdRigid", child.type()
 
     name = "rConstraint"
+    excon = child["ragdollId"].connection(type="rdConstraint")
 
     with cmdx.DagModifier() as mod:
 
@@ -1541,13 +1543,31 @@ def _attach_bodies(parent, child, scene, standalone):
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["driveEnabled"], True)
 
-        mod.set_attr(con["drawScale"], _scale_from_rigid(child))
+        draw_scale = _scale_from_rigid(child)
+        mod.set_attr(con["drawScale"], draw_scale)
 
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(child["ragdollId"], con["childRigid"])
 
         # Add to scene
         add_constraint(mod, con, scene)
+
+        # Was there already a constraint here?
+        # Does it have an input drive matrix?
+        if excon:
+            world_matrix = excon["driveMatrix"].connection(
+                type="multMatrix", destination=False)
+
+            if world_matrix is not None:
+                local_matrix = world_matrix["matrixIn"][0].connection(
+                    type="composeMatrix", destination=False)
+
+                if local_matrix is not None:
+                    mod.connect(local_matrix["outputMatrix"],
+                                con["driveMatrix"])
+
+                    # Take priority
+                    mod.set_attr(excon["driveStrength"], 0.0)
 
     return con
 
@@ -1579,8 +1599,7 @@ def set_initial_state(rigids):
         if rigid["inputMatrix"].editable:
             cmds.setAttr(rigid["inputMatrix"].path(), rest, type="matrix")
 
-        if rigid["restMatrix"].editable:
-            cmds.setAttr(rigid["restMatrix"].path(), rest, type="matrix")
+        cmds.setAttr(rigid["cachedRestMatrix"].path(), rest, type="matrix")
 
 
 def transfer_attributes(a, b, mirror=True):

@@ -2515,7 +2515,7 @@ class Plug(object):
         max_index = 1e7
 
         while start_index < max_index:
-            if not self[start_index].connected:
+            if self[start_index].connection() is None:
                 return start_index
             start_index += 1
 
@@ -2677,8 +2677,22 @@ class Plug(object):
 
     @property
     def connected(self):
-        """Return whether or not this attribute is connected (to anything)"""
-        return self.connection() is not None
+        """Return whether or not this attribute has an input connection
+
+        Examples:
+            >>> node = createNode("transform")
+            >>> node["tx"] >> node["ty"]
+
+            # ty is connected, tx is not
+            >>> node["tx"].connected
+            False
+
+            >>> node["ty"].connected
+            True
+
+        """
+
+        return self.connection(destination=False) is not None
 
     def lock(self):
         """Convenience function for plug.locked = True
@@ -4715,6 +4729,45 @@ class _BaseModifier(object):
 
         self._modifier.connect(src, dst)
 
+    def tryConnect(self, src, dst):
+        """Connect and ignore failure
+
+        Convenience method to improve readability of your code.
+
+        Returns:
+            success (bool): Whether or not the connection succeeded
+
+        Examples:
+            >>> node = createNode("transform")
+            >>> node["translateY"].lock()
+            >>> with DGModifier() as mod:
+            ...     mod.connect(node["tx"], node["ty"])
+            ...
+            Traceback (most recent call last):
+            ...
+            LockedError: Channel locked, cannot connect 'translateY'
+
+            # Now let's tryConnect
+            >>> with DGModifier() as mod:
+            ...    success = mod.tryConnect(node["tx"], node["ty"])
+            ...
+            >>> success
+            False
+
+        """
+
+        try:
+            self.connect(src, dst)
+
+        except LockedError:
+            return False
+
+        except Exception:
+            return False
+
+        else:
+            return True
+
     @record_history
     def disconnect(self, a, b=None, source=True, destination=True):
         """Disconnect `a` from `b`
@@ -4835,6 +4888,7 @@ class _BaseModifier(object):
         reset_attr = resetAttr
         lock_attr = lockAttr
         keyable_attr = keyableAttr
+        try_connect = tryConnect
 
 
 class DGModifier(_BaseModifier):
@@ -4954,6 +5008,8 @@ class DagModifier(_BaseModifier):
 
 
 class HashableTime(om.MTime):
+    """Use time in a dictionary"""
+
     def __hash__(self):
         return hash(self.value)
 

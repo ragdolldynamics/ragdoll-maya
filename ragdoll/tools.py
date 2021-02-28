@@ -328,11 +328,9 @@ def create_dynamic_control(chain,
                            auto_blend=True,
                            auto_influence=True,
                            auto_multiplier=True,
-                           auto_initial_state=True,
-                           auto_world_constraint=True,
                            auto_key=False,
                            central_blend=True,
-                           use_capsules=False):
+                           use_capsules=True):
     """Turn selected animation controls dynamic
 
     Arguments:
@@ -353,7 +351,6 @@ def create_dynamic_control(chain,
     assert chain, "chain was empty"
 
     auto_influence = auto_blend and auto_influence
-    auto_initial_state = auto_blend and auto_initial_state
     local_constraints = []
     world_constraints = []
     new_rigids = []
@@ -531,6 +528,10 @@ def create_dynamic_control(chain,
         # map the pairblend into the space of the parent frame.
         parent_rigid = constraint["parentRigid"].connection()
 
+        # Could be connected to a scene too
+        if parent_rigid.type() != "rdRigid":
+            return
+
         mult = mod.create_node("multMatrix", name="compensateForHierarchy")
 
         # From this matrix..
@@ -538,7 +539,8 @@ def create_dynamic_control(chain,
         parent_transform_matrix = parent_transform_matrix.inverse()
 
         # To this matrix..
-        parent_rigid_matrix = parent_rigid["restMatrix"].asMatrix().inverse()
+        parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+        parent_rigid_matrix = parent_rigid_matrix.inverse()
 
         mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
         mult["matrixIn"][1] = parent_transform_matrix
@@ -549,7 +551,7 @@ def create_dynamic_control(chain,
         mult["notes"] = (
             "Two of the inputs are coming from initialisation\n"
             "[1] = %(rig)s['inputParentInverseMatrix'].asMatrix().inverse()\n"
-            "[2] = %(pari)s['restMatrix'].asMatrix().inverse()" % dict(
+            "[2] = %(pari)s['cachedRestMatrix'].asMatrix().inverse()" % dict(
                 rig=rigid.name(namespace=False),
                 pari=parent_rigid.name(namespace=False),
             )
@@ -666,10 +668,6 @@ def create_dynamic_control(chain,
 
         world_constraints.append(con)
 
-    def _auto_initial_state(mod, rigid):
-        mult = rigid.data["animatedWorldMult"]
-        mod.connect(mult["matrixSum"], rigid["restMatrix"])
-
     with cmdx.DagModifier() as mod:
         parent_rigid = parent.shape(type="rdRigid")
 
@@ -725,10 +723,6 @@ def create_dynamic_control(chain,
                 child_rigid = commands.convert_rigid(child_rigid,
                                                      passive=False)
 
-            con = commands.socket_constraint(
-                previous_rigid, child_rigid, scene
-            )
-
             # Figure out relationships
             count = len(children)
             previous = children[index - 1] if index > 0 else None
@@ -738,35 +732,6 @@ def create_dynamic_control(chain,
             # direction of its immediate joint child, if any
             if not subsequent and child.type() == "joint":
                 subsequent = child.child(type="joint")
-
-            aim = None
-            up = None
-
-            if subsequent:
-                aim = subsequent.transform(cmdx.sWorld).translation()
-
-            if previous:
-                up = previous.transform(cmdx.sWorld).translation()
-
-            commands.orient(con, aim, up)
-
-            # Let the user manually add these, if needed
-            mod.set_attr(con["angularLimitX"], 0)
-            mod.set_attr(con["angularLimitY"], 0)
-            mod.set_attr(con["angularLimitZ"], 0)
-            mod.set_attr(con["driveStrength"], 0.5)
-
-            mod.rename(con, commands._unique_name("rGuideConstraint"))
-
-            # Imprit name, so we can determine whether
-            # the next one is unique or not.
-            mod.do_it()
-
-            # These are not particularly useful per default
-            con["angularLimit"].keyable = False
-            con["limitEnabled"].keyable = False
-            con["limitStrength"].keyable = False
-            con["driveEnabled"].keyable = False
 
             geo = commands.infer_geometry(
                 child, parent=previous or root,
@@ -786,6 +751,36 @@ def create_dynamic_control(chain,
                 mod.set_attr(child_rigid["shapeType"],
                              commands.CapsuleShape)
 
+            # shapeLength is used during constraint creation, for initial size
+            mod.do_it()
+
+            con = commands.socket_constraint(
+                previous_rigid, child_rigid, scene
+            )
+
+            # These are not particularly useful per default
+            con["angularLimit"].keyable = False
+            con["limitEnabled"].keyable = False
+            con["limitStrength"].keyable = False
+            con["driveEnabled"].keyable = False
+
+            aim = None
+            up = None
+
+            if subsequent:
+                aim = subsequent.transform(cmdx.sWorld).translation()
+
+            if previous:
+                up = previous.transform(cmdx.sWorld).translation()
+
+            commands.orient(con, aim, up)
+
+            # Let the user manually add these, if needed
+            mod.set_attr(con["angularLimitX"], 0)
+            mod.set_attr(con["angularLimitY"], 0)
+            mod.set_attr(con["angularLimitZ"], 0)
+            mod.set_attr(con["driveStrength"], 0.5)
+
             previous_rigid = child_rigid
             new_rigids += [child_rigid]
             local_constraints += [con]
@@ -793,16 +788,6 @@ def create_dynamic_control(chain,
         if auto_blend:
             with cmdx.DGModifier() as mod:
                 _auto_blend(mod, new_rigids, root)
-
-                if auto_world_constraint:
-                    previous_rigid = parent_rigid
-                    for rigid in new_rigids:
-                        _auto_world_constraint(rigid, parent=previous_rigid)
-
-                        if auto_initial_state:
-                            _auto_initial_state(mod, rigid)
-
-                        previous_rigid = rigid
 
         if auto_multiplier and new_rigids:
             if local_constraints:
@@ -812,12 +797,6 @@ def create_dynamic_control(chain,
                 # E.g. no translate forces, just rotation for local control
                 mult["linearDriveStiffness"].keyable = False
                 mult["linearDriveDamping"].keyable = False
-
-            if world_constraints:
-                mult = _add_multiplier(world_constraints, "World", root)
-
-                with cmdx.DGModifier() as mod:
-                    mod.set_attr(mult["driveStrength"], 0.0)
 
     return new_rigids
 

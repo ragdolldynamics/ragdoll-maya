@@ -292,12 +292,12 @@
         "default": false,
         "help": "Include worldspace guide constraints with the generated dynamic controls."
     },
-    "dynamicControlAutoInitialState": {
-        "name": "dynamicControlAutoInitialState",
+    "autoInitialState": {
+        "name": "autoInitialState",
         "label": "Auto Initial State",
         "type": "Boolean",
-        "default": false,
-        "help": "Use the first frame of the *animation* as initial state of the *simulation*. Bear in mind this isn't fool-proof and generates a pure kinematic representation of the original hierarchy and cannot account for complex relationships like constraints and IK."
+        "default": true,
+        "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
     },
     "globalsValidations": {
         "name": "globalsValidations",
@@ -339,7 +339,7 @@
         "name": "autoHideShapeAttributes",
         "type": "Boolean",
         "default": true,
-        "help": "Rid the Channel Box of attributes unrelated to the currently selected shape type (requires Maya restart)."
+        "help": "(Requires scene reopen) Rid the Channel Box of attributes unrelated to the currently selected shape type."
     },
     "deleteFromSelection": {
         "name": "deleteFromSelection",

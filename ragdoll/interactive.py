@@ -617,6 +617,11 @@ def _upgrade():
 
         if upgraded_count:
             log.warning("%d Ragdoll nodes were upgraded" % upgraded_count)
+
+            # Synchronise viewport, sometimes it can go stale
+            time = cmds.currentTime(query=True)
+            cmds.evalDeferred(lambda: cmds.currentTime(time, update=True))
+
         else:
             log.warning("Ragdoll nodes already up to date!")
 
@@ -1247,7 +1252,7 @@ def _find_rigid(node, autocreate=False):
                 shape = commands.create_active_rigid(node, scene)
             else:
                 return log.warning(
-                    "%s did not have a rdRigid shape", node.path()
+                    "%s did not have a rdRigid shape" % node.path()
                 )
 
         node = shape
@@ -1763,8 +1768,6 @@ def create_dynamic_control(selection=None, **opts):
         "auto_blend": _opt("dynamicControlAutoBlend", opts),
         "auto_influence": _opt("dynamicControlAutoInfluence", opts),
         "auto_multiplier": _opt("dynamicControlAutoMultiplier", opts),
-        "auto_initial_state": _opt("dynamicControlAutoInitialState", opts),
-        "auto_world_constraint": _opt("dynamicControlAutoWorldspace", opts),
         "central_blend": (
             _opt("dynamicControlBlendMethod", opts) == "From Root"
         ),

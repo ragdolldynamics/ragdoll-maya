@@ -26,7 +26,7 @@ def has_upgrade(node, from_version):
         return from_version < 20201015
 
     if node.type() == "rdRigid":
-        return from_version < 20201016
+        return from_version < 20210228
 
 
 def scene(node, from_version, to_version):
@@ -48,8 +48,11 @@ def rigid(node, from_version, to_version):
     if from_version < 20201015:
         _rigid_00000000_20201015(node)
 
-    if from_version < 20201016:
+    elif from_version < 20201016:
         _rigid_20201015_20201016(node)
+
+    if from_version < 20210228:
+        _rigid_20201016_20210228(node)
 
     node["version"] = to_version
 
@@ -63,11 +66,20 @@ def _scene_00000000_20201015(node):
 def _rigid_00000000_20201015(node):
     """Introduced the .restMatrix"""
     log.info("Upgrading %s to 2020.10.15" % node)
-    rest = node["inputMatrix"].asMatrix()
-    cmds.setAttr(node["restMatrix"].path(), tuple(rest), type="matrix")
+
+    if "restMatrix" in node and node["restMatrix"].editable:
+        rest = node["inputMatrix"].asMatrix()
+        cmds.setAttr(node["restMatrix"].path(), tuple(rest), type="matrix")
 
 
 def _rigid_20201015_20201016(node):
     """Introduced .color"""
     log.info("Upgrading %s to 2020.10.16" % node)
     node["color"] = commands._random_color()
+
+
+def _rigid_20201016_20210228(node):
+    """Introduced .cachedRestMatrix"""
+    log.info("Upgrading %s to 2021.02.28" % node)
+    rest = node["restMatrix"].asMatrix()
+    cmds.setAttr(node["cachedRestMatrix"].path(), tuple(rest), type="matrix")

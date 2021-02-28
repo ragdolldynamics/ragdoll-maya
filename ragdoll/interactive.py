@@ -190,20 +190,12 @@ def install():
 def uninstall():
     uninstall_logger()
 
-    if "RAGDOLL_DO_NOT_LOAD_BINDING" not in os.environ:
-        return log.error(
-            "Can't uninstall this, the Python bindings are loaded. "
-            "Set RAGDOLL_DO_NOT_LOAD_BINDING to avoid that."
-        )
-
     if not __.installed:
         return log.warning("Ragdoll not installed")
 
     uninstall_callbacks()
     uninstall_menu()
     options.uninstall()
-
-    uninstall_pyragdoll()
 
     # Call last, for Maya to properly unload and clean up
     uninstall_plugin()
@@ -329,48 +321,6 @@ def uninstall_plugin(force=True):
         os.environ["XBMLANGPATH"].replace(
             _resource(__.xbmlangpath) + os.pathsep, "")
     )
-
-
-def uninstall_pyragdoll():
-    """Clean up compiled Python extension
-
-    Compiled Python extensions are special. Normally, when a `.py`
-    module is no longer in `sys.modules` the module is gone. On
-    re-import, the file is read from disk anew. But, the file handle
-    of a compiled library is never really closed. It can't be.
-    Instead, the file handle remains open for the duration of the
-    Python interpreter; which in the case of Maya means until Maya
-    itself is shutdown.
-
-    This is bad news for uninstalling Ragdoll.
-
-    """
-
-    import ctypes
-    import _ctypes
-
-    # Get rid of any direct reference
-    pyragdoll = sys.modules.pop("pyragdoll", None)
-
-    # It may not have been loaded, that's ok
-    if not pyragdoll:
-        return
-
-    # Now release the file handle
-    fname = pyragdoll.__file__
-
-    if fname.endswith(".pyd"):
-        log.info("Freeing pyragdoll..")
-
-        dll = ctypes.CDLL(fname)
-
-        # The following is safe, as we can guarantee that there is no
-        # code being executed on release of this file handle.
-        _ctypes.FreeLibrary(dll._handle)
-        _ctypes.FreeLibrary(dll._handle)
-
-        # Called twice? Yes, it doesn't seem to have an effect otherwise :S
-        # Maybe one is for this call?
 
 
 def install_menu():

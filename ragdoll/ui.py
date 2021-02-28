@@ -1588,6 +1588,8 @@ class SplashScreen(QtWidgets.QDialog):
         expiry.setText("Expires %s" % datestring)
 
     def on_magic(self, magic_days):
+        self.on_deactivated()
+
         log.info("Ragdoll is magic")
 
         status = _resource("ui", "mode_orange.png")

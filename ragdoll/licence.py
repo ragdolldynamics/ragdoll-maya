@@ -1,5 +1,6 @@
 """Ragdoll Licence API"""
 
+from maya import cmds
 import logging
 
 STATUS_OK = 0                  # All OK
@@ -9,10 +10,9 @@ STATUS_ALREADY_ACTIVATED = 26  # No action needed
 STATUS_INET = 4                # Connection to the server failed.
 STATUS_INET_DELAYED = 21       # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5               # Maximum number of activations reached
-STATUS_TRIAL_EXPIRED = 30               # Maximum number of activations reached
+STATUS_TRIAL_EXPIRED = 30      # Maximum number of activations reached
 
 log = logging.getLogger("ragdoll")
-binding = None
 
 
 def install(key=None):
@@ -25,14 +25,7 @@ def install(key=None):
 
     """
 
-    # Binding is special. It has initialisation code
-    # that cannot be executed until *after* the Maya plug-in
-    # has been loaded. Hence we cannot import it at module-level
-    # without limiting when and where `licence.py` can be imported
-    global binding
-    from . import binding
-
-    status = binding.init_licence()
+    status = cmds.ragdollLicence(init=True)
 
     if status == STATUS_OK:
         log.debug("Successfully initialised Ragdoll licence.")
@@ -68,7 +61,7 @@ def install(key=None):
             "this is a bug. Tell someone."
         )
 
-    if key is not None and not binding.is_licence_activated():
+    if key is not None and not cmds.ragdollLicence(isActivated=True):
         log.info("Automatically activating Ragdoll licence")
         return activate(key)
 
@@ -77,7 +70,7 @@ def install(key=None):
 
 def current_key():
     """Return the currently activated key, if any"""
-    return binding.licence_key()
+    return cmds.ragdollLicence(serial=True)
 
 
 def activate(key):
@@ -88,7 +81,7 @@ def activate(key):
 
     """
 
-    status = binding.activate_licence(key)
+    status = cmds.ragdollLicence(activate=key)
 
     if status == STATUS_OK:
         log.info("Successfully activated your Ragdoll licence.")
@@ -129,24 +122,30 @@ def deactivate():
 
     """
 
-    status = binding.deactivate_licence()
+    status = cmds.ragdollLicence(deactivate=True)
 
     if status == STATUS_OK:
-        log.info("Successfully deactivated Ragdoll licence")
+        log.info("Successfully deactivated Ragdoll licence.")
+
+    elif status == STATUS_TRIAL_EXPIRED:
+        log.info("Successfully deactivated Ragdoll licence, "
+                 "but your trial has expired.")
+
     else:
-        log.error("Couldn't deactivate Ragdoll licence.")
+        log.error("Couldn't deactivate Ragdoll licence "
+                  "(error code: %s)." % status)
 
     return status
 
 
 def reverify():
-    return binding.reverify_licence()
+    return cmds.ragdollLicence(reverify=True)
 
 
 def data():
     """Return overall information about the current Ragdoll licence"""
     return dict(
-        key=binding.licence_key(),
+        key=cmds.ragdollLicence(serial=True, query=True),
 
         # Which edition of Ragdoll is this?
         # Standard or Enterprise
@@ -156,21 +155,21 @@ def data():
         floating=False,
 
         # Is the current licence activated?
-        isActivated=binding.is_licence_activated(),
+        isActivated=cmds.ragdollLicence(isActivated=True, query=True),
 
         # Is the current licence a trial licence?
-        isTrial=binding.is_licence_trial(),
+        isTrial=cmds.ragdollLicence(isTrial=True, query=True),
 
         # Has the licence not been tampered with?
-        isGenuine=binding.is_licence_genuine(),
+        isGenuine=cmds.ragdollLicence(isGenuine=True, query=True),
 
         # Has the licence been verified with the server
         # (requires a connection to the internet)?
-        isVerified=binding.is_licence_verified(),
+        isVerified=cmds.ragdollLicence(isVerified=True, query=True),
 
         # How many days until this trial expires?
-        trialDays=binding.licence_trial_days(),
+        trialDays=cmds.ragdollLicence(trialDays=True, query=True),
 
         # How many magic days are left?
-        magicDays=binding.licence_magic_days(),
+        magicDays=cmds.ragdollLicence(magicDays=True, query=True),
     )

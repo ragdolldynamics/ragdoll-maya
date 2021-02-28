@@ -248,15 +248,44 @@ def uninstall_logger():
     log.propagate = True  # Defer to root logger
 
 
+def _on_cycle(clientData=None):
+    """The solver is panicking
+
+    This is expected to happen only when there is a cycle,
+    but could happen for other reasons too. The result is
+    an unexpected dependency graph, where one rigid or scene
+    evaluates ahead of another.
+
+    """
+
+    log.warning("Something is not right!")
+
+
+def _on_licence_expired(clientData=None):
+    pass
+
+
 def install_callbacks():
-    __.callback = om.MSceneMessage.addCallback(
-        om.MSceneMessage.kAfterOpen,
-        _on_scene_open
+    __.callbacks.append(
+        om.MSceneMessage.addCallback(
+            om.MSceneMessage.kAfterOpen, _on_scene_open)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollCycleEvent", _on_cycle)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollLicenceExpiredEvent", _on_licence_expired)
     )
 
 
 def uninstall_callbacks():
-    om.MMessage.removeCallback(__.callback)
+    for callback_id in __.callbacks:
+        om.MMessage.removeCallback(callback_id)
+    __.callbacks[:] = []
 
 
 def install_plugin():

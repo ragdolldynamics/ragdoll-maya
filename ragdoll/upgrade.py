@@ -17,6 +17,7 @@ compatibility path for all time.
 import logging
 from maya import cmds
 from . import commands
+from .vendor import cmdx
 
 log = logging.getLogger("ragdoll")
 
@@ -36,6 +37,9 @@ def scene(node, from_version, to_version):
 
     if from_version < 20201015:
         _scene_00000000_20201015(node)
+
+    if from_version < 20210228:
+        _scene_20201016_20210228(node)
 
     node["version"] = to_version
 
@@ -78,8 +82,48 @@ def _rigid_20201015_20201016(node):
     node["color"] = commands._random_color()
 
 
-def _rigid_20201016_20210228(node):
+def _scene_20201016_20210228(scene):
+    """Array indices are automatically removed since 02-28
+
+    There remains support for unconnected indices with references to
+    non-existent entities, but not for long.
+
+    """
+
+    log.info("Upgrading %s to 2021.02.28" % scene)
+
+    array_attributes = [
+        "inputActive",
+        "inputActiveStart",
+        "inputConstraint",
+        "inputConstraintStart",
+        "inputLink",
+        "inputLinkStart",
+        "inputSlice",
+        "inputSliceStart",
+    ]
+
+    with cmdx.DGModifier() as mod:
+        for attr in array_attributes:
+            for element in scene[attr]:
+                if element.connected:
+                    continue
+
+                mod._modifier.removeMultiInstance(element._mplug, True)
+
+
+def _rigid_20201016_20210228(rigid):
     """Introduced .cachedRestMatrix"""
-    log.info("Upgrading %s to 2021.02.28" % node)
-    rest = node["restMatrix"].asMatrix()
-    cmds.setAttr(node["cachedRestMatrix"].path(), tuple(rest), type="matrix")
+    log.info("Upgrading %s to 2021.02.28" % rigid)
+
+    if not rigid["restMatrix"].connected:
+        rest = rigid["restMatrix"].asMatrix()
+
+        cmds.setAttr(
+            rigid["cachedRestMatrix"].path(),
+            tuple(rest), type="matrix"
+        )
+
+        tm = rigid.parent()
+        cmds.connectAttr(tm["worldMatrix"][0].path(),
+                         rigid["restMatrix"].path())

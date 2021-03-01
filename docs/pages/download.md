@@ -138,7 +138,6 @@ You should now see a new `Ragdoll` menu.
 
 As of `Ragdoll {{ config.ragdoll_version }}` these are the current known limitations of Ragdoll.
 
-- Cannot unload the plug-in once loaded, must restart Maya. Otherwise, expect hard-crashes upon re-loading the plug-in.
 - Must visit start frame on scene open
 - Poor support for any `rotateAxis` other than `XYZ`
 - Attributes `jointOrient`, `rotatePivot` and `rotatePivotTranslate` will be zeroed out

@@ -41,7 +41,8 @@ def scene(node, from_version, to_version):
     if from_version < 20210228:
         _scene_20201016_20210228(node)
 
-    node["version"] = to_version
+    with cmdx.DGModifier() as mod:
+        mod.set_attr(node["version"], to_version)
 
 
 def rigid(node, from_version, to_version):
@@ -58,7 +59,8 @@ def rigid(node, from_version, to_version):
     if from_version < 20210228:
         _rigid_20201016_20210228(node)
 
-    node["version"] = to_version
+    with cmdx.DGModifier() as mod:
+        mod.set_attr(node["version"], to_version)
 
 
 def _scene_00000000_20201015(node):

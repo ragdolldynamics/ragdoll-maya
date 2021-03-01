@@ -1024,6 +1024,10 @@ def create_active_rigid(selection=None, **opts):
                         previous, rigid, scene
                     )
 
+                    with cmdx.DagModifier() as mod:
+                        name = commands._unique_name("rLocalConstraint")
+                        mod.rename(con, name)
+
                     if _opt("autoOrient", opts):
                         commands.orient(con)
 

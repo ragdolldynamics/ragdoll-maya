@@ -1,0 +1,11 @@
+Highlight for this release is **Automatic Initial State**!
+
+- [**ADDED** Replay](#replay) Animator-friendly automation of Ragdoll setuport going out of sync
+
+<br>
+
+## Replay
+
+Ever set-up a character with physics, only to have to do it all over again on some other shot or character? With **Replay** this can be a thing of the past! :)
+
+If you've ever worked with Photoshop and it's "Actions" panel, you'll know what to expect. It'll record the things you do, such that you can replay them later. For every recorded action, selection and preferences are stored. You can edit the names of selected nodes with *wildcards* to support alternative naming conventions, for example if a control has a different namespace than originally recorded at. Preferences can be manipulated post-recording as well, such as the initial shapes of things.

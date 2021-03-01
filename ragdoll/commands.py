@@ -398,7 +398,7 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     scene = rigid["startState"].connection(type="rdScene")
     assert scene is not None, "%s was unconnected, this is a bug" % rigid
 
-    con = _rdconstraint(mod, "rGuideConstraint", parent=transform)
+    con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
 
     mod.set_attr(con["limitEnabled"], False)
     mod.set_attr(con["driveEnabled"], True)
@@ -411,6 +411,10 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     mod.connect(rigid["ragdollId"], con["childRigid"])
 
     mod.keyable_attr(con["driveStrength"])
+    mod.keyable_attr(con["linearDriveStiffness"])
+    mod.keyable_attr(con["linearDriveDamping"])
+    mod.keyable_attr(con["angularDriveStiffness"])
+    mod.keyable_attr(con["angularDriveDamping"])
 
     # Add to scene
     add_constraint(mod, con, scene)
@@ -424,6 +428,10 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
 
         # Account for node being potentially parented somewhere
         mult = dgmod.create_node("multMatrix", name="makeWorldspace")
+
+        # Keep channel box tidy
+        compose["isHistoricallyInteresting"] = False
+        mult["isHistoricallyInteresting"] = False
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
@@ -1524,15 +1532,15 @@ def _attach_bodies(parent, child, scene, standalone):
     with cmdx.DagModifier() as mod:
 
         if standalone:
-            transform = mod.create_node("transform", name)
+            transform = mod.create_node("transform", name=name)
             mod.lock_attr(transform["translate"])
             mod.lock_attr(transform["rotate"])
             mod.lock_attr(transform["scale"])
+            con = _rdconstraint(mod, name + "Shape", parent=transform)
 
         else:
             transform = child.parent()
-
-        con = _rdconstraint(mod, name + "Shape", parent=transform)
+            con = _rdconstraint(mod, name, parent=transform)
 
         mod.set_attr(con["standalone"], standalone)
         mod.set_attr(con["disableCollision"], True)

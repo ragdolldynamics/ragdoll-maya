@@ -65,11 +65,7 @@ If you've activated 3 licences, you can hit the `Deactivate` button (which is sa
 
 #### Do I need an internet connection to use Ragdoll?
 
-Yes and no.
-
-- Yes: To activate either the trial of purchased version of Ragdoll, the machine needs a connection to the internet.
-- No: Once activated, you won't need internet for **90 days**
-- No: For special cases, get in touch.
+No.
 
 <br>
 

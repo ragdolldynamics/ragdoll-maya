@@ -29,11 +29,12 @@ global proc AErdSceneTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
-            // editorTemplate -label "Shapes" -addControl "drawShapes";
+            editorTemplate -label "Shapes" -addControl "drawShapes";
             editorTemplate -label "Constraints" -addControl "drawConstraints";
             editorTemplate -label "Drives" -addControl "drawDrives";
             editorTemplate -label "Velocities" -addControl "drawVelocities";
             editorTemplate -label "Trajectories" -addControl "drawTrajectories";
+            editorTemplate -label "Ghosts" -addControl "drawGhosts";
             editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";
             editorTemplate -label "Limit Scale" -addControl "drawLimitScale";
             editorTemplate -label "Line Width" -addControl "drawLineWidth";

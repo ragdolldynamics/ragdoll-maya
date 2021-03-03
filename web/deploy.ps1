@@ -6,6 +6,7 @@ rez env -e "PYTHONPATH=$(pwd)/plugins" `
     nltk `
     mkdocs `
     libsass `
+    mkdocs -- `
     mkdocs build --site-dir $args[0]
 
 copy-item .\CNAME $args[0]

@@ -14,7 +14,7 @@ Let's dive into specifics.
 
 #### How does it work?
 
-On first launch, Ragdoll will try and connect to the Ragdoll Licence Server (internet connection required, offline activation coming soon) and register your trial version. This version is node-locked to the particular machine you are on. It'll stick with the machine even across re-installs of your operating system.
+On first launch, Ragdoll will try and connect to the Ragdoll Licence Server and register your trial version. This version is node-locked to the particular machine you are on.
 
 Once you've acquired a product key, you can either:
 
@@ -28,6 +28,8 @@ Or if you prefer:
 from ragdoll import licence
 licence.activate(key)
 ```
+
+If internet is unavailable, Ragdoll enters "offline mode" and expires at a fixed date. Each new release is given an updated expiry date.
 
 <br>
 
@@ -47,11 +49,11 @@ Reach out to us if this is relevant to you. We're contemplating a permanently ac
 
 <br>
 
-#### Can I use it on more than one machine?
+#### Can I use my licence on more than one machine?
 
 Yes.
 
-You can activate and use Ragdoll on up to 3 machines. You just can't run a simulation on more than 1 at a time, that could lead to suspension of the licence.
+You can activate and use each Ragdoll licence on up to 3 machines. You just can't run a simulation on more than 1 at a time, that could lead to suspension of the licence.
 
 <br>
 
@@ -59,13 +61,15 @@ You can activate and use Ragdoll on up to 3 machines. You just can't run a simul
 
 Yes.
 
-If you've activated 3 licences, you can hit the `Deactivate` button (which is same as the `Activate` button once you've actiavted) and the activation will be released.
+If you've activated 3 licences, you can hit the `Deactivate` button (which is same as the `Activate` button once you've activated) and the activation will be released.
 
 <br>
 
 #### Do I need an internet connection to use Ragdoll?
 
 No.
+
+Activation can happen either offline or online, online happening from within Maya at the click of a button and offline being a 4-step process, [see below](#can-i-activate-offline).
 
 <br>
 

@@ -500,7 +500,6 @@ def create_scene():
         # Not yet supported
         tm["scale"].locked = True
         tm["scale"].keyable = False
-        tm["scale"].keyable = False
 
         scene = _rdscene(mod, "rSceneShape", parent=tm)
         mod.connect(tm["worldMatrix"][0], scene["inputMatrix"])
@@ -1134,26 +1133,13 @@ def convert_rigid(rigid, passive=None):
         # Convert active --> passive
         if not rigid["kinematic"] and passive:
             mod.set_attr(rigid["kinematic"], True)
-
-            for plug in node["translate"]:
-                mod.disconnect(plug, destination=False)
-
-            for plug in node["rotate"]:
-                mod.disconnect(plug, destination=False)
-
-            for plug in node["scale"]:
-                mod.disconnect(plug, destination=False)
-
             mod.doIt()
-
-            mod.connect(node["worldMatrix"][0], rigid["inputMatrix"])
 
         # Convert passive --> active
         elif not passive:
             mod.set_attr(rigid["kinematic"], False)
-            mod.disconnect(rigid["inputMatrix"], destination=False)
 
-            # The user will expect a newly-turned rigid to collide
+            # The user will expect a newly-turned active rigid to collide
             mod.set_attr(rigid["collide"], True)
 
             # Make sure inputMatrix has been disconnected

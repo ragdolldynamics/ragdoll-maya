@@ -354,10 +354,15 @@ def create_dynamic_control(chain,
     local_constraints = []
     world_constraints = []
     new_rigids = []
+    cache = {}
 
     root, children = chain[0], chain[1:]
 
     parent = root
+
+    # Pre-cache to avoid needless evaluation
+    for link in chain:
+        cache[(link, "worldMatrix")] = link["worldMatrix"][0].asMatrix()
 
     def _add_pairblend(mod, rigid, transform):
         """Put a pairBlend between rigid and transform
@@ -672,7 +677,9 @@ def create_dynamic_control(chain,
         parent_rigid = parent.shape(type="rdRigid")
 
         def make_parent_rigid():
-            parent_rigid = commands.create_passive_rigid(parent, scene)
+            parent_rigid = commands.create_rigid(parent, scene,
+                                                 passive=True,
+                                                 _cache=cache)
 
             mod.set_attr(parent_rigid["drawShaded"], False)
 
@@ -716,7 +723,8 @@ def create_dynamic_control(chain,
 
             # Handle overlapping controllers, like branches
             if child_rigid is None:
-                child_rigid = commands.create_active_rigid(child, scene)
+                child_rigid = commands.create_rigid(child, scene,
+                                                    _cache=cache)
                 mod.set_attr(child_rigid["drawShaded"], False)
 
             else:

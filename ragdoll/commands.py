@@ -520,7 +520,8 @@ def create_rigid(node,
                  scene,
                  passive=False,
                  compute_mass=False,
-                 existing=Overwrite):
+                 existing=Overwrite,
+                 _cache=None):
     """Create a new rigid
 
     Create a new rigid from `node`, which may be a transform or
@@ -534,8 +535,33 @@ def create_rigid(node,
             based on shape volume
         existing (int): What to do about existing connections to translate
             and rotate channels.
+        _cache (AttributeCache, optional): Reach for attributes here first,
+            to avoid triggering evaluations prematurely
 
     """
+
+    it = create_rigid_iter(node,
+                           scene,
+                           passive,
+                           compute_mass,
+                           existing,
+                           _cache)
+    # Create
+    rigid = next(it)
+
+    # Connect
+    next(it)
+
+    return rigid
+
+
+def create_rigid_iter(node,
+                      scene,
+                      passive=False,
+                      compute_mass=False,
+                      existing=Overwrite,
+                      _cache=None):
+    cache = _cache or {}
 
     if isinstance(node, string_types):
         node = cmdx.encode(node)
@@ -559,12 +585,16 @@ def create_rigid(node,
         transform = node
         shape = node.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
 
-    rest = transform["worldMatrix"][0].asMatrix()
+    rest = cache.get((node, "worldMatrix"))
+    rest = rest or transform["worldMatrix"][0].asMatrix()
 
     with cmdx.DagModifier() as mod:
         rigid = _rdrigid(mod, "rRigid", parent=transform)
 
+        # Keep up to date with initial world matrix
         mod.connect(transform["worldMatrix"][0], rigid["restMatrix"])
+
+        # Compensate for any parents when outputting from the solver
         mod.connect(transform["parentInverseMatrix"][0],
                     rigid["inputParentInverseMatrix"])
 
@@ -644,6 +674,8 @@ def create_rigid(node,
                 0.01
             ))
 
+    yield rigid
+
     # Make the connections
     with cmdx.DagModifier() as mod:
         try:
@@ -660,15 +692,15 @@ def create_rigid(node,
             mod.delete_node(rigid)
             raise
 
-    return rigid
+    yield rigid
 
 
-def create_active_rigid(node, scene):
-    return create_rigid(node, scene, passive=False)
+def create_active_rigid(node, scene, **kwargs):
+    return create_rigid(node, scene, passive=False, **kwargs)
 
 
-def create_passive_rigid(node, scene):
-    return create_rigid(node, scene, passive=True)
+def create_passive_rigid(node, scene, **kwargs):
+    return create_rigid(node, scene, passive=True, **kwargs)
 
 
 @with_undo_chunk

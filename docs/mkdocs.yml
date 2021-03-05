@@ -8,7 +8,7 @@ site_url: https://learn.ragdolldynamics.com
 repo_name: mottosso/ragdoll
 repo_url: https://github.com/mottosso/ragdoll
 
-ragdoll_version: "2021.03.01"
+ragdoll_version: "2021.03.04"
 copyright: "Copyright &copy; 2020 mottosso"
 
 # Page tree
@@ -23,6 +23,7 @@ nav:
   - Node Reference: nodes.md
   - API Reference: api.md
   - Release History:
+    - 2021.03.04: releases/2021.03.04.md
     - 2021.03.01: releases/2021.03.01.md
     - 2021.02.07: releases/2021.02.07.md
     - 2021.01.27: releases/2021.01.27.md

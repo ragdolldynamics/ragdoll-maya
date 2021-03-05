@@ -2,6 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
+- [2021.03.04 - Passive to Active Transitions](/releases/2021.03.04)
 - [2021.03.01 - Auto Initial State](/releases/2021.03.01)
 - [2021.02.07 - Scale](/releases/2021.02.07)
 - [2021.01.27 - Message Board](/releases/2021.01.27)

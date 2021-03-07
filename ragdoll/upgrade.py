@@ -27,7 +27,7 @@ def has_upgrade(node, from_version):
         return from_version < 20201015
 
     if node.type() == "rdRigid":
-        return from_version < 20210228
+        return from_version < 20210308
 
 
 def scene(node, from_version, to_version):
@@ -58,6 +58,9 @@ def rigid(node, from_version, to_version):
 
     if from_version < 20210228:
         _rigid_20201016_20210228(node)
+
+    if from_version < 20210308:
+        _rigid_20210228_20210308(node)
 
     with cmdx.DGModifier() as mod:
         mod.set_attr(node["version"], to_version)
@@ -129,3 +132,13 @@ def _rigid_20201016_20210228(rigid):
         tm = rigid.parent()
         cmds.connectAttr(tm["worldMatrix"][0].path(),
                          rigid["restMatrix"].path())
+
+
+def _rigid_20210228_20210308(rigid):
+    """Introduced .startTime"""
+    log.info("Upgrading %s to 2021.03.08" % rigid)
+
+    scene = rigid["nextState"].connection(type="rdScene")
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(scene["startTime"], rigid["startTime"])

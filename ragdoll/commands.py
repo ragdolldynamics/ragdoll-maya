@@ -263,6 +263,7 @@ def add_rigid(mod, rigid, scene):
     index = scene["outputObjects"].next_available_index()
     mod.connect(time["outTime"], rigid["currentTime"])
     mod.connect(scene["outputObjects"][index], rigid["nextState"])
+    mod.connect(scene["startTime"], rigid["startTime"])
     mod.connect(rigid["startState"], scene["inputActiveStart"][index])
     mod.connect(rigid["currentState"], scene["inputActive"][index])
 
@@ -353,6 +354,7 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
+        reverse = dgmod.create_node("reverse", name="reverseKinematic")
         dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
 
         # Establish initial values, before keyframes
@@ -398,29 +400,9 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     scene = rigid["startState"].connection(type="rdScene")
     assert scene is not None, "%s was unconnected, this is a bug" % rigid
 
-    con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
-
-    mod.set_attr(con["limitEnabled"], False)
-    mod.set_attr(con["driveEnabled"], True)
-    mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
-
-    # Follow animation, if any
-    mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
-
-    mod.connect(scene["ragdollId"], con["parentRigid"])
-    mod.connect(rigid["ragdollId"], con["childRigid"])
-
-    mod.keyable_attr(con["driveStrength"])
-    mod.keyable_attr(con["linearDriveStiffness"])
-    mod.keyable_attr(con["linearDriveDamping"])
-    mod.keyable_attr(con["angularDriveStiffness"])
-    mod.keyable_attr(con["angularDriveDamping"])
-
-    # Add to scene
-    add_constraint(mod, con, scene)
-
     # Automatically hide con when blend is 0
-    mod.connect(pair_blend["weight"], con["visibility"])
+    mod.connect(rigid["kinematic"], reverse["inputX"])
+    mod.connect(reverse["outputX"], pair_blend["weight"])
 
     # Pair blend directly feeds into the drive matrix
     with cmdx.DGModifier() as dgmod:
@@ -429,10 +411,6 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
         # Account for node being potentially parented somewhere
         mult = dgmod.create_node("multMatrix", name="makeWorldspace")
 
-        # Keep channel box tidy
-        compose["isHistoricallyInteresting"] = False
-        mult["isHistoricallyInteresting"] = False
-
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
     mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
@@ -440,12 +418,8 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     # Keep the modified history shallow
     mod.do_it()
 
-    # Reproduce a parent hierarchy, but don't
-    # connect it as it could lead to a cycle
+    # Reproduce a parent hierarchy, but don't connect it to avoid cycle
     _set_matrix(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
-
-    # Support soft manipulation
-    mod.connect(mult["matrixSum"], con["driveMatrix"])
 
     # Support hard manipulation
     # For e.g. transitioning between active and passive
@@ -453,12 +427,38 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
 
     # Keep channel box clean
     mod.set_attr(compose["isHistoricallyInteresting"], False)
+    mod.set_attr(mult["isHistoricallyInteresting"], False)
 
-    mod.do_it()
+    if True:
+        con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
 
-    _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
+        mod.set_attr(con["limitEnabled"], False)
+        mod.set_attr(con["driveEnabled"], True)
+        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
 
-    return con
+        # Follow animation, if any
+        mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
+
+        mod.connect(scene["ragdollId"], con["parentRigid"])
+        mod.connect(rigid["ragdollId"], con["childRigid"])
+
+        mod.keyable_attr(con["driveStrength"])
+        mod.keyable_attr(con["linearDriveStiffness"])
+        mod.keyable_attr(con["linearDriveDamping"])
+        mod.keyable_attr(con["angularDriveStiffness"])
+        mod.keyable_attr(con["angularDriveDamping"])
+
+        mod.do_it()
+
+        _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
+
+        # Support soft manipulation
+        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
+
+        # Add to scene
+        add_constraint(mod, con, scene)
+
+        mod.connect(pair_blend["weight"], con["visibility"])
 
 
 def _remove_pivots(mod, transform):
@@ -487,7 +487,12 @@ def _remove_pivots(mod, transform):
                     )
 
     if "jointOrient" in transform:
+        tm = transform.transform()
         mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+
+        # "Freeze" transformations if possible
+        if transform["rotate"].editable:
+            mod.set_attr(transform["rotate"], tm.rotation())
 
 
 @with_undo_chunk
@@ -701,6 +706,196 @@ def create_active_rigid(node, scene, **kwargs):
 
 def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=True, **kwargs)
+
+
+@with_undo_chunk
+def create_chain(chain, scene,
+                 passive=False,
+                 compute_mass=False,
+                 existing=Overwrite):
+    assert isinstance(chain, (tuple, list)), "%s was not a tuple" % str(chain)
+
+    if isinstance(scene, string_types):
+        scene = cmdx.encode(scene)
+
+    assert scene.type() == "rdScene", scene.type()
+
+    cache = {}
+    chain = chain[:]  # Immutable input list
+    output_rigids = []
+
+    def sanity_check():
+        """Ensure incoming chain reflects a physical hierarchy in Maya"""
+
+        lineage = chain[:]
+        while lineage:
+            child = lineage.pop()
+            parent = lineage[-1]
+            assert parent in list(child.lineage()), (
+                "%s was not the parent of %s" % (parent, child)
+            )
+
+    def pre_flight():
+        for index, node in enumerate(chain):
+            if isinstance(node, string_types):
+                node = cmdx.encode(node)
+
+            assert isinstance(node, cmdx.DagNode), type(node)
+            assert not node.shape(type="rdRigid"), (
+                "%s is already a rigid" % node
+            )
+
+            if node.isA(cmdx.kShape):
+                transform = node.parent()
+                shape = node
+
+            else:
+                # Supported shapes, in order of preference
+                transform = node
+                shape = node.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
+
+            # For now, we can't allow joint orients
+            with cmdx.DagModifier() as mod:
+                _remove_pivots(mod, transform)
+
+            chain[index] = (transform, shape)
+            cache[(transform, "worldMatrix")] = (
+                transform["worldMatrix"][0].asMatrix()
+            )
+
+    # Call in scope, to avoid leaking variables
+    sanity_check()
+    pre_flight()
+
+    connections = []
+    parent_rigid = None
+
+    for transform, shape in chain:
+        with cmdx.DagModifier() as mod:
+
+            rigid = _rdrigid(mod, "rRigid", parent=transform)
+
+            # Keep up to date with initial world matrix
+            connections.append((transform["worldMatrix"][0],
+                                rigid["restMatrix"]))
+            connections.append((transform["parentInverseMatrix"][0],
+                                rigid["inputParentInverseMatrix"]))
+
+            # Assign some random color, within some nice range
+            mod.set_attr(rigid["color"], _random_color())
+
+            # Add to scene
+            add_rigid(mod, rigid, scene)
+
+        # Copy current transformation
+        rest = cache[(transform, "worldMatrix")]
+
+        cmds.setAttr(rigid["cachedRestMatrix"].path(),
+                     tuple(rest), type="matrix")
+        cmds.setAttr(rigid["inputMatrix"].path(),
+                     tuple(rest), type="matrix")
+
+        # Transfer geometry into rigid, if any
+        #
+        #     ______                ______
+        #    /\    /|              /     /|
+        #   /  \  /.|   ------>   /     / |
+        #  /____\/  |            /____ /  |
+        #  |\   | . |            |    |   |
+        #  | \  |  /             |    |  /
+        #  |  \ |./              |    | /
+        #  |___\|/               |____|/
+        #
+        #
+        with cmdx.DagModifier() as mod:
+            if shape:
+                bbox = shape.bounding_box
+                extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+                center = cmdx.Vector(bbox.center)
+
+                mod.set_attr(rigid["shapeOffset"], center)
+                mod.set_attr(rigid["shapeExtents"], extents)
+                mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
+
+                # Account for flat shapes, like a circle
+                mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
+
+                if shape.type() == "mesh":
+                    connections.append((shape["outMesh"], rigid["inputMesh"]))
+                    mod.set_attr(rigid["shapeType"], MeshShape)
+
+                elif shape.type() == "nurbsCurve":
+                    connections.append((shape["local"], rigid["inputCurve"]))
+                    mod.set_attr(rigid["shapeType"], MeshShape)
+
+                elif shape.type() == "nurbsSurface":
+                    connections.append((shape["local"], rigid["inputSurface"]))
+                    mod.set_attr(rigid["shapeType"], MeshShape)
+
+                # In case the shape is connected to a common
+                # generator, like polyCube or polyCylinder
+                _shapeattributes_from_generator(mod, shape, rigid)
+
+            elif transform.isA(cmdx.kJoint):
+                mod.set_attr(rigid["shapeType"], CapsuleShape)
+
+                # Orient inner shape to wherever the joint is pointing
+                # as opposed to whatever its jointOrient is facing
+                geometry = infer_geometry(transform)
+
+                mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
+                mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
+                mod.set_attr(rigid["shapeLength"], geometry.length)
+                mod.set_attr(rigid["shapeRadius"], geometry.radius)
+                mod.set_attr(rigid["shapeExtents"], geometry.extents)
+
+            if compute_mass:
+                # Establish a sensible default mass, also taking into
+                # consideration that joints must be comparable to meshes.
+                # Mass unit is kg, whereas lengths are in centimeters
+                mod.set_attr(rigid["mass"], (
+                    extents.x *
+                    extents.y *
+                    extents.z *
+                    0.01
+                ))
+
+            if parent_rigid:
+                connections.append((parent_rigid["ragdollId"],
+                                    rigid["parentRigid"]))
+
+                rigid_parent = rigid.parent().parent()
+
+                if rigid_parent:
+                    parent_matrix = parent_rigid["worldMatrix"][0].asMatrix()
+                    matrix = rigid_parent["worldMatrix"][0].asMatrix()
+
+                    # Account for offset groups inbetween rigids
+                    offset_matrix = matrix
+                    offset_matrix *= parent_matrix.inverse()
+
+                    _set_matrix(rigid["inputParentOffsetMatrix"],
+                                offset_matrix)
+
+        parent_rigid = rigid
+        output_rigids.append(rigid)
+
+    yield output_rigids[:]
+
+    # Make the connections
+    with cmdx.DagModifier() as mod:
+        for src, dst in connections:
+            mod.connect(src, dst)
+
+        for index, rigid in enumerate(output_rigids):
+            transform, _ = chain[index]
+
+            if passive:
+                _connect_passive(mod, rigid)
+            else:
+                _connect_active(mod, rigid, existing=existing)
+
+    yield True
 
 
 @with_undo_chunk

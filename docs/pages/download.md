@@ -139,6 +139,6 @@ You should now see a new `Ragdoll` menu.
 As of `Ragdoll {{ config.ragdoll_version }}` these are the current known limitations of Ragdoll.
 
 - Must visit start frame on scene open
-- Poor support for any `rotateAxis` other than `XYZ`
+- No support for `rotateAxis` other than 0
 - Attributes `jointOrient`, `rotatePivot` and `rotatePivotTranslate` will be zeroed out
 - When weight painting rigid joints, cannot right-click "Select influence" (see [workaround](https://forums.ragdolldynamics.com/t/swing-physics-test/40/2))

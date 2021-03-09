@@ -329,6 +329,12 @@
         "default": true,
         "help": "Let the user know of a Ragdoll limitation, that a custom rotate axis are unsupported."
     },
+    "validateRotateOrder": {
+        "name": "validateRotateOrder",
+        "type": "Boolean",
+        "default": true,
+        "help": "Let the user know of a Ragdoll limitation, that a custom rotate order are currently unsupported."
+    },
     "validateScale": {
         "name": "validateScale",
         "type": "Boolean",

@@ -326,6 +326,7 @@
             "validateEvaluationMode",
             "validateRotatePivot",
             "validateRotateAxis",
+            "validateRotateOrder",
             "validateScale",
             "validatePlaybackSpeed"
         ]

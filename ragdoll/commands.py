@@ -454,6 +454,10 @@ def _remove_pivots(mod, transform):
                         % (transform, channel, axis)
                     )
 
+    if transform["rotateOrder"].read() > 0:
+        log.warning("Resetting %s.rotateOrder" % transform)
+        mod.set_attr(transform["rotateOrder"], 0)
+
     if "jointOrient" in transform:
         tm = transform.transform()
         mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))

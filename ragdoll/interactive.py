@@ -1134,6 +1134,7 @@ def _validate_transforms(nodes, tolerance=0.01):
     negative_scaled = []
     positive_scaled = []
     axes = []
+    rotate_orders = []
     issues = []
 
     for node in nodes:
@@ -1151,6 +1152,9 @@ def _validate_transforms(nodes, tolerance=0.01):
         if (any(abs(value) > tolerance for value in axis)):
             axes += [node]
 
+        if node["rotateOrder"].read() > 0:
+            rotate_orders += [node]
+
     if negative_scaled and options.read("validateScale"):
         issues += [
             "%d node(s) has negative scale\n%s" % (
@@ -1164,6 +1168,14 @@ def _validate_transforms(nodes, tolerance=0.01):
             "%d node(s) had a custom rotate axis\n%s" % (
                 len(axes),
                 "\n".join(" - %s" % node for node in axes),
+            )
+        ]
+
+    if rotate_orders and options.read("validateRotateOrder"):
+        issues += [
+            "%d node(s) had a custom rotate order\n%s" % (
+                len(rotate_orders),
+                "\n".join(" - %s" % node for node in rotate_orders),
             )
         ]
 

@@ -333,7 +333,7 @@ def _connect_active(mod, rigid, existing=Overwrite):
     return True
 
 
-def _connect_active_blend(mod, rigid, existing=Overwrite):
+def _connect_active_blend(mod, rigid):
     r"""Constrain rigid to original animation
 
      ______
@@ -346,11 +346,6 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     """
 
     transform = rigid.parent()
-
-    # Preserve animation, if any, as soft constraints
-    is_connected = any(
-        transform[attr].connected for attr in ("tx", "ty", "tz",
-                                               "rx", "ry", "rz"))
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
@@ -429,36 +424,9 @@ def _connect_active_blend(mod, rigid, existing=Overwrite):
     mod.set_attr(compose["isHistoricallyInteresting"], False)
     mod.set_attr(mult["isHistoricallyInteresting"], False)
 
-    if True:
-        con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
+    # _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
 
-        mod.set_attr(con["limitEnabled"], False)
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
-
-        # Follow animation, if any
-        mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
-
-        mod.connect(scene["ragdollId"], con["parentRigid"])
-        mod.connect(rigid["ragdollId"], con["childRigid"])
-
-        mod.keyable_attr(con["driveStrength"])
-        mod.keyable_attr(con["linearDriveStiffness"])
-        mod.keyable_attr(con["linearDriveDamping"])
-        mod.keyable_attr(con["angularDriveStiffness"])
-        mod.keyable_attr(con["angularDriveDamping"])
-
-        mod.do_it()
-
-        _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
-
-        # Support soft manipulation
-        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
-
-        # Add to scene
-        add_constraint(mod, con, scene)
-
-        mod.connect(pair_blend["weight"], con["visibility"])
+    return pair_blend
 
 
 def _remove_pivots(mod, transform):
@@ -526,6 +494,7 @@ def create_rigid(node,
                  passive=False,
                  compute_mass=False,
                  existing=Overwrite,
+                 constraint=None,
                  _cache=None):
     """Create a new rigid
 
@@ -545,27 +514,6 @@ def create_rigid(node,
 
     """
 
-    it = create_rigid_iter(node,
-                           scene,
-                           passive,
-                           compute_mass,
-                           existing,
-                           _cache)
-    # Create
-    rigid = next(it)
-
-    # Connect
-    next(it)
-
-    return rigid
-
-
-def create_rigid_iter(node,
-                      scene,
-                      passive=False,
-                      compute_mass=False,
-                      existing=Overwrite,
-                      _cache=None):
     cache = _cache or {}
 
     if isinstance(node, string_types):
@@ -679,8 +627,6 @@ def create_rigid_iter(node,
                 0.01
             ))
 
-    yield rigid
-
     # Make the connections
     with cmdx.DagModifier() as mod:
         try:
@@ -690,6 +636,9 @@ def create_rigid_iter(node,
                 _remove_pivots(mod, transform)
                 _connect_active(mod, rigid, existing=existing)
 
+                if constraint:
+                    _worldspace_constraint(rigid)
+
             mod.do_it()
 
         except Exception:
@@ -697,7 +646,50 @@ def create_rigid_iter(node,
             mod.delete_node(rigid)
             raise
 
-    yield rigid
+    return rigid
+
+
+def _worldspace_constraint(rigid):
+    scene = rigid["nextState"].connection(type="rdScene")
+    assert scene is not None, "%s was not connected to a scene" % rigid
+
+    transform = rigid.parent()
+
+    # Preserve animation, if any, as soft constraints
+    is_connected = any(
+        transform[attr].connected for attr in ("tx", "ty", "tz",
+                                               "rx", "ry", "rz"))
+
+    with cmdx.DagModifier() as mod:
+        con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
+
+        mod.set_attr(con["limitEnabled"], False)
+        mod.set_attr(con["driveEnabled"], True)
+        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
+
+        # Follow animation, if any
+        mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
+
+        mod.connect(scene["ragdollId"], con["parentRigid"])
+        mod.connect(rigid["ragdollId"], con["childRigid"])
+
+        mod.keyable_attr(con["driveStrength"])
+        mod.keyable_attr(con["linearDriveStiffness"])
+        mod.keyable_attr(con["linearDriveDamping"])
+        mod.keyable_attr(con["angularDriveStiffness"])
+        mod.keyable_attr(con["angularDriveDamping"])
+
+        mod.do_it()
+
+        # Support soft manipulation
+        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
+
+        # Add to scene
+        add_constraint(mod, con, scene)
+
+        mod.connect(rigid["dynamic"], con["visibility"])
+
+    return con
 
 
 def create_active_rigid(node, scene, **kwargs):
@@ -1351,7 +1343,7 @@ def convert_rigid(rigid, passive=None):
     if isinstance(rigid, string_types):
         rigid = cmdx.encode(rigid)
 
-    node = rigid.parent()
+    transform = rigid.parent()
 
     if passive is None:
         passive = not rigid["kinematic"].read()
@@ -1359,6 +1351,12 @@ def convert_rigid(rigid, passive=None):
     with cmdx.DagModifier() as mod:
         # Convert active --> passive
         if not rigid["kinematic"] and passive:
+            mod.disconnect(transform["translateX"])
+            mod.disconnect(transform["translateY"])
+            mod.disconnect(transform["translateZ"])
+            mod.disconnect(transform["rotateX"])
+            mod.disconnect(transform["rotateY"])
+            mod.disconnect(transform["rotateZ"])
             mod.set_attr(rigid["kinematic"], True)
             mod.doIt()
 
@@ -1372,7 +1370,8 @@ def convert_rigid(rigid, passive=None):
             # Make sure inputMatrix has been disconnected
             mod.doIt()
 
-            _connect_transform(mod, rigid, node)
+            _remove_pivots(mod, transform)
+            _connect_active_blend(mod, rigid)
 
     return rigid
 
@@ -1383,10 +1382,12 @@ def _rdscene(mod, name, parent=None):
     return node
 
 
-def _rdrigid(mod, name, parent=None):
+def _rdrigid(mod, name, parent):
+    assert parent.isA(cmdx.kTransform), "%s was not a transform" % parent
     name = _unique_name(name)
-    node = mod.create_node("rdRigid", name=name, parent=parent)
-    return node
+    rigid = mod.create_node("rdRigid", name=name, parent=parent)
+    mod.connect(parent["rotateOrder"], rigid["rotateOrder"])
+    return rigid
 
 
 def _rdcontrol(mod, name, parent=None):

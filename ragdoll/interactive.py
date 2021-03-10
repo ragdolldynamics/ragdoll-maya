@@ -868,50 +868,71 @@ def create_scene(selection=None):
 
 
 @requires_ui
-def has_valid_rotatepivot(transform):
+def is_valid_transform(transform):
     """Ragdoll currently does not support any custom pivot or axis"""
 
-    if not options.read("validateRotatePivot"):
-        return True
+    if options.read("validateRotateOrder"):
 
-    tolerance = 0.01
-    nonzero = []
+        def select_offender():
+            cmds.select(transform.path())
+            return False
 
-    for attr in ("rotatePivot",
-                 "rotatePivotTranslate",
-                 "scalePivot",
-                 "scalePivotTranslate",
-                 "rotateAxis"):
-        for axis in "XYZ":
-            plug = transform[attr + axis]
-            if abs(plug.read()) > tolerance:
-                nonzero.append(plug)
+        if transform["rotateOrder"].read() != 0:
+            return ui.warn(
+                option="validateRotateOrder",
+                title="Custom Rotate Order Not Supported",
+                message=(
+                    "A custom rotate order was found.\n\n"
+                    "- %s\n\n"
+                    "These are currently unsupported." % transform.name()
+                ),
+                call_to_action="What would you like to do?",
+                actions=[
+                    ("Reset Rotate Order", lambda: True),
 
-    if nonzero:
-        for plug in nonzero:
-            log.warning("%s was not zero" % plug.path())
+                    ("Select Node", select_offender),
 
-        return ui.warn(
-            option="validateRotatePivot",
-            title="Custom Rotate Pivot Found",
-            message=(
-                "Non-zero rotate pivots were found. These are currently "
-                "unsupported and need to be zeroed out, "
-                "see Script Editor for details."
-            ),
-            call_to_action="What would you like to do?",
-            actions=[
+                    ("Cancel", lambda: False)
+                ]
+            )
 
-                # Happens automatically by commands.py
-                # Take it or leave it, doesn't work otherwise
-                ("Zero out rotatePivot", lambda: True),
+    if options.read("validateRotatePivot"):
+        nonzero = []
+        tolerance = 0.01
+        for attr in ("rotatePivot",
+                     "rotatePivotTranslate",
+                     "scalePivot",
+                     "scalePivotTranslate",
+                     "rotateAxis"):
+            for axis in "XYZ":
+                plug = transform[attr + axis]
+                if abs(plug.read()) > tolerance:
+                    nonzero.append(plug)
 
-                ("Cancel", lambda: False)
-            ]
-        )
+        if nonzero:
+            for plug in nonzero:
+                log.warning("%s was not zero" % plug.path())
 
-    else:
-        return True
+            return ui.warn(
+                option="validateRotatePivot",
+                title="Custom Rotate Pivot Not Supported",
+                message=(
+                    "Non-zero rotate pivots were found. These are currently "
+                    "unsupported and need to be zeroed out, "
+                    "see Script Editor for details."
+                ),
+                call_to_action="What would you like to do?",
+                actions=[
+
+                    # Happens automatically by commands.py
+                    # Take it or leave it, doesn't work otherwise
+                    ("Zero out rotatePivot", lambda: True),
+
+                    ("Cancel", lambda: False)
+                ]
+            )
+
+    return True
 
 
 def _opt(key, override=None):
@@ -954,16 +975,19 @@ def create_active_rigid(selection=None, **opts):
     passive = _opt("createRigidType", opts) == "Passive"
     scene = _find_current_scene()
 
-    for index, node in enumerate(selection):
+    # Pre-flight check
+    for node in selection:
         transform = node.parent() if node.isA(cmdx.kShape) else node
-
-        if not has_valid_rotatepivot(transform):
+        if not is_valid_transform(transform):
             break
 
         # Rigid bodies must have translate and rotate channels
         if not transform.isA(cmdx.kTransform):
             log.warning("%s is not a transform node", transform.path())
-            continue
+            break
+
+    for index, node in enumerate(selection):
+        transform = node.parent() if node.isA(cmdx.kShape) else node
 
         existing = {
             "Abort": commands.Abort,
@@ -1748,8 +1772,9 @@ def create_dynamic_control(selection=None, **opts):
             "The first selection will be passive (i.e. animated)."
         )
 
-    if not _validate_transforms(chain):
-        return
+    for link in chain:
+        if not is_valid_transform(link):
+            return
 
     # Protect against accidental duplicates
     for link in chain[1:]:
@@ -1769,7 +1794,7 @@ def create_dynamic_control(selection=None, **opts):
     }
 
     for ctrl in chain:
-        if not has_valid_rotatepivot(ctrl):
+        if not is_valid_transform(ctrl):
             return
 
     try:

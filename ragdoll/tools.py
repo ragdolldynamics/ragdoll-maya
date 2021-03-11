@@ -352,7 +352,6 @@ def create_dynamic_control(chain,
 
     auto_influence = auto_blend and auto_influence
     local_constraints = []
-    world_constraints = []
     new_rigids = []
     cache = {}
 
@@ -364,7 +363,30 @@ def create_dynamic_control(chain,
     for link in chain:
         cache[(link, "worldMatrix")] = link["worldMatrix"][0].asMatrix()
 
-    def _add_pairblend(mod, rigid, transform):
+    def _make_simulated_attr(dgmod, transform):
+        if transform.has_attr("simulated"):
+            return
+
+        dgmod.add_attr(transform, cmdx.Boolean(
+            "simulated",
+            keyable=True,
+            default=True)
+        )
+        dgmod.add_attr(transform, cmdx.Boolean(
+            "notSimulated", keyable=False)
+        )
+
+        commands._record_attr(transform, "simulated")
+        commands._record_attr(transform, "notSimulated")
+
+        dgmod.do_it()
+
+        reverse = dgmod.create_node("reverse")
+        dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
+        dgmod.connect(transform["simulated"], reverse["inputX"])
+        dgmod.connect(reverse["outputX"], transform["notSimulated"])
+
+    def _add_pairblend(dgmod, rigid, transform):
         """Put a pairBlend between rigid and transform
 
          ________________          ___________
@@ -383,22 +405,23 @@ def create_dynamic_control(chain,
 
         constraint = rigid.sibling(type="rdConstraint")
 
-        pair_blend = mod.create_node("pairBlend")
-        mod.set_attr(pair_blend["rotInterpolation"], 1)  # Quaternion
-        mod.set_attr(pair_blend["isHistoricallyInteresting"], False)
+        pair_blend = dgmod.create_node("pairBlend")
+        dgmod.set_attr(pair_blend["rotInterpolation"], 1)  # Quaternion
+        dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes
-        mod.set_attr(pair_blend["inTranslate1"], transform["translate"])
-        mod.set_attr(pair_blend["inRotate1"], transform["rotate"])
+        dgmod.set_attr(pair_blend["inTranslate1"], transform["translate"])
+        dgmod.set_attr(pair_blend["inRotate1"], transform["rotate"])
 
-        mod.connect(rigid["outputTranslateX"], pair_blend["inTranslateX2"])
-        mod.connect(rigid["outputTranslateY"], pair_blend["inTranslateY2"])
-        mod.connect(rigid["outputTranslateZ"], pair_blend["inTranslateZ2"])
-        mod.connect(rigid["outputRotateX"], pair_blend["inRotateX2"])
-        mod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
-        mod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
+        dgmod.connect(rigid["outputTranslateX"], pair_blend["inTranslateX2"])
+        dgmod.connect(rigid["outputTranslateY"], pair_blend["inTranslateY2"])
+        dgmod.connect(rigid["outputTranslateZ"], pair_blend["inTranslateZ2"])
+        dgmod.connect(rigid["outputRotateX"], pair_blend["inRotateX2"])
+        dgmod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
+        dgmod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
+        dgmod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
 
-        mod.do_it()
+        dgmod.do_it()
 
         if auto_key:
             # Generate default animation curves, it's expected since you can no
@@ -410,36 +433,26 @@ def create_dynamic_control(chain,
                                     ("animCurveTA", "rx", "inRotateX1"),
                                     ("animCurveTA", "ry", "inRotateY1"),
                                     ("animCurveTA", "rz", "inRotateZ1")):
-                curve = mod.create_node(curve)
+                curve = dgmod.create_node(curve)
                 curve.key(time, transform[src].read())
-                mod.connect(curve["output"], pair_blend[dst])
+                dgmod.connect(curve["output"], pair_blend[dst])
 
-            mod.do_it()
+            dgmod.do_it()
 
         # Transfer existing animation/connections
         for src, dst in transform.data.get("priorConnections", {}).items():
             dst = pair_blend[dst]
-            mod.connect(src, dst)
+            dgmod.connect(src, dst)
 
-        commands._connect_transform(mod, pair_blend, transform)
+        commands._connect_transform(dgmod, pair_blend, transform)
 
         # Proxy commands below aren't part of the modifier, and thus
         # needs to happen after it's done its thing.
-        mod.do_it()
+        dgmod.do_it()
 
         if not central_blend:
-            if not transform.has_attr("simulated"):
-                mod.add_attr(transform, cmdx.Boolean(
-                    "simulated",
-                    keyable=True,
-                    default=True)
-                )
-
-                commands._record_attr(transform, "simulated")
-
-                mod.do_it()
-
-            mod.connect(transform["simulated"], pair_blend["weight"])
+            _make_simulated_attr(dgmod, transform)
+            dgmod.connect(transform["notSimulated"], rigid["kinematic"])
 
         # Forward some convenience attributes
         transform_proxies = commands.UserAttributes(rigid, transform)
@@ -450,15 +463,6 @@ def create_dynamic_control(chain,
         if constraint:
             constraint_proxies = commands.UserAttributes(
                 constraint, transform)
-
-            if central_blend:
-                mod.connect(pair_blend["weight"], constraint["visibility"])
-                mod.connect(pair_blend["weight"], rigid["visibility"])
-            else:
-                mod.connect(transform["simulated"],
-                            constraint["visibility"])
-                mod.connect(transform["simulated"],
-                            rigid["visibility"])
 
             # Forward some convenience attributes
             constraint_proxies.add("angularDriveStiffness",
@@ -472,35 +476,20 @@ def create_dynamic_control(chain,
 
         return pair_blend
 
-    def _auto_blend(mod, rigids, root):
-        pair_blends = []
-        for rigid in rigids:
-            transform = rigid.parent()
-            blend = _add_pairblend(mod, rigid, transform)
-
-            if auto_influence:
-                _auto_influence(mod, rigid, blend)
-
-            pair_blends += [blend]
-
+    def _auto_blend(dgmod, rigids, root):
         if central_blend:
             # Blend everything from the root
-            if not root.has_attr("simulated"):
-                mod.add_attr(root, cmdx.Boolean(
-                    "simulated",
-                    keyable=True,
-                    default=True)
-                )
+            _make_simulated_attr(dgmod, root)
 
-                commands._record_attr(root, "simulated")
+        for rigid in rigids:
+            transform = rigid.parent()
+            blend = _add_pairblend(dgmod, rigid, transform)
 
-                mod.do_it()
+            if auto_influence:
+                _auto_influence(dgmod, rigid, blend)
 
-            for pair_blend in pair_blends:
-                mod.connect(root["simulated"], pair_blend["weight"])
-
-            # Include root rigid in hiding
-            mod.connect(root["simulated"], parent_rigid["visibility"])
+            if central_blend:
+                dgmod.connect(root["notSimulated"], rigid["kinematic"])
 
     def _auto_influence(mod, rigid, blend):
         """Treat incoming animation as guide constraint
@@ -528,6 +517,23 @@ def create_dynamic_control(chain,
         mod.connect(blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(blend["inRotate1"], compose["inputRotate"])
 
+        make_worldspace = mod.create_node("multMatrix", name="makeWorldspace")
+        mod.connect(compose["outputMatrix"], make_worldspace["matrixIn"][0])
+
+        # Reproduce a parent hierarchy, but don't connect it to avoid cycle
+        mod.do_it()
+        commands._set_matrix(make_worldspace["matrixIn"][1],
+                             rigid.parent()["parentMatrix"][0].asMatrix())
+
+        mod.connect(make_worldspace["matrixSum"], rigid["inputMatrix"])
+
+        # Satisfy the curiosity of anyone browsing the node network
+        make_worldspace["notes"] = cmdx.String()
+        make_worldspace["notes"] = (
+            "matrixIn[1] is the original parentMatrix "
+            "of the rigid parent transform."
+        )
+
         # A drive is relative the parent frame, but the pairblend is relative
         # the parent Maya transform. In case these are not the same, we'll
         # map the pairblend into the space of the parent frame.
@@ -537,7 +543,8 @@ def create_dynamic_control(chain,
         if parent_rigid.type() != "rdRigid":
             return
 
-        mult = mod.create_node("multMatrix", name="compensateForHierarchy")
+        compensate = mod.create_node("multMatrix",
+                                     name="compensateForHierarchy")
 
         # From this matrix..
         parent_transform_matrix = rigid["inputParentInverseMatrix"].asMatrix()
@@ -547,13 +554,13 @@ def create_dynamic_control(chain,
         parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
         parent_rigid_matrix = parent_rigid_matrix.inverse()
 
-        mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
-        mult["matrixIn"][1] = parent_transform_matrix
-        mult["matrixIn"][2] = parent_rigid_matrix
+        mod.connect(compose["outputMatrix"], compensate["matrixIn"][0])
+        compensate["matrixIn"][1] = parent_transform_matrix
+        compensate["matrixIn"][2] = parent_rigid_matrix
 
         # Satisfy the curiosity of anyone browsing the node network
-        mult["notes"] = cmdx.String()
-        mult["notes"] = (
+        compensate["notes"] = cmdx.String()
+        compensate["notes"] = (
             "Two of the inputs are coming from initialisation\n"
             "[1] = %(rig)s['inputParentInverseMatrix'].asMatrix().inverse()\n"
             "[2] = %(pari)s['cachedRestMatrix'].asMatrix().inverse()" % dict(
@@ -562,13 +569,14 @@ def create_dynamic_control(chain,
             )
         )
 
-        mod.connect(mult["matrixSum"], constraint["driveMatrix"])
+        mod.connect(compensate["matrixSum"], constraint["driveMatrix"])
 
         # Keep channel box clean
         mod.set_attr(compose["isHistoricallyInteresting"], False)
-        mod.set_attr(mult["isHistoricallyInteresting"], False)
+        mod.set_attr(compensate["isHistoricallyInteresting"], False)
+        mod.set_attr(make_worldspace["isHistoricallyInteresting"], False)
 
-        rigid.data["compensateForHierarchy"] = mult
+        rigid.data["compensateForHierarchy"] = compensate
 
     def _add_multiplier(constraints, name, parent):
         r"""Multiply provided `constraints`
@@ -618,60 +626,6 @@ def create_dynamic_control(chain,
             proxies.do_it()
 
         return mult
-
-    def _auto_world_constraint(rigid, parent):
-        transform = rigid.parent()
-
-        if "animatedWorldMult" in parent.data:
-            ghost_mult = matrix = parent.data["animatedWorldMult"]
-            matrix = ghost_mult["matrixSum"]
-        else:
-            matrix = parent["inputMatrix"]
-
-        with cmdx.DagModifier() as mod:
-            name = commands._unique_name("rWorldConstraint")
-            con = mod.create_node("rdConstraint", name=name, parent=transform)
-
-        with cmdx.DGModifier() as mod:
-            compensate = rigid.data["compensateForHierarchy"]
-            mult = mod.create_node("multMatrix", name="animatedWorldMult")
-            mod.connect(compensate["matrixSum"], mult["matrixIn"][0])
-            mod.connect(matrix, mult["matrixIn"][1])
-
-            # Make worldspace guide
-            mod.connect(rigid["ragdollId"], con["childRigid"])
-
-            mod.set_attr(con["driveEnabled"], True)
-            mod.set_attr(con["driveStrength"], 1.0)
-            mod.set_attr(con["disableCollision"], False)
-
-            mod.set_attr(con["drawConnection"], False)
-            mod.set_attr(con["drawScale"],
-                         commands._scale_from_rigid(rigid))
-
-            mod.connect(scene["ragdollId"], con["parentRigid"])
-            mod.connect(mult["matrixSum"], con["driveMatrix"])
-            mod.set_attr(mult["isHistoricallyInteresting"], False)
-
-            commands.add_constraint(mod, con, scene)
-
-            blend = rigid.data["pairBlend"]
-
-            if central_blend:
-                mod.connect(blend["weight"], con["visibility"])
-            else:
-                mod.connect(transform["simulated"], con["visibility"])
-
-        con["driveStrength"].keyable = True
-        con["linearDriveStiffness"].keyable = True
-        con["linearDriveDamping"].keyable = True
-        con["angularDriveStiffness"].keyable = True
-        con["angularDriveDamping"].keyable = True
-
-        # Pass data from parent to child on next iteration
-        rigid.data["animatedWorldMult"] = mult
-
-        world_constraints.append(con)
 
     with cmdx.DagModifier() as mod:
         parent_rigid = parent.shape(type="rdRigid")
@@ -794,8 +748,8 @@ def create_dynamic_control(chain,
             local_constraints += [con]
 
         if auto_blend:
-            with cmdx.DGModifier() as mod:
-                _auto_blend(mod, new_rigids, root)
+            with cmdx.DGModifier() as dgmod:
+                _auto_blend(dgmod, new_rigids, root)
 
         if auto_multiplier and new_rigids:
             if local_constraints:

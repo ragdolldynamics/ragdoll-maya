@@ -349,8 +349,8 @@ def _connect_active_blend(mod, rigid):
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
-        reverse = dgmod.create_node("reverse", name="reverseKinematic")
         dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
+        dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes
         # Use transform, rather than translate/rotate directly,
@@ -396,8 +396,7 @@ def _connect_active_blend(mod, rigid):
     assert scene is not None, "%s was unconnected, this is a bug" % rigid
 
     # Automatically hide con when blend is 0
-    mod.connect(rigid["kinematic"], reverse["inputX"])
-    mod.connect(reverse["outputX"], pair_blend["weight"])
+    mod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
 
     # Pair blend directly feeds into the drive matrix
     with cmdx.DGModifier() as dgmod:
@@ -1353,7 +1352,9 @@ def convert_rigid(rigid, passive=None):
         passive = not rigid["kinematic"].read()
 
     with cmdx.DagModifier() as mod:
+        #
         # Convert active --> passive
+        #
         if not rigid["kinematic"] and passive:
             mod.disconnect(transform["translateX"])
             mod.disconnect(transform["translateY"])
@@ -1364,7 +1365,9 @@ def convert_rigid(rigid, passive=None):
             mod.set_attr(rigid["kinematic"], True)
             mod.doIt()
 
+        #
         # Convert passive --> active
+        #
         elif not passive:
             mod.set_attr(rigid["kinematic"], False)
 

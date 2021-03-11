@@ -477,8 +477,22 @@ def create_dynamic_control(chain,
         return pair_blend
 
     def _auto_blend(dgmod, rigids, root):
+        # Find top-level root for blend attribute
+        # It'll be the one with a multiplier node, if one exists
+        mult = root.shape("rdConstraintMultiplier")
+
+        if not mult:
+            con = root.shape("rdConstraint")
+
+            if con is not None:
+                mult = con["multiplierNode"].connection(
+                    type="rdConstraintMultiplier")
+
+        if mult and "simulated" in mult.parent():
+            root = mult.parent()
+
         if central_blend:
-            # Blend everything from the root
+            # Blend everything from the parent
             _make_simulated_attr(dgmod, root)
 
         for rigid in rigids:

@@ -454,12 +454,29 @@ def _remove_pivots(mod, transform):
                     )
 
     if transform["rotateOrder"].read() > 0:
-        log.warning("Resetting %s.rotateOrder" % transform)
-        mod.set_attr(transform["rotateOrder"], 0)
+        if transform["rotateOrder"].editable:
+            log.warning("Resetting %s.rotateOrder" % transform)
+            mod.set_attr(transform["rotateOrder"], 0)
+        else:
+            log.warning(
+                "Tried resetting %s.rotateOrder, but could not. "
+                "If you experience flipping issues, try resetting it to XYZ"
+                % transform
+            )
 
     if "jointOrient" in transform:
+        # Grab full transform, ahead of resetting the jointOrient
+        # in case we reset it without connecting to `rotate`
         tm = transform.transform()
-        mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+
+        if transform["jointOrient"].editable:
+            mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+        else:
+            log.warning(
+                "Tried resetting %s.jointOrient but could not. "
+                "If you experience weird rotations, try resetting it to 0"
+                % transform
+            )
 
         # "Freeze" transformations if possible
         if transform["rotate"].editable:

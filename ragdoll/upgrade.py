@@ -24,7 +24,7 @@ log = logging.getLogger("ragdoll")
 
 def has_upgrade(node, from_version):
     if node.type() == "rdScene":
-        return from_version < 20201015
+        return from_version < 20210313
 
     if node.type() == "rdRigid":
         return from_version < 20210308
@@ -40,6 +40,9 @@ def scene(node, from_version, to_version):
 
     if from_version < 20210228:
         _scene_20201016_20210228(node)
+
+    if from_version < 20210313:
+        _scene_20201015_20210313(node)
 
     with cmdx.DGModifier() as mod:
         mod.set_attr(node["version"], to_version)
@@ -70,6 +73,20 @@ def _scene_00000000_20201015(node):
     """TGS was introduced, let's maintain backwards compatibility though"""
     log.info("Upgrading %s to 2020.10.15" % node)
     node["solverType"] = commands.PGSSolverType
+
+
+def _scene_20201015_20210313(node):
+    """Support for Z-up got added"""
+    log.info("Upgrading %s to 2021.03.13" % node)
+
+    up = commands.global_up_axis()
+
+    if up.y:
+        node["gravityY"].niceName = "Gravity"
+        node["gravityY"].keyable = True
+    else:
+        node["gravityZ"].niceName = "Gravity"
+        node["gravityZ"].keyable = True
 
 
 def _rigid_00000000_20201015(node):

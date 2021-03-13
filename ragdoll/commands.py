@@ -70,6 +70,8 @@ Blend = 2
 
 QuaternionInterpolation = 1
 
+Epsilon = 0.001
+
 # Python 2 backwards compatibility
 try:
     string_types = basestring,
@@ -486,6 +488,7 @@ def _remove_pivots(mod, transform):
 @with_undo_chunk
 def create_scene():
     time = cmdx.encode("time1")
+    up = global_up_axis()
 
     with cmdx.DagModifier() as mod:
         tm = mod.create_node("transform", name=_unique_name("rScene"))
@@ -498,6 +501,16 @@ def create_scene():
         mod.connect(tm["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
+        mod.set_attr(scene["gravity"], up * -98.2)
+
+        if up.y:
+            mod.set_keyable(scene["gravityY"])
+            mod.set_nice_name(scene["gravityY"], "Gravity")
+
+        else:
+            mod.set_keyable(scene["gravityZ"])
+            mod.set_nice_name(scene["gravityZ"], "Gravity")
+            mod.set_attr(tm["rotateX"], cmdx.radians(90))
 
         # Record for backwards compatibility
         mod.set_attr(scene["version"], _version())
@@ -2478,15 +2491,16 @@ def delete_all_physics():
     return delete_physics(cmds.ls())
 
 
-def delete_physics(nodes):
+def delete_physics(nodes, include_attributes=False):
     """Delete Ragdoll from anything related to `nodes`
 
     This will delete anything related to Ragdoll from your scenes, including
     any attributes added (polluted) onto your animation controls.
 
     Arguments:
-        nodes (list, optional): Delete physics from these nodes,
-            leave empty for *all* nodes
+        nodes (list): Delete physics from these nodes
+        include_attributes (bool, optional): Whether to also
+            erase custom Ragdoll attributes
 
     """
 
@@ -2508,26 +2522,28 @@ def delete_physics(nodes):
         cmds.delete(nodes)
 
     # Remove transforms and custom attributes
-    for suspect in suspects:
-        attrs = suspect + "._ragdollAttributes"
+    # NOTE: This crashes Maya sometimes, whyyyy?
+    if include_attributes:
+        for suspect in suspects:
+            attrs = suspect + "._ragdollAttributes"
 
-        # Was the transform created exclusively for this node?
-        if cmds.objExists(suspect + "._ragdollExclusive"):
-            log.debug("Deleting %s" % suspect)
-            cmds.delete(suspect)
+            # Was the transform created exclusively for this node?
+            if cmds.objExists(suspect + "._ragdollExclusive"):
+                log.debug("Deleting %s" % suspect)
+                cmds.delete(suspect)
 
-        # No? Then let's erase User Attributes from it
-        elif cmds.objExists(attrs):
+            # No? Then let's erase User Attributes from it
+            elif cmds.objExists(attrs):
 
-            # Get rid of any attributes we made on the original nodes
-            for attr in filter(None, cmds.getAttr(attrs).split(" ")):
-                attr = "%s.%s" % (suspect, attr)
-                if cmds.objExists(attr):
-                    log.debug("Deleting %s" % attr)
-                    cmds.deleteAttr(attr)
+                # Get rid of any attributes we made on the original nodes
+                for attr in filter(None, cmds.getAttr(attrs).split(" ")):
+                    attr = "%s.%s" % (suspect, attr)
+                    if cmds.objExists(attr):
+                        log.debug("Deleting %s" % attr)
+                        cmds.deleteAttr(attr)
 
-            # Clean up after yourself
-            cmds.deleteAttr(attrs)
+                # Clean up after yourself
+                cmds.deleteAttr(attrs)
 
     return len(nodes)
 

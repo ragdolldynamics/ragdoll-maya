@@ -1596,6 +1596,13 @@ class DagNode(Node):
         if not type or type == self._fn.__class__(mobject).typeName:
             return cls(mobject)
 
+    def lineage(self, type=None):
+        """Return parents all the way up a hierarchy"""
+        parent = self.parent(type)
+        while parent is not None:
+            yield parent
+            parent = parent.parent(type)
+
     def children(self,
                  type=None,
                  filter=om.MFn.kTransform,
@@ -2897,6 +2904,25 @@ class Plug(object):
     def lockAndHide(self):
         self.lock()
         self.hide()
+
+    @property
+    def niceName(self):
+        """The nice name of this plug, visible in e.g. Channel Box
+
+        Examples:
+            >>> node = createNode("transform")
+            >>> assert node["translateY"].niceName == "Translate Y"
+            >>> node["translateY"].niceName = "New Name"
+            >>> assert node["translateY"].niceName == "New Name"
+
+        """
+        # No way of retrieving this information via the API?
+        return cmds.attributeName(self.path(), nice=True)
+
+    @niceName.setter
+    def niceName(self, value):
+        fn = om.MFnAttribute(self._mplug.attribute())
+        fn.setNiceNameOverride(value)
 
     @property
     def default(self):
@@ -4538,6 +4564,7 @@ class _BaseModifier(object):
         # Extras
         self._lockAttrs = []
         self._keyableAttrs = []
+        self._niceNames = []
 
     @record_history
     def lockAttr(self, plug, value=True):
@@ -4548,6 +4575,16 @@ class _BaseModifier(object):
     def keyableAttr(self, plug, value=True):
         assert isinstance(plug, (Plug, om.MPlug)), "%s was not a plug" % plug
         self._keyableAttrs.append((plug, value))
+
+    def setKeyable(self, plug, value=True):
+        return self.keyableAttr(plug, value)
+
+    def setLocked(self, plug, value=True):
+        return self.lockAttr(plug, value)
+
+    def setNiceName(self, plug, value):
+        assert isinstance(plug, (Plug, om.MPlug)), "%s was not a plug" % plug
+        self._niceNames.append((plug, value))
 
     def doIt(self):
         if (not self.isContext) and self._opts["undoable"]:
@@ -4560,6 +4597,7 @@ class _BaseModifier(object):
             with _undo_chunk("lockAttrs"):
                 self._doLockAttrs()
                 self._doKeyableAttrs()
+                self._doNiceNames()
 
         except RuntimeError:
 
@@ -4594,6 +4632,25 @@ class _BaseModifier(object):
 
             for el in elements:
                 cmds.setAttr(el.path(), keyable=value)
+
+    def _doNiceNames(self):
+        """Apply all of the new nice names
+
+        Examples:
+            >>> with _BaseModifier() as mod:
+            ...     node = mod.createNode("reverse")
+            ...     mod.setNiceName(node["inputX"], "Test")
+            ...
+            >>> assert node["inputX"].niceName == "Test"
+
+        """
+
+        while self._niceNames:
+            plug, value = self._niceNames.pop(0)
+            elements = plug if plug.isArray or plug.isCompound else [plug]
+
+            for el in elements:
+                el.niceName = value
 
     @record_history
     def createNode(self, type, name=None):
@@ -4889,6 +4946,9 @@ class _BaseModifier(object):
         lock_attr = lockAttr
         keyable_attr = keyableAttr
         try_connect = tryConnect
+        set_keyable = setKeyable
+        set_locked = setLocked
+        set_nice_name = setNiceName
 
 
 class DGModifier(_BaseModifier):

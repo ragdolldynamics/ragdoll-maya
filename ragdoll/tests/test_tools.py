@@ -35,6 +35,9 @@ JOINT_3CHAIN = (
 
 def new():
     cmds.file(new=True, force=True)
+    cmds.playbackOptions(minTime=1, maxTime=120)
+    cmds.playbackOptions(animationStartTime=1, animationEndTime=120)
+    cmds.currentTime(1)
 
 
 def test_character():
@@ -69,13 +72,13 @@ def test_character():
 
     # Account for platform differences
     if os.name == "posix":
-        assert_almost_equals(result["tx"].read(), -3.592, 3)
-        assert_almost_equals(result["ty"].read(), 1.000, 3)
-        assert_almost_equals(result["tz"].read(), -8.438, 3)
+        assert_almost_equals(result["tx"].read(), -3.59, 2)
+        assert_almost_equals(result["ty"].read(), 1.00, 2)
+        assert_almost_equals(result["tz"].read(), -8.44, 2)
     else:
-        assert_almost_equals(result["tx"].read(), -3.593, 3)
-        assert_almost_equals(result["ty"].read(), 1.000, 3)
-        assert_almost_equals(result["tz"].read(), -8.434, 3)
+        assert_almost_equals(result["tx"].read(), -3.59, 2)
+        assert_almost_equals(result["ty"].read(), 1.00, 2)
+        assert_almost_equals(result["tz"].read(), -8.44, 2)
 
 
 def test_dynamic_control():

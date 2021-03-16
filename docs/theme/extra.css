@@ -374,11 +374,11 @@ img.hero-image {
   background-color: #fcfcfc;
 }
 
-.md-typeset .admonition, .md-typeset details.example > p {
+.md-typeset details.example > p {
   display: none;
 }
 
-.md-typeset .admonition, .md-typeset details.example {
+.md-typeset details.example {
   padding: 0;
 }
 

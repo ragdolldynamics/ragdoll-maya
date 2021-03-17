@@ -37,11 +37,24 @@
             "solver",
             "createRigidType",
             "initialShape",
-            "autoConnect",
             "existingAnimation",
             "autoOrient",
             "computeMass",
             "rigidSelect"
+        ]
+    },
+    "activeChain": {
+        "label": "Active Chain",
+        "icon": "chain.png",
+        "summary": "Create a series of connected rigid bodies.",
+        "description": "Use this to represent limbs of a character. It also supports tree-like hierarchies, like two arms connected to a spine.",
+        "options": [
+            "solver",
+            "chainInitialShape",
+            "chainAutoBlend",
+            "chainBlendMethod",
+            "chainAutoInfluence",
+            "chainAutoMultiplier"
         ]
     },
     "passiveRigid": {
@@ -61,8 +74,8 @@
             "initialShape"
         ]
     },
-    "soft": {
-        "label": "Soft",
+    "tissue": {
+        "label": "Tissue",
         "enable": false
     },
     "cloth": {
@@ -319,11 +332,12 @@
         "options": [
             "scale",
             "cacheMedia",
-            "autoHideShapeAttributes",
             "autoInitialState",
             "ogsReset",
             "globalsValidations",
             "validateEvaluationMode",
+            "validateCachingMode",
+            "validateLegacyOpenGL",
             "validateRotatePivot",
             "validateRotateAxis",
             "validateRotateOrder",

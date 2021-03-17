@@ -45,6 +45,7 @@ from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
 from . import (
     commands,
+    chain,
     tools,
     upgrade,
     ui,
@@ -56,6 +57,7 @@ from . import (
 # Environment variables
 RAGDOLL_DEVELOPER = bool(os.getenv("RAGDOLL_DEVELOPER"))
 RAGDOLL_PLUGIN = os.getenv("RAGDOLL_PLUGIN", "ragdoll")
+RAGDOLL_PLUGIN_NAME = os.path.basename(RAGDOLL_PLUGIN)
 RAGDOLL_NO_STARTUP_DIALOG = bool(os.getenv("RAGDOLL_NO_STARTUP_DIALOG"))
 RAGDOLL_AUTO_SERIAL = os.getenv("RAGDOLL_AUTO_SERIAL")
 
@@ -117,6 +119,21 @@ def requires_ui(func):
         if _is_standalone():
             return True
         return func(*args, **kwargs)
+    return wrapper
+
+
+def _format_exception(func):
+    """Turn exceptions into user-facing messages"""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            # Turn this into a friendly warning
+            _print_exception()
+            log.warning(str(e))
+            return kFailure
     return wrapper
 
 
@@ -188,11 +205,12 @@ def install():
 
 
 def uninstall():
-    uninstall_logger()
-
     if not __.installed:
-        return log.warning("Ragdoll not installed")
+        # May have been uninstalled by either the C++ plug-in,
+        # or via the Script Editor or userSetup.py etc.
+        return
 
+    uninstall_logger()
     uninstall_callbacks()
     uninstall_menu()
     options.uninstall()
@@ -254,7 +272,7 @@ def _on_cycle(clientData=None):
 
 
 def _on_licence_expired(clientData=None):
-    pass
+    welcome_user()
 
 
 def install_callbacks():
@@ -292,12 +310,15 @@ def install_plugin():
     ])
 
     # Override with RAGDOLL_PLUGIN environment variable
-    cmds.loadPlugin(RAGDOLL_PLUGIN)
+    if not cmds.pluginInfo(RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
+        # May already have been loaded prior to calling install
+        cmds.loadPlugin(RAGDOLL_PLUGIN, quiet=True)
 
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)
 
-    __.version_str = cmds.pluginInfo("ragdoll", query=True, version=True)
+    __.version_str = cmds.pluginInfo(RAGDOLL_PLUGIN_NAME,
+                                     query=True, version=True)
 
     # Debug builds come with a `.debug` suffix, e.g. `2020.10.15.debug`
     __.version = int("".join(__.version_str.split(".")[:3]))
@@ -306,11 +327,8 @@ def install_plugin():
 def uninstall_plugin(force=True):
     cmds.file(new=True, force=force)
 
-    try:
-        cmds.unloadPlugin(os.path.basename(RAGDOLL_PLUGIN))
-    except RuntimeError as e:
-        # This is fine
-        log.warning(str(e))
+    if cmds.pluginInfo(RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
+        cmds.unloadPlugin(RAGDOLL_PLUGIN_NAME)
 
     # Restore environment
     os.environ["MAYA_SCRIPT_PATH"] = (
@@ -400,11 +418,13 @@ def install_menu():
     divider("Create")
 
     item("activeRigid", create_active_rigid, create_rigid_options)
+    item("activeChain", create_chain, create_chain_options)
     item("passiveRigid", create_passive_rigid, create_passive_options)
-    item("soft")
+    item("tissue")
     item("cloth")
     item("muscle", create_muscle, create_muscle_options)
     item("fluid")
+    item("character", create_character, create_character_options)
 
     divider("Constrain")
 
@@ -442,7 +462,6 @@ def install_menu():
 
     divider("Assists")
 
-    item("character", create_character, create_character_options)
     item("trajectory")
     item("momentOfInertia")
     item("centerOfMass")
@@ -675,14 +694,24 @@ def _find_current_scene(autocreate=True):
                 else:
                     raise cmdx.ExistError("No Ragdoll scene was found")
 
-    # Use this from now on
-    options.write("solver", scene.shortest_path())
+    # Cancelled by the user
+    if scene is not None:
+        # Use this from now on
+        options.write("solver", scene.shortest_path())
 
     return scene
 
 
 @requires_ui
 def validate_evaluation_mode():
+    if not options.read("validateEvaluationMode"):
+        return True
+
+    mode = cmds.evaluationManager(query=True, mode=True)
+
+    if mode[0] != "off":  # Both Serial and Parallel are OK
+        return True
+
     def ignore():
         return True
 
@@ -710,10 +739,53 @@ def validate_evaluation_mode():
 
 
 @requires_ui
-def validate_playbackspeed():
-    play_every_frame = cmds.optionVar(query="timeSliderPlaySpeed") == 0.0
+def validate_cached_playback():
+    if not cmds.optionVar(query="cachedPlaybackEnable"):
+        return True
 
-    if play_every_frame:
+    if not options.read("validateCachingMode"):
+        return True
+
+    if cmds.optionVar(query="cachePreferenceDynamicsSupportEnabled"):
+        return True
+
+    def ignore():
+        return True
+
+    def enable_caching():
+        cmds.optionVar(intValue=("cachePreferenceDynamicsSupportEnabled", 1))
+        log.info("Cached Playback Enabled")
+        return True
+
+    return ui.warn(
+        option="validateCachingMode",
+        title="Cached Playback Detected",
+        message=(
+            "Ragdoll works with Cached Playback, but needs Maya to allow "
+            "for dynamics to be cached also."
+        ),
+        call_to_action="What would you like to do?",
+        actions=[
+            ("Ignore", ignore),
+            ("Enable Cached Dynamics", enable_caching),
+            ("Cancel", lambda: False)
+        ]
+    )
+
+
+@requires_ui
+def validate_playbackspeed():
+    if not options.read("validatePlaybackSpeed"):
+        return True
+
+    playback_speed = cmds.playbackOptions(playbackSpeed=True, query=True)
+
+    if playback_speed == 0.0:
+        return True
+
+    def fix_it():
+        cmds.playbackOptions(playbackSpeed=0.0)
+        log.info("Playing every frame")
         return True
 
     return ui.warn(
@@ -724,9 +796,47 @@ def validate_playbackspeed():
             "to avoid frame drops, these can break a simulation and "
             "generally causes odd things to happen."
         ),
+        call_to_action="What would you like to do?",
+        actions=[
+            ("Ignore", lambda: True),
+            ("Play Every Frame", fix_it),
+            ("Cancel", lambda: False)
+        ]
+    )
+
+
+@requires_ui
+def validate_legacy_opengl():
+    if not options.read("validateLegacyOpenGL"):
+        return True
+
+    opengl_legacy = cmds.optionVar(query="vp2RenderingEngine") == "OpenGL"
+
+    if not opengl_legacy:
+        return True
+
+    def fix_it():
+        cmds.optionVar(stringValue=("vp2RenderingEngine",
+                                    "OpenGLCoreProfileCompat"))
+        log.warning(
+            "OpenGL Core Compatibility Profile "
+            "enabled, restart required."
+        )
+        return False
+
+    return ui.warn(
+        option="validate_legacy_opengl",
+        title="Legacy OpenGL Detected",
+        message=(
+            "Your viewport is set to render in Legacy OpenGL, which is "
+            "incompatible with the Ragdoll renderer. Changing renderer "
+            "requires a restart of Maya."
+        ),
         call_to_action="Go to Maya Preferences to change this.",
         actions=[
-            ("Ok", lambda: True)
+            ("Ignore", lambda: True),
+            ("Play Every Frame", fix_it),
+            ("Cancel", lambda: False)
         ]
     )
 
@@ -854,15 +964,17 @@ def _filtered_selection(node_type):
 
 @commands.with_undo_chunk
 def create_scene(selection=None):
+    if not validate_evaluation_mode():
+        return
 
-    if options.read("validateEvaluationMode"):
-        mode = cmds.evaluationManager(query=True, mode=True)
+    if not validate_cached_playback():
+        return
 
-        if mode[0] == 'off' and not validate_evaluation_mode():
-            return
+    if not validate_playbackspeed():
+        return
 
-    if options.read("validatePlaybackSpeed"):
-        validate_playbackspeed()
+    if not validate_legacy_opengl():
+        return
 
     return commands.create_scene()
 
@@ -878,17 +990,22 @@ def is_valid_transform(transform):
             return False
 
         if transform["rotateOrder"].read() != 0:
+            order = transform["rotateOrder"].read()
+            order = ["XYZ" "YZX" "ZXY" "XZY" "YXZ" "ZYX"][order]
             return ui.warn(
                 option="validateRotateOrder",
                 title="Custom Rotate Order Not Supported",
                 message=(
                     "A custom rotate order was found.\n\n"
-                    "- %s\n\n"
-                    "These are currently unsupported." % transform.name()
+                    "- %s.rotateOrder=%s\n\n"
+                    "These are currently unsupported." % (
+                        transform.name(),
+                        order
+                    )
                 ),
                 call_to_action="What would you like to do?",
                 actions=[
-                    ("Reset Rotate Order", lambda: True),
+                    ("Reset Rotate Order to XYZ", lambda: True),
 
                     ("Select Node", select_offender),
 
@@ -946,14 +1063,18 @@ def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
     created = []
-    converted = []
     selection = selection or cmdx.selection(type="dagNode")
+    defaults = opts.pop("defaults", {})
+    defaults["shapeType"] = defaults.get("shapeType", commands.BoxShape)
 
     if not selection:
-        return log.warning(
-            "Select something to turn dynamic, "
-            "e.g. a box or NURBS curve"
-        )
+
+        # Make a new rigid from scratch
+        with cmdx.DagModifier() as mod:
+            name = commands._unique_name("rigid")
+            transform = mod.create_node("transform", name=name)
+
+        selection = [transform]
 
     # Based on the first selection, determine
     # whether to convert or create something new.
@@ -970,10 +1091,13 @@ def create_active_rigid(selection=None, **opts):
     if not _validate_transforms(selection):
         return
 
-    previous = None
     select = _opt("rigidSelect", opts)
     passive = _opt("createRigidType", opts) == "Passive"
     scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
 
     # Pre-flight check
     for node in selection:
@@ -1001,8 +1125,27 @@ def create_active_rigid(selection=None, **opts):
             "existing": existing,
         }
 
+        # Translate UI options into attribute defaults
+        initial_shape = _opt("initialShape", opts)
+        if initial_shape != "Auto":
+            shapes = {
+                "Box": commands.BoxShape,
+                "Sphere": commands.SphereShape,
+                "Capsule": commands.CapsuleShape,
+                "Mesh": commands.ConvexHullShape,
+            }
+
+            defaults["shapeType"] = shapes.get(
+                initial_shape,
+
+                # Fallback, this should never really happen
+                commands.BoxShape
+            )
+
         try:
-            rigid = commands.create_rigid(node, scene, **kwargs)
+            rigid = commands.create_rigid(node, scene,
+                                          defaults=defaults,
+                                          **kwargs)
         except Exception as e:
             _print_exception()
             log.error(str(e))
@@ -1012,62 +1155,14 @@ def create_active_rigid(selection=None, **opts):
         if not rigid:
             continue
 
-        # Apply optionvars
-        initial_shape = _opt("initialShape", opts)
-        auto_connect = _opt("autoConnect", opts)
+        created.append(rigid)
 
-        if initial_shape != "Auto":
-            # Overtake the automatic mechanism from commands.py
-            # with whatever the user selected in the UIr
-            shapes = {
-                "Box": commands.BoxShape,
-                "Sphere": commands.SphereShape,
-                "Capsule": commands.CapsuleShape,
-                "Mesh": commands.ConvexHullShape,
-            }
-
-            with cmdx.DagModifier() as mod:
-                mod.set_attr(rigid["shapeType"], shapes.get(
-                    initial_shape,
-
-                    # Fallback, this should never really happen
-                    commands.BoxShape
-                ))
-
-        # Auto connect
-        if auto_connect != "Nothing":
-            can_connect = previous is not None and not passive
-
-            if can_connect:
-                is_joint = previous.parent().type() == "joint"
-                connect_all = auto_connect == "All"
-                connect_joints = auto_connect == "Joints Only"
-
-                if connect_all or (connect_joints and is_joint):
-                    con = commands.socket_constraint(
-                        previous, rigid, scene
-                    )
-
-                    with cmdx.DagModifier() as mod:
-                        name = commands._unique_name("rLocalConstraint")
-                        mod.rename(con, name)
-
-                    if _opt("autoOrient", opts):
-                        commands.orient(con)
-
-        if isinstance(rigid, list):
-            created.extend(rigid)
-        else:
-            created.append(rigid)
-
-        previous = rigid
-
-    if created or converted:
+    if created:
         if select:
-            all_rigids = [r.parent() for r in created + converted]
+            all_rigids = [r.parent() for r in created]
             cmds.select(map(str, all_rigids), replace=True)
 
-        log.info("Created %d rigid bodies", len(created + converted))
+        log.info("Created %d rigid bodies", len(created))
         return kSuccess
 
     else:
@@ -1080,13 +1175,84 @@ def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
         with cmdx.DagModifier() as mod:
-            name = commands._unique_name("rPassive1")
+            name = commands._unique_name("rPassive")
             transform = mod.create_node("transform", name=name)
 
         cmds.select(transform.path())
 
     opts["createRigidType"] = "Passive"
     return _replay(create_active_rigid)(selection, **opts)
+
+
+@_replayable
+@_format_exception
+@commands.with_undo_chunk
+def create_chain(selection=None, **opts):
+    links = selection or cmdx.selection(type="transform")
+
+    # This is no chain
+    if len(links) < 2:
+        return create_rigid(selection, **opts)
+
+    if not links:
+        return log.warning(
+            "Select two or more transforms "
+            "in the order they should be connected. "
+            "The first selection will be passive (i.e. animated)."
+        )
+
+    for link in links:
+        if not is_valid_transform(link):
+            return
+
+    # Protect against accidental duplicates
+    for link in links[1:]:
+        if link.shape("rdRigid") is not None:
+            return log.warning("Already dynamic: '%s'" % link)
+
+    scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
+
+    opts = {
+        "autoBlend": _opt("chainAutoBlend", opts),
+        "autoInfluence": _opt("chainAutoInfluence", opts),
+        "autoMultiplier": _opt("chainAutoMultiplier", opts),
+        "centralBlend": (
+            _opt("chainBlendMethod", opts) == "From Root"
+        ),
+    }
+
+    defaults = {
+        "drawShaded": False
+    }
+
+    if _opt("chainShapeType", opts) == "Box":
+        defaults["shapeType"] = commands.BoxShape
+
+    elif _opt("chainShapeType", opts) == "Sphere":
+        defaults["shapeType"] = commands.SphereShape
+
+    elif _opt("chainShapeType", opts) == "Capsule":
+        defaults["shapeType"] = commands.CapsuleShape
+
+    elif _opt("chainShapeType", opts) == "Mesh":
+        defaults["shapeType"] = commands.MeshShape
+
+    chain.Chain(
+        links, scene, options=opts, defaults=defaults
+    ).do_it()
+
+    root = links[0]
+    cmds.select(str(root))
+
+    return kSuccess
+
+
+def create_chain_options(selection=None, **opts):
+    pass
 
 
 @commands.with_undo_chunk
@@ -1132,6 +1298,10 @@ def create_muscle(selection=None, **opts):
 
     new_scene = not cmdx.ls(type="rdScene")
     scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
 
     if new_scene:
         # Muscles work best with the PGS solver, fow now
@@ -1220,6 +1390,11 @@ def _validate_transforms(nodes, tolerance=0.01):
 @commands.with_undo_chunk
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
+
     root = selection or cmdx.selection(type="joint")
 
     if not root or root[0].type() != "joint":
@@ -1268,6 +1443,11 @@ def _find_rigid(node, autocreate=False):
         if not shape and not node.shape(type="rdLink"):
             if autocreate:
                 scene = _find_current_scene(autocreate=autocreate)
+
+                # Cancelled by user
+                if not scene:
+                    return
+
                 shape = commands.create_active_rigid(node, scene)
             else:
                 return log.warning(
@@ -1298,6 +1478,11 @@ def create_constraint(selection=None, **opts):
         )
 
     scene = _find_current_scene(autocreate=True)
+
+    # Cancelled by user
+    if not scene:
+        return
+
     parent = _find_rigid(parent)
     child = _find_rigid(child)
 
@@ -1624,6 +1809,11 @@ def _create_force(selection=None, force_type=None):
         return log.warning("No rigids found")
 
     scene = _find_current_scene(autocreate=False)
+
+    # Cancelled by user
+    if not scene:
+        return
+
     force = commands.create_force(force_type, rigid, scene)
 
     for rigid in rigids:
@@ -1656,6 +1846,11 @@ def create_turbulence_force(selection=None):
 @commands.with_undo_chunk
 def create_slice(selection=None):
     scene = _find_current_scene(autocreate=False)
+
+    # Cancelled by user
+    if not scene:
+        return
+
     slice = commands.create_slice(scene)
     cmds.select(slice.parent().path())
     log.info("Created %s", slice)
@@ -1782,6 +1977,10 @@ def create_dynamic_control(selection=None, **opts):
             return log.warning("Already a dynamic control: '%s'" % link)
 
     scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
 
     kwargs = {
         "use_capsules": _opt("dynamicControlShapeType", opts) == "Capsule",

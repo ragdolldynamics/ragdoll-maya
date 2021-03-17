@@ -291,6 +291,18 @@ def test_normalise_shapes():
     interactive.normalise_shapes()
 
 
+def test_select_shapes():
+    """Commands properly finds corresponding transform of selected shape"""
+
+
+def test_select_transforms():
+    """Commands properly find optional shapes under selected transforms"""
+
+
+def test_select_transforms_and_shapes():
+    """Commands properly separate between transforms and shapes"""
+
+
 def manual():
     import time
     t0 = time.time()

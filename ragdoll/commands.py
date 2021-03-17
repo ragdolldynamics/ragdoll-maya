@@ -70,6 +70,9 @@ Blend = 2
 
 QuaternionInterpolation = 1
 
+SteppedBlendMethod = 0
+SmoothBlendMethod = 1
+
 Epsilon = 0.001
 
 # Python 2 backwards compatibility
@@ -257,6 +260,8 @@ class UserAttributes(object):
 
 
 def add_rigid(mod, rigid, scene):
+    assert rigid.type() == "rdRigid", rigid
+    assert scene.type() == "rdScene", scene
     assert rigid["startState"].connection() != scene, (
         "%s already a member of %s" % (rigid, scene)
     )
@@ -296,10 +301,6 @@ def add_force(mod, force, rigid):
     mod.set_attr(force["version"], _version())
 
 
-def _set_matrix(attr, mat):
-    cmds.setAttr(attr.path(), mat, type="matrix")
-
-
 def _unique_name(name):
     """Internal utility function"""
     if cmdx.exists(name):
@@ -311,15 +312,12 @@ def _unique_name(name):
     return name
 
 
-def _connect_passive(mod, rigid):
-    transform = rigid.parent()
+def _connect_passive(mod, transform, rigid):
     mod.set_attr(rigid["kinematic"], True)
     mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
 
-def _connect_active(mod, rigid, existing=Overwrite):
-    transform = rigid.parent()
-
+def _connect_active(mod, transform, rigid, existing=Overwrite):
     if existing == Overwrite:
         _connect_transform(mod, rigid, transform)
 
@@ -411,11 +409,8 @@ def _connect_active_blend(mod, rigid):
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
     mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
 
-    # Keep the modified history shallow
-    mod.do_it()
-
     # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-    _set_matrix(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
+    mod.set_attr(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
 
     # Support hard manipulation
     # For e.g. transitioning between active and passive
@@ -424,8 +419,6 @@ def _connect_active_blend(mod, rigid):
     # Keep channel box clean
     mod.set_attr(compose["isHistoricallyInteresting"], False)
     mod.set_attr(mult["isHistoricallyInteresting"], False)
-
-    # _set_matrix(con["parentFrame"], compose["outputMatrix"].asMatrix())
 
     return pair_blend
 
@@ -528,6 +521,7 @@ def create_rigid(node,
                  compute_mass=False,
                  existing=Overwrite,
                  constraint=None,
+                 defaults=None,
                  _cache=None):
     """Create a new rigid
 
@@ -542,12 +536,15 @@ def create_rigid(node,
             based on shape volume
         existing (int): What to do about existing connections to translate
             and rotate channels.
+        defaults (dict, optional): Default attribute values for the
+            newly created rigid
         _cache (AttributeCache, optional): Reach for attributes here first,
             to avoid triggering evaluations prematurely
 
     """
 
     cache = _cache or {}
+    defaults = defaults or {}
 
     if isinstance(node, string_types):
         node = cmdx.encode(node)
@@ -571,29 +568,26 @@ def create_rigid(node,
         transform = node
         shape = node.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
 
+    assert not transform.shape(type="rdRigid"), (
+        "%s already had a rigid" % transform
+    )
+
     rest = cache.get((node, "worldMatrix"))
     rest = rest or transform["worldMatrix"][0].asMatrix()
 
     with cmdx.DagModifier() as mod:
         rigid = _rdrigid(mod, "rRigid", parent=transform)
 
-        # Keep up to date with initial world matrix
-        mod.connect(transform["worldMatrix"][0], rigid["restMatrix"])
-
-        # Compensate for any parents when outputting from the solver
-        mod.connect(transform["parentInverseMatrix"][0],
-                    rigid["inputParentInverseMatrix"])
-
-        # Assign some random color, within some nice range
-        mod.set_attr(rigid["color"], _random_color())
+        # Copy current transformation
+        mod.set_attr(rigid["cachedRestMatrix"], rest)
+        mod.set_attr(rigid["inputMatrix"], rest)
 
         # Add to scene
         add_rigid(mod, rigid, scene)
 
-    # Copy current transformation (Matrix-type unsupported by modifier,
-    # hence no undo. We'll resort to cmds for this..)
-    cmds.setAttr(rigid["cachedRestMatrix"].path(), tuple(rest), type="matrix")
-    cmds.setAttr(rigid["inputMatrix"].path(), tuple(rest), type="matrix")
+    # Apply provided default attribute values
+    for key, value in defaults.items():
+        rigid[key] = value
 
     # Transfer geometry into rigid, if any
     #
@@ -609,54 +603,18 @@ def create_rigid(node,
     #
     with cmdx.DagModifier() as mod:
         if shape:
-            bbox = shape.bounding_box
-            extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-            center = cmdx.Vector(bbox.center)
-
-            mod.set_attr(rigid["shapeOffset"], center)
-            mod.set_attr(rigid["shapeExtents"], extents)
-            mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
-
-            # Account for flat shapes, like a circle
-            mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
-
-            if shape.type() == "mesh":
-                mod.connect(shape["outMesh"], rigid["inputMesh"])
-                mod.set_attr(rigid["shapeType"], MeshShape)
-
-            elif shape.type() == "nurbsCurve":
-                mod.connect(shape["local"], rigid["inputCurve"])
-                mod.set_attr(rigid["shapeType"], MeshShape)
-
-            elif shape.type() == "nurbsSurface":
-                mod.connect(shape["local"], rigid["inputSurface"])
-                mod.set_attr(rigid["shapeType"], MeshShape)
-
-            # In case the shape is connected to a common
-            # generator, like polyCube or polyCylinder
-            _shapeattributes_from_generator(mod, shape, rigid)
-
-        elif transform.isA(cmdx.kJoint):
-            mod.set_attr(rigid["shapeType"], CapsuleShape)
-
-            # Orient inner shape to wherever the joint is pointing
-            # as opposed to whatever its jointOrient is facing
-            geometry = infer_geometry(transform)
-
-            mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
-            mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
-            mod.set_attr(rigid["shapeLength"], geometry.length)
-            mod.set_attr(rigid["shapeRadius"], geometry.radius)
-            mod.set_attr(rigid["shapeExtents"], geometry.extents)
+            _interpret_shape(mod, rigid, shape)
+        else:
+            _interpret_transform(mod, rigid, transform)
 
         if compute_mass:
             # Establish a sensible default mass, also taking into
             # consideration that joints must be comparable to meshes.
             # Mass unit is kg, whereas lengths are in centimeters
             mod.set_attr(rigid["mass"], (
-                extents.x *
-                extents.y *
-                extents.z *
+                rigid["extentsX"].read() *
+                rigid["extentsY"].read() *
+                rigid["extentsZ"].read() *
                 0.01
             ))
 
@@ -664,10 +622,10 @@ def create_rigid(node,
     with cmdx.DagModifier() as mod:
         try:
             if passive:
-                _connect_passive(mod, rigid)
+                _connect_passive(mod, transform, rigid)
             else:
                 _remove_pivots(mod, transform)
-                _connect_active(mod, rigid, existing=existing)
+                _connect_active(mod, transform, rigid, existing=existing)
 
                 if constraint:
                     _worldspace_constraint(rigid)
@@ -731,196 +689,6 @@ def create_active_rigid(node, scene, **kwargs):
 
 def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=True, **kwargs)
-
-
-@with_undo_chunk
-def create_chain(chain, scene,
-                 passive=False,
-                 compute_mass=False,
-                 existing=Overwrite):
-    assert isinstance(chain, (tuple, list)), "%s was not a tuple" % str(chain)
-
-    if isinstance(scene, string_types):
-        scene = cmdx.encode(scene)
-
-    assert scene.type() == "rdScene", scene.type()
-
-    cache = {}
-    chain = chain[:]  # Immutable input list
-    output_rigids = []
-
-    def sanity_check():
-        """Ensure incoming chain reflects a physical hierarchy in Maya"""
-
-        lineage = chain[:]
-        while lineage:
-            child = lineage.pop()
-            parent = lineage[-1]
-            assert parent in list(child.lineage()), (
-                "%s was not the parent of %s" % (parent, child)
-            )
-
-    def pre_flight():
-        for index, node in enumerate(chain):
-            if isinstance(node, string_types):
-                node = cmdx.encode(node)
-
-            assert isinstance(node, cmdx.DagNode), type(node)
-            assert not node.shape(type="rdRigid"), (
-                "%s is already a rigid" % node
-            )
-
-            if node.isA(cmdx.kShape):
-                transform = node.parent()
-                shape = node
-
-            else:
-                # Supported shapes, in order of preference
-                transform = node
-                shape = node.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
-
-            # For now, we can't allow joint orients
-            with cmdx.DagModifier() as mod:
-                _remove_pivots(mod, transform)
-
-            chain[index] = (transform, shape)
-            cache[(transform, "worldMatrix")] = (
-                transform["worldMatrix"][0].asMatrix()
-            )
-
-    # Call in scope, to avoid leaking variables
-    sanity_check()
-    pre_flight()
-
-    connections = []
-    parent_rigid = None
-
-    for transform, shape in chain:
-        with cmdx.DagModifier() as mod:
-
-            rigid = _rdrigid(mod, "rRigid", parent=transform)
-
-            # Keep up to date with initial world matrix
-            connections.append((transform["worldMatrix"][0],
-                                rigid["restMatrix"]))
-            connections.append((transform["parentInverseMatrix"][0],
-                                rigid["inputParentInverseMatrix"]))
-
-            # Assign some random color, within some nice range
-            mod.set_attr(rigid["color"], _random_color())
-
-            # Add to scene
-            add_rigid(mod, rigid, scene)
-
-        # Copy current transformation
-        rest = cache[(transform, "worldMatrix")]
-
-        cmds.setAttr(rigid["cachedRestMatrix"].path(),
-                     tuple(rest), type="matrix")
-        cmds.setAttr(rigid["inputMatrix"].path(),
-                     tuple(rest), type="matrix")
-
-        # Transfer geometry into rigid, if any
-        #
-        #     ______                ______
-        #    /\    /|              /     /|
-        #   /  \  /.|   ------>   /     / |
-        #  /____\/  |            /____ /  |
-        #  |\   | . |            |    |   |
-        #  | \  |  /             |    |  /
-        #  |  \ |./              |    | /
-        #  |___\|/               |____|/
-        #
-        #
-        with cmdx.DagModifier() as mod:
-            if shape:
-                bbox = shape.bounding_box
-                extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-                center = cmdx.Vector(bbox.center)
-
-                mod.set_attr(rigid["shapeOffset"], center)
-                mod.set_attr(rigid["shapeExtents"], extents)
-                mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
-
-                # Account for flat shapes, like a circle
-                mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
-
-                if shape.type() == "mesh":
-                    connections.append((shape["outMesh"], rigid["inputMesh"]))
-                    mod.set_attr(rigid["shapeType"], MeshShape)
-
-                elif shape.type() == "nurbsCurve":
-                    connections.append((shape["local"], rigid["inputCurve"]))
-                    mod.set_attr(rigid["shapeType"], MeshShape)
-
-                elif shape.type() == "nurbsSurface":
-                    connections.append((shape["local"], rigid["inputSurface"]))
-                    mod.set_attr(rigid["shapeType"], MeshShape)
-
-                # In case the shape is connected to a common
-                # generator, like polyCube or polyCylinder
-                _shapeattributes_from_generator(mod, shape, rigid)
-
-            elif transform.isA(cmdx.kJoint):
-                mod.set_attr(rigid["shapeType"], CapsuleShape)
-
-                # Orient inner shape to wherever the joint is pointing
-                # as opposed to whatever its jointOrient is facing
-                geometry = infer_geometry(transform)
-
-                mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
-                mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
-                mod.set_attr(rigid["shapeLength"], geometry.length)
-                mod.set_attr(rigid["shapeRadius"], geometry.radius)
-                mod.set_attr(rigid["shapeExtents"], geometry.extents)
-
-            if compute_mass:
-                # Establish a sensible default mass, also taking into
-                # consideration that joints must be comparable to meshes.
-                # Mass unit is kg, whereas lengths are in centimeters
-                mod.set_attr(rigid["mass"], (
-                    extents.x *
-                    extents.y *
-                    extents.z *
-                    0.01
-                ))
-
-            if parent_rigid:
-                connections.append((parent_rigid["ragdollId"],
-                                    rigid["parentRigid"]))
-
-                rigid_parent = rigid.parent().parent()
-
-                if rigid_parent:
-                    parent_matrix = parent_rigid["worldMatrix"][0].asMatrix()
-                    matrix = rigid_parent["worldMatrix"][0].asMatrix()
-
-                    # Account for offset groups inbetween rigids
-                    offset_matrix = matrix
-                    offset_matrix *= parent_matrix.inverse()
-
-                    _set_matrix(rigid["inputParentOffsetMatrix"],
-                                offset_matrix)
-
-        parent_rigid = rigid
-        output_rigids.append(rigid)
-
-    yield output_rigids[:]
-
-    # Make the connections
-    with cmdx.DagModifier() as mod:
-        for src, dst in connections:
-            mod.connect(src, dst)
-
-        for index, rigid in enumerate(output_rigids):
-            transform, _ = chain[index]
-
-            if passive:
-                _connect_passive(mod, rigid)
-            else:
-                _connect_active(mod, rigid, existing=existing)
-
-    yield True
 
 
 @with_undo_chunk
@@ -1189,10 +957,10 @@ def _reset_constraint(mod, con,
 
         # Drive to where you currently are
         if con["driveMatrix"].writable:
-            _set_matrix(con["driveMatrix"], parent_frame)
+            mod.set_attr(con["driveMatrix"], parent_frame)
 
-        _set_matrix(con["parentFrame"], parent_frame)
-        _set_matrix(con["childFrame"], cmdx.Mat4())
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], cmdx.Mat4())
 
 
 def _apply_scale(mat):
@@ -1284,8 +1052,9 @@ def orient(con, aim=None, up=None):
     parent_frame = mat * parent_matrix.inverse()
     child_frame = mat * child_matrix.inverse()
 
-    _set_matrix(con["parentFrame"], parent_frame)
-    _set_matrix(con["childFrame"], child_frame)
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], child_frame)
 
 
 @with_undo_chunk
@@ -1334,8 +1103,9 @@ def reorient(con):
         child_frame.rotateBy(rotation, cmdx.sPreTransform)
         child_frame = child_frame.asMatrix()
 
-        _set_matrix(con["parentFrame"], parent_frame)
-        _set_matrix(con["childFrame"], child_frame)
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(con["parentFrame"], parent_frame)
+            mod.set_attr(con["childFrame"], child_frame)
 
 
 def _connect_transform(mod, node, transform):
@@ -1420,10 +1190,26 @@ def _rdscene(mod, name, parent=None):
 
 
 def _rdrigid(mod, name, parent):
-    assert parent.isA(cmdx.kTransform), "%s was not a transform" % parent
+    assert isinstance(parent, cmdx.DagNode) and parent.isA(cmdx.kTransform), (
+        "%s was not a transform" % parent
+    )
+
     name = _unique_name(name)
     rigid = mod.create_node("rdRigid", name=name, parent=parent)
+
+    # Link relevant attributes
+    # Keep up to date with initial world matrix
+    mod.connect(parent["worldMatrix"][0], rigid["restMatrix"])
+
+    # Compensate for any parents when outputting from the solver
+    mod.connect(parent["parentInverseMatrix"][0],
+                rigid["inputParentInverseMatrix"])
+
     mod.connect(parent["rotateOrder"], rigid["rotateOrder"])
+
+    # Assign some random color, within some nice range
+    mod.set_attr(rigid["color"], _random_color())
+
     return rigid
 
 
@@ -1854,11 +1640,11 @@ def set_initial_state(rigids):
     for rigid in rigids:
         rest_matrices += [rigid.parent()["worldMatrix"][0].asMatrix()]
 
-    for rigid, rest in zip(rigids, rest_matrices):
-        if rigid["inputMatrix"].editable:
-            cmds.setAttr(rigid["inputMatrix"].path(), rest, type="matrix")
-
-        cmds.setAttr(rigid["cachedRestMatrix"].path(), rest, type="matrix")
+    with cmdx.DagModifier() as mod:
+        for rigid, rest in zip(rigids, rest_matrices):
+            if rigid["inputMatrix"].editable:
+                mod.set_attr(rigid["inputMatrix"], rest)
+            mod.set_attr(rigid["cachedRestMatrix"], rest)
 
 
 def transfer_attributes(a, b, mirror=True):
@@ -1941,13 +1727,9 @@ def transfer_constraint(ca, cb, mirror=True):
         _mirror(parent_frame)
         _mirror(child_frame)
 
-    cmds.setAttr(cb["parentFrame"].path(),
-                 parent_frame.asMatrix(),
-                 type="matrix")
-
-    cmds.setAttr(cb["childFrame"].path(),
-                 child_frame.asMatrix(),
-                 type="matrix")
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(cb["parentFrame"], parent_frame.asMatrix())
+        mod.set_attr(cb["childFrame"], child_frame.asMatrix())
 
 
 @with_undo_chunk
@@ -2384,6 +2166,68 @@ def infer_geometry(root, parent=None, children=None):
     root.data["_rdGeometry"] = geometry
 
     return geometry
+
+
+def _interpret_shape(mod, rigid, shape):
+    """Translate `shape` into rigid shape attributes
+
+    For example, if the shape is a `mesh`, we'll plug that in as
+    a mesh for convex hull generation.
+
+    """
+
+    assert isinstance(rigid, cmdx.DagNode), "%s was not a cmdx.DagNode" % rigid
+    assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
+    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
+    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
+
+    bbox = shape.bounding_box
+    extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+    center = cmdx.Vector(bbox.center)
+
+    mod.set_attr(rigid["shapeOffset"], center)
+    mod.set_attr(rigid["shapeExtents"], extents)
+    mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
+
+    # Account for flat shapes, like a circle
+    mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
+
+    if shape.type() == "mesh":
+        mod.connect(shape["outMesh"], rigid["inputMesh"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    elif shape.type() == "nurbsCurve":
+        mod.connect(shape["local"], rigid["inputCurve"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    elif shape.type() == "nurbsSurface":
+        mod.connect(shape["local"], rigid["inputSurface"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    # In case the shape is connected to a common
+    # generator, like polyCube or polyCylinder
+    _shapeattributes_from_generator(mod, shape, rigid)
+
+
+def _interpret_transform(mod, rigid, transform):
+    """Translate `transform` into rigid shape attributes
+
+    Primarily joints, that have a radius and length.
+
+    """
+
+    if transform.isA(cmdx.kJoint):
+        mod.set_attr(rigid["shapeType"], CapsuleShape)
+
+        # Orient inner shape to wherever the joint is pointing
+        # as opposed to whatever its jointOrient is facing
+        geometry = infer_geometry(transform)
+
+        mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
+        mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
+        mod.set_attr(rigid["shapeLength"], geometry.length)
+        mod.set_attr(rigid["shapeRadius"], geometry.radius)
+        mod.set_attr(rigid["shapeExtents"], geometry.extents)
 
 
 def local_bounding_size(root):

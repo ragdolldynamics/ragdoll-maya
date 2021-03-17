@@ -387,7 +387,7 @@ def create_dynamic_control(chain,
         dgmod.connect(reverse["outputX"], transform["notSimulated"])
 
     def _add_pairblend(dgmod, rigid, transform):
-        """Put a pairBlend between rigid and transform
+        """Put a pairBlend between `rigid` and `transform`
 
          ________________          ___________
         |                |        |           |
@@ -535,9 +535,8 @@ def create_dynamic_control(chain,
         mod.connect(compose["outputMatrix"], make_worldspace["matrixIn"][0])
 
         # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-        mod.do_it()
-        commands._set_matrix(make_worldspace["matrixIn"][1],
-                             rigid.parent()["parentMatrix"][0].asMatrix())
+        mod.set_attr(make_worldspace["matrixIn"][1],
+                     rigid.parent()["parentMatrix"][0].asMatrix())
 
         mod.connect(make_worldspace["matrixSum"], rigid["inputMatrix"])
 
@@ -897,20 +896,13 @@ def make_muscle(a,
                                      scene,
                                      maintain_offset=False)
 
-    # Move tip constraint to tip of muscle
-    length = muscle["shapeLength"].read()
-    child_frame = cmdx.MatrixType()
-    child_frame[3 * 4] = length  # Translate X
-
-    commands._set_matrix(con2["childFrame"], child_frame)
-
     def parentframe_to_anchorpoints(mod):
         # Move parent frames to anchor points
         for anchor, constraint in ((a, con1), (b, con2)):
             matrix = anchor.transform(cmdx.sWorld).asMatrix()
             parent_matrix = anchor.parent().transform(cmdx.sWorld).asMatrix()
             parent_frame = matrix * parent_matrix.inverse()
-            commands._set_matrix(constraint["parentFrame"], parent_frame)
+            mod.set_attr(constraint["parentFrame"], parent_frame)
 
     def add_to_set(mod):
         try:
@@ -933,10 +925,18 @@ def make_muscle(a,
 
         pftm = cmdx.Tm(con1["parentFrame"].asMatrix())
         pftm.setRotation(tm.rotation(asQuaternion=True))
-        commands._set_matrix(con1["parentFrame"], pftm.asMatrix())
+        mod.set_attr(con1["parentFrame"], pftm.asMatrix())
         mod.set_attr(con1["angularLimitX"], cmdx.radians(-1))
 
     with cmdx.DagModifier() as mod:
+
+        # Move tip constraint to tip of muscle
+        length = muscle["shapeLength"].read()
+        child_frame = cmdx.Matrix4()
+        child_frame[4 * 3] = length  # Row 4, column 3 = Translate X
+
+        mod.set_attr(con2["childFrame"], child_frame)
+
         for con in (con1, con2):
             mod.set_attr(con["linearLimit"], 0.01)
             mod.set_attr(con["linearLimitStiffness"], 500)

@@ -40,6 +40,13 @@
         "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
         "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
     },
+    "chainInitialShape": {
+        "name": "initialShape",
+        "type": "Enum",
+        "default": "Auto",
+        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
+        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
+    },
     "solver": {
         "name": "solver",
         "type": "Enum",
@@ -240,6 +247,13 @@
         "default": 1.0,
         "help": "Capsule radius, how thick of a muscle to make."
     },
+
+
+    "#": "-----------------",
+    "#": " Dynamic Control ",
+    "#": "-----------------",
+
+
     "dynamicControlShapeType": {
         "name": "dynamicControlShapeType",
         "label": "Shape Type",
@@ -247,14 +261,6 @@
         "items": ["Mesh", "Capsule"],
         "default": "Capsule",
         "help": "The initial shape to represent the selected control.<br>- <b>Mesh</b>: Suitable for NURBS controls that *wrap* around the model<br>- <b>Capsule</b>: Suitable for flat controls, e.g. a circle or square."
-    },
-    "dynamicControlLastForLength": {
-        "name": "dynamicControlLastForLength",
-        "label": "Last For Length",
-        "type": "Boolean",
-        "default": false,
-        "depends": ["dynamicControlShapeType"],
-        "help": "Do not turn the last selected node into a dynamic control, use it to determine length and direction of the previous control."
     },
     "dynamicControlAutoBlend": {
         "name": "dynamicControlAutoBlend",
@@ -277,14 +283,6 @@
         "default": true,
         "help": "Automatically add a constraint multiplier to the dynamic control root."
     },
-    "dynamicControlBlendMethod": {
-        "name": "dynamicControlBlendMethod",
-        "label": "Blend Method",
-        "type": "Enum",
-        "items": ["From Root", "Each Control"],
-        "default": "From Root",
-        "help": "Blend simulation from the root control, or per-control."
-    },
     "dynamicControlAutoWorldspace": {
         "name": "dynamicControlAutoWorldspace",
         "label": "Auto Worldspace",
@@ -292,6 +290,65 @@
         "default": false,
         "help": "Include worldspace guide constraints with the generated dynamic controls."
     },
+
+
+    "#": "----------------",
+    "#": " Chain ",
+    "#": "----------------",
+
+
+    "chainAutoBlend": {
+        "name": "chainAutoBlend",
+        "label": "Auto Blend",
+        "type": "Boolean",
+        "default": true,
+        "help": "Add a `blendSimulation` attribute to blend between animation and simulation."
+    },
+    "chainAutoInfluence": {
+        "name": "chainAutoInfluence",
+        "label": "Auto Influence",
+        "type": "Boolean",
+        "default": true,
+        "help": "Use blended animation as input to the simulation."
+    },
+    "chainDrawShaded": {
+        "name": "chainDrawShaded",
+        "label": "Draw Shaded",
+        "type": "Boolean",
+        "default": true,
+        "help": "Whether to render the wireframe or shaded surface of rigids."
+    },
+    "chainAutoMultiplier": {
+        "name": "chainAutoMultiplier",
+        "label": "Auto Multiplier",
+        "type": "Boolean",
+        "default": true,
+        "help": "Automatically add a constraint multiplier to the dynamic control root."
+    },
+    "chainBlendMethod": {
+        "name": "chainBlendMethod",
+        "label": "Blend Method",
+        "type": "Enum",
+        "items": ["From Root", "Each Control"],
+        "default": "From Root",
+        "help": "Blend simulation from the root control, or per-control."
+    },
+    "chainAutoWorldspace": {
+        "name": "chainAutoWorldspace",
+        "label": "Auto Worldspace",
+        "type": "Boolean",
+        "default": false,
+        "help": "Include worldspace guide constraints with the generated dynamic controls."
+    },
+
+
+
+    "#": "----------------",
+    "#": " Global options ",
+    "#": "----------------",
+
+
+
     "autoInitialState": {
         "name": "autoInitialState",
         "label": "Auto Initial State",
@@ -299,6 +356,7 @@
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
     },
+
     "globalsValidations": {
         "name": "globalsValidations",
         "label": "Validations",
@@ -310,6 +368,18 @@
         "type": "Boolean",
         "default": true,
         "help": "Check whether Maya is evaluating in Parallel or Serial whenever creating a new scene, as DG is slow and error-prone."
+    },
+    "validateLegacyOpenGL": {
+        "name": "validateLegacyOpenGL",
+        "type": "Boolean",
+        "default": true,
+        "help": "Check whether Viewport 2.0 is set to render using Legacy OpenGL. That isn't supported."
+    },
+    "validateCachingMode": {
+        "name": "validateCachingMode",
+        "type": "Boolean",
+        "default": true,
+        "help": "Check whether Maya is caching dynamics, which is required in order for Cached Playback to work with Ragdoll."
     },
     "validateRotatePivot": {
         "name": "validateRotatePivot",
@@ -340,12 +410,6 @@
         "type": "Boolean",
         "default": false,
         "help": "Let the user know of a Ragdoll limitation, that scale is unsupported."
-    },
-    "autoHideShapeAttributes": {
-        "name": "autoHideShapeAttributes",
-        "type": "Boolean",
-        "default": true,
-        "help": "(Requires scene reopen) Rid the Channel Box of attributes unrelated to the currently selected shape type."
     },
     "deleteFromSelection": {
         "name": "deleteFromSelection",

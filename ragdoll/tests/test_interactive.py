@@ -34,12 +34,29 @@ JOINT_3CHAIN = (
     ],
 )
 
+CONTROL_3CHAIN = (
+    # translation
+    [
+        [-6.21, 9.98, 0.08],
+        [7.62, 0.0, 0.00],
+        [7.21, 0.0, 0.00],
+        [3.80, 0.0, 0.00]
+    ],
+    # orientation
+    [
+        [1.57, -0.0, -0.66],
+        [0.0, 1.33, 0.0],
+        [0.0, -0.58, 0.0],
+        [0.0, -0.09, 0.0]
+    ],
+)
+
 
 def setup():
     options.reset()
 
 
-def create_arm():
+def create_joint_arm():
     joints = []
 
     parent = None
@@ -54,6 +71,27 @@ def create_arm():
         joints += [joint]
 
     return joints
+
+
+def create_arm_rig():
+    ctrls = []
+
+    parent = None
+
+    for translate, orient in zip(*JOINT_3CHAIN):
+        ctrl, _ = cmds.circle()
+        ctrl = cmdx.encode(ctrl)
+        ctrl["translate"] = translate
+        ctrl["rotate"] = orient
+
+        if parent:
+            parent.add_child(ctrl)
+
+        parent = ctrl
+
+        ctrls += [ctrl]
+
+    return ctrls
 
 
 def new():
@@ -83,7 +121,7 @@ def test_create_rigid():
 def test_create_muscle():
     new()
 
-    arm = create_arm()
+    arm = create_joint_arm()
     a = cmdx.create_node("joint", parent=arm[0])
     b = cmdx.create_node("joint", parent=arm[1])
 
@@ -213,7 +251,7 @@ def test_create_force():
 def test_create_character():
     new()
 
-    hierarchy = create_arm()
+    hierarchy = create_joint_arm()
     root = hierarchy[0]
 
     cmds.select(root.path())
@@ -230,7 +268,7 @@ def test_create_character():
 def test_dynamic_control(**opts):
     new()
 
-    hierarchy = create_arm()
+    hierarchy = create_joint_arm()
     a, b, c = map(str, hierarchy[:3])
     cmds.select(a, b, c)
     assert_true(interactive.create_dynamic_control(selection=None, **opts))
@@ -242,24 +280,62 @@ def test_dynamic_control(**opts):
     assert_equals(len(cmds.ls(type="rdConstraint")), 2)
 
 
+def test_chain(**opts):
+    new()
+
+    hierarchy = create_joint_arm()
+    a, b, c = map(str, hierarchy[:3])
+    cmds.select(a, b, c)
+    assert_true(interactive.create_active_chain(selection=None, **opts))
+
+    assert_equals(len(cmds.ls(type="rdScene")), 1)
+    assert_equals(len(cmds.ls(type="rdRigid")), 3)
+
+    # Two local constraints
+    assert_equals(len(cmds.ls(type="rdConstraint")), 2)
+
+
 def test_dynamic_control_opt1_mesh():
+    test_dynamic_control(dynamicControlShapeType="Capsule")
     test_dynamic_control(dynamicControlShapeType="Mesh")
 
 
 def test_dynamic_control_opt2_auto_blend():
     test_dynamic_control(dynamicControlAutoBlend=False)
+    test_dynamic_control(dynamicControlAutoBlend=True)
 
 
 def test_dynamic_control_opt3_blend_method():
     test_dynamic_control(dynamicControlBlendMethod="Each Control")
 
 
-def test_dynamic_control_opt4_auto_influence():
-    test_dynamic_control(dynamicControlAutoInfluence=False)
-
-
-def test_dynamic_control_opt5_auto_multiplier():
+def test_dynamic_control_opt4_auto_multiplier_off():
     test_dynamic_control(dynamicControlAutoMultiplier=False)
+    test_dynamic_control(dynamicControlAutoMultiplier=True)
+
+
+def test_chain_opt1_mesh():
+    test_chain(chainShapeType="Mesh")
+
+
+def test_chain_opt2_draw_shaded():
+    test_chain(chainDrawShaded=False)
+    test_chain(chainDrawShaded=True)
+
+
+def test_chain_opt3_blend_method():
+    test_chain(chainBlendMethod="Stepped")
+    test_chain(chainBlendMethod="Smooth")
+
+
+def test_chain_opt4_auto_multiplier_off():
+    test_chain(chainAutoMultiplier=False)
+    test_chain(chainAutoMultiplier=True)
+
+
+def test_chain_opt5_auto_limits():
+    test_chain(chainAutoLimits=False)
+    test_chain(chainAutoLimits=True)
 
 
 def test_dynamic_control_with_delete_all():
@@ -286,13 +362,25 @@ def test_save():
 def test_normalise_shapes():
     new()
 
-    hierarchy = create_arm()
+    hierarchy = create_joint_arm()
     cmds.select(hierarchy[0].path())
     interactive.normalise_shapes()
 
 
 def test_select_shapes():
     """Commands properly finds corresponding transform of selected shape"""
+
+    new()
+
+    upperarm, lowerarm, hand, tip = create_arm_rig()
+    cmds.select(upperarm.shape().path(),
+                lowerarm.shape().path(),
+                hand.shape().path())
+    interactive.create_active_chain()
+
+    for frame in range(1, 30):
+        upperarm["ty"].read()  # Trigger evaluation
+        cmds.currentTime(frame)
 
 
 def test_select_transforms():
@@ -304,27 +392,16 @@ def test_select_transforms_and_shapes():
 
 
 def manual():
+    import sys
     import time
+
     t0 = time.time()
 
-    tests = (
-        test_create_rigid,
-        test_create_muscle,
-        test_create_passive,
-        test_create_constraint,
-        test_create_kinematic_control,
-        test_create_driven_control,
-        test_create_force,
-        test_create_character,
-        test_dynamic_control,
-        test_dynamic_control_opt1_mesh,
-        test_dynamic_control_opt2_auto_blend,
-        test_dynamic_control_opt3_blend_method,
-        test_dynamic_control_opt4_auto_influence,
-        test_dynamic_control_opt5_auto_multiplier,
-        test_dynamic_control_with_delete_all,
-        test_save,
-        test_normalise_shapes,
+    mod = sys.modules[__name__]
+    tests = list(
+        func
+        for name, func in mod.__dict__.items()
+        if name.startswith("test_")
     )
 
     setup()

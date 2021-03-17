@@ -2,6 +2,7 @@
 - [**ADDED** JSON Export](#json-export) Run your ragdolls in Unreal, Unity or your own custom game engine
 - [**ADDED** Replay](#replay) Animator-friendly automation of Ragdoll setuport going out of sync
 - [**ADDED** Dynamic Install](#dynamic-install) Install/uninstall by just loading/unloading the Maya plug-in
+- [**IMPROVED** Greater Guide Strength](#greater-guide-strength) Have simulation follow animation even closelier
 
 <br>
 
@@ -72,7 +73,32 @@ Previous releases shipped with a `userSetup.py` that triggered on launch of Maya
 
 This release associates install with plug-in load.
 
+**Install**
 
+![ragdollinstall](https://user-images.githubusercontent.com/2152766/111457614-55953380-8710-11eb-99a4-f2fb7cc67771.gif)
+
+**Uninstall**
+
+![ragdolluninstall](https://user-images.githubusercontent.com/2152766/111457654-6776d680-8710-11eb-964c-a31712f7875d.gif)
+
+<br>
+
+## Greater Guide Strength
+
+The solver `Iterations` determines how high your `Guide Strength` attribute can go. Per default, `Iterations` was set to `1` which enabled strengths between `0-5` or so until their effect dimished.
+
+This release increases this default value to `4` for ranges between `0-100`, which means "incredibly high!". The change comes at a minor performance impact - estimated between 1-5% - so if you find the need to optimise, lower this value back to 2 or 1.
+
+!!! hint
+    Bear in mind that the number of iterations are spread across all rigid in your scene. Meaning twice the number of rigids would half the amount of iterations dedicated to each one.
+
+#### Before
+
+![ragdolliterations3](https://user-images.githubusercontent.com/2152766/111459062-21bb0d80-8712-11eb-9eb9-1449d8352cab.gif)
+
+#### After
+
+![ragdolliterations4](https://user-images.githubusercontent.com/2152766/111459108-2da6cf80-8712-11eb-89a0-a2c7a7dc1675.gif)
 
 <br>
 

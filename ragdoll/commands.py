@@ -1186,6 +1186,10 @@ def convert_rigid(rigid, passive=None):
 def _rdscene(mod, name, parent=None):
     name = _unique_name(name)
     node = mod.create_node("rdScene", name=name, parent=parent)
+
+    # Improve drive strength ranges
+    mod.set_attr(node["positionIterations"], 4)
+
     return node
 
 
@@ -1923,6 +1927,19 @@ def duplicate(rigid):
     return dup
 
 
+def add_to_set(node, name, mod=None):
+    try:
+        collection = cmdx.encode(name)
+    except cmdx.ExistError:
+        with cmdx.DGModifier() as mod:
+            collection = mod.create_node(
+                "objectSet", name=name
+            )
+
+    collection.add(node)
+    return collection
+
+
 def global_up_axis():
     try:
         # Supported since Maya 2019
@@ -2325,14 +2342,14 @@ def edit_global_scale(scale):
         cmds.dgdirty(affected_nodes)
 
 
-def delete_all_physics():
+def delete_all_physics(include_attributes=False):
     """Nuke it from orbit
 
     Return to simpler days, days before physics, with this one command.
 
     """
 
-    return delete_physics(cmds.ls())
+    return delete_physics(cmds.ls(), include_attributes)
 
 
 def delete_physics(nodes, include_attributes=False):
@@ -2348,7 +2365,9 @@ def delete_physics(nodes, include_attributes=False):
 
     """
 
-    # Translate cmdx instances, if any
+    assert isinstance(nodes, (list, tuple)), "First input must be a list"
+
+    # Translate from cmdx instances, if any
     nodes = list(map(str, nodes))
 
     # Filter by our types

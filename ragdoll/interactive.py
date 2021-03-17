@@ -177,11 +177,13 @@ def _selected_channels():
 # all stored persistently alongside Maya's native preferences
 with open(_resource("options.json")) as f:
     __.optionvars = json.load(f)
+    __.optionvars.pop("#", None)  # Exclude comments
 
 
 # Every menu item
 with open(_resource("menu.json")) as f:
     __.menuitems = json.load(f)
+    __.menuitems.pop("#", None)  # Exclude comments
 
 
 def install():
@@ -219,11 +221,6 @@ def uninstall():
     uninstall_plugin()
 
     cmdx.uninstall()
-
-    # Erase all trace
-    for module in sys.modules.copy():
-        if module.startswith("ragdoll"):
-            sys.modules.pop(module)
 
 
 class RagdollGuiLogHandler(MayaGuiLogHandler):
@@ -418,7 +415,7 @@ def install_menu():
     divider("Create")
 
     item("activeRigid", create_active_rigid, create_rigid_options)
-    item("activeChain", create_chain, create_chain_options)
+    item("activeChain", create_active_chain, create_chain_options)
     item("passiveRigid", create_passive_rigid, create_passive_options)
     item("tissue")
     item("cloth")
@@ -889,6 +886,8 @@ def _replayable(func):
         item = __.menuitems[key]
         opt = item.get("options", [])
 
+        print(opt)
+
         action = {
             "name": func.__name__,
 
@@ -1187,7 +1186,7 @@ def create_passive_rigid(selection=None, **opts):
 @_replayable
 @_format_exception
 @commands.with_undo_chunk
-def create_chain(selection=None, **opts):
+def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
 
     # This is no chain
@@ -1217,11 +1216,12 @@ def create_chain(selection=None, **opts):
         return
 
     opts = {
-        "autoBlend": _opt("chainAutoBlend", opts),
-        "autoInfluence": _opt("chainAutoInfluence", opts),
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
-        "centralBlend": (
-            _opt("chainBlendMethod", opts) == "From Root"
+        "autoLimits": _opt("chainAutoLimits", opts),
+        "blendMethod": (
+            commands.SmoothBlendMethod
+            if _opt("chainBlendMethod", opts) == "Smooth"
+            else commands.SteppedBlendMethod
         ),
     }
 
@@ -1249,10 +1249,6 @@ def create_chain(selection=None, **opts):
     cmds.select(str(root))
 
     return kSuccess
-
-
-def create_chain_options(selection=None, **opts):
-    pass
 
 
 @commands.with_undo_chunk
@@ -1927,11 +1923,13 @@ def duplicate_selected(selection=None, **opts):
 
 @commands.with_undo_chunk
 def delete_physics(selection=None, **opts):
+    attributes_too = _opt("deleteAttributesToo", opts)
+
     if _opt("deleteFromSelection", opts):
         selection = selection or cmdx.selection(type="dagNode")
 
         if not selection:
-            count = commands.delete_all_physics()
+            count = commands.delete_all_physics(attributes_too)
 
         else:
             shapes = []
@@ -1942,10 +1940,10 @@ def delete_physics(selection=None, **opts):
             shapes = list(shapes) + selection
             shapes = filter(lambda shape: shape.isA(cmdx.kShape), shapes)
 
-            count = commands.delete_physics(shapes)
+            count = commands.delete_physics(shapes, attributes_too)
 
     else:
-        count = commands.delete_all_physics()
+        count = commands.delete_all_physics(attributes_too)
 
     if count:
         log.info("Deleted %d Ragdoll nodes", count)
@@ -1987,9 +1985,7 @@ def create_dynamic_control(selection=None, **opts):
         "auto_blend": _opt("dynamicControlAutoBlend", opts),
         "auto_influence": _opt("dynamicControlAutoInfluence", opts),
         "auto_multiplier": _opt("dynamicControlAutoMultiplier", opts),
-        "central_blend": (
-            _opt("dynamicControlBlendMethod", opts) == "From Root"
-        ),
+        "central_blend": True,
     }
 
     for ctrl in chain:
@@ -2257,6 +2253,11 @@ def reset_preferences(*args):
 
 def create_rigid_options(*args):
     window = _Window("activeRigid", create_active_rigid)
+    return window
+
+
+def create_chain_options(*args):
+    window = _Window("activeChain", create_active_chain)
     return window
 
 

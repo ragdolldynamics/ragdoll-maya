@@ -54,9 +54,9 @@ Ragdoll ships as a Maya [Module](https://around-the-corner.typepad.com/adn/2012/
 
     contact@ragdolldynamics.com
 
-You should now see a new `Ragdoll` menu.
+The plug-in is now available via the Plug-in Manager.
 
-<img class="boxshadow" src=https://user-images.githubusercontent.com/2152766/95727954-cb353900-0c72-11eb-9592-b7fa930fff3b.png>
+<img class="boxshadow" src=https://user-images.githubusercontent.com/2152766/111457614-55953380-8710-11eb-99a4-f2fb7cc67771.gif>
 
 - See [Release History](/releases)
 

@@ -50,11 +50,10 @@
         "description": "Use this to represent limbs of a character. It also supports tree-like hierarchies, like two arms connected to a spine.",
         "options": [
             "solver",
-            "chainInitialShape",
-            "chainAutoBlend",
+            "chainShapeType",
             "chainBlendMethod",
-            "chainAutoInfluence",
-            "chainAutoMultiplier"
+            "chainAutoMultiplier",
+            "chainAutoLimits"
         ]
     },
     "passiveRigid": {
@@ -237,7 +236,6 @@
         "options": [
             "dynamicControlShapeType",
             "dynamicControlAutoBlend",
-            "dynamicControlBlendMethod",
             "dynamicControlAutoInfluence",
             "dynamicControlAutoMultiplier"
         ],
@@ -321,7 +319,8 @@
         "summary": "Clear the Maya scene of anything related to Ragdoll.",
         "description": "Clear the Maya scene of anything related to Ragdoll. This can be useful for getting a clean slate, or to debug whether the problem you are experiencing is related to Ragdoll.",
         "options": [
-            "deleteFromSelection"
+            "deleteFromSelection",
+            "deleteAttributesToo"
         ]
     },
     "globalPreferences": {

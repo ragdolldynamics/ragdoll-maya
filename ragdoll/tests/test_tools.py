@@ -70,13 +70,13 @@ def test_character():
     # The chain should now be lying down, which means
     # the Y-position should end up being the capsule radius
 
-    # Account for platform differences
+    # Account for compiler differences
     if os.name == "posix":
-        assert_almost_equals(result["tx"].read(), -3.59, 2)
+        assert_almost_equals(result["tx"].read(), -2.37, 2)
         assert_almost_equals(result["ty"].read(), 1.00, 2)
         assert_almost_equals(result["tz"].read(), -8.44, 2)
     else:
-        assert_almost_equals(result["tx"].read(), -3.59, 2)
+        assert_almost_equals(result["tx"].read(), -2.37, 2)
         assert_almost_equals(result["ty"].read(), 1.00, 2)
         assert_almost_equals(result["tz"].read(), -8.44, 2)
 

@@ -40,13 +40,6 @@
         "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
         "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
     },
-    "chainInitialShape": {
-        "name": "initialShape",
-        "type": "Enum",
-        "default": "Auto",
-        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
-        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
-    },
     "solver": {
         "name": "solver",
         "type": "Enum",
@@ -297,19 +290,13 @@
     "#": "----------------",
 
 
-    "chainAutoBlend": {
-        "name": "chainAutoBlend",
-        "label": "Auto Blend",
-        "type": "Boolean",
-        "default": true,
-        "help": "Add a `blendSimulation` attribute to blend between animation and simulation."
-    },
-    "chainAutoInfluence": {
-        "name": "chainAutoInfluence",
-        "label": "Auto Influence",
-        "type": "Boolean",
-        "default": true,
-        "help": "Use blended animation as input to the simulation."
+    "chainShapeType": {
+        "name": "chainShapeType",
+        "label": "Initial Shape",
+        "type": "Enum",
+        "default": "Auto",
+        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
+        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
     },
     "chainDrawShaded": {
         "name": "chainDrawShaded",
@@ -325,20 +312,20 @@
         "default": true,
         "help": "Automatically add a constraint multiplier to the dynamic control root."
     },
+    "chainAutoLimits": {
+        "name": "chainAutoLimits",
+        "label": "Auto Limits",
+        "type": "Boolean",
+        "default": false,
+        "help": "Generate suitable limits automatically from input."
+    },
     "chainBlendMethod": {
         "name": "chainBlendMethod",
         "label": "Blend Method",
         "type": "Enum",
-        "items": ["From Root", "Each Control"],
-        "default": "From Root",
-        "help": "Blend simulation from the root control, or per-control."
-    },
-    "chainAutoWorldspace": {
-        "name": "chainAutoWorldspace",
-        "label": "Auto Worldspace",
-        "type": "Boolean",
-        "default": false,
-        "help": "Include worldspace guide constraints with the generated dynamic controls."
+        "items": ["Stepped", "Smooth"],
+        "default": "Stepped",
+        "help": "Blend between animation and simulation using either a boolean or float attribute."
     },
 
 
@@ -416,6 +403,12 @@
         "type": "Boolean",
         "default": false,
         "help": "Limit deletion to selection-only, rather than the whole scene."
+    },
+    "deleteAttributesToo": {
+        "name": "deleteAttributesToo",
+        "type": "Boolean",
+        "default": true,
+        "help": "Delete custom attributes, if any, in addition to Ragdoll nodes."
     },
     "constraintStandalone": {
         "name": "constraintStandalone",

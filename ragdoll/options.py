@@ -71,8 +71,7 @@ def read(arg):
         arg = __.optionvars.get(arg["name"])
 
     if arg is None:
-        log.warning("Unrecognised optionvar '%s'" % arg)
-        return None
+        raise ValueError("Unrecognised optionvar '%s'" % arg)
 
     name = arg["name"]
     key = _optionvarkey(name)

@@ -47,7 +47,7 @@ class Chain(object):
                                              commands.SteppedBlendMethod)
         options["computeMass"] = options.get("computeMass", False)
         options["shapeType"] = options.get("shapeType", commands.CapsuleShape)
-        options["limited"] = options.get("limited", False)
+        options["autoLimits"] = options.get("autoLimits", False)
         options["addUserAttributes"] = options.get("addUserAttributes", True)
         options["autoInfluence"] = (
             options.get("autoInfluence", False) and
@@ -68,14 +68,17 @@ class Chain(object):
         # Separate input into transforms and (optional) shapes
         self._pairs = []
 
-        for link in links:
+        for index, link in enumerate(links):
             if isinstance(link, string_types):
                 link = cmdx.encode(link)
 
             assert isinstance(link, cmdx.DagNode), type(link)
-            assert not link.shape(type="rdRigid"), (
-                "%s already has a rigid" % link
-            )
+
+            # Only the root is allowed to have a pre-existing rigid
+            if index > 0:
+                assert not link.shape(type="rdRigid"), (
+                    "%s already has a rigid" % link
+                )
 
             if link.isA(cmdx.kShape):
                 transform = link.parent()
@@ -183,23 +186,11 @@ class Chain(object):
     def _do_all(self):
         root_transform, root_shape = self._pairs[0]
         root_rigid = root_transform.shape(type="rdRigid")
-        root_rigid = root_rigid
 
         # Root
-        with cmdx.DagModifier() as mod:
-            if not root_rigid:
-
-                # Add divider to new root
-                transform_attrs = commands.UserAttributes(None, root_transform)
-                transform_attrs.add_divider("Ragdoll")
-                self._new_userattrs += [transform_attrs]
-
-                root_rigid = self.make_rigid(
-                    mod, root_transform, root_shape, passive=True
-                )
-
-                for key, value in self._defaults.items():
-                    mod.set_attr(root_rigid[key], value)
+        if not root_rigid:
+            with cmdx.DagModifier() as mod:
+                root_rigid = self._make_root(mod, root_transform, root_shape)
 
         # Links
         with cmdx.DagModifier() as mod:
@@ -210,14 +201,8 @@ class Chain(object):
                                               shape,
                                               previous_rigid)
 
-        # Optionals
         with cmdx.DGModifier() as dgmod:
-            # Blend everything from the root
-            if self._opts["centralBlend"]:
-                self._make_simulated_attr(dgmod, self._root)
-
-            if self._opts["autoBlend"]:
-                self._auto_blend(dgmod)
+            self._auto_blend(dgmod)
 
             if self._opts["autoMultiplier"]:
                 self._auto_multiplier(dgmod)
@@ -247,11 +232,13 @@ class Chain(object):
             rigid = commands.convert_rigid(rigid, passive=False)
 
         else:
-            rigid = self.make_rigid(mod, transform, shape)
+            rigid = self._make_rigid(mod, transform, shape)
 
             # Add header to newly created rigid
-            transform_attrs = commands.UserAttributes(None, transform)
+            transform_attrs = commands.UserAttributes(rigid, transform)
             transform_attrs.add_divider("Ragdoll")
+            transform_attrs.add("mass")
+
             self._new_userattrs += [transform_attrs]
 
         # Figure out hierarchy
@@ -281,6 +268,18 @@ class Chain(object):
         if not subsequent and transform.type() == "joint":
             subsequent = transform.child(type="joint")
 
+        # Transfer geometry into rigid, if any
+        #
+        #     ______                ______
+        #    /\    /|              /     /|
+        #   /  \  /.|   ------>   /     / |
+        #  /____\/  |            /____ /  |
+        #  |\   | . |            |    |   |
+        #  | \  |  /             |    |  /
+        #  |  \ |./              |    | /
+        #  |___\|/               |____|/
+        #
+        #
         geo = commands.infer_geometry(
             transform,
             parent=previous or self._root,
@@ -312,13 +311,17 @@ class Chain(object):
         mod.set_keyable(con["limitStrength"], False)
         mod.set_keyable(con["driveEnabled"], False)
         mod.set_keyable(con["limitEnabled"], False)
-        mod.set_keyable(con["angularLimit"], self._opts["limited"])
+        mod.set_keyable(con["angularLimit"], self._opts["autoLimits"])
 
-        if self._opts["limited"]:
+        if self._opts["autoLimits"]:
             fourtyfive = cmdx.radians(45)
             mod.set_attr(con["angularLimitX"], fourtyfive)
             mod.set_attr(con["angularLimitY"], fourtyfive)
             mod.set_attr(con["angularLimitZ"], fourtyfive)
+        else:
+            mod.set_attr(con["angularLimitX"], 0)
+            mod.set_attr(con["angularLimitY"], 0)
+            mod.set_attr(con["angularLimitZ"], 0)
 
         aim = None
         up = None
@@ -332,9 +335,6 @@ class Chain(object):
         commands.orient(con, aim, up)
 
         # Let the user manually add these, if needed
-        mod.set_attr(con["angularLimitX"], 0)
-        mod.set_attr(con["angularLimitY"], 0)
-        mod.set_attr(con["angularLimitZ"], 0)
         mod.set_attr(con["driveStrength"], 0.5)
 
         # Record hierarchical relationship, for articulations
@@ -354,38 +354,39 @@ class Chain(object):
 
         return rigid
 
-    def _make_simulated_attr(self, dgmod, transform):
+    def _make_simulated_attr(self, transform):
         if transform.has_attr("simulated"):
             return
 
-        if self._opts["blendMethod"] == commands.SmoothBlendMethod:
-            dgmod.add_attr(transform, cmdx.Double(
-                "simulated",
-                min=0.0,
-                max=1.0,
-                keyable=True,
-                default=True)
-            )
-        else:
-            dgmod.add_attr(transform, cmdx.Boolean(
-                "simulated",
-                keyable=True,
-                default=True)
-            )
+        with cmdx.DGModifier() as dgmod:
+            if self._opts["blendMethod"] == commands.SmoothBlendMethod:
+                dgmod.add_attr(transform, cmdx.Double(
+                    "simulated",
+                    min=0.0,
+                    max=1.0,
+                    keyable=True,
+                    default=True)
+                )
+            else:
+                dgmod.add_attr(transform, cmdx.Boolean(
+                    "simulated",
+                    keyable=True,
+                    default=True)
+                )
 
-        dgmod.add_attr(transform, cmdx.Boolean(
-            "notSimulated", keyable=False)
-        )
+            if not transform.has_attr("notSimulated"):
+                dgmod.add_attr(transform, cmdx.Boolean(
+                    "notSimulated", keyable=False)
+                )
+                commands._record_attr(transform, "notSimulated")
+            commands._record_attr(transform, "simulated")
 
-        commands._record_attr(transform, "simulated")
-        commands._record_attr(transform, "notSimulated")
+            dgmod.do_it()
 
-        dgmod.do_it()
-
-        reverse = dgmod.create_node("reverse")
-        dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
-        dgmod.connect(transform["simulated"], reverse["inputX"])
-        dgmod.connect(reverse["outputX"], transform["notSimulated"])
+            reverse = dgmod.create_node("reverse")
+            dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
+            dgmod.connect(transform["simulated"], reverse["inputX"])
+            dgmod.connect(reverse["outputX"], transform["notSimulated"])
 
     def _add_pairblend(self, dgmod, rigid, transform):
         """Put a pairBlend between `rigid` and `transform`
@@ -449,17 +450,26 @@ class Chain(object):
 
         commands._connect_transform(dgmod, pair_blend, transform)
 
-        if not self._opts["centralBlend"]:
-            self._make_simulated_attr(dgmod, transform)
-            dgmod.connect(transform["notSimulated"], rigid["kinematic"])
-
-        # Forward some convenience attributes
-        transform_attrs = commands.UserAttributes(rigid, transform)
-        transform_attrs.add("mass")
-
-        self._new_userattrs.append(transform_attrs)
-
         return pair_blend
+
+    def _find_root(self):
+        """Traverse the rigid network in search for the true root"""
+        root = self._root
+
+        # It'll be the one with a multiplier node, if one exists
+        mult = root.shape("rdConstraintMultiplier")
+
+        if not mult:
+            con = root.shape("rdConstraint")
+
+            if con is not None:
+                mult = con["multiplierNode"].connection(
+                    type="rdConstraintMultiplier")
+
+        if mult and "simulated" in mult.parent():
+            root = mult.parent()
+
+        return root
 
     def _auto_blend(self, dgmod):
         """Add a `Simulated` attribute to new links
@@ -468,19 +478,7 @@ class Chain(object):
 
         assert isinstance(dgmod, cmdx.DGModifier)
 
-        # Find top-level root for blend attribute
-        # It'll be the one with a multiplier node, if one exists
-        mult = self._root.shape("rdConstraintMultiplier")
-
-        if not mult:
-            con = self._root.shape("rdConstraint")
-
-            if con is not None:
-                mult = con["multiplierNode"].connection(
-                    type="rdConstraintMultiplier")
-
-        if mult and "simulated" in mult.parent():
-            self._root = mult.parent()
+        root = self._find_root()
 
         for rigid in self._new_rigids:
             transform = rigid.parent()
@@ -490,9 +488,9 @@ class Chain(object):
                 self._auto_influence(dgmod, rigid, blend)
 
             if self._opts["centralBlend"]:
-                dgmod.connect(self._root["notSimulated"], rigid["kinematic"])
+                dgmod.connect(root["notSimulated"], rigid["kinematic"])
 
-    def _auto_influence(self, mod, rigid, blend):
+    def _auto_influence(self, mod, rigid, pair_blend):
         """Treat incoming animation as guide constraint
 
          ___________
@@ -513,10 +511,10 @@ class Chain(object):
         if not constraint:
             return
 
-        # Pair blend directly feeds into the drive matrix
+        # pairBlend directly feeds into the drive matrix
         compose = mod.create_node("composeMatrix", name="animationToMatrix")
-        mod.connect(blend["inTranslate1"], compose["inputTranslate"])
-        mod.connect(blend["inRotate1"], compose["inputRotate"])
+        mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
+        mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
 
         make_worldspace = mod.create_node("multMatrix", name="makeWorldspace")
         mod.connect(compose["outputMatrix"], make_worldspace["matrixIn"][0])
@@ -629,7 +627,26 @@ class Chain(object):
 
         return mult
 
-    def make_rigid(self, mod, transform, shape, passive=False):
+    def _make_root(self, mod, transform, shape):
+        root_rigid = self._make_rigid(
+            mod, transform, shape, passive=True
+        )
+
+        mod.set_attr(root_rigid["collide"], False)
+
+        for key, value in self._defaults.items():
+            mod.set_attr(root_rigid[key], value)
+
+        transform_attrs = commands.UserAttributes(root_rigid, transform)
+        transform_attrs.add_divider("Ragdoll")
+        transform_attrs.do_it()
+
+        if not transform.has_attr("simulated"):
+            self._make_simulated_attr(transform)
+
+        return root_rigid
+
+    def _make_rigid(self, mod, transform, shape, passive=False):
         rigid = commands._rdrigid(mod, "rRigid", parent=transform)
 
         # Copy current transformation
@@ -662,5 +679,4 @@ class Chain(object):
                 0.01
             )))
 
-        self._new_rigids.append(rigid)
         return rigid

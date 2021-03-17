@@ -1531,6 +1531,45 @@ class DagNode(Node):
         plug = self["worldMatrix"][0] if space == sWorld else self["matrix"]
         return TransformationMatrix(plug.asMatrix(time))
 
+    def translation(self, space=sObject, time=None):
+        """Convenience method for transform(space).translation()
+
+        Example:
+            >>> node = createNode("transform")
+            >>> node["translateX"] = 5.0
+            >>> node.translation().x
+            5.0
+
+        """
+
+        return self.transform(space, time).translation()
+
+    def rotation(self, space=sObject, time=None):
+        """Convenience method for transform(space).rotation()
+
+        Example:
+            >>> node = createNode("transform")
+            >>> node["rotateX"] = radians(90)
+            >>> degrees(node.rotation().x)
+            90.0
+
+        """
+
+        return self.transform(space, time).rotation()
+
+    def scale(self, space=sObject, time=None):
+        """Convenience method for transform(space).scale()
+
+        Example:
+            >>> node = createNode("transform")
+            >>> node["scaleX"] = 5.0
+            >>> node.scale().x
+            5.0
+
+        """
+
+        return self.transform(space, time).scale()
+
     def mapFrom(self, other, time=None):
         """Return TransformationMatrix of `other` relative self
 
@@ -1597,7 +1636,24 @@ class DagNode(Node):
             return cls(mobject)
 
     def lineage(self, type=None):
-        """Return parents all the way up a hierarchy"""
+        """Yield parents all the way up a hierarchy
+
+        Example:
+            >>> _ = cmds.file(new=True, force=True)
+            >>> a = createNode("transform", name="a")
+            >>> b = createNode("transform", name="b", parent=a)
+            >>> c = createNode("transform", name="c", parent=b)
+            >>> d = createNode("transform", name="d", parent=c)
+            >>> lineage = d.lineage()
+            >>> next(lineage) == c
+            True
+            >>> next(lineage) == b
+            True
+            >>> next(lineage) == a
+            True
+
+        """
+
         parent = self.parent(type)
         while parent is not None:
             yield parent
@@ -3669,6 +3725,10 @@ class Point(om.MPoint):
     """Maya's MPoint"""
 
 
+class Color(om.MColor):
+    """Maya's MColor"""
+
+
 class BoundingBox(om.MBoundingBox):
     """Maya's MBoundingBox"""
 
@@ -4274,6 +4334,10 @@ def _python_to_mod(value, plug, mod):
 
     elif isinstance(value, om.MTime):
         mod.newPlugValueMTime(mplug, value)
+
+    elif isinstance(value, om.MMatrix):
+        obj = om.MFnMatrixData().create(value)
+        mod.newPlugValue(mplug, obj)
 
     elif isinstance(value, om.MEulerRotation):
         for index, value in enumerate(value):

@@ -1,94 +1,78 @@
 
 - [**ADDED** JSON Export](#json-export) Run your ragdolls in Unreal, Unity or your own custom game engine
 - [**ADDED** Replay](#replay) Animator-friendly automation of Ragdoll setuport going out of sync
+- [**ADDED** Dynamic Install](#dynamic-install) Install/uninstall by just loading/unloading the Maya plug-in
 
 <br>
 
 ## JSON Export
 
-In 2021.03.04 we introduced `cmds.ragdollDump` to get a copy of all rigids in the form of a JSON dictionary.
+<img width=200 src=https://user-images.githubusercontent.com/2152766/111428442-684b4080-86ef-11eb-8919-ea14e85555ec.png>
+
+In [2021.03.01](/releases/2021.03.01/#cmdsragdolldump) we introduced `cmds.ragdollDump` to get a copy of all rigids in the form of a JSON dictionary.
+
+This release includes **all initial state** for the simulation, such that you can reproduce the results you see in Maya in a game engine, like Unreal, Unity, CryEngine or your own custom game engine. Or why not Houdini, Blender or 3dsMax?
+
+This enables you to use Maya as an authoring platform for physics anywhere.
 
 ```py
-import json
 from maya import cmds
-from ragdoll.vendor import cmdx
+dump = cmds.ragdollDump()
 
-cmds.file(new=True, force=True)
+# Convert big string to structured dictionary
+import json
+dump = json.loads(dump)
 
-rd = r"C:\Users\marcus\Downloads\ragdoll.json"
-with open(rd) as f:
-    rd = json.load(f)
+for entity, data in dump.items():
+    components = data["components"]
+    name = components["NameComponents"]["members"]["path"]
+    print(name)
 
-joints = ["pelvis1", "spine_01", "spine_02"]
-
-for uid, data in rd["entities"].items():
-    comps = data["components"]
-    
-    if "NameComponent" not in comps:
-        continue
-    
-    if not "RigidComponent" in comps:
-        continue
-
-    name = comps["NameComponent"]
-    path = name["members"]["path"]
-
-    if not path:
-        # What's this? :O
-        continue
-
-    joint = path.rsplit("|", 3)[-2]
-
-    scale = comps["ScaleComponent"]["members"]["absolute"]["values"]
-    scale = cmdx.Vector(scale)
-    matrix = comps["RestComponent"]["members"]["matrix"]["values"]
-    matrix = cmdx.Matrix4(matrix)
-    tm = cmdx.Tm(matrix)
-
-    transform = cmdx.createNode("transform", name=joint)
-    transform["translate"] = tm.translation()
-    transform["rotate"] = tm.rotation()
-
-    desc = comps["GeometryDescriptionComponent"]["members"]
-    if desc["type"] == "Capsule":
-        radius = desc["radius"] * scale.x
-        length = desc["length"] * scale.y
-        geo, _ = cmds.polyCylinder(axis=(1, 0, 0),
-                                   radius=radius,
-                                   height=length,
-                                   roundCap=True,
-                                   subdivisionsCaps=5)
-
-    elif desc["type"] == "Box":
-        extents = cmdx.Vector(desc["extents"]["values"])
-        extents.x *= scale.x
-        extents.y *= scale.y
-        extents.z *= scale.z
-        geo, _ = cmds.polyCube(width=extents.x,
-                            height=extents.y,
-                            depth=extents.z)
-
-    elif desc["type"] == "Sphere":
-        radius = desc["radius"] * scale.x
-        geo, _ = cmds.polySphere(radius=radius)
-
-    else:
-        print("Unsupported shape type: %s" % desc["type"])
-        continue
-
-    offset = cmdx.Vector(desc["offset"]["values"])
-    offset.x *= scale.x
-    offset.y *= scale.y
-    offset.z *= scale.z
-
-    geo = cmdx.encode(geo)
-    geo["translate"] = offset
-    geo["rotate"] = cmdx.Quaternion(desc["rotation"]["values"])
-
-    transform.addChild(geo)
-
-
+# |root|pelvis|rRigid1
+# |root|pelvis|spine|rRigid2
+# |root|pelvis|spine2|rRigid3
+# ...
 ```
+
+Here's an example of what to expect from the output.
+
+- [`output_example.json`](https://gist.github.com/mottosso/ca60e9846f1becfa0c1a12681e73c917)
+
+```py
+{
+  "entities": {
+    "10": {
+      "components": {
+        "NameComponent": "upperArm",
+        "ColorComponent": [1.0, 0.0, 0.0],
+        "GeometryDescriptionComponent": "Capsule",
+        ...
+      }
+    },
+    "15": {
+      "components": {
+        "NameComponent": "lowerArm",
+        "ColorComponent": [0.0, 1.0, 0.0],
+        "GeometryDescriptionComponent": "Box",
+        ...
+      }
+  }
+}
+```
+
+See the new Serialisation documentation for an overview, examples and data reference.
+
+- https://learn.ragdolldynamics.com/serialisation
+
+<br>
+
+## Dynamic Install
+
+Previous releases shipped with a `userSetup.py` that triggered on launch of Maya. This made it easy to get setup, but made it challenging to *uninstall* without physically removing files off of the file system (hint: `~/Documents/maya/modules/Ragdoll.mod`).
+
+This release associates install with plug-in load.
+
+
 
 <br>
 

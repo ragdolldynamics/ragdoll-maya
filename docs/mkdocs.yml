@@ -42,7 +42,8 @@ nav:
     - 2020.11.16: releases/2020.11.16.md
     - 2020.11.10: releases/2020.11.10.md
   - Licencing: licencing.md
-  # - About: about.md
+  - Serialisation: serialisation.md
+  - About: about.md
 
 docs_dir: pages
 

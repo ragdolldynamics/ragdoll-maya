@@ -1,5 +1,3 @@
-import os
-
 # Internal
 __ = type("internal", (object,), {})
 __.installed = False
@@ -14,9 +12,6 @@ __.version = 0
 __.version_str = "0"
 __.previousvars = {}
 
-if os.name.lower() == "posix":
+if __import__("os").name.lower() == "posix":
     # Linux has this special requirement, for whatever reason
     __.xbmlangpath += "/%B"
-
-# Leave no trace
-del os

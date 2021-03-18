@@ -233,17 +233,26 @@ Despite the name, there is no notion of hierarchy or "parent" in Ragdoll; the na
 }
 ```
 
+<br>
+
+### Limit
+
+Constraints may optionally have a "limit", which means it can keep a rigid within a given angle ("angular limit") or position ("linear limit").
+
+!!! note "Min & Max"
+    Values represent a upper end of a *range*. With `x=5` the minimum value of the linear X axis is `-5`.
+
 ```py
 "LimitComponent": {
   "type": "LimitComponent",
   "members": {
     "enabled": true,
-    "x": -1.0,
+    "x": -1.0,           # Linear limit along the X-axis
     "y": -1.0,
     "z": -1.0,
-    "twist": 0.78,
-    "swing1": 0.78,
-    "swing2": 0.78,
+    "twist": 0.78,       # Angular limit along the X-axis
+    "swing1": 0.78,      # ..Y
+    "swing2": 0.78,      # ..Z
     "angularStiffness": 1000000.0,
     "angularDamping": 10000.0,
     "linearStiffness": 1000000.0,
@@ -251,6 +260,19 @@ Despite the name, there is no notion of hierarchy or "parent" in Ragdoll; the na
   }
 }
 ```
+
+!!! note "Locked, Free or Limited"
+    A value of `-1` means the axis is "Locked", i.e. the value along this axis cannot change. A Point Constraint is typically locked on all linear axes, but free on the angular axes. A value of `0` means the axis if "Free", meaning it has no effect. It is "limitless". A value above `0` indicates the range of a given limit.
+
+    - `<0` means Locked
+    - `=0` means Free
+    - `>0` means Limited
+
+<br>
+
+### Drive
+
+A constraint may optionally have a "drive", which means having one rigid reach a `target` position and/or angle relative another rigid. The typical use case is having simulation match your input animation, where the animation provides the positions and angles.
 
 ```py
 "DriveComponent": {

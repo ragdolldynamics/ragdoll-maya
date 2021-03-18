@@ -886,8 +886,6 @@ def _replayable(func):
         item = __.menuitems[key]
         opt = item.get("options", [])
 
-        print(opt)
-
         action = {
             "name": func.__name__,
 
@@ -990,7 +988,7 @@ def is_valid_transform(transform):
 
         if transform["rotateOrder"].read() != 0:
             order = transform["rotateOrder"].read()
-            order = ["XYZ" "YZX" "ZXY" "XZY" "YXZ" "ZYX"][order]
+            order = ["XYZ", "YZX", "ZXY", "XZY", "YXZ", "ZYX"][order]
             return ui.warn(
                 option="validateRotateOrder",
                 title="Custom Rotate Order Not Supported",
@@ -1056,8 +1054,8 @@ def _opt(key, override=None):
     return override.get(key, options.read(key))
 
 
-@_replayable
-@commands.with_undo_chunk
+# @commands.with_undo_chunk
+# @_replayable
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
@@ -1168,8 +1166,8 @@ def create_active_rigid(selection=None, **opts):
         return log.warning("Nothing happened, that was unexpected")
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
@@ -1382,8 +1380,8 @@ def _validate_transforms(nodes, tolerance=0.01):
     return False if issues else True
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
 
@@ -1622,36 +1620,36 @@ def convert_to_socket(node):
     return kSuccess
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_point_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Point"})
     return create_constraint(selection, **opts)
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_orient_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Orient"})
     return create_constraint(selection, **opts)
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_parent_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Parent"})
     return create_constraint(selection, **opts)
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_hinge_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Hinge"})
     return create_constraint(selection, **opts)
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Socket"})
     return create_constraint(selection, **opts)
@@ -1681,8 +1679,8 @@ def set_initial_state(selection=None, **opts):
     return kSuccess
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_driven_control(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
@@ -1724,8 +1722,8 @@ def create_driven_control(selection=None, **opts):
     return kSuccess
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_kinematic_control(selection=None, **opts):
     controls = []
 
@@ -1953,8 +1951,8 @@ def delete_physics(selection=None, **opts):
         return log.warning("Nothing deleted")
 
 
-@_replayable
 @commands.with_undo_chunk
+@_replayable
 def create_dynamic_control(selection=None, **opts):
     chain = selection or cmdx.selection(type="transform")
 

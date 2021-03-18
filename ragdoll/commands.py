@@ -487,8 +487,8 @@ def create_scene():
         tm = mod.create_node("transform", name=_unique_name("rScene"))
 
         # Not yet supported
-        tm["scale"].locked = True
-        tm["scale"].keyable = False
+        mod.set_keyable(tm["scale"], False)
+        mod.set_locked(tm["scale"])
 
         scene = _rdscene(mod, "rSceneShape", parent=tm)
         mod.connect(tm["worldMatrix"][0], scene["inputMatrix"])
@@ -508,8 +508,9 @@ def create_scene():
         # Record for backwards compatibility
         mod.set_attr(scene["version"], _version())
 
-        # Tag for automated deletion
-        mod.add_attr(tm, cmdx.Boolean("_ragdollExclusive", default=True))
+        # For cleanup
+        attr = mod.add_attr(tm, cmdx.Message("_ragdollExclusive", hidden=True))
+        mod.connect_attr(scene["message"], tm, attr)
 
     return scene
 

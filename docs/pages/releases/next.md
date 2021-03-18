@@ -1,8 +1,13 @@
+Highlight for this  release is JSON Export, this one's for you **game developers** out there!
 
 - [**ADDED** JSON Export](#json-export) Run your ragdolls in Unreal, Unity or your own custom game engine
 - [**ADDED** Replay](#replay) Animator-friendly automation of Ragdoll setuport going out of sync
-- [**ADDED** Dynamic Install](#dynamic-install) Install/uninstall by just loading/unloading the Maya plug-in
-- [**IMPROVED** Greater Guide Strength](#greater-guide-strength) Have simulation follow animation even closelier
+- [**ADDED** Active Chain](#active-chain) Next generation "Dynamic Control" with "chain"
+- [**CHANGED** Dynamic Install](#dynamic-install) Tighter integration into Maya's native Plug-in Manager
+- [**CHANGED** Greater Guide Strength](#greater-guide-strength) Have simulation follow animation even closelier
+
+!!! warning "Important!"
+    This version won't self-install like the past releases, see [Dynamic Install](#dynamic-install) on how you need to load the plug-in via Maya's Plug-in Manager from now on.
 
 <br>
 
@@ -80,6 +85,14 @@ This release associates install with plug-in load.
 **Uninstall**
 
 ![ragdolluninstall](https://user-images.githubusercontent.com/2152766/111457654-6776d680-8710-11eb-964c-a31712f7875d.gif)
+
+<br>
+
+## Active Chain
+
+Dynamic Control has been renamed `Active Chain`!
+
+
 
 <br>
 

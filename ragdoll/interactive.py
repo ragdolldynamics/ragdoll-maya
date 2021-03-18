@@ -1359,14 +1359,6 @@ def _validate_transforms(nodes, tolerance=0.01):
             )
         ]
 
-    if rotate_orders and options.read("validateRotateOrder"):
-        issues += [
-            "%d node(s) had a custom rotate order\n%s" % (
-                len(rotate_orders),
-                "\n".join(" - %s" % node for node in rotate_orders),
-            )
-        ]
-
     if issues:
         for issue in issues:
             log.warning(issue)

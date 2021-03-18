@@ -118,6 +118,22 @@ def test_create_rigid():
     assert_equals(len(cmds.ls(type="rdScene")), 1)
 
 
+def test_undo1():
+    new()
+
+    cube, _ = cmds.polyCube()
+    cmds.select(cube)
+    assert_true(interactive.create_active_rigid())
+
+    assert_equals(len(cmds.ls(type="rdRigid")), 1)
+    assert_equals(len(cmds.ls(type="rdScene")), 1)
+
+    cmds.undo()
+
+    assert_equals(len(cmds.ls(type="rdRigid")), 0)
+    assert_equals(len(cmds.ls(type="rdScene")), 0)
+
+
 def test_create_muscle():
     new()
 

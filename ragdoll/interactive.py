@@ -115,18 +115,18 @@ def requires_ui(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def requires_ui_wrapper(*args, **kwargs):
         if _is_standalone():
             return True
         return func(*args, **kwargs)
-    return wrapper
+    return requires_ui_wrapper
 
 
 def _format_exception(func):
     """Turn exceptions into user-facing messages"""
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def format_exception_wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
@@ -134,7 +134,7 @@ def _format_exception(func):
             _print_exception()
             log.warning(str(e))
             return kFailure
-    return wrapper
+    return format_exception_wrapper
 
 
 def _selected_channels():
@@ -216,11 +216,22 @@ def uninstall():
     uninstall_callbacks()
     uninstall_menu()
     options.uninstall()
+    cmdx.uninstall()
 
     # Call last, for Maya to properly unload and clean up
-    uninstall_plugin()
+    try:
+        uninstall_plugin()
 
-    cmdx.uninstall()
+    except RuntimeError:
+        # This is fine, for development
+        import traceback
+        traceback.print_exc()
+
+    # Erase all trace
+    import sys
+    for module in sys.modules.copy():
+        if module.startswith("ragdoll"):
+            sys.modules.pop(module)
 
 
 class RagdollGuiLogHandler(MayaGuiLogHandler):
@@ -423,45 +434,39 @@ def install_menu():
     item("fluid")
     item("character", create_character, create_character_options)
 
-    divider("Constrain")
+    divider("Manipulate")
 
-    item("point", create_point_constraint, _constraint_options("Point"))
-    item("orient", create_orient_constraint, _constraint_options("Orient"))
-    item("parent", create_parent_constraint, _constraint_options("Parent"))
-    item("hinge", create_hinge_constraint, _constraint_options("Hinge"))
-    item("socket", create_socket_constraint, _constraint_options("Socket"))
+    with submenu("Constraints", icon="constraint.png"):
+        item("point", create_point_constraint, _constraint_options("Point"))
+        item("orient", create_orient_constraint, _constraint_options("Orient"))
+        item("parent", create_parent_constraint, _constraint_options("Parent"))
+        item("hinge", create_hinge_constraint, _constraint_options("Hinge"))
+        item("socket", create_socket_constraint, _constraint_options("Socket"))
 
-    divider("Control")
+    with submenu("Controls", icon="control.png"):
+        item("kinematic", create_kinematic_control,
+             create_kinematic_control_options)
+        item("guide", create_driven_control,
+             create_driven_control_options)
+        item("motor")
+        item("actuator")
+        item("trigger")
 
-    item("kinematic", create_kinematic_control,
-         create_kinematic_control_options)
-    item("guide", create_driven_control,
-         create_driven_control_options)
-    item("motor")
-    item("actuator")
-    item("trigger")
+    with submenu("Forces", icon="turbulence.png"):
+        item("push", create_push_force, create_push_force_options)
+        item("pull", create_pull_force, create_pull_force_options)
+        item("directional", create_uniform_force, create_uniform_force_options)
+        item("wind", create_turbulence_force, create_turbulence_force_options)
 
-    divider("Force")
+        divider()
 
-    item("push", create_push_force, create_push_force_options)
-    item("pull", create_pull_force, create_pull_force_options)
-    item("directional", create_uniform_force, create_uniform_force_options)
-    item("wind", create_turbulence_force, create_turbulence_force_options)
+        item("visualiser", create_slice)
+        item("assignToSelected", assign_force)
 
-    divider()
-
-    item("visualiser", create_slice)
-    item("assignToSelected", assign_force)
-
-    divider("Emit")
-
-    item("particles")
-
-    divider("Assists")
-
-    item("trajectory")
-    item("momentOfInertia")
-    item("centerOfMass")
+    with submenu("Assists", icon="swirl.png"):
+        item("trajectory")
+        item("momentOfInertia")
+        item("centerOfMass")
 
     divider("Utilities")
 
@@ -840,14 +845,14 @@ def validate_legacy_opengl():
 
 def _replay(func):
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def replay_wrapper(*args, **kwargs):
 
         # Hint to the recorder that we're playing back this
         # command, and that it shouldn't be recorded
         kwargs["_replaying"] = True
 
         return func(*args, **kwargs)
-    return wrapper
+    return replay_wrapper
 
 
 def _replayable(func):
@@ -911,7 +916,7 @@ def _replayable(func):
         _append(selection[0], action)
 
     @functools.wraps(func)
-    def wrapper(selection=None, **kwargs):
+    def replayabale_wrapper(selection=None, **kwargs):
         if not kwargs.get("_replaying") and not _is_standalone():
             sel = selection or cmdx.selection()
             if sel:
@@ -927,7 +932,7 @@ def _replayable(func):
         # e.g. joints versus transforms
         return func(selection, **kwargs)
 
-    return wrapper
+    return replayabale_wrapper
 
 
 def _filtered_selection(node_type):
@@ -1207,12 +1212,6 @@ def create_active_chain(selection=None, **opts):
         if link.shape("rdRigid") is not None:
             return log.warning("Already dynamic: '%s'" % link)
 
-    scene = _find_current_scene()
-
-    # Cancelled by user
-    if not scene:
-        return
-
     opts = {
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
@@ -1239,9 +1238,16 @@ def create_active_chain(selection=None, **opts):
     elif _opt("chainShapeType", opts) == "Mesh":
         defaults["shapeType"] = commands.MeshShape
 
-    chain.Chain(
-        links, scene, options=opts, defaults=defaults
-    ).do_it()
+    operator = chain.Chain(links, options=opts, defaults=defaults)
+    operator.pre_flight()
+
+    scene = _find_current_scene()
+
+    # Cancelled by user
+    if not scene:
+        return
+
+    operator.do_it(scene)
 
     root = links[0]
     cmds.select(str(root))
@@ -1919,24 +1925,16 @@ def delete_physics(selection=None, **opts):
         selection = selection or cmdx.selection(type="dagNode")
 
         if not selection:
-            count = commands.delete_all_physics(attributes_too)
+            nodes, plugs = commands.delete_all_physics(attributes_too)
 
         else:
-            shapes = []
-            for node in selection:
-                shapes += node.shapes()
-
-            shapes = filter(None, shapes)
-            shapes = list(shapes) + selection
-            shapes = filter(lambda shape: shape.isA(cmdx.kShape), shapes)
-
-            count = commands.delete_physics(shapes, attributes_too)
+            nodes, plugs = commands.delete_physics(selection, attributes_too)
 
     else:
-        count = commands.delete_all_physics(attributes_too)
+        nodes, plugs = commands.delete_all_physics(attributes_too)
 
-    if count:
-        log.info("Deleted %d Ragdoll nodes", count)
+    if nodes or plugs:
+        log.info("Deleted %d Ragdoll nodes and %d attributes", nodes, plugs)
         return kSuccess
 
     else:
@@ -2126,7 +2124,7 @@ def repeatable(func):
     """
 
     @functools.wraps(func)
-    def _wrapper(*args, **kwargs):
+    def repeatable_wrapper(*args, **kwargs):
         _last_command._func = func
 
         command = 'python("import {0};{0}._last_command()")'.format(__name__)
@@ -2141,7 +2139,7 @@ def repeatable(func):
             pass
 
         return result
-    return _wrapper
+    return repeatable_wrapper
 
 
 def welcome_user(*args):

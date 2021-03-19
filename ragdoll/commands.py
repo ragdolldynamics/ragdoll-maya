@@ -93,7 +93,7 @@ def to_cmds(name):
     func = getattr(sys.modules[__name__], name)
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def to_cmds_wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
 
         if isinstance(result, (tuple, list)):
@@ -112,7 +112,7 @@ def to_cmds(name):
 
         return result
 
-    return wrapper
+    return to_cmds_wrapper
 
 
 def with_undo_chunk(func):
@@ -204,10 +204,12 @@ class UserAttributes(object):
             added += [name]
 
         # Record it
-        if not cmds.objExists("%s.%s" % (self._target, "_ragdollAttributes")):
-            cmds.addAttr(self._target.path(),
-                         longName="_ragdollAttributes",
-                         dataType="string")
+        if "_ragdollAttributes" not in self._target:
+            with cmdx.DagModifier() as mod:
+                mod.add_attr(
+                    self._target,
+                    cmdx.String("_ragdollAttributes", hidden=True)
+                )
 
         previous = self._target["_ragdollAttributes"].read()
         new = " ".join(added)
@@ -218,6 +220,27 @@ class UserAttributes(object):
             attributes,
             type="string"
         )
+
+        # Indicate that this target acts as an interface for the source
+        # node. If that node is one of ours, it'll get picked up by the
+        # automatic delete_all function.
+        with cmdx.DagModifier() as mod:
+            if "_ragdollInterface" not in self._target:
+                mod.add_attr(
+                    self._target,
+                    cmdx.Message("_ragdollInterface", hidden=True)
+                )
+
+            if "interfaces" not in self._source:
+                mod.add_attr(
+                    self._source,
+                    cmdx.Message("interfaces", array=True)
+                )
+
+        with cmdx.DagModifier() as mod:
+            index = self._source["interfaces"].next_available_index()
+            mod.connect(self._source["interfaces"][index],
+                        self._target["_ragdollInterface"])
 
     def proxy(self, attr, long_name=None, nice_name=None):
         """Create a proxy attribute for `name` on `target`"""
@@ -654,11 +677,11 @@ def _worldspace_constraint(rigid):
         mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(rigid["ragdollId"], con["childRigid"])
 
-        mod.keyable_attr(con["driveStrength"])
-        mod.keyable_attr(con["linearDriveStiffness"])
-        mod.keyable_attr(con["linearDriveDamping"])
-        mod.keyable_attr(con["angularDriveStiffness"])
-        mod.keyable_attr(con["angularDriveDamping"])
+        mod.set_keyable(con["driveStrength"])
+        mod.set_keyable(con["linearDriveStiffness"])
+        mod.set_keyable(con["linearDriveDamping"])
+        mod.set_keyable(con["angularDriveStiffness"])
+        mod.set_keyable(con["angularDriveDamping"])
 
         mod.do_it()
 
@@ -1251,14 +1274,14 @@ def create_absolute_control(rigid, reference=None):
 
             # Just mirror whatever the rigid is doing
             mod.connect(rigid["outputWorldScale"], reference["scale"])
-            mod.keyable_attr(reference["scale"], False)
+            mod.set_keyable(reference["scale"], False)
 
         ctrl = _rdcontrol(mod, "rAbsoluteControl1", reference)
         mod.connect(rigid["ragdollId"], ctrl["rigid"])
 
         con = mod.create_node("rdConstraint",
                               name="rAbsoluteConstraint1",
-                              parent=rigid.parent())
+                              parent=reference)
 
         mod.connect(rigid["ragdollId"], con["childRigid"])
 
@@ -1398,11 +1421,11 @@ def create_active_control(reference, rigid):
         mod.set_attr(con["angularDriveStiffness"], 10000.0)
         mod.set_attr(con["angularDriveDamping"], 1000.0)
 
-        mod.keyable_attr(con["driveStrength"])
-        mod.keyable_attr(con["linearDriveStiffness"])
-        mod.keyable_attr(con["linearDriveDamping"])
-        mod.keyable_attr(con["angularDriveStiffness"])
-        mod.keyable_attr(con["angularDriveDamping"])
+        mod.set_keyable(con["driveStrength"])
+        mod.set_keyable(con["linearDriveStiffness"])
+        mod.set_keyable(con["linearDriveDamping"])
+        mod.set_keyable(con["angularDriveStiffness"])
+        mod.set_keyable(con["angularDriveDamping"])
 
     forwarded = (
         "driveStrength",
@@ -1434,8 +1457,10 @@ def create_kinematic_control(rigid, reference=None):
         rigid = cmdx.encode(rigid)
 
     with cmdx.DagModifier() as mod:
+
         if reference is None:
-            reference = mod.create_node("transform", name="rPassive1")
+            name = _unique_name("rPassive1")
+            reference = mod.create_node("transform", name=name)
 
             tmat = rigid.transform(cmdx.sWorld)
 
@@ -1443,16 +1468,20 @@ def create_kinematic_control(rigid, reference=None):
             mod.set_attr(reference["rotate"], tmat.rotation())
             mod.set_attr(reference["scale"], tmat.scale())
 
-            mod.lock_attr(reference["scale"], True)
-            mod.keyable_attr(reference["scale"], False)
+            mod.set_locked(reference["scale"], True)
+            mod.set_keyable(reference["scale"], False)
 
         ctrl = mod.create_node("rdControl",
-                               name="rPassiveShape1",
+                               name=_unique_name("rPassiveShape1"),
                                parent=reference)
 
+        if rigid["kinematic"].connected:
+            mod.disconnect(rigid["kinematic"], destination=False)
+            mod.do_it()
+
+        mod.set_attr(rigid["kinematic"], True)
         mod.connect(rigid["ragdollId"], ctrl["rigid"])
         mod.connect(reference["worldMatrix"][0], rigid["inputMatrix"])
-        mod.set_attr(rigid["kinematic"], True)
 
     forwarded = (
         "kinematic",
@@ -1564,9 +1593,9 @@ def _attach_bodies(parent, child, scene, standalone):
 
         if standalone:
             transform = mod.create_node("transform", name=name)
-            mod.lock_attr(transform["translate"])
-            mod.lock_attr(transform["rotate"])
-            mod.lock_attr(transform["scale"])
+            mod.set_locked(transform["translate"])
+            mod.set_locked(transform["rotate"])
+            mod.set_locked(transform["scale"])
             con = _rdconstraint(mod, name + "Shape", parent=transform)
 
         else:
@@ -2339,10 +2368,12 @@ def delete_all_physics(include_attributes=False):
 
     """
 
-    return delete_physics(cmds.ls(), include_attributes)
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    return delete_physics(cmdx.ls(type=all_nodetypes), include_attributes)
 
 
-def delete_physics(nodes, include_attributes=False):
+@with_undo_chunk
+def delete_physics(nodes, include_attributes=False, _dry_run=False):
     """Delete Ragdoll from anything related to `nodes`
 
     This will delete anything related to Ragdoll from your scenes, including
@@ -2357,48 +2388,112 @@ def delete_physics(nodes, include_attributes=False):
 
     assert isinstance(nodes, (list, tuple)), "First input must be a list"
 
-    # Translate from cmdx instances, if any
-    nodes = list(map(str, nodes))
+    # Include shapes in supplied nodes
+    shapes = []
+    for node in nodes:
+
+        # Don't bother with underworld shapes
+        if node.isA(cmdx.kShape):
+            continue
+
+        shapes += node.shapes()
+
+    shapes = filter(None, shapes)
+    shapes = list(shapes) + nodes
+    shapes = filter(lambda shape: shape.isA(cmdx.kShape), shapes)
+    nodes = shapes
 
     # Filter by our types
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    nodes = cmds.ls(nodes, type=all_nodetypes)
+    ragdoll_nodes = list(
+        node for node in nodes
+        if node.type() in all_nodetypes
+    )
 
-    # Programmatically figure out what nodes are ours
-    suspects = set()
+    # Nothing to do!
+    if not ragdoll_nodes:
+        return 0, 0
 
-    # Exclusive transforms
-    for node in nodes:
-        suspects.update(cmds.listRelatives(node, parent=True, fullPath=True))
+    # Delete transforms exclusively made for each ragdoll node
+    # These are connected from a rigid into a dynamic
+    # `_ragdollExclusive` attribute.
+    #
+    #  _________________     ___________________
+    # |                 |   |                   |
+    # | Rigid           |   | Transform         |
+    # |                 |   |                   |
+    # |         message o---o _ragdollExclusive |
+    # |_________________|   |___________________|
+    #
+    #
+    exclusives = list()
+    for node in ragdoll_nodes:
+        other_plugs = node["message"].connections(plugs=True, source=False)
 
-    if nodes:
-        cmds.delete(nodes)
+        for other_plug in other_plugs:
+            assert isinstance(other_plug, cmdx.Plug)
+            if other_plug.name() != "_ragdollExclusive":
+                continue
 
-    # Remove transforms and custom attributes
-    # NOTE: This crashes Maya sometimes, whyyyy?
+            exclusives.append(other_plug.node())
+
+    # Delete attributes from Ragdoll interfaces,
+    # such as the original animation controls.
+    #
+    #   ____
+    #  / o  \
+    #  \__\_/
+    #      \
+    #      _\_____  interface
+    #     |  \    |
+    #     |   o   |
+    #     |       |
+    #     |_______|
+    #
+    #
+    interface_plugs = set()
+
     if include_attributes:
-        for suspect in suspects:
-            attrs = suspect + "._ragdollAttributes"
+        interfaces = set()
+        for node in ragdoll_nodes:
+            if "interfaces" not in node:
+                continue
 
-            # Was the transform created exclusively for this node?
-            if cmds.objExists(suspect + "._ragdollExclusive"):
-                log.debug("Deleting %s" % suspect)
-                cmds.delete(suspect)
+            for element in node["interfaces"]:
+                interface = element.connection(source=False)
 
-            # No? Then let's erase User Attributes from it
-            elif cmds.objExists(attrs):
+                if interface is not None:
+                    interfaces.add(interface)
 
-                # Get rid of any attributes we made on the original nodes
-                for attr in filter(None, cmds.getAttr(attrs).split(" ")):
-                    attr = "%s.%s" % (suspect, attr)
-                    if cmds.objExists(attr):
-                        log.debug("Deleting %s" % attr)
-                        cmds.deleteAttr(attr)
+        for interface in interfaces:
+            if "_ragdollAttributes" not in interface:
+                # Must have already been deleted by someone else
+                continue
 
-                # Clean up after yourself
-                cmds.deleteAttr(attrs)
+            attrs = interface["_ragdollAttributes"].read()
+            attrs = filter(None, attrs.split(" "))
 
-    return len(nodes)
+            for attr in attrs:
+                if attr in interface:
+                    interface_plugs.add(interface[attr])
+
+            interface_plugs.add(interface["_ragdollAttributes"])
+            interface_plugs.add(interface["_ragdollInterface"])
+
+    deleted_node_count = len(ragdoll_nodes + exclusives)
+    deleted_plug_count = len(interface_plugs)
+
+    if _dry_run:
+        return deleted_node_count, deleted_plug_count
+
+    # Ok, go ahead and start deleting stuff
+    with cmdx.DagModifier() as mod:
+        for plug in interface_plugs:
+            mod.delete_attr(plug)
+
+    cmdx.delete(ragdoll_nodes + exclusives)
+
+    return deleted_node_count, deleted_plug_count
 
 
 def normalise_shapes(root, max_delta=0.25):

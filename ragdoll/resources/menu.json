@@ -198,8 +198,8 @@
         "summary": "Assign force to the selected rigids.",
         "description": "Forces are typically assigned to all existing rigids when created, or to the currently selected rigids. This command lets you add forces to rigids manually. Forces can be removed by breaking their connection to each other."
     },
-    "particles": {
-        "label": "Particles",
+    "emitter": {
+        "label": "Emitter",
         "enable": false
     },
     "character": {

@@ -3,6 +3,7 @@ from .. import commands, chain
 from ..vendor import cmdx
 
 from nose.tools import (
+    assert_equals,
     assert_almost_equals,
 )
 
@@ -44,33 +45,65 @@ def test_defaults():
 
 
 def test_delete_all():
+    import sys
     new()
+
+    sys.stderr.write("Part 1\n")
+
+    wait = raw_input("Press any key")
 
     a = cmdx.createNode("transform")
     b = cmdx.createNode("transform", parent=a)
     c = cmdx.createNode("transform", parent=b)
+    d = cmdx.createNode("transform", parent=c)
 
+    sys.stderr.write("Part 2\n")
+
+    a["ty"] = 5.0
     b["tx"] = 5.0
     c["tx"] = 5.0
+    d["tx"] = 5.0
+
+    sys.stderr.write("Part 3\n")
 
     scene = commands.create_scene()
-    rigid = commands.create_chain(transform, scene)
+    chain.Chain([a, b, c, d]).do_it(scene)
+    assert_equals(len(cmds.ls(type="rdRigid")), 4)
 
-    commands.delete_physics([rigid], include_attributes=False)
-    assert transform.has_attr("mass")
+    assert a.has_attr("_ragdollAttributes"), (
+        "%s didn't have _ragdollAttributes" % a
+    )
 
-    commands.delete_physics([rigid], include_attributes=True)
-    assert not transform.has_attr("mass")
+    sys.stderr.write("Part 4\n")
 
-    new()
+    commands.delete_physics([a, b, c, d], include_attributes=False)
+    assert a.has_attr("_ragdollAttributes")
+    print(cmds.ls(type="rdRigid", long=True))
+    assert_equals(len(cmds.ls(type="rdRigid")), 0)
 
-    transform = cmdx.createNode("transform")
-    scene = commands.create_scene()
-    rigid = commands.create_rigid(transform, scene)
+    sys.stderr.write("Part 5\n")
 
-    commands.delete_all_physics(include_attributes=True)
+    cmds.undo()
 
-    assert not transform.has_attr("mass")
+    sys.stderr.write("Part 6\n")
+
+    assert_equals(len(cmds.ls(type="rdRigid")), 4)
+
+    commands.delete_physics([a, b, c, d], include_attributes=True)
+    assert not a.has_attr("_ragdollAttributes")
+    assert_equals(len(cmds.ls(type="rdRigid")), 0)
+
+    sys.stderr.write("Part 2\n")
+
+
+def test_convert_constraint():
+    pass
+
+
+def test_convert_rigid():
+    # Passive -> Active
+    # Active -> Passive
+    pass
 
 
 def manual():

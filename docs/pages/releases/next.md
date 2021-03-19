@@ -5,6 +5,7 @@ Highlight for this  release is JSON Export, this one's for you **game developers
 - [**ADDED** Active Chain](#active-chain) Next generation "Dynamic Control" with "chain"
 - [**CHANGED** Dynamic Install](#dynamic-install) Tighter integration into Maya's native Plug-in Manager
 - [**CHANGED** Greater Guide Strength](#greater-guide-strength) Have simulation follow animation even closelier
+- [**FIXED** Crash on Cleanup](#crash-on-cleanup) A more stable clean-up experience
 
 !!! warning "Important!"
     This version won't self-install like the past releases, see [Dynamic Install](#dynamic-install) on how you need to load the plug-in via Maya's Plug-in Manager from now on.
@@ -112,6 +113,14 @@ This release increases this default value to `4` for ranges between `0-100`, whi
 #### After
 
 ![ragdolliterations4](https://user-images.githubusercontent.com/2152766/111459108-2da6cf80-8712-11eb-89a0-a2c7a7dc1675.gif)
+
+<br>
+
+## Crash on Cleanup
+
+In rare cases, Ragdoll could crash Maya due to accessing memory it had no business accessing. Those have now been patched up and refactored for a more stable, crash-free experience!
+
+![image](https://user-images.githubusercontent.com/47274066/111773312-eea98300-88a5-11eb-9f52-289b59125678.png)
 
 <br>
 

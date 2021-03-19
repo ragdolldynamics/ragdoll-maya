@@ -56,7 +56,7 @@ Now let's see how to steer our simulation with regular keyframes.
 
 ### Switch to Animation
 
-The simulation will try to follow your keyframe animation. Just switch off the `Blend Simulation` attribute on the root control while you're animating, then switch it back on to see how it looks.
+The simulation will try to follow your keyframe animation. Just switch off the `Simulated` attribute on the root control while you're animating, then switch it back on to see how it looks.
 
 ![animate](https://user-images.githubusercontent.com/8775944/104857605-9986da80-5911-11eb-9f2b-26a559f7e777.gif)
 

@@ -23,7 +23,7 @@ Depending on where you are and what you are looking for, one of these should fit
 | [Reference](/reference) | The Reference page lists all menu items, item options and node attributes of Ragdoll along with descriptions and examples.
 | [Node Reference](/nodes) | Every node is detailed in the "Nodes" section to the right, such as [`rdRigid`](/nodes/rdRigid/).
 | [Community](https://forums.ragdolldynamics.com) | Inspire and be inspired via the Ragdoll forums
-| Support | Get us involved and we'll make some waves
+| Support | [Get us involved](mailto:contact@ragdolldynamics.com) and let's make some waves
 
 <br>
 

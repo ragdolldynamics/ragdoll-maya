@@ -5,7 +5,9 @@
 Serialise all rigid bodies to JSON, for import into external software such as Unreal, Unity, Godot, CryEngine or any other engine able to read and parse JSON, including your own custom game engine.
 
 !!! info "Units"
-    All linear units are in `centimeters` and all angular units are in `radians`.
+    - All linear units are in `centimeters`
+    - All angular units are in `radians`
+    - All quaternions are ordered `XYZW`
 
 <br>
 

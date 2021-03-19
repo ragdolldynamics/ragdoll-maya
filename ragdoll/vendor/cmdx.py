@@ -2921,6 +2921,10 @@ class Plug(object):
 
     @keyable.setter
     def keyable(self, value):
+
+        # Facilitate passing e.g. `0` or `None`
+        value = bool(value)
+
         elements = (
             self
             if self.isArray or self.isCompound
@@ -4595,10 +4599,33 @@ class _BaseModifier(object):
     Type = om.MDGModifier
 
     def __enter__(self):
+        """Support use as a context manager
+
+        Examples:
+            >>> with DagModifier() as mod:
+            ...    node = mod.createNode("transform")
+            ...    mod.set_attr(node["translateX"], 5.0)
+            ...
+            >>>
+
+            # Use of modified once exited is not allowed
+            >>> node = mod.createNode("transform")
+            >>> mod.doIt()
+            Traceback (most recent call last):
+            ...
+            RuntimeError: Cannot re-use modifier which was once a context
+
+        """
+
         self.isContext = True
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
+
+        if exc_type:
+            # Let our internal calls to `assert` prevent the
+            # modifier from proceeding, given it's half-baked
+            return
 
         # Support calling `doIt` during a context,
         # without polluting the undo queue.
@@ -4606,6 +4633,10 @@ class _BaseModifier(object):
             commit(self._modifier.undoIt, self._modifier.doIt)
 
         self.doIt()
+
+        # Prevent continued use of the modifier,
+        # after exiting the context manager.
+        self.isExited = True
 
     def __init__(self,
                  undoable=True,
@@ -4616,6 +4647,7 @@ class _BaseModifier(object):
         super(_BaseModifier, self).__init__()
         self.isDone = False
         self.isContext = False
+        self.isExited = False
 
         self._modifier = self.Type()
         self._history = list()
@@ -4793,6 +4825,11 @@ class _BaseModifier(object):
         return self.niceNameAttr(plug, value)
 
     def doIt(self):
+        if self.isExited:
+            raise RuntimeError(
+                "Cannot re-use modifier which was once a context"
+            )
+
         if (not self.isContext) and self._opts["undoable"]:
             commit(self._modifier.undoIt, self._modifier.doIt)
 
@@ -4811,6 +4848,7 @@ class _BaseModifier(object):
             if self._opts["atomic"]:
                 self.undoIt()
 
+            traceback.print_exc()
             raise ModifierError(self._history)
 
         else:
@@ -4940,7 +4978,7 @@ class _BaseModifier(object):
 
     @record_history
     def deleteNode(self, node):
-        return self._modifier.deleteNode(node._mobject)
+        return self._modifier.deleteNode(node._mobject, includeParents=False)
 
     @record_history
     def renameNode(self, node, name):
@@ -5033,11 +5071,18 @@ class _BaseModifier(object):
 
     @record_history
     def setAttr(self, plug, value):
+        if isinstance(plug, om.MPlug):
+            plug = Plug(plug.node(), plug)
+
+        assert plug.editable, "%s was locked or connected" % plug.path()
+
+        # Support passing a cmdx.Plug as value
         if isinstance(value, Plug):
             value = value.read()
 
-        if isinstance(plug, om.MPlug):
-            value = Plug(plug.node(), plug).read()
+        # Support passing an MPlug as value
+        if isinstance(value, om.MPlug):
+            value = Plug(value.node(), value).read()
 
         _python_to_mod(value, plug, self._modifier)
 
@@ -5113,6 +5158,10 @@ class _BaseModifier(object):
             if disconnected:
                 # Connecting after disconnecting breaks undo,
                 # unless we do it first.
+                #
+                # NOTE: This is bad, the user should be in control of when
+                # the modifier is actually being called. Especially if we
+                # want to avoid calling it altogether in case of an exception
                 self.doIt()
 
         self._modifier.connect(src, dst)
@@ -5587,11 +5636,11 @@ def createNode(type, name=None, parent=None):
     """
 
     try:
-        with DagModifier() as mod:
+        with DagModifier(undoable=False) as mod:
             node = mod.createNode(type, name=name, parent=parent)
 
     except TypeError:
-        with DGModifier() as mod:
+        with DGModifier(undoable=False) as mod:
             node = mod.createNode(type, name=name)
 
     return node
@@ -5784,14 +5833,30 @@ def connectAttr(src, dst):
 
 
 def delete(*nodes):
+    # Flatten possible sub-lists
+    flattened = list()
+    for node in nodes:
+        if isinstance(node, (tuple, list)):
+            flattened += node
+        else:
+            flattened += [node]
 
-    with DGModifier() as mod:
-        for node in nodes:
+    # Use DAG modifier rather than DG, because
+    # DG doesn't understand hierarchy.
+    with DagModifier() as mod:
+        for node in flattened:
             if isinstance(node, str):
                 node, node = node.rsplit(".", 1)
                 node = encode(node)
                 node = node[node]
+
+            if not node.exists:
+                # May have been a child of something
+                # deleted earlier
+                continue
+
             mod.delete(node)
+            mod.do_it()
 
 
 def rename(node, name):
@@ -6700,7 +6765,7 @@ def install():
 
 
 def uninstall():
-    if ENABLE_UNDO:
+    if ENABLE_UNDO and self.installed:
         # Plug-in may exist in undo queue and
         # therefore cannot be unloaded until flushed.
         cmds.flushUndo()

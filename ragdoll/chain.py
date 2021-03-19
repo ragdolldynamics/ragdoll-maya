@@ -34,8 +34,7 @@ class Chain(object):
 
     """
 
-    def __init__(self, links, scene, options=None, defaults=None):
-        assert scene.type() == "rdScene", "%s was not a rdScene" % scene
+    def __init__(self, links, options=None, defaults=None):
         assert isinstance(links, (list, tuple)), "links was not a list"
         assert links, "links was empty"
 
@@ -46,6 +45,7 @@ class Chain(object):
         options["blendMethod"] = options.get("blendMethod",
                                              commands.SteppedBlendMethod)
         options["computeMass"] = options.get("computeMass", False)
+        options["autoMultiplier"] = options.get("autoMultiplier", True)
         options["shapeType"] = options.get("shapeType", commands.CapsuleShape)
         options["autoLimits"] = options.get("autoLimits", False)
         options["addUserAttributes"] = options.get("addUserAttributes", True)
@@ -62,11 +62,13 @@ class Chain(object):
         self._cache = {}
         self._root = links[0]
         self._children = links[1:]
-        self._scene = scene
+        self._scene = None
         self._opts = options
 
         # Separate input into transforms and (optional) shapes
         self._pairs = []
+
+        self._pre_flighted = False
 
         for index, link in enumerate(links):
             if isinstance(link, string_types):
@@ -137,16 +139,53 @@ class Chain(object):
 
                 # Walk up the hierarchy until you find what
                 # is supposed to be the parent.
-                found = False
+                #
+                #                   .
+                #  |--o a          /|\
+                #     |--o B        |
+                #        |--o c     |
+                #           |--o d  |
+                #                   |
+                #
+                valid = False
                 for parent in transform.lineage():
                     if parent == expected_parent:
-                        found = True
+                        valid = True
                         break
 
-                assert found, (
+                problem = (
                     "%s was not a parent of %s" % (
                         expected_parent, transform)
                 )
+
+                # Ok, so the prior link isn't a parent, but we
+                # also must make it isn't a child of the subsequent
+                # link, as that would mean a cycle
+                #
+                #                   |
+                #  |--o a           |
+                #     |--o B        |
+                #        |--o c     |
+                #           |--o d  |
+                #                  \ /
+                #                   `
+                if not valid:
+                    is_child = False
+                    for child in transform.descendents():
+                        if child == expected_parent:
+                            is_child = True
+                            break
+
+                    # It's valid if the Maya parent isn't a Ragdoll child
+                    valid = not is_child
+
+                    # This flips the problem on its head
+                    problem = (
+                        "%s cannot be a child of %s, that's a cycle" % (
+                            expected_parent, transform)
+                    )
+
+                assert valid, problem
 
         def pre_cache():
             """Pre-cache attributes to avoid needless evaluation"""
@@ -178,8 +217,14 @@ class Chain(object):
         remember_existing_inputs()
         pre_cache()
 
-    def do_it(self):
-        self.pre_flight()
+    def do_it(self, scene):
+        self._scene = scene
+
+        # May be called ahead of time by the user
+        if not self._pre_flighted:
+            self.pre_flight()
+            self._pre_flighted = True
+
         self._do_all()
         return self._new_rigids[:]
 

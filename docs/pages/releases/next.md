@@ -5,7 +5,8 @@ Highlight for this  release is JSON Export, this one's for you **game developers
 - [**ADDED** Active Chain](#active-chain) Next generation "Dynamic Control" with "chain"
 - [**CHANGED** Dynamic Install](#dynamic-install) Tighter integration into Maya's native Plug-in Manager
 - [**CHANGED** Greater Guide Strength](#greater-guide-strength) Have simulation follow animation even closelier
-- [**FIXED** Crash on Cleanup](#crash-on-cleanup) A more stable clean-up experience
+- [**FIXED** Less Crashes](#less-crashes) Kids, say *no* to crashes
+- [**FIXED** Custom Rotate Order](#custom-rotate-order) Now works as expected
 
 !!! warning "Important!"
     This version won't self-install like the past releases, see [Dynamic Install](#dynamic-install) on how you need to load the plug-in via Maya's Plug-in Manager from now on.

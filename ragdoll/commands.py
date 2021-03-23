@@ -2116,6 +2116,7 @@ def infer_geometry(root, parent=None, children=None):
         geometry.extents.x = 0
 
     if abs(root_scale.y) > 0:
+        geometry.extents.x /= root_scale.x
         geometry.length /= root_scale.y
     else:
         geometry.length = 0
@@ -2213,8 +2214,8 @@ def local_bounding_size(root):
     center /= len(positions)
 
     # Then figure out a bounding box, relative this center
-    min_ = cmdx.Vector(-0.5, -0.5, -0.5)
-    max_ = cmdx.Vector(0.5, 0.5, 0.5)
+    min_ = cmdx.Vector()
+    max_ = cmdx.Vector()
 
     for pos2 in positions:
         dist = pos2 - center

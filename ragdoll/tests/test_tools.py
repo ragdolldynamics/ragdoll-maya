@@ -1,6 +1,7 @@
 import os
 from maya import cmds
-from .. import tools, commands
+from .. import commands
+from ..tools import character_tool
 from ..vendor import cmdx
 
 from nose.tools import (
@@ -60,7 +61,7 @@ def test_character():
     # Create with root
     root = joints[0]
     scene = commands.create_scene()
-    result = tools.create_character(root, scene, copy=False)
+    result = character_tool.create(root, scene, copy=False)
 
     # After 100 frames, the simulation has come to a rest
     for frame in range(1, 101):

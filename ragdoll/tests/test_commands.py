@@ -1,6 +1,7 @@
 from maya import cmds
-from .. import commands, chain
+from .. import commands
 from ..vendor import cmdx
+from ..tools import chain_tool
 
 from nose.tools import (
     assert_equals,
@@ -45,55 +46,41 @@ def test_defaults():
 
 
 def test_delete_all():
-    import sys
     new()
-
-    sys.stderr.write("Part 1\n")
-
-    wait = raw_input("Press any key")
 
     a = cmdx.createNode("transform")
     b = cmdx.createNode("transform", parent=a)
     c = cmdx.createNode("transform", parent=b)
     d = cmdx.createNode("transform", parent=c)
 
-    sys.stderr.write("Part 2\n")
-
     a["ty"] = 5.0
     b["tx"] = 5.0
     c["tx"] = 5.0
     d["tx"] = 5.0
 
-    sys.stderr.write("Part 3\n")
-
     scene = commands.create_scene()
-    chain.Chain([a, b, c, d]).do_it(scene)
+
+    operator = chain_tool.Chain([a, b, c, d], scene)
+    assert operator.pre_flight()
+    operator.do_it()
     assert_equals(len(cmds.ls(type="rdRigid")), 4)
 
-    assert a.has_attr("_ragdollAttributes"), (
-        "%s didn't have _ragdollAttributes" % a
-    )
+    result = commands.delete_physics([scene, a, b, c, d])
 
-    sys.stderr.write("Part 4\n")
+    # 1 scene, 4 rigids, 3 constraints, 1 multiplier
+    assert_equals(result["deletedRagdollNodeCount"], 9)
 
-    commands.delete_physics([a, b, c, d], include_attributes=False)
-    assert a.has_attr("_ragdollAttributes")
-    print(cmds.ls(type="rdRigid", long=True))
+    # Scene node transform
+    assert_equals(result["deletedExclusiveNodeCount"], 1)
+
     assert_equals(len(cmds.ls(type="rdRigid")), 0)
-
-    sys.stderr.write("Part 5\n")
 
     cmds.undo()
 
-    sys.stderr.write("Part 6\n")
-
     assert_equals(len(cmds.ls(type="rdRigid")), 4)
 
-    commands.delete_physics([a, b, c, d], include_attributes=True)
-    assert not a.has_attr("_ragdollAttributes")
+    commands.delete_physics([a, b, c, d])
     assert_equals(len(cmds.ls(type="rdRigid")), 0)
-
-    sys.stderr.write("Part 2\n")
 
 
 def test_convert_constraint():
@@ -134,3 +121,14 @@ def manual():
         print("Ran %d tests with %d errors in %.2fs" % (
             len(tests), len(errors), duration)
         )
+
+
+def test_chain_tree_tiger():
+    # "simulated" attribute only appears on tree root
+    # multiplier applies to
+    pass
+
+
+def test_save_load_tiger():
+    # Animation/initial pose should not be affected by saving/loading
+    pass

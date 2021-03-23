@@ -52,6 +52,7 @@
             "solver",
             "chainShapeType",
             "chainBlendMethod",
+            "chainPassiveRoot",
             "chainAutoMultiplier",
             "chainAutoLimits"
         ]
@@ -194,7 +195,7 @@
         "description": "This creates a 2-dimensonal representation of either all or selected 3-dimensional forces. The slice can be moved and scaled just like any normal Maya transform, and the amount and length of samples can be manipulated (and even animated) interactively to get a fine-grained understanding of what your forces do to each rigid. Hint: Create *multiple* slices at various strategic locations in your scene to get an even greater understanding at specific areas."
     },
     "assignToSelected": {
-        "label": "Assign to Selected",
+        "label": "Assign Force to Selected Rigid(s)",
         "summary": "Assign force to the selected rigids.",
         "description": "Forces are typically assigned to all existing rigids when created, or to the currently selected rigids. This command lets you add forces to rigids manually. Forces can be removed by breaking their connection to each other."
     },
@@ -213,7 +214,7 @@
             "characterLabels",
             "characterStopBehaviour"
         ],
-        "description": "An auto-rigger, designed to produce an animatable character from a skeleton hierarchy."
+        "description": "An auto-rigger, designed to automatically generate an animatable character from a skeletal hierarchy."
     },
     "trajectory": {
         "label": "Trajectory",
@@ -280,10 +281,16 @@
         "enable": false
     },
     "editConstraintFrames": {
-        "label": "Edit Constraint Frames",
+        "label": "Edit Constraint Pivots",
         "icon": "frame.png",
-        "summary": "Edit the parent and child frames using a native Maya transform.",
-        "description": "Create editable transforms for the parent and child frames for the selected constraint, or constraint under the selected transform. The parent frame represents the position and orientation the child rigid is connected, and vice versa."
+        "summary": "Edit the parent and child pivots using native Maya transforms",
+        "description": "Create editable transforms for the parent and child pivots for the selected constraint, or constraint under the selected transform. The parent frame represents the position and orientation the child rigid is connected, and vice versa."
+    },
+    "editShape": {
+        "label": "Edit Shape",
+        "icon": "rigid.png",
+        "summary": "Edit the shape offset and shape rotation attributes with a native Maya transform.",
+        "description": "Create editable transforms for the shape attributes to simplify editing with the native interactive Maya manipulators."
     },
     "duplicateSelected": {
         "label": "Duplicate Selected",
@@ -339,7 +346,6 @@
             "validateLegacyOpenGL",
             "validateRotatePivot",
             "validateRotateAxis",
-            "validateRotateOrder",
             "validateScale",
             "validatePlaybackSpeed"
         ]

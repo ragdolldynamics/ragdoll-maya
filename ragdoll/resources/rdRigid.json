@@ -414,6 +414,22 @@
             "type": "bool",
             "default": true,
             "summary": "Whether to draw this rigid shaded or wireframe-only."
+        },
+        "exclusiveNodes": {
+            "longName": "exclusiveNodes",
+            "shortName": "excl",
+            "type": "bool",
+            "default": true,
+            "summary": "Nodes created for this and only this rigid.",
+            "description": "Exclusive nodes are deleted alongside this rigid. If you want to keep a node initially created as an exclusive node, disconnect it from this array."
+        },
+        "userAttributes": {
+            "longName": "userAttributes",
+            "shortName": "usat",
+            "type": "bool",
+            "default": true,
+            "summary": "References to attributes created for this rigid but on another node.",
+            "description": "Such as proxy attributes created on an original animation control, used to drive the attribute on this rigid."
         }
     }
 }

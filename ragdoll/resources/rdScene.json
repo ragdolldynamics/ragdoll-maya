@@ -183,6 +183,17 @@
             "summary": "Divide changes in time by this many.",
             "description": "Ragdoll simulates once per frame (or generally once per change in time, including sub-frame changes), but multiples the number of steps taken by this amount for greater accuracy at a (possible) cost to performance."
         },
+        "positionIterations": {
+            "niceName": "Iterations",
+            "longName": "positionIterations",
+            "shortName": "poit",
+            "type": "int",
+            "min": 0,
+            "keyable": false,
+            "default": 4,
+            "summary": "Spend this many iterations on each rigid.",
+            "description": "Amount of iterations given to solve all constraints. This attribute is a multiplier of the `rdRigid.positionIterations` attribute, to affect the overall behavior of the scene."
+        },
         "gravity": {
             "longName": "gravity",
             "shortName": "grav",

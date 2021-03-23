@@ -312,6 +312,13 @@
         "default": true,
         "help": "Automatically add a constraint multiplier to the dynamic control root."
     },
+    "chainPassiveRoot": {
+        "name": "chainPassiveRoot",
+        "label": "Passive Root",
+        "type": "Boolean",
+        "default": true,
+        "help": "Should the root be passive?"
+    },
     "chainAutoLimits": {
         "name": "chainAutoLimits",
         "label": "Auto Limits",
@@ -389,7 +396,7 @@
     "validateRotateOrder": {
         "name": "validateRotateOrder",
         "type": "Boolean",
-        "default": false,
+        "default": true,
         "help": "Let the user know of a Ragdoll limitation, that a custom rotate order are currently unsupported."
     },
     "validateScale": {

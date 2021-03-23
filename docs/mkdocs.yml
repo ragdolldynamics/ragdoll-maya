@@ -23,6 +23,7 @@ nav:
   - Node Reference: nodes.md
   - API Reference: api.md
   - Release History:
+    - 2021.03.23: releases/2021.03.23.md
     - 2021.03.11: releases/2021.03.11.md
     - 2021.03.04: releases/2021.03.04.md
     - 2021.03.01: releases/2021.03.01.md
@@ -42,8 +43,8 @@ nav:
     - 2020.11.16: releases/2020.11.16.md
     - 2020.11.10: releases/2020.11.10.md
   - Licencing: licencing.md
-  # - Serialisation: serialisation.md
-  # - About: about.md
+  - Serialisation: serialisation.md
+  - About: about.md
 
 docs_dir: pages
 

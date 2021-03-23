@@ -1092,7 +1092,6 @@ def create_active_rigid(selection=None, **opts):
     created = []
     selection = selection or cmdx.selection(type="dagNode")
     defaults = opts.pop("defaults", {})
-    defaults["shapeType"] = defaults.get("shapeType", commands.BoxShape)
 
     if not selection:
 

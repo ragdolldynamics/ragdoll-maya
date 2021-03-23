@@ -17,7 +17,7 @@ from maya import cmds
 from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui
 from maya import OpenMaya as om1, OpenMayaMPx as ompx1, OpenMayaUI as omui1
 
-__version__ = "0.4.11"
+__version__ = "0.5.0"
 
 PY3 = sys.version_info[0] == 3
 
@@ -884,7 +884,8 @@ class Node(object):
                 if cached:
                     raise KeyError("'%s' not cached" % name)
 
-        plug = self._fn.findPlug(name, False)
+        assert isinstance(name, string_types), "%s was not string" % name
+        plug = self._fn.findPlug(name, True)
         self._state["plugs"][name] = plug
 
         return plug
@@ -1270,75 +1271,41 @@ class Node(object):
         shortest_path = shortestPath
 
 
-class ContainerNode(Node):
-    """A.k.a. "asset"
+if __maya_version__ >= 2017:
+    class ContainerNode(Node):
+        """A.k.a. "asset"
 
-    These are special. Published names aren't your average plug. They can't
-    be found via the MFnDependencyNode.findPlug call. Instead, they are
-    so-called "published names" and reside elsewhere.
+        These are special. Published names aren't your average plug. They can't
+        be found via the MFnDependencyNode.findPlug call. Instead, they are
+        so-called "published names" and reside elsewhere.
 
-    This class wraps that interface to align with regular attribute access,
-    for an as-transparent-as-possible experience.
+        This class wraps that interface to align with regular attribute access,
+        for an as-transparent-as-possible experience.
 
-    Examples:
-        >>> from maya import cmds
-        >>> _ = cmds.file(new=True, force=True)
+        """
 
-        # Establish a published plug
-        >>> con = cmds.container(name="myContainer")
-        >>> con = encode(con)
-        >>> con.isA(kDagNode)
-        False
-        >>> isinstance(con, ContainerNode)
-        True
+        _Fn = om.MFnContainerNode
 
-        >>> from maya import cmds
-        >>> _ = cmds.file(new=True, force=True)
+        def __getitem__(self, key):
+            try:
+                return super(ContainerNode, self).__getitem__(key)
+            except ExistError:
+                pass
 
-        # Establish a published plug
-        >>> node = cmds.createNode("transform")
-        >>> con = cmds.container(name="myContainer",
-        ...                      addNode=[node],
-        ...                      type="dagContainer")
-        >>> plug = cmds.container(con,
-        ...                       edit=True,
-        ...                       publishName="inputTranslate")
-        >>> binding = ("%s.tx" % node, plug)
-        >>> _ = cmds.container(con, edit=True, bindAttr=binding)
+            # It may be a published name rather than a traditional attribute
+            mplugs, keys = self._fn.getPublishedPlugs()
 
-        # Query and connect that published plug
-        >>> source = createNode("transform")
-        >>> con = encode(con)
-        >>> con.isA(kDagNode)
-        True
-        >>> isinstance(con, ContainerNode)
-        True
-        >>> source["tx"] >> con[plug]
-        >>> source["tx"] = 5.0
-        >>> con["inputTranslate"].read()
-        5.0
+            if key not in keys:
+                raise ExistError(
+                    "'%s' was not an attribute, nor a "
+                    "published name for this container" % key
+                )
 
-    """
-
-    _Fn = om.MFnContainerNode
-
-    def __getitem__(self, key):
-        try:
-            return super(ContainerNode, self).__getitem__(key)
-        except ExistError:
-            pass
-
-        # It may be a published name rather than a traditional attribute
-        mplugs, keys = self._fn.getPublishedPlugs()
-
-        if key not in keys:
-            raise ExistError(
-                "'%s' was not an attribute, nor a "
-                "published name for this container" % key
-            )
-
-        mplug = mplugs[keys.index(key)]
-        return Plug(self, mplug, unit=None, key=key, modifier=self._modifier)
+            mplug = mplugs[keys.index(key)]
+            return Plug(self, mplug,
+                        unit=None,
+                        key=key,
+                        modifier=self._modifier)
 
 
 class DagNode(Node):
@@ -1550,7 +1517,7 @@ class DagNode(Node):
         Example:
             >>> node = createNode("transform")
             >>> node["rotateX"] = radians(90)
-            >>> degrees(node.rotation().x)
+            >>> round(degrees(node.rotation().x), 1)
             90.0
 
         """
@@ -1721,7 +1688,18 @@ class DagNode(Node):
 
         other = "typeId" if isinstance(type, om.MTypeId) else "typeName"
 
-        for index in range(self._fn.childCount()):
+        assert self._fn.hasObj(self._mobject), "This is a Maya bug"
+
+        try:
+            count = int(self._fn.childCount())
+        except OverflowError:
+            # Maya does this sometimes and you'd be lucky if
+            # Python catches onto it. More likely it will
+            # fatal crash your Maya, as it likely accesses
+            # a bad memory address.
+            raise
+
+        for index in range(count):
             try:
                 mobject = self._fn.child(index)
 
@@ -2465,11 +2443,11 @@ class Plug(object):
             for value in values:
                 yield value
 
-    def __getitem__(self, index):
+    def __getitem__(self, logicalIndex):
         """Read from child of array or compound plug
 
         Arguments:
-            index (int): Logical index of plug (NOT physical, make note)
+            logicalIndex (int): Logical index of plug (NOT physical, make note)
 
         Example:
             >>> _ = cmds.file(new=True, force=True)
@@ -2484,21 +2462,45 @@ class Plug(object):
             >>> node["translate"][2].read()
             5.1
 
+            # Elements are accessed by logical index, rather than physical
+            >>> tm = createNode("transform")
+            >>> mult = createNode("multMatrix")
+            >>> plug = mult["matrixIn"]
+            >>> plug[0] << tm["matrix"]
+            >>> plug[1] << tm["parentMatrix"][0]
+            >>> plug[2] << tm["worldMatrix"][0]
+
+            >>> plug[2].connection(plug=True) == tm["worldMatrix"]
+            True
+
+            # Notice how index 2 remains index 2 even on disconnect
+            # The physical index moves to 1.
+            >>> plug[1].disconnect()
+            >>> plug[2].connection(plug=True) == tm["worldMatrix"]
+            True
+
         """
 
         cls = self.__class__
 
-        if isinstance(index, int):
+        if isinstance(logicalIndex, int):
             # Support backwards-indexing
-            if index < 0:
-                index = self.count() - abs(index)
+            if logicalIndex < 0:
+                logicalIndex = self.count() - abs(logicalIndex)
 
             if self._mplug.isArray:
-                item = self._mplug.elementByLogicalIndex(index)
+                # Preserve behavior from MEL
+                #
+                # NOTE: Physical index makes a lot more sense for
+                # programmatic use, but it isn't reliable when
+                # accessing native Maya array attributes like worldMatrix
+                # In that case, there is no index-0, even though a logical
+                # index 0 most definitely always (?) exists.
+                item = self._mplug.elementByLogicalIndex(logicalIndex)
                 return cls(self._node, item, self._unit)
 
             elif self._mplug.isCompound:
-                item = self._mplug.child(index)
+                item = self._mplug.child(logicalIndex)
                 return cls(self._node, item, self._unit)
 
             else:
@@ -2506,7 +2508,7 @@ class Plug(object):
                     "%s does not support indexing" % self.path()
                 )
 
-        elif isinstance(index, string_types):
+        elif isinstance(logicalIndex, string_types):
             # Compound attributes have no equivalent
             # to "MDependencyNode.findPlug()" and must
             # be searched by hand.
@@ -2515,14 +2517,14 @@ class Plug(object):
                     child = self._mplug.child(child)
                     _, name = child.name().rsplit(".", 1)
 
-                    if index == name:
+                    if logicalIndex == name:
                         return cls(self._node, child)
 
             else:
                 raise TypeError("'%s' is not a compound attribute"
                                 % self.path())
 
-            raise ExistError("'%s' was not found" % index)
+            raise ExistError("'%s' was not found" % logicalIndex)
 
     def __setitem__(self, index, value):
         """Write to child of array or compound plug
@@ -2536,6 +2538,10 @@ class Plug(object):
         """
 
         self[index].write(value)
+
+    def __hash__(self):
+        """Support storing in set() and as key in dict()"""
+        return hash(self.path())
 
     def __init__(self, node, mplug, unit=None, key=None, modifier=None):
         """A Maya plug
@@ -2557,7 +2563,12 @@ class Plug(object):
         self._modifier = modifier
 
     def plug(self):
+        """Return the MPlug of this cmdx.Plug"""
         return self._mplug
+
+    def attribute(self):
+        """Return the attribute MObject of this cmdx.Plug"""
+        return self._mplug.attribute()
 
     @property
     def isArray(self):
@@ -2565,22 +2576,71 @@ class Plug(object):
 
     @property
     def arrayIndices(self):
-        if not self.isArray:
+        if not self._mplug.isArray:
             raise TypeError('{} is not an array'.format(self.path()))
-        return self._mplug.getExistingArrayAttributeIndices()
+
+        # Convert from `p_OpenMaya_py2.rItemNot3Strs` to list
+        return list(self._mplug.getExistingArrayAttributeIndices())
 
     @property
     def isCompound(self):
         return self._mplug.isCompound
 
-    def next_available_index(self, start_index=0):
+    def nextAvailableIndex(self, startIndex=0):
+        """Find the next unconnected element in an array plug
+
+        Array plugs have both a "logical" and "physical" index.
+        Accessing any array plug via index means to access it's
+        logical element.
+
+        [0]<---- plug1
+        [.]
+        [.]
+        [3]<---- plug2
+        [4]<---- plug3
+        [5]<---- plug4
+        [.]
+        [7]<---- plug5
+
+        In the above scenario, 5 plugs are connected by 5 physical
+        indices, and yet the last index is 7. 7 is a logical index.
+
+        This function walks each element from the `startIndex` in search
+        of the first available index, in this case [1].
+
+        Examples:
+            >>> transform = createNode("transform")
+            >>> mult = createNode("multMatrix")
+            >>> mult["matrixIn"][0] << transform["matrix"]
+            >>> mult["matrixIn"][1] << transform["matrix"]
+            >>> mult["matrixIn"][2] << transform["matrix"]
+
+            # 3 logical indices are occupied
+            >>> mult["matrixIn"].count()
+            3
+
+            # Disconnecting affects the physical count
+            >>> mult["matrixIn"][1].disconnect()
+            >>> mult["matrixIn"].count()
+            2
+
+            # But the last logical index is still 2
+            >>> mult["matrixIn"].arrayIndices
+            [0, 2]
+
+            # Finally, let's find the next available index
+            >>> mult["matrixIn"].nextAvailableIndex()
+            1
+
+        """
+
         # Assume a max of 10 million connections
         max_index = 1e7
 
-        while start_index < max_index:
-            if self[start_index].connection() is None:
-                return start_index
-            start_index += 1
+        while startIndex < max_index:
+            if self[startIndex].connection() is None:
+                return startIndex
+            startIndex += 1
 
         # No connections means the first index is available
         return 0
@@ -2628,7 +2688,7 @@ class Plug(object):
             raise TypeError("\"%s\" was not an array attribute" % self.path())
 
         if autofill:
-            index = self.next_available_index()
+            index = self.nextAvailableIndex()
         else:
             index = self.count()
 
@@ -3406,6 +3466,7 @@ class Plug(object):
         lock_and_hide = lockAndHide
         array_indices = arrayIndices
         type_class = typeClass
+        next_available_index = nextAvailableIndex
 
 
 class TransformationMatrix(om.MTransformationMatrix):
@@ -4490,7 +4551,18 @@ def meters(cm):
 
 
 def clear():
-    """Remove all reused nodes"""
+    """Clear all memory used by cmdx, including undo"""
+
+    if ENABLE_UNDO:
+        cmds.flushUndo()
+
+        # Traces left in here can trick Maya into thinking
+        # nodes still exists that cannot be unloaded.
+        self.shared.undo = None
+        self.shared.redo = None
+        self.shared.undos = {}
+        self.shared.redos = {}
+
     Singleton._instances.clear()
 
 
@@ -4978,7 +5050,44 @@ class _BaseModifier(object):
 
     @record_history
     def deleteNode(self, node):
-        return self._modifier.deleteNode(node._mobject, includeParents=False)
+        """Delete a node
+
+        Examples:
+            >>> _new()
+            >>> with DGModifier() as mod:
+            ...   node = mod.createNode("multMatrix", name="specialName")
+            ...
+            >>> "specialName" in cmds.ls()
+            True
+            >>> with DGModifier() as mod:
+            ...   mod.deleteNode(node)
+            ...
+            >>> "specialName" in cmds.ls()
+            False
+
+            # It does not automatically delete empty parent transforms
+            >>> with DagModifier() as mod:
+            ...   transform = mod.createNode("transform",
+            ...                              name="specialTransform")
+            ...   shape = mod.createNode("mesh",
+            ...                          name="specialShape",
+            ...                          parent=transform)
+            ...
+            >>> "specialTransform" in cmds.ls()
+            True
+            >>> "specialShape" in cmds.ls()
+            True
+            >>> with DGModifier() as mod:
+            ...   mod.deleteNode(shape)
+            ...
+            >>> "specialTransform" in cmds.ls()
+            True
+            >>> "specialShape" in cmds.ls()
+            False
+
+        """
+
+        self._modifier.deleteNode(node._mobject)
 
     @record_history
     def renameNode(self, node, name):
@@ -5240,6 +5349,18 @@ class _BaseModifier(object):
             1.0
 
         """
+
+        if isinstance(srcNode, Node):
+            srcNode = srcNode.object()
+
+        if isinstance(dstNode, Node):
+            dstNode = dstNode.object()
+
+        if isinstance(srcAttr, Plug):
+            srcAttr = srcAttr.attribute()
+
+        if isinstance(dstAttr, Plug):
+            dstAttr = dstAttr.attribute()
 
         assert isinstance(srcNode, om.MObject)
         assert isinstance(srcAttr, om.MObject)
@@ -5633,17 +5754,44 @@ def createNode(type, name=None, parent=None):
         >>> node = createNode("transform")  # Type as string
         >>> node = createNode(tTransform)  # Type as ID
 
+        # Shape without transform automatically creates transform
+        >>> node = createNode("mesh")
+        >>> node.isA(kTransform)
+        True
+
+        # DG nodes are also OK
+        >>> node = createNode("multMatrix")
+
+        # Parenting is A-OK
+        >>> parent = createNode("transform")
+        >>> child = createNode("transform", parent=parent)
+        >>> child.parent() == parent
+        True
+
+        # Custom name is OK
+        >>> specialName = createNode("transform", name="specialName")
+        >>> specialName.name() == "specialName"
+        True
+
     """
 
+    kwargs = {}
+    fn = GlobalDependencyNode
+
+    if name:
+        kwargs["name"] = name
+
+    if parent:
+        kwargs["parent"] = parent._mobject
+        fn = GlobalDagNode
+
     try:
-        with DagModifier(undoable=False) as mod:
-            node = mod.createNode(type, name=name, parent=parent)
+        mobj = fn.create(type, **kwargs)
+    except RuntimeError as e:
+        log.debug(str(e))
+        raise TypeError("Unrecognized node type '%s'" % type)
 
-    except TypeError:
-        with DGModifier(undoable=False) as mod:
-            node = mod.createNode(type, name=name)
-
-    return node
+    return Node(mobj, exists=False)
 
 
 def getAttr(attr, type=None, time=None):
@@ -6115,6 +6263,12 @@ def last(iterator, default=None):
 # --------------------------------------------------------
 
 
+# Disconnect behaviors
+kNothing = om.MFnAttribute.kNothing
+kReset = om.MFnAttribute.kReset
+kDelete = om.MFnAttribute.kDelete
+
+
 class _AbstractAttribute(dict):
     Fn = None
     Type = None
@@ -6134,6 +6288,13 @@ class _AbstractAttribute(dict):
     ChannelBox = False
     AffectsAppearance = False
     AffectsWorldSpace = False
+
+    # What should happen when an attribute is disconnected?
+    # kNothing | leave the attribute set to its last known value
+    # kReset   | reset the attribute to its default value
+    # kDelete  | delete the element of the array that was connected
+    #          | (only relevant for array attributes)
+    DisconnectBehavior = kNothing
 
     Help = ""
 
@@ -6194,10 +6355,13 @@ class _AbstractAttribute(dict):
                  array=False,
                  indexMatters=None,
                  connectable=True,
+                 disconnectBehavior=kNothing,
                  help=None):
 
         self.Fn = type(self).Fn()
 
+        # To avoid repeating the long list of arguments above,
+        # store all arguments to this function using "locals"
         args = locals().copy()
         args.pop("self")
 
@@ -6269,6 +6433,7 @@ class _AbstractAttribute(dict):
         self.Fn.channelBox = self["channelBox"]
         self.Fn.affectsAppearance = self["affectsAppearance"]
         self.Fn.affectsWorldSpace = self["affectsWorldSpace"]
+        self.Fn.disconnectBehavior = self["disconnectBehavior"]
         self.Fn.array = self["array"]
 
         if self["indexMatters"] is False:
@@ -6662,6 +6827,7 @@ unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
 # This module is both a Python module and Maya plug-in.
 # Data is shared amongst the two through this "module"
 unique_shared = "cmdx_%s_shared" % __version__.replace(".", "_")
+
 if unique_shared not in sys.modules:
     sys.modules[unique_shared] = types.ModuleType(unique_shared)
 
@@ -6766,16 +6932,10 @@ def install():
 
 def uninstall():
     if ENABLE_UNDO and self.installed:
+
         # Plug-in may exist in undo queue and
         # therefore cannot be unloaded until flushed.
-        cmds.flushUndo()
-
-        # Discard shared module
-        shared.undo = None
-        shared.redo = None
-        shared.undos.clear()
-        shared.redos.clear()
-        sys.modules.pop(unique_shared, None)
+        clear()
 
         cmds.unloadPlugin(unique_plugin)
 

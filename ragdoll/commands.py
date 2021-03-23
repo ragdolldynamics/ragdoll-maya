@@ -128,20 +128,6 @@ def with_undo_chunk(func):
     return _undo_chunk
 
 
-def _record_attr(node, attr):
-    """Keep track of attributes added outside of our own Ragdoll nodes"""
-
-    if not node.has_attr("_ragdollAttributes"):
-        cmds.addAttr(node.path(),
-                     longName="_ragdollAttributes",
-                     dataType="string")
-
-    with cmdx.DagModifier() as mod:
-        current = node["_ragdollAttributes"].read()
-        attributes = " ".join([current, attr]) if current else attr
-        mod.set_attr(node["_ragdollAttributes"], attributes)
-
-
 class UserAttributes(object):
     """User attributes appear on the original controllers
      __________________
@@ -188,6 +174,7 @@ class UserAttributes(object):
                     mod.add_attr(self._target, attr)
 
                 name = attr["name"]
+                plug = self._target[attr["name"]]
 
             else:
                 attr, long_name, nice_name = attr
@@ -197,50 +184,22 @@ class UserAttributes(object):
                     cmds.deleteAttr("%s.%s" % (self._target, name))
 
                 if cmdx.__maya_version__ == 2019:
-                    self.proxy_2019(attr, long_name, nice_name)
+                    plug = self.proxy_2019(attr, long_name, nice_name)
                 else:
-                    self.proxy(attr, long_name, nice_name)
+                    plug = self.proxy(attr, long_name, nice_name)
 
-            added += [name]
-
-        # Record it
-        if "_ragdollAttributes" not in self._target:
-            with cmdx.DagModifier() as mod:
-                mod.add_attr(
-                    self._target,
-                    cmdx.String("_ragdollAttributes", hidden=True)
-                )
-
-        previous = self._target["_ragdollAttributes"].read()
-        new = " ".join(added)
-        attributes = " ".join([previous, new]) if previous else new
-
-        cmds.setAttr(
-            "%s._ragdollAttributes" % self._target,
-            attributes,
-            type="string"
-        )
-
-        # Indicate that this target acts as an interface for the source
-        # node. If that node is one of ours, it'll get picked up by the
-        # automatic delete_all function.
-        with cmdx.DagModifier() as mod:
-            if "_ragdollInterface" not in self._target:
-                mod.add_attr(
-                    self._target,
-                    cmdx.Message("_ragdollInterface", hidden=True)
-                )
-
-            if "interfaces" not in self._source:
-                mod.add_attr(
-                    self._source,
-                    cmdx.Message("interfaces", array=True)
-                )
+            added += [plug]
 
         with cmdx.DagModifier() as mod:
-            index = self._source["interfaces"].next_available_index()
-            mod.connect(self._source["interfaces"][index],
-                        self._target["_ragdollInterface"])
+            for new_plug in added:
+                index = self._source["userAttributes"].next_available_index()
+                mod.connect(new_plug, self._source["userAttributes"][index])
+
+                # Can't figure out the next available index until the
+                # current index has been occupied. And we can't simply
+                # linearly increment the index either, as indices are
+                # logical, not physical.
+                mod.do_it()
 
     def proxy(self, attr, long_name=None, nice_name=None):
         """Create a proxy attribute for `name` on `target`"""
@@ -255,6 +214,8 @@ class UserAttributes(object):
 
         kwargs["proxy"] = self._source[attr].path()
         cmds.addAttr(self._target.path(), **kwargs)
+
+        return self._target[name]
 
     def proxy_2019(self, attr, long_name=None, nice_name=None):
         """Maya 2019 doesn't play well with proxy attributes"""
@@ -275,10 +236,14 @@ class UserAttributes(object):
         cmds.connectAttr("%s.%s" % (self._target, name),
                          "%s.%s" % (self._source, attr))
 
+        return self._target[name]
+
     def add(self, attr, long_name=None, nice_name=None):
+        assert isinstance(attr, string_types), "%s was not a string" % attr
         self._added.append((attr, long_name, nice_name))
 
     def add_divider(self, label):
+        assert isinstance(label, string_types), "%s was not a string" % label
         self._added.append(cmdx.Divider(label))
 
 
@@ -471,13 +436,17 @@ def _remove_pivots(mod, transform):
                         % (transform, channel, axis)
                     )
 
-    if "jointOrient" in transform:
+    if "jointOrient" in transform and any(transform["jointOrient"].read()):
         # Grab full transform, ahead of resetting the jointOrient
         # in case we reset it without connecting to `rotate`
         tm = transform.transform()
 
         if transform["jointOrient"].editable:
             mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+            log.warning(
+                "%s had a non-zero jointOrient, it was zeroed out"
+                % transform
+            )
         else:
             log.warning(
                 "Tried resetting %s.jointOrient but could not. "
@@ -519,10 +488,7 @@ def create_scene():
 
         # Record for backwards compatibility
         mod.set_attr(scene["version"], _version())
-
-        # For cleanup
-        attr = mod.add_attr(tm, cmdx.Message("_ragdollExclusive", hidden=True))
-        mod.connect_attr(scene["message"], tm, attr)
+        mod.connect(tm["message"], scene["exclusiveNodes"][0])
 
     return scene
 
@@ -598,10 +564,6 @@ def create_rigid(node,
         # Add to scene
         add_rigid(mod, rigid, scene)
 
-    # Apply provided default attribute values
-    for key, value in defaults.items():
-        rigid[key] = value
-
     # Transfer geometry into rigid, if any
     #
     #     ______                ______
@@ -633,22 +595,18 @@ def create_rigid(node,
 
     # Make the connections
     with cmdx.DagModifier() as mod:
-        try:
-            if passive:
-                _connect_passive(mod, transform, rigid)
-            else:
-                _remove_pivots(mod, transform)
-                _connect_active(mod, transform, rigid, existing=existing)
+        if passive:
+            _connect_passive(mod, transform, rigid)
+        else:
+            _remove_pivots(mod, transform)
+            _connect_active(mod, transform, rigid, existing=existing)
 
-                if constraint:
-                    _worldspace_constraint(rigid)
+            if constraint:
+                _worldspace_constraint(rigid)
 
-            mod.do_it()
-
-        except Exception:
-            mod.undo_it()
-            mod.delete_node(rigid)
-            raise
+        # Apply provided default attribute values
+        for key, value in defaults.items():
+            mod.set_attr(rigid[key], value)
 
     return rigid
 
@@ -676,12 +634,6 @@ def _worldspace_constraint(rigid):
 
         mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(rigid["ragdollId"], con["childRigid"])
-
-        mod.set_keyable(con["driveStrength"])
-        mod.set_keyable(con["linearDriveStiffness"])
-        mod.set_keyable(con["linearDriveDamping"])
-        mod.set_keyable(con["angularDriveStiffness"])
-        mod.set_keyable(con["angularDriveDamping"])
 
         mod.do_it()
 
@@ -730,9 +682,6 @@ def convert_to_point(con,
         mod.set_attr(con["angularLimitY"], 0)
         mod.set_attr(con["angularLimitZ"], 0)
 
-    con["limitStrength"].keyable = True
-    con["linearLimit"].keyable = True
-
     return con
 
 
@@ -761,8 +710,6 @@ def convert_to_orient(con,
         mod.set_attr(con["angularLimitX"], cmdx.radians(-1))
         mod.set_attr(con["angularLimitY"], cmdx.radians(-1))
         mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
-
-    con["limitEnabled"].keyable = True
 
     return con
 
@@ -803,10 +750,6 @@ def convert_to_hinge(con,
         mod.set_attr(con["angularLimitY"], cmdx.radians(-1))
         mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
 
-    con["limitEnabled"].keyable = True
-    con["limitStrength"].keyable = True
-    con["angularLimit"].keyable = True
-
     reorient(con)
 
     return con
@@ -841,14 +784,6 @@ def convert_to_socket(con,
         mod.set_attr(con["angularLimitX"], cmdx.radians(45))
         mod.set_attr(con["angularLimitY"], cmdx.radians(45))
         mod.set_attr(con["angularLimitZ"], cmdx.radians(45))
-
-    con["limitEnabled"].keyable = True
-    con["limitStrength"].keyable = True
-    con["angularLimit"].keyable = True
-    con["driveEnabled"].keyable = True
-    con["driveStrength"].keyable = True
-    con["angularDriveStiffness"].keyable = True
-    con["angularDriveDamping"].keyable = True
 
     return con
 
@@ -939,24 +874,21 @@ def _reset_constraint(mod, con,
 
     assert con.type() == "rdConstraint", "%s must be an rdConstraint" % con
 
-    mod.reset_attr(con["limitEnabled"])
-    mod.reset_attr(con["limitStrength"])
-    mod.reset_attr(con["driveEnabled"])
-    mod.reset_attr(con["driveStrength"])
-    mod.reset_attr(con["linearLimitX"])
-    mod.reset_attr(con["linearLimitY"])
-    mod.reset_attr(con["linearLimitZ"])
-    mod.reset_attr(con["angularLimitX"])
-    mod.reset_attr(con["angularLimitY"])
-    mod.reset_attr(con["angularLimitZ"])
+    def reset_attr(attr):
+        if not attr.editable:
+            return
+        mod.reset_attr(attr)
 
-    con["driveEnabled"].keyable = False
-    con["driveStrength"].keyable = False
-
-    con["limitEnabled"].keyable = False
-    con["linearLimit"].keyable = False
-    con["angularLimit"].keyable = False
-    con["limitStrength"].keyable = False
+    reset_attr(con["limitEnabled"])
+    reset_attr(con["limitStrength"])
+    reset_attr(con["driveEnabled"])
+    reset_attr(con["driveStrength"])
+    reset_attr(con["linearLimitX"])
+    reset_attr(con["linearLimitY"])
+    reset_attr(con["linearLimitZ"])
+    reset_attr(con["angularLimitX"])
+    reset_attr(con["angularLimitY"])
+    reset_attr(con["angularLimitZ"])
 
     # Initialise parent frame
     parent_rigid = con["parentRigid"].connection(type="rdRigid")
@@ -1198,12 +1130,12 @@ def convert_rigid(rigid, passive=None):
 
 def _rdscene(mod, name, parent=None):
     name = _unique_name(name)
-    node = mod.create_node("rdScene", name=name, parent=parent)
+    scene = mod.create_node("rdScene", name=name, parent=parent)
 
     # Improve drive strength ranges
-    mod.set_attr(node["positionIterations"], 4)
+    mod.set_attr(scene["positionIterations"], 4)
 
-    return node
+    return scene
 
 
 def _rdrigid(mod, name, parent):
@@ -1311,14 +1243,7 @@ def create_absolute_control(rigid, reference=None):
 
     for attr in forwarded:
         # Expose on constraint node itself
-        con[attr].keyable = True
         reference_proxies.add(attr)
-
-    con["driveStrength"].keyable = True
-    con["linearDriveStiffness"].keyable = True
-    con["linearDriveDamping"].keyable = True
-    con["angularDriveStiffness"].keyable = True
-    con["angularDriveDamping"].keyable = True
 
     reference_proxies.do_it()
 
@@ -1375,12 +1300,6 @@ def create_relative_control(rigid):
     tm["translate"].lock_and_hide()
     tm["scale"].lock_and_hide()
 
-    con["driveStrength"].keyable = True
-    con["linearDriveStiffness"].keyable = True
-    con["linearDriveDamping"].keyable = True
-    con["angularDriveStiffness"].keyable = True
-    con["angularDriveDamping"].keyable = True
-
     return con
 
 
@@ -1421,12 +1340,6 @@ def create_active_control(reference, rigid):
         mod.set_attr(con["angularDriveStiffness"], 10000.0)
         mod.set_attr(con["angularDriveDamping"], 1000.0)
 
-        mod.set_keyable(con["driveStrength"])
-        mod.set_keyable(con["linearDriveStiffness"])
-        mod.set_keyable(con["linearDriveDamping"])
-        mod.set_keyable(con["angularDriveStiffness"])
-        mod.set_keyable(con["angularDriveDamping"])
-
     forwarded = (
         "driveStrength",
         "linearDriveStiffness",
@@ -1440,7 +1353,6 @@ def create_active_control(reference, rigid):
 
     for attr in forwarded:
         # Expose on constraint node itself
-        con[attr].keyable = True
         reference_proxies.add(attr)
 
     reference_proxies.do_it()
@@ -1497,19 +1409,6 @@ def create_kinematic_control(rigid, reference=None):
 
 # Alias
 create_passive_control = create_kinematic_control
-
-
-def _next_available_index(attr, start_index=0):
-    # Assume a max of 10 million connections
-    max_index = 1e7
-
-    while start_index < max_index:
-        if not attr[start_index].connected:
-            return start_index
-        start_index += 1
-
-    # No connections means the first index is available
-    return 0
 
 
 def _shapeattributes_from_generator(mod, shape, rigid):
@@ -1583,8 +1482,10 @@ def _scale_from_rigid(rigid):
 
 
 def _attach_bodies(parent, child, scene, standalone):
-    assert parent.type() == "rdRigid", parent.type()
     assert child.type() == "rdRigid", child.type()
+    assert parent.type() in ("rdRigid", "rdScene"), (
+        "%s must be a rigid or scene" % parent.type()
+    )
 
     name = "rConstraint"
     excon = child["ragdollId"].connection(type="rdConstraint")
@@ -1795,6 +1696,37 @@ def edit_constraint_frames(con):
         mod.connect(child_frame["matrix"], con["childFrame"])
 
     return parent_frame, child_frame
+
+
+@with_undo_chunk
+def edit_shape(rigid):
+    if isinstance(rigid, string_types):
+        rigid = cmdx.encode(rigid)
+
+    assert rigid and rigid.type() == "rdRigid", "%s was not a rigid" % rigid
+    parent_transform = rigid.parent()
+
+    with cmdx.DagModifier() as mod:
+        shape = mod.create_node("transform",
+                                name="shapeTransform",
+                                parent=parent_transform)
+
+        mod.set_attr(shape["displayHandle"], True)
+        mod.set_attr(shape["displayLocalAxis"], True)
+
+        # Transfer current values
+        mod.set_attr(shape["translateX"], rigid["shapeOffsetX"])
+        mod.set_attr(shape["translateY"], rigid["shapeOffsetY"])
+        mod.set_attr(shape["translateZ"], rigid["shapeOffsetZ"])
+
+        mod.set_attr(shape["rotateX"], rigid["shapeRotationX"])
+        mod.set_attr(shape["rotateY"], rigid["shapeRotationY"])
+        mod.set_attr(shape["rotateZ"], rigid["shapeRotationZ"])
+
+        mod.connect(shape["translate"], rigid["shapeOffset"])
+        mod.connect(shape["rotate"], rigid["shapeRotation"])
+
+    return shape
 
 
 @with_undo_chunk
@@ -2369,11 +2301,11 @@ def delete_all_physics(include_attributes=False):
     """
 
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    return delete_physics(cmdx.ls(type=all_nodetypes), include_attributes)
+    return delete_physics(cmdx.ls(type=all_nodetypes))
 
 
 @with_undo_chunk
-def delete_physics(nodes, include_attributes=False, _dry_run=False):
+def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
 
     This will delete anything related to Ragdoll from your scenes, including
@@ -2381,12 +2313,16 @@ def delete_physics(nodes, include_attributes=False, _dry_run=False):
 
     Arguments:
         nodes (list): Delete physics from these nodes
-        include_attributes (bool, optional): Whether to also
-            erase custom Ragdoll attributes
 
     """
 
     assert isinstance(nodes, (list, tuple)), "First input must be a list"
+
+    result = {
+        "deletedRagdollNodeCount": 0,
+        "deletedExclusiveNodeCount": 0,
+        "deletedUserAttributeCount": 0,
+    }
 
     # Include shapes in supplied nodes
     shapes = []
@@ -2412,88 +2348,73 @@ def delete_physics(nodes, include_attributes=False, _dry_run=False):
 
     # Nothing to do!
     if not ragdoll_nodes:
-        return 0, 0
+        return result
 
     # Delete transforms exclusively made for each ragdoll node
     # These are connected from a rigid into a dynamic
     # `_ragdollExclusive` attribute.
     #
-    #  _________________     ___________________
-    # |                 |   |                   |
-    # | Rigid           |   | Transform         |
-    # |                 |   |                   |
-    # |         message o---o _ragdollExclusive |
-    # |_________________|   |___________________|
+    #  _____________________       ___________________
+    # |                     |     |                   |
+    # | Rigid               |     | Transform         |
+    # |                     |     |                   |
+    # |      exclusives [0] o<----o message           |
+    # |_____________________|     |___________________|
     #
     #
     exclusives = list()
     for node in ragdoll_nodes:
-        other_plugs = node["message"].connections(plugs=True, source=False)
+        if "exclusiveNodes" not in node:
+            continue
 
-        for other_plug in other_plugs:
-            assert isinstance(other_plug, cmdx.Plug)
-            if other_plug.name() != "_ragdollExclusive":
-                continue
+        for element in node["exclusiveNodes"]:
+            other = element.connection(source=True, destination=False)
 
-            exclusives.append(other_plug.node())
+            if other is not None:
+                assert isinstance(other, cmdx.Node), "This is a bug in cmdx"
+                exclusives.append(other)
 
     # Delete attributes from Ragdoll interfaces,
     # such as the original animation controls.
     #
-    #   ____
-    #  / o  \
-    #  \__\_/
-    #      \
-    #      _\_____  interface
-    #     |  \    |
-    #     |   o   |
-    #     |       |
-    #     |_______|
+    #  _____________________       ___________________
+    # |                     |     |                   |
+    # | Rigid               |     | Transform         |
+    # |                     |     |                   |
+    # |   userAttribute [0] o<----o mass              |
+    # |                 [1] o<----o stiffness         |
+    # |_____________________|     |___________________|
     #
     #
-    interface_plugs = set()
+    user_attributes = set()
 
-    if include_attributes:
-        interfaces = set()
-        for node in ragdoll_nodes:
-            if "interfaces" not in node:
-                continue
+    for node in ragdoll_nodes:
+        if "userAttributes" not in node:
+            continue
 
-            for element in node["interfaces"]:
-                interface = element.connection(source=False)
+        for element in node["userAttributes"]:
+            user_attribute = element.connection(plug=True,
+                                                source=True,
+                                                destination=False)
+            if user_attribute is not None:
+                user_attributes.add(user_attribute)
 
-                if interface is not None:
-                    interfaces.add(interface)
-
-        for interface in interfaces:
-            if "_ragdollAttributes" not in interface:
-                # Must have already been deleted by someone else
-                continue
-
-            attrs = interface["_ragdollAttributes"].read()
-            attrs = filter(None, attrs.split(" "))
-
-            for attr in attrs:
-                if attr in interface:
-                    interface_plugs.add(interface[attr])
-
-            interface_plugs.add(interface["_ragdollAttributes"])
-            interface_plugs.add(interface["_ragdollInterface"])
-
-    deleted_node_count = len(ragdoll_nodes + exclusives)
-    deleted_plug_count = len(interface_plugs)
-
-    if _dry_run:
-        return deleted_node_count, deleted_plug_count
+    result["deletedRagdollNodeCount"] = len(ragdoll_nodes)
+    result["deletedExclusiveNodeCount"] = len(exclusives)
+    result["deletedUserAttributeCount"] = len(user_attributes)
 
     # Ok, go ahead and start deleting stuff
     with cmdx.DagModifier() as mod:
-        for plug in interface_plugs:
-            mod.delete_attr(plug)
+        for attr in user_attributes:
+            mod.delete_attr(attr)
 
-    cmdx.delete(ragdoll_nodes + exclusives)
+    with cmdx.DagModifier() as mod:
+        for node in ragdoll_nodes + exclusives:
+            if node.exists:
+                mod.delete_node(node)
+            mod.do_it()
 
-    return deleted_node_count, deleted_plug_count
+    return result
 
 
 def normalise_shapes(root, max_delta=0.25):
@@ -2607,3 +2528,45 @@ def multiply_constraints(constraints, parent=None, channels=None):
         mult["angularDriveDamping"].keyable = True
 
     return mult
+
+
+@with_undo_chunk
+def convert_to_polygons(actor, worldspace=True):
+    """Convert rigid or control to a polygonal surface
+
+    Mostly intended for rendering and export of collision shapes
+
+    Arguments:
+        actor (rdRigid): Rigid which to generate a polygonal mesh from
+        worldspace (bool): Move verticies to worldspace,
+            or animate the translate/rotate channels
+
+    """
+
+    assert "outputMesh" in actor, (
+        "%s did not have an .outputMesh attribute" % actor
+    )
+
+    with cmdx.DagModifier() as mod:
+        tm = mod.create_node("transform", name=actor.name())
+        mesh = mod.create_node("mesh", name=tm.name() + "Shape", parent=tm)
+        mod.connect(actor["outputMesh"], mesh["inMesh"])
+        mod.set_attr(mesh["displayColors"], True)
+        mod.set_attr(mesh["displayColorChannel"], "Diffuse")
+
+    # Transfer colors from our precious actor
+    cmds.polyColorPerVertex(mesh.path(), rgb=actor["color"].read())
+
+    if worldspace:
+        with cmdx.DGModifier() as mod:
+            dm = mod.create_node("decomposeMatrix")
+            mod.connect(actor.parent()["worldMatrix"][0], dm["inputMatrix"])
+            mod.connect(dm["outputTranslate"], tm["translate"])
+            mod.connect(dm["outputRotate"], tm["rotate"])
+            mod.connect(dm["outputScale"], tm["scale"])
+
+    # Assign default shader
+    lambert = cmdx.encode("initialShadingGroup")
+    lambert.add(mesh)
+
+    return mesh

@@ -45,13 +45,17 @@ from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
 from . import (
     commands,
-    chain,
-    tools,
     upgrade,
     ui,
     options,
     licence,
     __
+)
+from .tools import (
+    chain_tool,
+    character_tool,
+    muscle_tool,
+    dynamic_control_tool,
 )
 
 # Environment variables
@@ -187,6 +191,9 @@ with open(_resource("menu.json")) as f:
 
 
 def install():
+    if __.installed:
+        return
+
     install_logger()
     install_plugin()
     licence.install(RAGDOLL_AUTO_SERIAL)
@@ -232,6 +239,8 @@ def uninstall():
     for module in sys.modules.copy():
         if module.startswith("ragdoll"):
             sys.modules.pop(module)
+
+    __.installed = False
 
 
 class RagdollGuiLogHandler(MayaGuiLogHandler):
@@ -361,7 +370,7 @@ def install_menu():
         menuitem = __.menuitems[key]
 
         kwargs = {
-            "label": menuitem.get("label", label or key),
+            "label": label or menuitem.get("label", key),
             "enable": menuitem.get("enable", True),
             "echoCommand": True,
             "image": "bad.png",
@@ -432,7 +441,16 @@ def install_menu():
     item("cloth")
     item("muscle", create_muscle, create_muscle_options)
     item("fluid")
-    item("character", create_character, create_character_options)
+
+    with submenu("Character", icon="ragdoll.png"):
+        item("character", create_character, create_character_options,
+             label="New")
+
+        divider()
+
+        item("trajectory")
+        item("momentOfInertia")
+        item("centerOfMass")
 
     divider("Manipulate")
 
@@ -442,6 +460,12 @@ def install_menu():
         item("parent", create_parent_constraint, _constraint_options("Parent"))
         item("hinge", create_hinge_constraint, _constraint_options("Hinge"))
         item("socket", create_socket_constraint, _constraint_options("Socket"))
+
+        divider()
+
+        item("editConstraintFrames",
+             edit_constraint_frames,
+             label="Edit Pivots")
 
     with submenu("Controls", icon="control.png"):
         item("kinematic", create_kinematic_control,
@@ -463,11 +487,6 @@ def install_menu():
         item("visualiser", create_slice)
         item("assignToSelected", assign_force)
 
-    with submenu("Assists", icon="swirl.png"):
-        item("trajectory")
-        item("momentOfInertia")
-        item("centerOfMass")
-
     divider("Utilities")
 
     with submenu("Animation", icon="animation.png"):
@@ -485,7 +504,11 @@ def install_menu():
              multiply_constraints_options)
 
     with submenu("Rigging", icon="rigging.png"):
+        item("editShape", edit_shape, edit_shape_options)
         item("editConstraintFrames", edit_constraint_frames)
+
+        divider()
+
         item("duplicateSelected", duplicate_selected)
         item("transferAttributes", transfer_selected)
 
@@ -864,6 +887,9 @@ def _replayable(func):
 
     """
 
+    # We need to get rid of string attributes..
+    return func
+
     def _append(root, action):
         if not root.has_attr("_ragdollHistory"):
             cmds.addAttr(root.path(),
@@ -986,7 +1012,6 @@ def is_valid_transform(transform):
     """Ragdoll currently does not support any custom pivot or axis"""
 
     if options.read("validateRotateOrder"):
-
         def select_offender():
             cmds.select(transform.path())
             return False
@@ -996,20 +1021,20 @@ def is_valid_transform(transform):
             order = ["XYZ", "YZX", "ZXY", "XZY", "YXZ", "ZYX"][order]
             return ui.warn(
                 option="validateRotateOrder",
-                title="Custom Rotate Order Not Supported",
+                title="Custom Rotate Order Flaky",
                 message=(
                     "A custom rotate order was found.\n\n"
                     "- %s.rotateOrder=%s\n\n"
-                    "These are currently unsupported." % (
+                    "These might not look right." % (
                         transform.name(),
                         order
                     )
                 ),
                 call_to_action="What would you like to do?",
                 actions=[
-                    ("Reset Rotate Order to XYZ", lambda: True),
+                    ("Ignore", lambda: True),
 
-                    ("Select Node", select_offender),
+                    ("Select and Cancel", select_offender),
 
                     ("Cancel", lambda: False)
                 ]
@@ -1059,8 +1084,8 @@ def _opt(key, override=None):
     return override.get(key, options.read(key))
 
 
-# @commands.with_undo_chunk
-# @_replayable
+@commands.with_undo_chunk
+@_replayable
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
@@ -1093,6 +1118,17 @@ def create_active_rigid(selection=None, **opts):
     if not _validate_transforms(selection):
         return
 
+    # Pre-flight check
+    for node in selection:
+        transform = node.parent() if node.isA(cmdx.kShape) else node
+        if not is_valid_transform(transform):
+            return
+
+        # Rigid bodies must have translate and rotate channels
+        if not transform.isA(cmdx.kTransform):
+            log.warning("%s is not a transform node", transform.path())
+            return
+
     select = _opt("rigidSelect", opts)
     passive = _opt("createRigidType", opts) == "Passive"
     scene = _find_current_scene()
@@ -1100,17 +1136,6 @@ def create_active_rigid(selection=None, **opts):
     # Cancelled by user
     if not scene:
         return
-
-    # Pre-flight check
-    for node in selection:
-        transform = node.parent() if node.isA(cmdx.kShape) else node
-        if not is_valid_transform(transform):
-            break
-
-        # Rigid bodies must have translate and rotate channels
-        if not transform.isA(cmdx.kTransform):
-            log.warning("%s is not a transform node", transform.path())
-            break
 
     for index, node in enumerate(selection):
         transform = node.parent() if node.isA(cmdx.kShape) else node
@@ -1186,9 +1211,9 @@ def create_passive_rigid(selection=None, **opts):
     return _replay(create_active_rigid)(selection, **opts)
 
 
+@commands.with_undo_chunk
 @_replayable
 @_format_exception
-@commands.with_undo_chunk
 def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
 
@@ -1215,6 +1240,7 @@ def create_active_chain(selection=None, **opts):
     opts = {
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
+        "passiveRoot": _opt("chainPassiveRoot", opts),
         "blendMethod": (
             commands.SmoothBlendMethod
             if _opt("chainBlendMethod", opts) == "Smooth"
@@ -1238,16 +1264,13 @@ def create_active_chain(selection=None, **opts):
     elif _opt("chainShapeType", opts) == "Mesh":
         defaults["shapeType"] = commands.MeshShape
 
-    operator = chain.Chain(links, options=opts, defaults=defaults)
-    operator.pre_flight()
-
     scene = _find_current_scene()
 
     # Cancelled by user
     if not scene:
         return
 
-    operator.do_it(scene)
+    chain_tool.create(links, scene, options=opts, defaults=defaults)
 
     root = links[0]
     cmds.select(str(root))
@@ -1317,7 +1340,7 @@ def create_muscle(selection=None, **opts):
         "radius": _opt("muscleRadius", opts),
     }
 
-    muscle, root, tip = tools.make_muscle(a, b, scene, **kwargs)
+    muscle, root, tip = muscle_tool.create(a, b, scene, **kwargs)
 
     cmds.select(muscle.parent().path())
     return kSuccess
@@ -1417,7 +1440,7 @@ def create_character(selection=None, **opts):
         "normalise_shapes": _opt("characterNormalise", opts),
     }
 
-    tools.create_character(root, scene, **kwargs)
+    character_tool.create(root, scene, **kwargs)
 
     cmds.select(str(root))
     log.info("Successfully created character from %s", root)
@@ -1475,7 +1498,7 @@ def create_constraint(selection=None, **opts):
     if not scene:
         return
 
-    parent = _find_rigid(parent)
+    parent = _find_rigid(parent) or scene
     child = _find_rigid(child)
 
     if any(node is None for node in (parent, child)):
@@ -1780,6 +1803,34 @@ def edit_constraint_frames(selection=None):
     return kSuccess
 
 
+def edit_shape(selection=None):
+    editors = []
+
+    for node in selection or cmdx.selection():
+        rigid = node
+
+        if rigid.isA(cmdx.kTransform):
+            rigid = node.shape(type="rdRigid")
+
+        if rigid is None:
+            log.warning("No rigid found for %s" % node)
+            continue
+
+        if rigid.type() != "rdRigid":
+            log.warning("%s was not a rigid" % rigid)
+            continue
+
+        if not rigid:
+            log.warning("%s had no constraint", node)
+            continue
+
+        editors.append(commands.edit_shape(rigid))
+
+    log.info("Created %d shape editors", len(editors))
+    cmds.select(map(str, editors))
+    return kSuccess
+
+
 def _create_force(selection=None, force_type=None):
     # To specific rigids, or all of them
     selection = cmdx.selection() or cmdx.ls(type="rdRigid")
@@ -1919,22 +1970,24 @@ def duplicate_selected(selection=None, **opts):
 
 @commands.with_undo_chunk
 def delete_physics(selection=None, **opts):
-    attributes_too = _opt("deleteAttributesToo", opts)
-
     if _opt("deleteFromSelection", opts):
         selection = selection or cmdx.selection(type="dagNode")
 
         if not selection:
-            nodes, plugs = commands.delete_all_physics(attributes_too)
+            result = commands.delete_all_physics()
 
         else:
-            nodes, plugs = commands.delete_physics(selection, attributes_too)
+            result = commands.delete_physics(selection)
 
     else:
-        nodes, plugs = commands.delete_all_physics(attributes_too)
+        result = commands.delete_all_physics()
 
-    if nodes or plugs:
-        log.info("Deleted %d Ragdoll nodes and %d attributes", nodes, plugs)
+    if any(result.values()):
+        log.info(
+            "Deleted {deletedRagdollNodeCount} Ragdoll nodes, "
+            "{deletedExclusiveNodeCount} exclusive nodes and "
+            "{deletedUserAttributeCount} user attributes".format(**result)
+        )
         return kSuccess
 
     else:
@@ -1981,7 +2034,7 @@ def create_dynamic_control(selection=None, **opts):
             return
 
     try:
-        tools.create_dynamic_control(chain, scene, **kwargs)
+        dynamic_control_tool.create(chain, scene, **kwargs)
 
     except Exception as e:
         # Turn this into a friendly warning
@@ -2010,7 +2063,7 @@ def convert_to_polygons(selection=None):
             log.warning("%s was not a rdRigid or rdControl" % node)
             continue
 
-        mesh = tools.convert_to_polygons(actor)
+        mesh = commands.convert_to_polygons(actor)
         meshes += [mesh.parent().path()]
 
     if meshes:
@@ -2300,6 +2353,10 @@ def create_turbulence_force_options(*args):
 
 def multiply_rigids_options(*args):
     return _Window("multiplyRigids", multiply_rigids)
+
+
+def edit_shape_options(*args):
+    return _Window("editShape", edit_shape_options)
 
 
 def multiply_constraints_options(*args):

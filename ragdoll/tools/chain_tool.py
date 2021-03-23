@@ -1,6 +1,6 @@
 """Support for chains and trees
 
-Animators can either author rigid bodies and constraint these. Or, they could
+Animators can either author rigid bodies and constrain these. Or, they could
 select a chain of controls and generate a rigid body chain from that. With a
 chain, we're better equipt to generate appropriate collision geometry and
 can automatically figure out constraints and limits based on order of
@@ -14,8 +14,8 @@ figure out the constraint frames.
 
 """
 
-from .vendor import cmdx
-from . import commands
+from ..vendor import cmdx
+from .. import commands
 
 
 # Python 2 backwards compatibility
@@ -30,23 +30,21 @@ class Chain(object):
 
     Arguments:
         links (list): Transforms and/or shapes for which to generate a chain
-        scene (rdScene): The parent scene of this chain
 
     """
 
-    def __init__(self, links, options=None, defaults=None):
+    def __init__(self, links, scene, options=None, defaults=None):
         assert isinstance(links, (list, tuple)), "links was not a list"
         assert links, "links was empty"
 
         options = options or {}
-        options["centralBlend"] = options.get("centralBlend", True)
         options["autoKey"] = options.get("autoKey", False)
         options["drawShaded"] = options.get("drawShaded", False)
         options["blendMethod"] = options.get("blendMethod",
                                              commands.SteppedBlendMethod)
         options["computeMass"] = options.get("computeMass", False)
         options["autoMultiplier"] = options.get("autoMultiplier", True)
-        options["shapeType"] = options.get("shapeType", commands.CapsuleShape)
+        options["passiveRoot"] = options.get("passiveRoot", True)
         options["autoLimits"] = options.get("autoLimits", False)
         options["addUserAttributes"] = options.get("addUserAttributes", True)
         options["autoInfluence"] = (
@@ -54,22 +52,25 @@ class Chain(object):
             options.get("autoBlend", False)
         )
 
+        defaults = defaults or {}
+        defaults["shapeType"] = defaults.get(
+            "shapeType", commands.CapsuleShape
+        )
+
         self._new_rigids = []
         self._new_constraints = []
         self._new_userattrs = []
 
-        self._defaults = defaults or {}
+        self._scene = scene
+        self._defaults = defaults
         self._cache = {}
-        self._root = links[0]
-        self._children = links[1:]
-        self._scene = None
         self._opts = options
+        self._pre_flighted = False
 
         # Separate input into transforms and (optional) shapes
         self._pairs = []
 
-        self._pre_flighted = False
-
+        transforms = []
         for index, link in enumerate(links):
             if isinstance(link, string_types):
                 link = cmdx.encode(link)
@@ -93,11 +94,15 @@ class Chain(object):
                                          "nurbsCurve",
                                          "nurbsSurface"))
 
-            # For now, we can't allow custom pivots
-            with cmdx.DagModifier() as mod:
-                commands._remove_pivots(mod, transform)
-
+            transforms.append(transform)
             self._pairs.append((transform, shape))
+
+        # Find the root, which must not be a shape
+        self._root = self._pairs[0]
+        self._children = transforms[1:]
+
+        # Traverse the tree to find the true root
+        self._tree_root = self._find_root()
 
     def pre_flight(self):
         """Before doing anything, make sure the basics are accounted for"""
@@ -190,11 +195,13 @@ class Chain(object):
         def pre_cache():
             """Pre-cache attributes to avoid needless evaluation"""
             for transform, _ in self._pairs:
-                matrix = transform["worldMatrix"][0].asMatrix()
+                world_matrix = transform["worldMatrix"][0].asMatrix()
+                matrix = transform["matrix"].asMatrix()
                 translate = transform["translate"].as_vector()
                 rotate = transform["rotate"].as_euler()
 
-                self._cache[(transform, "worldMatrix")] = matrix
+                self._cache[(transform, "worldMatrix")] = world_matrix
+                self._cache[(transform, "matrix")] = matrix
                 self._cache[(transform, "translate")] = translate
                 self._cache[(transform, "rotate")] = rotate
 
@@ -212,13 +219,53 @@ class Chain(object):
                             dst = "in%s%s1" % (channel.title(), axis)
                             anim[src] = dst
 
+        def remove_pivots():
+            # For now, we can't allow custom pivots
+            with cmdx.DagModifier() as mod:
+                for transform, _ in self._pairs:
+                    commands._remove_pivots(mod, transform)
+
         check_already_chain()
         check_hierarchy()
         remember_existing_inputs()
         pre_cache()
 
-    def do_it(self, scene):
-        self._scene = scene
+        # Temporarily, until we've implemented support
+        # The important bit is clearing these *after* we've
+        # pre-cached the transforms, as we want their original
+        # transform not the one following removal
+        remove_pivots()
+
+        return True
+
+    def _find_root(self):
+        """Traverse the rigid network in search for the true root"""
+        transform, shape = self._pairs[0]
+
+        # It'll be the one with a multiplier node, if one exists
+        mult = transform.shape("rdConstraintMultiplier")
+
+        if not mult:
+            con = transform.shape("rdConstraint")
+
+            if con is not None:
+                mult = con["multiplierNode"].connection(
+                    type="rdConstraintMultiplier")
+
+        if mult and "simulated" in mult.parent():
+            # We're in a tree, use tree root as real root
+            transform = mult.parent()
+            shape = transform.shape(type=("mesh",
+                                          "nurbsCurve",
+                                          "nurbsSurface"))
+
+        assert not transform.isA(cmdx.kShape), transform
+        assert transform.isA(cmdx.kTransform), transform
+        assert not shape or shape.isA(cmdx.kShape), shape
+
+        return transform, shape
+
+    def do_it(self):
 
         # May be called ahead of time by the user
         if not self._pre_flighted:
@@ -229,15 +276,22 @@ class Chain(object):
         return self._new_rigids[:]
 
     def _do_all(self):
-        root_transform, root_shape = self._pairs[0]
-        root_rigid = root_transform.shape(type="rdRigid")
+        tree_root_transform, tree_root_shape = self._tree_root
+        tree_root_rigid = tree_root_transform.shape(type="rdRigid")
 
         # Root
-        if not root_rigid:
+        if not tree_root_rigid:
             with cmdx.DagModifier() as mod:
-                root_rigid = self._make_root(mod, root_transform, root_shape)
+                tree_root_rigid = self._make_root(mod,
+                                                  tree_root_transform,
+                                                  tree_root_shape)
+
+        self._make_simulated_attr(tree_root_rigid, tree_root_transform)
 
         # Links
+        root_transform, root_shape = self._root
+        root_rigid = root_transform.shape(type="rdRigid")
+
         with cmdx.DagModifier() as mod:
             previous_rigid = root_rigid
             for transform, shape in self._pairs[1:]:
@@ -296,7 +350,7 @@ class Chain(object):
         #
         index = self._children.index(transform)
         count = len(self._children)
-        previous = self._children[index - 1] if index > 0 else self._root
+        previous = self._children[index - 1] if index > 0 else self._root[0]
         subsequent = self._children[index + 1] if index < count - 1 else None
 
         # Joints are special.
@@ -327,7 +381,7 @@ class Chain(object):
         #
         geo = commands.infer_geometry(
             transform,
-            parent=previous or self._root,
+            parent=previous or self._root[0],
             children=[subsequent] if subsequent else False
         )
 
@@ -337,12 +391,8 @@ class Chain(object):
         mod.set_attr(rigid["shapeRotation"], geo.shape_rotation)
         mod.set_attr(rigid["shapeOffset"], geo.shape_offset)
 
-        shape_type = self._opts["shapeType"]
-
         if geo.length == 0:
-            shape_type = commands.SphereShape
-
-        mod.set_attr(rigid["shapeType"], shape_type)
+            self._defaults["shapeType"] = commands.SphereShape
 
         # `shapeLength` is used during constraint creation,
         # to figure out draw scale
@@ -351,12 +401,6 @@ class Chain(object):
         con = commands.socket_constraint(
             previous_rigid, rigid, self._scene
         )
-
-        # These are not particularly useful per default
-        mod.set_keyable(con["limitStrength"], False)
-        mod.set_keyable(con["driveEnabled"], False)
-        mod.set_keyable(con["limitEnabled"], False)
-        mod.set_keyable(con["angularLimit"], self._opts["autoLimits"])
 
         if self._opts["autoLimits"]:
             fourtyfive = cmdx.radians(45)
@@ -399,40 +443,6 @@ class Chain(object):
 
         return rigid
 
-    def _make_simulated_attr(self, transform):
-        if transform.has_attr("simulated"):
-            return
-
-        with cmdx.DGModifier() as dgmod:
-            if self._opts["blendMethod"] == commands.SmoothBlendMethod:
-                dgmod.add_attr(transform, cmdx.Double(
-                    "simulated",
-                    min=0.0,
-                    max=1.0,
-                    keyable=True,
-                    default=True)
-                )
-            else:
-                dgmod.add_attr(transform, cmdx.Boolean(
-                    "simulated",
-                    keyable=True,
-                    default=True)
-                )
-
-            if not transform.has_attr("notSimulated"):
-                dgmod.add_attr(transform, cmdx.Boolean(
-                    "notSimulated", keyable=False)
-                )
-                commands._record_attr(transform, "notSimulated")
-            commands._record_attr(transform, "simulated")
-
-            dgmod.do_it()
-
-            reverse = dgmod.create_node("reverse")
-            dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
-            dgmod.connect(transform["simulated"], reverse["inputX"])
-            dgmod.connect(reverse["outputX"], transform["notSimulated"])
-
     def _add_pairblend(self, dgmod, rigid, transform):
         """Put a pairBlend between `rigid` and `transform`
 
@@ -457,8 +467,13 @@ class Chain(object):
         dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes
-        translate = self._cache[(transform, "translate")]
-        rotate = self._cache[(transform, "rotate")]
+        tm = cmdx.Tm(self._cache[(transform, "matrix")])
+
+        # Read from matrix, as opposed to the rotate/translate channels
+        # to account for jointOrient, pivots and all manner of things
+        translate = tm.translation()
+        rotate = tm.rotation()
+
         dgmod.set_attr(pair_blend["inTranslate1"], translate)
         dgmod.set_attr(pair_blend["inRotate1"], rotate)
 
@@ -497,25 +512,6 @@ class Chain(object):
 
         return pair_blend
 
-    def _find_root(self):
-        """Traverse the rigid network in search for the true root"""
-        root = self._root
-
-        # It'll be the one with a multiplier node, if one exists
-        mult = root.shape("rdConstraintMultiplier")
-
-        if not mult:
-            con = root.shape("rdConstraint")
-
-            if con is not None:
-                mult = con["multiplierNode"].connection(
-                    type="rdConstraintMultiplier")
-
-        if mult and "simulated" in mult.parent():
-            root = mult.parent()
-
-        return root
-
     def _auto_blend(self, dgmod):
         """Add a `Simulated` attribute to new links
 
@@ -523,17 +519,13 @@ class Chain(object):
 
         assert isinstance(dgmod, cmdx.DGModifier)
 
-        root = self._find_root()
-
         for rigid in self._new_rigids:
             transform = rigid.parent()
             blend = self._add_pairblend(dgmod, rigid, transform)
+            self._auto_influence(dgmod, rigid, blend)
 
-            if self._opts["autoInfluence"]:
-                self._auto_influence(dgmod, rigid, blend)
-
-            if self._opts["centralBlend"]:
-                dgmod.connect(root["notSimulated"], rigid["kinematic"])
+            dgmod.connect(self._tree_root[0]["notSimulated"],
+                          rigid["kinematic"])
 
     def _auto_influence(self, mod, rigid, pair_blend):
         """Treat incoming animation as guide constraint
@@ -570,13 +562,6 @@ class Chain(object):
 
         mod.connect(make_worldspace["matrixSum"], rigid["inputMatrix"])
 
-        # Satisfy the curiosity of anyone browsing the node network
-        make_worldspace["notes"] = cmdx.String()
-        make_worldspace["notes"] = (
-            "matrixIn[1] is the original parentMatrix "
-            "of the rigid parent transform."
-        )
-
         # A drive is relative the parent frame, but the pairblend is relative
         # the parent Maya transform. In case these are not the same, we'll
         # map the pairblend into the space of the parent frame.
@@ -601,17 +586,6 @@ class Chain(object):
         compensate["matrixIn"][1] = parent_transform_matrix
         compensate["matrixIn"][2] = parent_rigid_matrix
 
-        # Satisfy the curiosity of anyone browsing the node network
-        compensate["notes"] = cmdx.String()
-        compensate["notes"] = (
-            "Two of the inputs are coming from initialisation\n"
-            "[1] = %(rig)s['inputParentInverseMatrix'].asMatrix().inverse()\n"
-            "[2] = %(pari)s['cachedRestMatrix'].asMatrix().inverse()" % dict(
-                rig=rigid.name(namespace=False),
-                pari=parent_rigid.name(namespace=False),
-            )
-        )
-
         mod.connect(compensate["matrixSum"], constraint["driveMatrix"])
 
         # Keep channel box clean
@@ -619,24 +593,17 @@ class Chain(object):
         mod.set_attr(compensate["isHistoricallyInteresting"], False)
         mod.set_attr(make_worldspace["isHistoricallyInteresting"], False)
 
-        rigid.data["compensateForHierarchy"] = compensate
-
     def _auto_multiplier(self, dgmod):
         r"""Multiply provided `constraints`
 
-                          _____________
-                         |             |
-                         o constraint1 |
-                        /|_____________|
-         ____________  /  _____________
-        |            |/  |             |
-        | multiplier o---o constraint2 |
-        |____________|\  |_____________|
-                       \  _____________
-                        \|             |
-                         o constraint3 |
-                         |_____________|
-
+        o     o     o
+         \    |    /
+          \   |   /
+           o  |  o------o
+            \ | /
+             \|/
+              |
+              o  <-- Tree root
 
         """
 
@@ -644,11 +611,13 @@ class Chain(object):
             con.type() == "rdConstraint" for con in self._new_constraints
         )
 
+        root, _ = self._tree_root
+
         # Use existing multiplier, if any, to support branching
-        mult = self._root.shape("rdConstraintMultiplier")
+        mult = root.shape("rdConstraintMultiplier")
 
         if not mult:
-            con = self._root.shape("rdConstraint")
+            con = root.shape("rdConstraint")
 
             if con is not None:
                 mult = con["multiplierNode"].connection(
@@ -661,33 +630,81 @@ class Chain(object):
         else:
             # There isn't any, let's make one
             mult = commands.multiply_constraints(self._new_constraints,
-                                                 parent=self._root)
+                                                 parent=root)
             mult.rename(commands._unique_name("rLocalMultiplier"))
 
             # Forward some convenience attributes
-            multiplier_attrs = commands.UserAttributes(mult, self._root)
+            multiplier_attrs = commands.UserAttributes(mult, root)
             multiplier_attrs.add("driveStrength",
                                  nice_name="Strength Multiplier")
             self._new_userattrs += [multiplier_attrs]
 
         return mult
 
+    def _make_simulated_attr(self, rigid, transform):
+        if "simulated" not in transform:
+            with cmdx.DGModifier() as dgmod:
+                if self._opts["blendMethod"] == commands.SmoothBlendMethod:
+                    simulated = dgmod.add_attr(transform, cmdx.Double(
+                        "simulated",
+                        min=0.0,
+                        max=1.0,
+                        keyable=True,
+                        default=True)
+                    )
+                else:
+                    simulated = dgmod.add_attr(transform, cmdx.Boolean(
+                        "simulated",
+                        keyable=True,
+                        default=True)
+                    )
+
+                index = rigid["userAttributes"].next_available_index()
+                dgmod.connect_attrs(transform, simulated,
+                                    rigid, rigid["userAttributes"][index])
+
+        if "notSimulated" not in transform:
+            with cmdx.DGModifier() as dgmod:
+                not_simulated = dgmod.add_attr(transform, cmdx.Boolean(
+                    "notSimulated", keyable=False)
+                )
+
+                index = rigid["userAttributes"].next_available_index()
+                dgmod.connect_attrs(transform, not_simulated,
+                                    rigid, rigid["userAttributes"][index])
+
+                reverse = dgmod.create_node("reverse")
+                dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
+                dgmod.connect_attrs(transform, transform["simulated"],
+                                    reverse, reverse["inputX"])
+                dgmod.connect_attrs(reverse, reverse["outputX"],
+                                    transform, not_simulated)
+
     def _make_root(self, mod, transform, shape):
         root_rigid = self._make_rigid(
-            mod, transform, shape, passive=True
+            mod, transform, shape, passive=self._opts["passiveRoot"]
         )
 
-        mod.set_attr(root_rigid["collide"], False)
+        if self._opts["passiveRoot"]:
+            # Don't collide per default, it's most likely an
+            # unsuitable shape for collisions anyway.
+            mod.set_attr(root_rigid["collide"], False)
 
         for key, value in self._defaults.items():
             mod.set_attr(root_rigid[key], value)
 
+        geo = commands.infer_geometry(
+            transform, parent=None, children=[self._children[0]])
+
+        mod.set_attr(root_rigid["shapeLength"], geo.length)
+        mod.set_attr(root_rigid["shapeRadius"], geo.radius)
+        mod.set_attr(root_rigid["shapeRotation"], geo.shape_rotation)
+        mod.set_attr(root_rigid["shapeOffset"], geo.shape_offset)
+        mod.set_attr(root_rigid["shapeExtents"], geo.extents)
+
         transform_attrs = commands.UserAttributes(root_rigid, transform)
         transform_attrs.add_divider("Ragdoll")
         transform_attrs.do_it()
-
-        if not transform.has_attr("simulated"):
-            self._make_simulated_attr(transform)
 
         return root_rigid
 
@@ -725,3 +742,8 @@ class Chain(object):
             )))
 
         return rigid
+
+
+@commands.with_undo_chunk
+def create(links, scene, options=None, defaults=None):
+    return Chain(links, scene, options, defaults).do_it()

@@ -2111,23 +2111,17 @@ def infer_geometry(root, parent=None, children=None):
     geometry.shape_rotation = shape_tm.rotation()
 
     # Take root_scale into account
-    if abs(root_scale.x) > 0:
-        geometry.radius /= root_scale.x
-        geometry.extents.x /= root_scale.x
-    else:
+    if abs(root_scale.x) <= 0:
         geometry.radius = 0
         geometry.extents.x = 0
 
     if abs(root_scale.y) > 0:
         geometry.length /= root_scale.y
-        geometry.extents.y /= root_scale.y
     else:
         geometry.length = 0
         geometry.extents.y = 0
 
-    if abs(root_scale.z) > 0:
-        geometry.extents.z /= root_scale.z
-    else:
+    if abs(root_scale.z) <= 0:
         geometry.extents.z = 0
 
     # Store for subsequent accesses

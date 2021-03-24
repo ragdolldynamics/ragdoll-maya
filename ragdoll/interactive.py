@@ -521,6 +521,7 @@ def install_menu():
     with submenu("System", icon="system.png"):
         item("deleteAllPhysics", delete_physics, delete_physics_options)
         item("globalPreferences", global_preferences)
+        item("explorer", show_explorer)
         item("savePreferences", save_preferences)
         item("resetPreferences", reset_preferences)
 
@@ -2150,6 +2151,14 @@ def select_controls(selection=None):
 
 def select_scenes(selection=None):
     return select_type("rdScene")(selection)
+
+
+def show_explorer(selection=None):
+    def get_fresh_dump():
+        return json.loads(cmds.ragdollDump())
+
+    win = ui.show_explorer(get_fresh_dump)
+    win.show(dockable=True)
 
 
 #

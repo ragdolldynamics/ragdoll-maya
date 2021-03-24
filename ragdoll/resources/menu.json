@@ -330,6 +330,13 @@
             "deleteAttributesToo"
         ]
     },
+    "explorer": {
+        "label": "Ragdoll Explorer",
+        "icon": "internals.png",
+        "summary": "Explore the internals of the solver.",
+        "description": "Ragdoll Explorer is a user interface for contents coming out of cmds.ragdollDump(). That is, the solver internals used for export to another application.",
+        "options": []
+    },
     "globalPreferences": {
         "label": "Ragdoll Preferences",
         "icon": "system.png",

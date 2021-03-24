@@ -7,10 +7,11 @@ import datetime
 
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import shiboken2
 
 from . import options, licence, __
-from .vendor import qargparse, markdown
+from .vendor import qargparse, markdown, qjsonmodel
 
 try:
     from maya.cmds import optionVar
@@ -1918,3 +1919,69 @@ class Replayer(QtWidgets.QDialog):
         layout.addWidget(sidepanel, 1)
 
         self._widgets["sidepanel"] = sidepanel
+
+
+class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
+    label = "Ragdoll Explorer"
+
+    def __init__(self, parent=None):
+        super(Explorer, self).__init__(parent)
+        self.setWindowTitle("Ragdoll Explorer")
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setMinimumWidth(px(200))
+        self.setMinimumHeight(px(100))
+
+        model = qjsonmodel.QJsonModel(editable=False)
+
+        view = QtWidgets.QTreeView()
+        view.setModel(model)
+        view.header().resizeSection(0, px(300))
+
+        refresh = QtWidgets.QPushButton("Refresh")
+        refresh.clicked.connect(self.reload)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(view)
+        layout.addWidget(refresh)
+
+        timer = QtCore.QTimer(parent=self)  # Delete on close
+        timer.setInterval(1000.0)  # ms
+        timer.timeout.connect(self.reload)
+
+        self._view = view
+        self._model = model
+        self._timer = timer
+        self._dump = None
+
+    def load(self, dump):
+        self._dump = dump
+        self.reload()
+
+        # Need to implement updating of individual fields,
+        # in order to not loose selection and navigation
+        # self._timer.start()
+
+    def reload(self):
+        assert self._dump is not None, "Call load() first"
+        dump = self._dump
+
+        if callable(dump):
+            dump = dump()
+
+        assert isinstance(dump, dict)
+        dump["entities"] = {
+            int(entity): value
+            for entity, value in dump["entities"].items()
+        }
+        self._model.load(dump)
+
+
+def show_explorer(dump):
+    exp = Explorer(parent=MayaWindow())
+    exp.load(dump)
+
+    # parent = MayaWindow()
+    # assert isinstance(parent, QtWidgets.QMainWindow)
+
+    # parent.addDockWidget(QtCore.Qt.LeftDockWidgetArea, exp)
+    return exp

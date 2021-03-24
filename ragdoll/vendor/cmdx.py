@@ -6040,15 +6040,33 @@ Y = "y"
 Z = "z"
 
 
-def upAxis():
-    return om.MGlobal.upAxis()
+if __maya_version__ >= 2019:
+    def upAxis():
+        """Get the current up-axis as string
 
+        Returns:
+            string: "y" for Y-up, "z" for Z-up
 
-def setUpAxis(axis=Y):
-    if axis == Y:
-        om.MGlobal.setYAxisUp()
-    else:
-        om.MGlobal.setZAxisUp()
+        """
+
+        return om.MGlobal.upAxis()
+
+    def setUpAxis(axis=Y):
+        if axis == Y:
+            om.MGlobal.setYAxisUp()
+        else:
+            om.MGlobal.setZAxisUp()
+
+else:
+    def upAxis():
+        return cmds.optionVar(query="upAxisDirection")
+
+    def setUpAxis(axis=Y):
+        cmds.optionVar(stringValue=("upAxisDirection", axis))
+        cmds.warning(
+            "Changing up-axis via cmdx in Maya 2019 "
+            "or below requires a restart."
+        )
 
 
 if ENABLE_PEP8:

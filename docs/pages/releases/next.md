@@ -39,3 +39,11 @@ The indicator used to face in the Y-axis of wherever the node was facing. That w
 **After**
 
 ![accurategravity1](https://user-images.githubusercontent.com/2152766/112306961-4d9d3c80-8c98-11eb-9df8-b0d2c905360a.gif)
+
+<br>
+
+### Ragdoll Explorer
+
+Added an early version of a visual interface for the `cmds.ragdollDump()` command, something to inspect the internals of the solver. Mostly intended for game developers but also advanced users and techincal directors.
+
+![image](https://user-images.githubusercontent.com/2152766/112311552-bcc95f80-8c9d-11eb-87a0-1f5a5ee9b265.png)

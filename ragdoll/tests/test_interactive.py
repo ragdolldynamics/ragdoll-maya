@@ -1,14 +1,12 @@
 from maya import cmds
 from .. import interactive, commands, options
 from ..vendor import cmdx
+from . import _new, _play, _save, _load
 
 from nose.tools import (
     assert_equals,
     assert_true,
 )
-
-__ = type("internal", (object,), {})()
-__.fname = "test.ma"
 
 # A simple arm
 #
@@ -94,21 +92,8 @@ def create_arm_rig():
     return ctrls
 
 
-def new():
-    cmds.file(new=True, force=True)
-
-
-def save():
-    __.fname = cmds.file("test.ma", rename=True)
-    cmds.file(save=True, force=True)
-
-
-def load():
-    cmds.file(__.fname, open=True, force=True)
-
-
 def test_create_rigid():
-    new()
+    _new()
 
     cube, _ = cmds.polyCube()
     cmds.select(cube)
@@ -119,7 +104,7 @@ def test_create_rigid():
 
 
 def test_undo1():
-    new()
+    _new()
 
     cube, _ = cmds.polyCube()
     cmds.select(cube)
@@ -135,7 +120,7 @@ def test_undo1():
 
 
 def test_create_muscle():
-    new()
+    _new()
 
     arm = create_joint_arm()
     a = cmdx.create_node("joint", parent=arm[0])
@@ -156,7 +141,7 @@ def test_create_muscle():
 
 
 def test_create_passive():
-    new()
+    _new()
 
     # Nothing needs to be selected
     assert_true(interactive.create_passive_rigid())
@@ -174,7 +159,7 @@ def test_create_passive():
 
 
 def test_create_constraint():
-    new()
+    _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
     sphere1, _ = map(cmdx.encode, cmds.polySphere())
@@ -201,7 +186,7 @@ def test_create_constraint():
 
 
 def test_create_kinematic_control():
-    new()
+    _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
     cube1["translate"] = (1, 2, 0)
@@ -220,7 +205,7 @@ def test_create_kinematic_control():
 
 
 def test_create_driven_control():
-    new()
+    _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
     cube1["translate"] = (1, 2, 0)
@@ -239,7 +224,7 @@ def test_create_driven_control():
 
 
 def test_create_force():
-    new()
+    _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
     cube1["translate"] = (1, 2, 0)
@@ -265,7 +250,7 @@ def test_create_force():
 
 
 def test_create_character():
-    new()
+    _new()
 
     hierarchy = create_joint_arm()
     root = hierarchy[0]
@@ -282,7 +267,7 @@ def test_create_character():
 
 
 def test_dynamic_control(**opts):
-    new()
+    _new()
 
     hierarchy = create_joint_arm()
     a, b, c = map(str, hierarchy[:3])
@@ -297,7 +282,7 @@ def test_dynamic_control(**opts):
 
 
 def test_chain(**opts):
-    new()
+    _new()
 
     hierarchy = create_joint_arm()
     a, b, c = map(str, hierarchy[:3])
@@ -362,21 +347,19 @@ def test_dynamic_control_with_delete_all():
 
 def test_save():
     test_dynamic_control()
-    save()
-    load()
+    _save()
+    _load()
 
     rigid = cmdx.ls(type="rdRigid")[0]
     transform = rigid.parent()
 
     assert_true(transform["translateY"] != 0)
 
-    for frame in range(1, 30):
-        transform["ty"].read()  # Trigger evaluation
-        cmds.currentTime(frame)
+    _play(rigid)
 
 
 def test_normalise_shapes():
-    new()
+    _new()
 
     hierarchy = create_joint_arm()
     cmds.select(hierarchy[0].path())
@@ -386,7 +369,7 @@ def test_normalise_shapes():
 def test_select_shapes():
     """Commands properly finds corresponding transform of selected shape"""
 
-    new()
+    _new()
 
     upperarm, lowerarm, hand, tip = create_arm_rig()
     cmds.select(upperarm.shape().path(),
@@ -394,9 +377,7 @@ def test_select_shapes():
                 hand.shape().path())
     interactive.create_active_chain()
 
-    for frame in range(1, 30):
-        upperarm["ty"].read()  # Trigger evaluation
-        cmds.currentTime(frame)
+    _play(upperarm)
 
 
 def test_select_transforms():
@@ -427,7 +408,7 @@ def manual():
         test()
 
     # Cleanup
-    new()
+    _new()
     t1 = time.time()
     duration = t1 - t0
 

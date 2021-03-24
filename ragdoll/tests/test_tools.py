@@ -3,6 +3,7 @@ from maya import cmds
 from .. import commands
 from ..tools import character_tool
 from ..vendor import cmdx
+from . import _new, _play
 
 from nose.tools import (
     assert_almost_equals,
@@ -34,15 +35,8 @@ JOINT_3CHAIN = (
 )
 
 
-def new():
-    cmds.file(new=True, force=True)
-    cmds.playbackOptions(minTime=1, maxTime=120)
-    cmds.playbackOptions(animationStartTime=1, animationEndTime=120)
-    cmds.currentTime(1)
-
-
 def test_character():
-    new()
+    _new()
 
     joints = []
 
@@ -64,9 +58,7 @@ def test_character():
     result = character_tool.create(root, scene, copy=False)
 
     # After 100 frames, the simulation has come to a rest
-    for frame in range(1, 101):
-        result["ty"].read()  # Trigger evaluation
-        cmds.currentTime(frame, update=True)
+    _play(result, 1, 101)
 
     # The chain should now be lying down, which means
     # the Y-position should end up being the capsule radius
@@ -103,7 +95,7 @@ def manual():
         test()
 
     # Cleanup
-    new()
+    _new()
     t1 = time.time()
     duration = t1 - t0
 

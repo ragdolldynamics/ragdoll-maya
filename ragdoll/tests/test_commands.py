@@ -2,6 +2,7 @@ from maya import cmds
 from .. import commands
 from ..vendor import cmdx
 from ..tools import chain_tool
+from . import _play, _new
 
 from nose.tools import (
     assert_equals,
@@ -9,23 +10,8 @@ from nose.tools import (
 )
 
 
-def new():
-    cmds.file(new=True, force=True)
-    cmds.playbackOptions(minTime=1, maxTime=120)
-    cmds.playbackOptions(animationStartTime=1, animationEndTime=120)
-    cmds.currentTime(1)
-
-
-def make_rigid():
-    transform = cmdx.createNode("transform")
-    transform["ty"] = 5.0
-
-    scene = commands.create_scene()
-    return commands.create_rigid(transform, scene)
-
-
 def test_defaults():
-    new()
+    _new()
 
     cube, _ = cmds.polyCube()
     cube = cmdx.encode(cube)  # Convert to cmdx
@@ -46,7 +32,7 @@ def test_defaults():
 
 
 def test_delete_all():
-    new()
+    _new()
 
     a = cmdx.createNode("transform")
     b = cmdx.createNode("transform", parent=a)
@@ -111,7 +97,7 @@ def manual():
         test()
 
     # Cleanup
-    new()
+    _new()
     t1 = time.time()
     duration = t1 - t0
 
@@ -132,3 +118,33 @@ def test_chain_tree_tiger():
 def test_save_load_tiger():
     # Animation/initial pose should not be affected by saving/loading
     pass
+
+
+def test_up_axes():
+    """Both Z and Y-up axes behave as you would expect"""
+
+    def new(axis):
+        _new()
+        cmdx.setUpAxis(axis)
+        box, _ = map(cmdx.encode, cmds.polyCube())
+        box["translateY"] = 10
+        box["translateZ"] = 10
+
+        scene = commands.create_scene()
+        rigid = commands.create_rigid(box, scene)
+        rigid["shapeType"] = commands.BoxShape
+        rigid["shapeExtents"] = (1, 1, 1)
+        return rigid
+
+    rigid = new(cmdx.Y)
+    _play(rigid, start=1, end=50)
+    assert_almost_equals(rigid["outputTranslateY"].read(), 0.5, 2)
+
+    # It may bounce around a little, that's OK
+    assert_almost_equals(rigid["outputTranslateZ"].read(), 10.0, 1)
+
+    # Test Z
+    rigid = new(cmdx.Z)
+    _play(rigid, start=1, end=50)
+    assert_almost_equals(rigid["outputTranslateY"].read(), 10.0, 1)
+    assert_almost_equals(rigid["outputTranslateZ"].read(), 0.5, 2)

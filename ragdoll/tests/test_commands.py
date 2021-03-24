@@ -120,31 +120,32 @@ def test_save_load_tiger():
     pass
 
 
-def test_up_axes():
-    """Both Z and Y-up axes behave as you would expect"""
+if cmdx.__maya_version__ >= 2019:
+    def test_up_axes():
+        """Both Z and Y-up axes behave as you would expect"""
 
-    def new(axis):
-        _new()
-        cmdx.setUpAxis(axis)
-        box, _ = map(cmdx.encode, cmds.polyCube())
-        box["translateY"] = 10
-        box["translateZ"] = 10
+        def new(axis):
+            _new()
+            cmdx.setUpAxis(axis)
+            box, _ = map(cmdx.encode, cmds.polyCube())
+            box["translateY"] = 10
+            box["translateZ"] = 10
 
-        scene = commands.create_scene()
-        rigid = commands.create_rigid(box, scene)
-        rigid["shapeType"] = commands.BoxShape
-        rigid["shapeExtents"] = (1, 1, 1)
-        return rigid
+            scene = commands.create_scene()
+            rigid = commands.create_rigid(box, scene)
+            rigid["shapeType"] = commands.BoxShape
+            rigid["shapeExtents"] = (1, 1, 1)
+            return rigid
 
-    rigid = new(cmdx.Y)
-    _play(rigid, start=1, end=50)
-    assert_almost_equals(rigid["outputTranslateY"].read(), 0.5, 2)
+        rigid = new(cmdx.Y)
+        _play(rigid, start=1, end=50)
+        assert_almost_equals(rigid["outputTranslateY"].read(), 0.5, 2)
 
-    # It may bounce around a little, that's OK
-    assert_almost_equals(rigid["outputTranslateZ"].read(), 10.0, 1)
+        # It may bounce around a little, that's OK
+        assert_almost_equals(rigid["outputTranslateZ"].read(), 10.0, 1)
 
-    # Test Z
-    rigid = new(cmdx.Z)
-    _play(rigid, start=1, end=50)
-    assert_almost_equals(rigid["outputTranslateY"].read(), 10.0, 1)
-    assert_almost_equals(rigid["outputTranslateZ"].read(), 0.5, 2)
+        # Test Z
+        rigid = new(cmdx.Z)
+        _play(rigid, start=1, end=50)
+        assert_almost_equals(rigid["outputTranslateY"].read(), 10.0, 1)
+        assert_almost_equals(rigid["outputTranslateZ"].read(), 0.5, 2)

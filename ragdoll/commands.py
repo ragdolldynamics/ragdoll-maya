@@ -408,6 +408,17 @@ def _connect_active_blend(mod, rigid):
     mod.set_attr(compose["isHistoricallyInteresting"], False)
     mod.set_attr(mult["isHistoricallyInteresting"], False)
 
+    uas = UserAttributes(rigid, transform)
+    uas.add_divider("Ragdoll")
+    uas.add("kinematic")
+    uas.add("collide")
+    uas.add("mass")
+    uas.add("friction")
+    uas.add("restitution")
+    uas.do_it()
+
+    _input_constraint(rigid)
+
     return pair_blend
 
 
@@ -601,9 +612,6 @@ def create_rigid(node,
             _remove_pivots(mod, transform)
             _connect_active(mod, transform, rigid, existing=existing)
 
-            if constraint:
-                _worldspace_constraint(rigid)
-
         # Apply provided default attribute values
         for key, value in defaults.items():
             mod.set_attr(rigid[key], value)
@@ -611,7 +619,8 @@ def create_rigid(node,
     return rigid
 
 
-def _worldspace_constraint(rigid):
+def _input_constraint(rigid):
+    """Apply inputMatrix to a new constraint"""
     scene = rigid["nextState"].connection(type="rdScene")
     assert scene is not None, "%s was not connected to a scene" % rigid
 
@@ -623,7 +632,7 @@ def _worldspace_constraint(rigid):
                                                "rx", "ry", "rz"))
 
     with cmdx.DagModifier() as mod:
-        con = _rdconstraint(mod, "rWorldConstraint", parent=transform)
+        con = _rdconstraint(mod, "rAnimConstraint", parent=transform)
 
         mod.set_attr(con["limitEnabled"], False)
         mod.set_attr(con["driveEnabled"], True)
@@ -643,7 +652,9 @@ def _worldspace_constraint(rigid):
         # Add to scene
         add_constraint(mod, con, scene)
 
-        mod.connect(rigid["dynamic"], con["visibility"])
+    uas = UserAttributes(con, transform)
+    uas.add("driveStrength")
+    uas.do_it()
 
     return con
 

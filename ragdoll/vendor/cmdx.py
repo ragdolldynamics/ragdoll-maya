@@ -6035,19 +6035,38 @@ def objExists(obj):
         return True
 
 
-# PEP08
-sl = selection
-create_node = createNode
-get_attr = getAttr
-set_attr = setAttr
-add_attr = addAttr
-list_relatives = listRelatives
-list_connections = listConnections
-connect_attr = connectAttr
-obj_exists = objExists
-current_time = currentTime
+# Possible up-axes
+Y = "y"
+Z = "z"
 
-# Speciality functions
+
+def upAxis():
+    return om.MGlobal.upAxis()
+
+
+def setUpAxis(axis=Y):
+    if axis == Y:
+        om.MGlobal.setYAxisUp()
+    else:
+        om.MGlobal.setZAxisUp()
+
+
+if ENABLE_PEP8:
+    sl = selection
+    create_node = createNode
+    get_attr = getAttr
+    set_attr = setAttr
+    add_attr = addAttr
+    list_relatives = listRelatives
+    list_connections = listConnections
+    connect_attr = connectAttr
+    obj_exists = objExists
+    current_time = currentTime
+    up_axis = upAxis
+    set_up_axis = setUpAxis
+
+
+# Special-purpose functions
 
 kOpen = om1.MFnNurbsCurve.kOpen
 kClosed = om1.MFnNurbsCurve.kClosed

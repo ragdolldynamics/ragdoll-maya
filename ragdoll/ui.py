@@ -194,16 +194,16 @@ class Player(QtWidgets.QWidget):
 
         animation = {
             "overlay": (
-                QtCore.QPropertyAnimation(self, "overlay_height")
+                QtCore.QPropertyAnimation(self, b"overlay_height")
             ),
             "background": (
-                QtCore.QPropertyAnimation(effects["background"], "opacity")
+                QtCore.QPropertyAnimation(effects["background"], b"opacity")
             ),
             "title": (
-                QtCore.QPropertyAnimation(effects["title"], "opacity")
+                QtCore.QPropertyAnimation(effects["title"], b"opacity")
             ),
             "description": (
-                QtCore.QPropertyAnimation(effects["description"], "opacity")
+                QtCore.QPropertyAnimation(effects["description"], b"opacity")
             ),
         }
 
@@ -532,7 +532,7 @@ class Clip(QtWidgets.QWidget):
 
         self.fit()
 
-        anim = QtCore.QPropertyAnimation(self, "animated_height")
+        anim = QtCore.QPropertyAnimation(self, b"animated_height")
         anim.setEasingCurve(QtCore.QEasingCurve.OutCubic)
         anim.setDuration(200)
 
@@ -1184,7 +1184,7 @@ class Options(QtWidgets.QMainWindow):
         def fade_in():
             to()
 
-            anim = QtCore.QPropertyAnimation(effect, "opacity")
+            anim = QtCore.QPropertyAnimation(effect, b"opacity")
             anim.setEasingCurve(QtCore.QEasingCurve.OutCubic)
             anim.setDuration(100)
             anim.setStartValue(1.0)
@@ -1200,7 +1200,7 @@ class Options(QtWidgets.QMainWindow):
             self._widgets["Foreground"].show()
             self._widgets["Foreground"].raise_()
 
-            anim = QtCore.QPropertyAnimation(effect, "opacity")
+            anim = QtCore.QPropertyAnimation(effect, b"opacity")
             anim.setEasingCurve(QtCore.QEasingCurve.OutCubic)
             anim.setDuration(100)
             anim.setStartValue(0.0)
@@ -1451,7 +1451,7 @@ class SplashScreen(QtWidgets.QDialog):
 
         widgets["close"].clicked.connect(self.close)
 
-        anim = QtCore.QPropertyAnimation(self, "windowOpacity")
+        anim = QtCore.QPropertyAnimation(self, b"windowOpacity")
         anim.setDuration(150)
         anim.setStartValue(0.0)
         anim.setEndValue(1.0)

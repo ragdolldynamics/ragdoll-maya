@@ -534,14 +534,20 @@ class Node(object):
             >>> node["myDist", Centimeters] = node["translateX", Meters]
             >>> round(node["rotateX", Radians], 3)
             0.017
-            >>> node["myDist"] = Distance()
-            Traceback (most recent call last):
-            ...
-            ExistError: myDist
-            >>> node["notExist"] = 5
-            Traceback (most recent call last):
-            ...
-            ExistError: |myNode.notExist
+            >>> try:
+            ...    node["myDist"] = Distance()
+            ... except Exception as e:
+            ...    assert isinstance(e, ExistError)
+            ... else:
+            ...    assert False
+            >>>
+            >>> try:
+            ...   node["notExist"] = 5
+            ... except Exception as f:
+            ...   assert isinstance(f, ExistError)
+            ... else:
+            ...   assert False
+            >>>
             >>> delete(node)
 
         """
@@ -574,11 +580,7 @@ class Node(object):
                         # where this exception is thrown. Stay catious.
                         raise ExistError(key)
 
-        try:
-            plug = self.findPlug(key)
-        except RuntimeError:
-            raise ExistError("%s.%s" % (self.path(), key))
-
+        plug = self.findPlug(key)
         plug = Plug(self, plug, unit=unit)
 
         if not getattr(self._modifier, "isDone", True):
@@ -594,6 +596,10 @@ class Node(object):
 
         # Else, write it immediately
         plug.write(value)
+
+    def __hash__(self):
+        """Support storing in set() and as key in dict()"""
+        return hash(self.path())
 
     def _onDestroyed(self, mobject):
         self._destroyed = True
@@ -885,7 +891,12 @@ class Node(object):
                     raise KeyError("'%s' not cached" % name)
 
         assert isinstance(name, string_types), "%s was not string" % name
-        plug = self._fn.findPlug(name, True)
+
+        try:
+            plug = self._fn.findPlug(name, True)
+        except RuntimeError:
+            raise ExistError("%s.%s" % (self.path(), name))
+
         self._state["plugs"][name] = plug
 
         return plug
@@ -945,8 +956,8 @@ class Node(object):
 
         Example:
             >>> node = createNode("transform", name="myName")
-            >>> node.name()
-            u'myName'
+            >>> node.name() == 'myName'
+            True
 
         """
 
@@ -961,13 +972,13 @@ class Node(object):
         Example:
             >>> _ = cmds.file(new=True, force=True)
             >>> node = createNode("transform", name="myNode")
-            >>> node.namespace()
-            u''
+            >>> node.namespace() == ""
+            True
             >>> _ = cmds.namespace(add=":A")
             >>> _ = cmds.namespace(add=":A:B")
             >>> node = createNode("transform", name=":A:B:myNode")
-            >>> node.namespace()
-            u'A:B'
+            >>> node.namespace() == 'A:B'
+            True
 
         """
 
@@ -1051,8 +1062,8 @@ class Node(object):
 
         Example:
             >>> node = createNode("choice")
-            >>> node.type()
-            u'choice'
+            >>> node.type() == 'choice'
+            True
 
         """
 
@@ -1083,6 +1094,7 @@ class Node(object):
         if isinstance(mobj, _AbstractAttribute):
             mobj = attr.create()
 
+        assert isinstance(mobj, om.MObject)
         self._fn.addAttribute(mobj)
 
         # These don't natively support defaults by Maya
@@ -1282,6 +1294,44 @@ if __maya_version__ >= 2017:
         This class wraps that interface to align with regular attribute access,
         for an as-transparent-as-possible experience.
 
+        Examples:
+            >> from maya import cmds
+            >> _ = cmds.file(new=True, force=True)
+
+            # Establish a published plug
+            >> con = cmds.container(name="myContainer")
+            >> con = encode(con)
+            >> con.isA(kDagNode)
+            False
+            >> isinstance(con, ContainerNode)
+            True
+
+            >> from maya import cmds
+            >> _ = cmds.file(new=True, force=True)
+
+            # Establish a published plug
+            >> node = cmds.createNode("transform")
+            >> con = cmds.container(name="myContainer",
+            ..                      addNode=[node],
+            ..                      type="dagContainer")
+            >> plug = cmds.container(con,
+            ..                       edit=True,
+            ..                       publishName="inputTranslate")
+            >> binding = ("%s.tx" % node, plug)
+            >> _ = cmds.container(con, edit=True, bindAttr=binding)
+
+            # Query and connect that published plug
+            >> source = createNode("transform")
+            >> con = encode(con)
+            >> con.isA(kDagNode)
+            True
+            >> isinstance(con, ContainerNode)
+            True
+            >> source["tx"] >> con[plug]
+            >> source["tx"] = 5.0
+            >> con["inputTranslate"].read()
+            5.0
+
         """
 
         _Fn = om.MFnContainerNode
@@ -1358,10 +1408,10 @@ class DagNode(Node):
         Example:
             >>> parent = createNode("transform", "myParent")
             >>> child = createNode("transform", "myChild", parent=parent)
-            >>> child.name()
-            u'myChild'
-            >>> child.path()
-            u'|myParent|myChild'
+            >>> child.name() == 'myChild'
+            True
+            >>> child.path() == '|myParent|myChild'
+            True
 
         """
 
@@ -1393,12 +1443,12 @@ class DagNode(Node):
             >>> _ = cmds.file(new=True, force=True)
             >>> parent = createNode("transform", name="myParent")
             >>> child = createNode("transform", name="myChild", parent=parent)
-            >>> child.shortestPath()
-            u'myChild'
+            >>> child.shortestPath() == "myChild"
+            True
             >>> child = createNode("transform", name="myChild")
             >>> # Now `myChild` could refer to more than a single node
-            >>> child.shortestPath()
-            u'|myChild'
+            >>> child.shortestPath() == '|myChild'
+            True
 
         """
 
@@ -2143,10 +2193,10 @@ class AnimCurve(Node):
                 self._fna.addKey(time, value, interpolation, interpolation)
 
         def keys(self, times, values, interpolation=Linear):
-            times = map(
+            times = list(map(
                 lambda t: Seconds(t) if isinstance(t, (float, int)) else t,
                 times
-            )
+            ))
 
             try:
                 self._fna.addKeys(times, values)
@@ -2202,6 +2252,9 @@ class Plug(object):
 
     # Python 3
     __nonzero__ = __bool__
+
+    def __round__(self, digits=2):
+        return round(self.read(), digits)
 
     def __float__(self):
         """Return plug as floating point value
@@ -2771,7 +2824,7 @@ class Plug(object):
             >>> node["translateY"] = 12
             >>> node["rotate"] = 1
             >>> tm = node["matrix"].asTransform()
-            >>> map(round, tm.rotation())
+            >>> [round(v, 1) for v in tm.rotation()]
             [1.0, 1.0, 1.0]
             >>> list(tm.translation())
             [0.0, 12.0, 0.0]
@@ -3271,7 +3324,7 @@ class Plug(object):
 
             """
 
-            times, values = map(UiUnit(), values.keys()), values.values()
+            times, values = list(map(UiUnit(), values.keys())), values.values()
             anim = createNode(_find_curve_type(self))
             anim.keys(times, values, interpolation=Linear)
             anim["output"] >> self
@@ -5111,13 +5164,16 @@ class _BaseModifier(object):
             False
 
             # Protect against adding an attribute twice
-            >>> with DagModifier() as mod:
-            ...   node = mod.createNode("transform")
-            ...   attr1 = mod.addAttr(node, Boolean("sameAttr"))
-            ...   attr2 = mod.addAttr(node, Double("sameAttr"))
-            Traceback (most recent call last):
-            ...
-            ExistError: Same attribute added twice: .sameAttr
+            >>> try:
+            ...   with DagModifier() as mod:
+            ...     node = mod.createNode("transform")
+            ...     attr1 = mod.addAttr(node, Boolean("sameAttr"))
+            ...     attr2 = mod.addAttr(node, Double("sameAttr"))
+            ... except Exception as e:
+            ...   assert isinstance(e, ExistError)
+            ... else:
+            ...   assert False
+            >>>
 
             # But allow the same attributes to be added to different nodes
             >>> with DagModifier() as mod:
@@ -5381,12 +5437,14 @@ class _BaseModifier(object):
         Examples:
             >>> node = createNode("transform")
             >>> node["translateY"].lock()
-            >>> with DGModifier() as mod:
-            ...     mod.connect(node["tx"], node["ty"])
-            ...
-            Traceback (most recent call last):
-            ...
-            LockedError: Channel locked, cannot connect 'translateY'
+            >>> mod = DGModifier()
+            >>> try:
+            ...    mod.connect(node["tx"], node["ty"])
+            ... except Exception as e:
+            ...    assert isinstance(e, LockedError)
+            ... else:
+            ...    assert False
+            >>>
 
             # Now let's tryConnect
             >>> with DGModifier() as mod:
@@ -5615,8 +5673,8 @@ class DagModifier(_BaseModifier):
         True
         >>> "myChild" in cmds.ls()
         True
-        >>> parent.child().name()
-        u'myChild'
+        >>> parent.child().name() == 'myChild'
+        True
         >>> mod = DagModifier()
         >>> _ = mod.delete(child)
         >>> mod.doIt()
@@ -5728,11 +5786,11 @@ Context = DGContext
 
 
 def ls(*args, **kwargs):
-    return map(encode, cmds.ls(*args, **kwargs))
+    return list(map(encode, cmds.ls(*args, **kwargs)))
 
 
 def selection(*args, **kwargs):
-    return map(encode, cmds.ls(*args, selection=True, **kwargs))
+    return list(map(encode, cmds.ls(*args, selection=True, **kwargs)))
 
 
 def createNode(type, name=None, parent=None):

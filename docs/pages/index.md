@@ -10,14 +10,14 @@ template: landing.html
         <div class="container"><p id="title">RAGDOLL</p></div>
         <div class="container">
             <p id="description">
-                Real-time <b>physics</b> for <i>Autodesk® Maya 2020</i>
+                Real-time <b>physics</b> for <i>Autodesk® Maya 2018-2022</i>
             </p>
         </div>
         <p class="badges">
             <img src=https://img.shields.io/badge/Maya-2018-green>
             <img src=https://img.shields.io/badge/Maya-2019-green>
             <img src=https://img.shields.io/badge/Maya-2020-green>
-            <img src=https://img.shields.io/badge/Maya-2021-green>
+            <img src=https://img.shields.io/badge/Maya-2022-green>
             <img alt=Windows title="Runs on Windows" width=16 src=https://user-images.githubusercontent.com/2152766/62287773-ba741b00-b452-11e9-8ad7-9a5152488de7.png>
             <img alt=Linux title="Runs on Linux" width=16 src=https://user-images.githubusercontent.com/2152766/62287771-b9db8480-b452-11e9-9bf1-45b40465ed54.png>
             <br>

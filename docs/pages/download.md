@@ -23,7 +23,7 @@
 
 Ragdoll ships as a Maya [Module](https://around-the-corner.typepad.com/adn/2012/07/distributing-files-on-maya-maya-modules.html) for Windows and Linux.
 
-??? info "Installation for Windows"
+!!! info "Installation for Windows"
     On the Windows platform, there's an executable you can run. However you can also do what Linux users do, and unzip the plug-in straight into your home directory.
 
     1. Run the `.msi` installer
@@ -104,7 +104,7 @@ The plug-in is now available via the Plug-in Manager.
     - Windows 10+ or CentOS 7+
     - 64-bit Intel® or AMD® processor
     - 4 GB of RAM
-    - Maya 2018-2021
+    - Maya 2018-2022
 
 ??? question "What are my licensing options?"
     - `Trial` - 30 days of non-commercial use, no strings attached

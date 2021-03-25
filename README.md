@@ -1,6 +1,6 @@
 ![gumtree_cover](https://user-images.githubusercontent.com/2152766/104089559-f6c2c200-5267-11eb-8297-67552c8f6aeb.png)
 
-Character animation tools for Autodesk Maya 2018-2020 that enable automatic overlapping animation through high-performance rigid-body simulation techniques. 
+Character animation tools for Autodesk Maya 2018-2022 that enable automatic overlapping animation through high-performance rigid-body simulation techniques. 
 
 <br>
 

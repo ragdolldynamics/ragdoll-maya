@@ -2,6 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
+- [2021.03.25 - Maya 2022](/releases/2021.03.25)
 - [2021.03.23 - JSON Export](/releases/2021.03.23)
 - [2021.03.11 - Localspace Simulation](/releases/2021.03.11)
 - [2021.03.04 - Passive to Active Transitions](/releases/2021.03.04)

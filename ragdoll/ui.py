@@ -1923,6 +1923,7 @@ class Replayer(QtWidgets.QDialog):
 
 class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
     label = "Ragdoll Explorer"
+    instance = None
 
     def __init__(self, parent=None):
         super(Explorer, self).__init__(parent)
@@ -1935,7 +1936,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
         view = QtWidgets.QTreeView()
         view.setModel(model)
-        view.header().resizeSection(0, px(300))
+        view.header().resizeSection(0, px(200))
 
         refresh = QtWidgets.QPushButton("Refresh")
         refresh.clicked.connect(self.reload)
@@ -1952,6 +1953,8 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self._model = model
         self._timer = timer
         self._dump = None
+
+        Explorer.instance = self
 
     def load(self, dump):
         self._dump = dump
@@ -1979,9 +1982,4 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 def show_explorer(dump):
     exp = Explorer(parent=MayaWindow())
     exp.load(dump)
-
-    # parent = MayaWindow()
-    # assert isinstance(parent, QtWidgets.QMainWindow)
-
-    # parent.addDockWidget(QtCore.Qt.LeftDockWidgetArea, exp)
     return exp

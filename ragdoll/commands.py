@@ -667,6 +667,62 @@ def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=True, **kwargs)
 
 
+def create_constraint(parent, child):
+    assert child.type() == "rdRigid", child.type()
+    assert parent.type() in ("rdRigid", "rdScene"), (
+        "%s must be a rigid or scene" % parent.type()
+    )
+
+    if parent.type() == "rdScene":
+        scene = parent
+    else:
+        scene = parent["nextState"].connection()
+        assert scene and scene.type() == "rdScene", (
+            "%s was not part of a scene" % parent
+        )
+
+    assert child["nextState"].connection() == scene, (
+        "%s and %s was not part of the same scene" % (parent, child)
+    )
+
+    name = _unique_name("rConstraint")
+
+    with cmdx.DagModifier() as mod:
+        transform = child.parent()
+        con = _rdconstraint(mod, name, parent=transform)
+
+        draw_scale = _scale_from_rigid(child)
+        mod.set_attr(con["drawScale"], draw_scale)
+
+        mod.connect(parent["ragdollId"], con["parentRigid"])
+        mod.connect(child["ragdollId"], con["childRigid"])
+
+        # Was there already a constraint here?
+        # Does it have an input drive matrix?
+        excon = child["ragdollId"].connection(type="rdConstraint")
+        if excon:
+            world_matrix = excon["driveMatrix"].connection(
+                type="multMatrix", destination=False)
+
+            if world_matrix is not None:
+                local_matrix = world_matrix["matrixIn"][0].connection(
+                    type="composeMatrix", destination=False)
+
+                if local_matrix is not None:
+                    mod.connect(local_matrix["outputMatrix"],
+                                con["driveMatrix"])
+
+                    # Take priority
+                    mod.set_attr(excon["driveStrength"], 0.0)
+
+        _reset_constraint(mod, con)
+
+        # Add to scene
+        add_constraint(mod, con, scene)
+
+    return con
+
+
 @with_undo_chunk
 def convert_to_point(con,
                      maintain_offset=True,
@@ -890,6 +946,7 @@ def _reset_constraint(mod, con,
             return
         mod.reset_attr(attr)
 
+    reset_attr(con["disableCollision"])
     reset_attr(con["limitEnabled"])
     reset_attr(con["limitStrength"])
     reset_attr(con["driveEnabled"])

@@ -49,6 +49,7 @@ from . import (
     ui,
     options,
     licence,
+    dump,
     __
 )
 from .tools import (
@@ -493,9 +494,15 @@ def install_menu():
         item("createDynamicControl",
              create_dynamic_control,
              create_dynamic_control_options)
+
+        divider()
+
         item("bakeSimulation")
-        item("exportPhysics")
-        item("importPhysics")
+        item("exportPhysics", export_physics, export_physics_options)
+        item("importPhysics", import_physics, import_physics_options)
+
+        divider()
+
         item("multiplyRigids",
              multiply_rigids,
              multiply_rigids_options)
@@ -514,14 +521,20 @@ def install_menu():
 
         if RAGDOLL_DEVELOPER:
             item("convertToPolygons", convert_to_polygons)
+            item("normaliseShapes", normalise_shapes)
 
-        item("normaliseShapes", normalise_shapes)
         item("setInitialState", set_initial_state)
 
     with submenu("System", icon="system.png"):
         item("deleteAllPhysics", delete_physics, delete_physics_options)
-        item("globalPreferences", global_preferences)
+
+        divider()
+
         item("explorer", show_explorer)
+
+        divider()
+
+        item("globalPreferences", global_preferences)
         item("savePreferences", save_preferences)
         item("resetPreferences", reset_preferences)
 
@@ -2216,6 +2229,68 @@ def welcome_user(*args):
     return win
 
 
+@_format_exception
+def export_physics(selection=None):
+    data = cmds.ragdollDump()
+
+    if not json.loads(data)["entities"]:
+        return log.error("Nothing to export")
+
+    from PySide2 import QtWidgets
+    fname, suffix = QtWidgets.QFileDialog.getSaveFileName(
+        ui.MayaWindow(),
+        "Save Ragdoll Scene",
+        options.read("lastVisitedPath"),
+        "Ragdoll scene files (*.rag)"
+    )
+
+    if not fname:
+        return log.warning("Cancelled")
+
+    fname = os.path.normpath(fname)
+
+    try:
+        with open(fname, "w") as f:
+            f.write(data)
+    except Exception:
+        _print_exception()
+        return log.error("Could not write to %s" % fname)
+
+    options.write("lastVisitedPath", os.path.dirname(fname))
+    log.info("Successfully exported to %s" % fname)
+
+
+@_format_exception
+def import_physics(selection=None):
+    from PySide2 import QtWidgets
+    fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
+        ui.MayaWindow(),
+        "Save Ragdoll Scene",
+        options.read("lastVisitedPath"),
+        "Ragdoll scene files (*.rag)"
+    )
+
+    if not fname:
+        return log.warning("Cancelled")
+
+    fname = os.path.normpath(fname)
+
+    try:
+        with open(fname) as f:
+            data = json.load(f)
+    except Exception:
+        _print_exception()
+        return log.error("Could not read from %s" % fname)
+
+    try:
+        dump.load(data)
+    except Exception:
+        return log.error("Could not load %s" % fname)
+
+    options.write("lastVisitedPath", os.path.dirname(fname))
+    log.info("Successfully imported %s" % fname)
+
+
 def _Arg(var, label=None, callback=None):
     var = __.optionvars[var]
     var = copy.deepcopy(var)  # Allow edits to internal lists etc.
@@ -2404,6 +2479,14 @@ select_controls_options = _st_options("selectControls", "rdControl")
 
 def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
+
+
+def import_physics_options(*args):
+    return _Window("importPhysics", import_physics)
+
+
+def export_physics_options(*args):
+    return _Window("exportPhysics", export_physics)
 
 
 # Backwards compatibility

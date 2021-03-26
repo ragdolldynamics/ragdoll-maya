@@ -274,11 +274,24 @@
     },
     "exportPhysics": {
         "label": "Export Physics",
-        "enable": false
+        "icon": "load.png",
+        "summary": "Save physics to disk.",
+        "description": "Export the internals of the Ragdoll solver into a new file, this file could then be imported back into Maya for re-application onto an identical character or imported elsewhere such as Unreal or Unity.",
+        "options": [
+            "exportIncludeAnimation",
+            "exportIncludeSimulation"
+        ]
     },
     "importPhysics": {
         "label": "Import Physics",
-        "enable": false
+        "icon": "save.png",
+        "summary": "Load physics from disk.",
+        "description": "Import a previously exported Ragdoll scene from disk.",
+        "options": [
+            "importIntegratePhysics",
+            "importIncludeAnimation",
+            "importIncludeSimulation"
+        ]
     },
     "editConstraintFrames": {
         "label": "Edit Constraint Pivots",

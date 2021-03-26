@@ -336,6 +336,52 @@
     },
 
 
+    "#": "----------------",
+    "#": " Import/Export  ",
+    "#": "----------------",
+
+
+    "importIntegratePhysics": {
+        "name": "importIntegratePhysics",
+        "label": "Integrate",
+        "type": "Boolean",
+        "default": true,
+        "help": "Apply physics to existing objects in the currently opened Maya scene."
+    },
+
+    "exportIncludeAnimation": {
+        "name": "exportIncludeAnimation",
+        "label": "Include Animation",
+        "type": "Boolean",
+        "default": false,
+        "help": "Include animation in exported file."
+    },
+
+    "exportIncludeSimulation": {
+        "name": "exportIncludeSimulation",
+        "label": "Include Simulation",
+        "type": "Boolean",
+        "default": false,
+        "help": "Include simulation in exported file."
+    },
+
+    "importIncludeAnimation": {
+        "name": "importIncludeAnimation",
+        "label": "Include Animation",
+        "type": "Boolean",
+        "default": false,
+        "help": "Include animation from imported file (if any)."
+    },
+
+    "importIncludeSimulation": {
+        "name": "importIncludeSimulation",
+        "label": "Include Simulation",
+        "type": "Boolean",
+        "default": false,
+        "help": "Include simulation from imported file (if any)."
+    },
+
+
 
     "#": "----------------",
     "#": " Global options ",
@@ -430,5 +476,12 @@
         "type": "Boolean",
         "default": false,
         "help": "Improve viewport robustness when simulating in DG Evaluation mode, by calling `ogs -reset` on the start frame. Bear in mind this action is global to Maya and may negatively (or positively) affect other nodes in your scene."
+    },
+    "lastVisitedPath": {
+        "name": "lastVisitedPath",
+        "label": "Last Visited Path",
+        "type": "String",
+        "default": "",
+        "help": "Remember and restore the directory last browsed to for importing and exporting of physics."
     }
 }

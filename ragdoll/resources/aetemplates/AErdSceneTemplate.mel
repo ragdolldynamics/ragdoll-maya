@@ -4,8 +4,10 @@ global proc AErdSceneTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "General" -collapse false;
+            editorTemplate -addControl "enabled";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "substeps";
+            editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "gravity";
             editorTemplate -addControl "airDensity";
         editorTemplate -endLayout;
@@ -24,6 +26,8 @@ global proc AErdSceneTemplate(string $nodeName) {
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "solverType";
             editorTemplate -addControl "bounceThresholdVelocity";
+            editorTemplate -label "Position Iterations" -addControl "positionIterations";
+            editorTemplate -addControl "velocityIterations";
             editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
             editorTemplate -addControl "threadCount";
         editorTemplate -endLayout;

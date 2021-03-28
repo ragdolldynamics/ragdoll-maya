@@ -208,7 +208,7 @@ def create(chain,
         mod.connect(blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(blend["inRotate1"], compose["inputRotate"])
 
-        make_worldspace = mod.create_node("multMatrix", name="makeWorldspace")
+        make_worldspace = mod.create_node("multMatrix", name="makeAbsolute")
         mod.connect(compose["outputMatrix"], make_worldspace["matrixIn"][0])
 
         # Reproduce a parent hierarchy, but don't connect it to avoid cycle
@@ -404,6 +404,7 @@ def create(chain,
             commands.orient(con, aim, up)
 
             # Let the user manually add these, if needed
+            mod.set_attr(con["disableCollision"], True)
             mod.set_attr(con["angularLimitX"], 0)
             mod.set_attr(con["angularLimitY"], 0)
             mod.set_attr(con["angularLimitZ"], 0)

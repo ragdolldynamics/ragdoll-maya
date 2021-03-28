@@ -402,6 +402,9 @@ class Chain(object):
             previous_rigid, rigid, self._scene
         )
 
+        # Rigids will overlap per default
+        mod.set_attr(con["disableCollision"], True)
+
         if self._opts["autoLimits"]:
             fourtyfive = cmdx.radians(45)
             mod.set_attr(con["angularLimitX"], fourtyfive)
@@ -549,18 +552,18 @@ class Chain(object):
             return
 
         # pairBlend directly feeds into the drive matrix
-        compose = mod.create_node("composeMatrix", name="animationToMatrix")
+        compose = mod.create_node("composeMatrix", name="composePairBlend")
         mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
 
-        make_worldspace = mod.create_node("multMatrix", name="makeWorldspace")
-        mod.connect(compose["outputMatrix"], make_worldspace["matrixIn"][0])
+        make_absolute = mod.create_node("multMatrix", name="makeAbsolute")
+        mod.connect(compose["outputMatrix"], make_absolute["matrixIn"][0])
 
         # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-        mod.set_attr(make_worldspace["matrixIn"][1],
+        mod.set_attr(make_absolute["matrixIn"][1],
                      rigid.parent()["parentMatrix"][0].asMatrix())
 
-        mod.connect(make_worldspace["matrixSum"], rigid["inputMatrix"])
+        mod.connect(make_absolute["matrixSum"], rigid["inputMatrix"])
 
         # A drive is relative the parent frame, but the pairblend is relative
         # the parent Maya transform. In case these are not the same, we'll
@@ -571,8 +574,7 @@ class Chain(object):
         if parent_rigid.type() != "rdRigid":
             return
 
-        compensate = mod.create_node("multMatrix",
-                                     name="compensateForHierarchy")
+        relative = mod.create_node("multMatrix", name="makeRelative")
 
         # From this matrix..
         parent_transform_matrix = rigid["inputParentInverseMatrix"].asMatrix()
@@ -582,16 +584,16 @@ class Chain(object):
         parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
         parent_rigid_matrix = parent_rigid_matrix.inverse()
 
-        mod.connect(compose["outputMatrix"], compensate["matrixIn"][0])
-        compensate["matrixIn"][1] = parent_transform_matrix
-        compensate["matrixIn"][2] = parent_rigid_matrix
+        mod.connect(compose["outputMatrix"], relative["matrixIn"][0])
+        relative["matrixIn"][1] = parent_transform_matrix
+        relative["matrixIn"][2] = parent_rigid_matrix
 
-        mod.connect(compensate["matrixSum"], constraint["driveMatrix"])
+        mod.connect(relative["matrixSum"], constraint["driveMatrix"])
 
         # Keep channel box clean
         mod.set_attr(compose["isHistoricallyInteresting"], False)
-        mod.set_attr(compensate["isHistoricallyInteresting"], False)
-        mod.set_attr(make_worldspace["isHistoricallyInteresting"], False)
+        mod.set_attr(relative["isHistoricallyInteresting"], False)
+        mod.set_attr(make_absolute["isHistoricallyInteresting"], False)
 
     def _auto_multiplier(self, dgmod):
         r"""Multiply provided `constraints`
@@ -631,7 +633,7 @@ class Chain(object):
             # There isn't any, let's make one
             mult = commands.multiply_constraints(self._new_constraints,
                                                  parent=root)
-            mult.rename(commands._unique_name("rLocalMultiplier"))
+            mult.rename(commands._unique_name("rGuideMultiplier"))
 
             # Forward some convenience attributes
             multiplier_attrs = commands.UserAttributes(mult, root)
@@ -725,9 +727,9 @@ class Chain(object):
             commands._interpret_transform(mod, rigid, transform)
 
         if passive:
-            commands._connect_passive(mod, transform, rigid)
+            commands._connect_passive(mod, rigid, transform)
         else:
-            commands._connect_active(mod, transform, rigid)
+            commands._connect_active(mod, rigid, transform)
 
         if self._opts["computeMass"]:
             # Establish a sensible default mass, also taking into

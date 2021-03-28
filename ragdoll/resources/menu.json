@@ -334,13 +334,12 @@
         "description": "You can edit the position and orientation of an active rigid, but the changes won't take effect until you set the initial state. This records the position of the rigid bodies, wherever they are, at any time, as the starting position and orientation the next time you hit play."
     },
     "deleteAllPhysics": {
-        "label": "Delete All Physics",
+        "label": "Delete Physics",
         "icon": "delete.png",
         "summary": "Clear the Maya scene of anything related to Ragdoll.",
         "description": "Clear the Maya scene of anything related to Ragdoll. This can be useful for getting a clean slate, or to debug whether the problem you are experiencing is related to Ragdoll.",
         "options": [
-            "deleteFromSelection",
-            "deleteAttributesToo"
+            "deleteFromSelection"
         ]
     },
     "explorer": {

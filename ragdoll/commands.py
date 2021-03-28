@@ -7,6 +7,7 @@ These do not depend on scene selection, user preferences or Maya state.
 
 """
 
+import re
 import os
 import sys
 import random
@@ -300,17 +301,18 @@ def _unique_name(name):
     return name
 
 
-def _connect_passive(mod, transform, rigid):
+def _connect_passive(mod, rigid, transform):
     mod.set_attr(rigid["kinematic"], True)
     mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
 
-def _connect_active(mod, transform, rigid, existing=Overwrite):
+def _connect_active(mod, rigid, transform, existing=Overwrite):
     if existing == Overwrite:
-        _connect_transform(mod, rigid, transform)
+        _connect_active_blend(mod, rigid, transform)
 
     elif existing == Blend:
-        _connect_active_blend(mod, rigid)
+        _connect_active_blend(mod, rigid, transform)
+        _anim_constraint(rigid)
 
     else:  # Abort
         raise ValueError(
@@ -321,7 +323,7 @@ def _connect_active(mod, transform, rigid, existing=Overwrite):
     return True
 
 
-def _connect_active_blend(mod, rigid):
+def _connect_active_blend(mod, rigid, transform):
     r"""Constrain rigid to original animation
 
      ______
@@ -332,8 +334,6 @@ def _connect_active_blend(mod, rigid):
      \|_____|
 
     """
-
-    transform = rigid.parent()
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
@@ -380,18 +380,14 @@ def _connect_active_blend(mod, rigid):
 
     _connect_transform(mod, pair_blend, transform)
 
-    scene = rigid["startState"].connection(type="rdScene")
-    assert scene is not None, "%s was unconnected, this is a bug" % rigid
-
-    # Automatically hide con when blend is 0
     mod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
 
     # Pair blend directly feeds into the drive matrix
     with cmdx.DGModifier() as dgmod:
-        compose = dgmod.create_node("composeMatrix", name="makeMatrix")
+        compose = dgmod.create_node("composeMatrix", name="composePairBlend")
 
         # Account for node being potentially parented somewhere
-        mult = dgmod.create_node("multMatrix", name="makeWorldspace")
+        mult = dgmod.create_node("multMatrix", name="makeAbsolute")
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
@@ -416,8 +412,6 @@ def _connect_active_blend(mod, rigid):
     uas.add("friction")
     uas.add("restitution")
     uas.do_it()
-
-    _input_constraint(rigid)
 
     return pair_blend
 
@@ -607,10 +601,10 @@ def create_rigid(node,
     # Make the connections
     with cmdx.DagModifier() as mod:
         if passive:
-            _connect_passive(mod, transform, rigid)
+            _connect_passive(mod, rigid, transform)
         else:
             _remove_pivots(mod, transform)
-            _connect_active(mod, transform, rigid, existing=existing)
+            _connect_active(mod, rigid, transform, existing=existing)
 
         # Apply provided default attribute values
         for key, value in defaults.items():
@@ -619,7 +613,7 @@ def create_rigid(node,
     return rigid
 
 
-def _input_constraint(rigid):
+def _anim_constraint(rigid):
     """Apply inputMatrix to a new constraint"""
     scene = rigid["nextState"].connection(type="rdScene")
     assert scene is not None, "%s was not connected to a scene" % rigid
@@ -1122,6 +1116,7 @@ def reorient(con):
 
 
 def _connect_transform(mod, node, transform):
+    assert transform.isA(cmdx.kTransform), "%s was not a transform" % transform
     attributes = {}
 
     if node.type() == "rdRigid":
@@ -1146,8 +1141,8 @@ def _connect_transform(mod, node, transform):
 
     else:
         raise TypeError(
-            "I don't know how to connect type '%s'"
-            % type(node)
+            "I don't know how to connect '%s' -> '%s"
+            % (type(node), type(transform))
         )
 
     for src, dst in attributes.items():
@@ -1191,7 +1186,8 @@ def convert_rigid(rigid, passive=None):
             mod.doIt()
 
             _remove_pivots(mod, transform)
-            _connect_active_blend(mod, rigid)
+            _connect_active_blend(mod, rigid, transform)
+            _anim_constraint(rigid)
 
     return rigid
 
@@ -2529,17 +2525,34 @@ def normalise_shapes(root, max_delta=0.25):
             mod.set_attr(rigid["shapeExtents"], new_extents)
 
 
+def _shape_name(transform_name):
+    """Generate a suitable shape name from `transform_name`
+
+    If a shape node has the name <transform>Shape<number>
+    then Maya will keep that name updated as the transform
+    name changes.
+
+    """
+
+    components = re.split(r"(\d+)$", transform_name, 1) + [""]
+    return "Shape".join(components[:2])
+
+
 def multiply_rigids(rigids, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
+        transform_name = _unique_name("rRigidMultiplier")
+        shape_name = transform_name
+
         if parent is None:
-            parent = mod.createNode("transform", name="rRigidMultiplier")
+            parent = mod.createNode("transform", name=transform_name)
+            shape_name = _shape_name(transform_name)
 
         mult = mod.createNode("rdRigidMultiplier",
-                              name="rRigidMultiplier",
+                              name=shape_name,
                               parent=parent)
 
         for rigid in rigids:
-            mod.connect(mult["message"], rigid["multiplierNode"])
+            mod.connect(mult["ragdollId"], rigid["multiplierNode"])
 
     if channels:
         channels = list(filter(None, [c for c in channels if c in mult]))
@@ -2562,15 +2575,19 @@ def multiply_rigids(rigids, parent=None, channels=None):
 
 def multiply_constraints(constraints, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
+        transform_name = _unique_name("rConstraintMultiplier")
+        shape_name = transform_name
+
         if parent is None:
-            parent = mod.createNode("transform", name="rConstraintMultiplier")
+            parent = mod.createNode("transform", name=transform_name)
+            shape_name = _shape_name(transform_name)
 
         mult = mod.createNode("rdConstraintMultiplier",
-                              name="rConstraintMultiplier",
+                              name=shape_name,
                               parent=parent)
 
         for con in constraints:
-            mod.connect(mult["message"], con["multiplierNode"])
+            mod.connect(mult["ragdollId"], con["multiplierNode"])
 
     if channels:
         channels = list(filter(None, [c for c in channels if c in mult]))

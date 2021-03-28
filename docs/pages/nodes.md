@@ -8,7 +8,7 @@ Detailed information about all of Ragdoll's custom nodes along with the most com
 
 <br>
 
-### Scene
+## Scene
 
 Container of all rigids, constraints and forces that interact.
 
@@ -34,14 +34,14 @@ Ragdoll scenes support both scene-level parallelism and node-level parallelism.
 
 <br>
 
-### Rigid
+## Rigid
 
 A single transform in or out of Ragdoll.
 
 The rigid is the physical equivalent of native Maya geometry. It can either feed into the simulation (passive) or come *out* of the simulation (active).
 
-- `Passive Rigid` pass data from Maya to Ragdoll
 - `Active Rigid` pass data from Ragdoll to Maya
+- `Passive Rigid` pass data from Maya to Ragdoll
 
 <br>
 
@@ -55,7 +55,7 @@ The rigid is the physical equivalent of native Maya geometry. It can either feed
 
 <br>
 
-### Constraint
+## Constraint
 
 A relationship between two rigids.
 
@@ -75,7 +75,7 @@ However it is important to keep in mind that in the real world, there is no such
 
 <br>
 
-### Control
+## Control
 
 A placeholder for drawing a rigid under a different transform.
 
@@ -91,7 +91,7 @@ This node is cosmetic only. It helps you spot the rigid and rigid orientation in
 
 <br>
 
-### Constraint Multiplier
+## Constraint Multiplier
 
 Multiply one or more attributes of one or more *constraints*.
 
@@ -109,7 +109,7 @@ This node enables you to animate one attribute that affect many attributes, like
 
 <br>
 
-### Rigid Multiplier
+## Rigid Multiplier
 
 Multiply one or more attributes of one or more *rigids*.
 
@@ -124,3 +124,30 @@ This node enables you to animate one attribute that affect many attributes, like
 <div class="hboxlayout justify-center">
     <a href="/nodes/rdRigidMultiplier" class="button blue">Full Reference</a>
 </div>
+
+<br>
+
+## Other
+
+Notes on general concepts used in Ragdoll.
+
+<br>
+
+### Backwards Compatibility
+
+- Default values never change, those written into the node type itself
+- Initial values may change, those set during node-creation
+
+This means previously authored scenes will always behave the same, whilst still enabling new default values for future versions and future authored physics.
+
+<br>
+
+### Exclusive Nodes
+
+Ragdoll consists of a few new native types, like `rdRigid` and `rdConstraint`. During creation, Ragdoll may generate Maya-native types too, like `multMatrix` and `composeMatrix`. Those nodes are exclusive to Ragdoll and should be removed alongside them. This is managed via the so-called `.exclusiveNodes` attribute on each Ragdoll node type.
+
+<br>
+
+### User Attributes
+
+Whenever Ragdoll attributes appear on your original animation controls, they are referred to as "user attributes" by Ragdoll and tracked via the `.userAttributes` attribute on each Ragdoll node. These attributes are exclusive to Ragdoll and are removed alongside the Ragdoll node types they interact with.

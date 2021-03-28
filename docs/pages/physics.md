@@ -13,6 +13,10 @@ A constraint limits one or more of these axes.
 
 In Maya, the most typical form of constraint is locking a channel. This prevents this axis from changing.
 
+- A value < 0 means `LOCKED`, meaning it may *not* move along this axis
+- A value = 0 means `FREE`, meaning it *may* freely move along this axis
+- A value > 0 means `LIMITED`, meaning it *may* move within the limited range of this axis
+
 <br>
 
 ## Soft Constraints

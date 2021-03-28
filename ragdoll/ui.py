@@ -1956,6 +1956,44 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
         Explorer.instance = self
 
+        # For uninstall
+        __.widgets[self.windowTitle()] = self
+
+    def parse(self, dump, simple=False):
+        import json
+
+        # "Deep copy"
+        dump = json.loads(json.dumps(dump))
+
+        if simple:
+            dump["entities"] = {
+                int(entity): value
+                for entity, value in dump["entities"].items()
+            }
+        else:
+            for key, value in dump["entities"].copy().items():
+                if "NameComponent" in value["components"]:
+                    name = value["components"]["NameComponent"]
+
+                    # E.g. _:|root_grp|upperArm_ctl|rRigid2
+                    name = name["members"]["path"]
+
+                    # E.g. _:upperArm_ctl|rRigid2
+                    name = "|".join(name.rsplit("|", 2)[1:])
+
+                    # E.g. upperArm_ctl|rRigid2
+                    name = name.rsplit(":", 1)[-1]
+
+                    index = 1
+                    orig = name
+                    while name in dump["entities"]:
+                        name = "%s(%d)" % (orig, index)
+                        index += 1
+
+                    dump["entities"][name] = dump["entities"].pop(key)
+
+        return dump
+
     def load(self, dump):
         self._dump = dump
         self.reload()
@@ -1972,11 +2010,10 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             dump = dump()
 
         assert isinstance(dump, dict)
-        dump["entities"] = {
-            int(entity): value
-            for entity, value in dump["entities"].items()
-        }
-        self._model.load(dump)
+
+        parsed = self.parse(dump)
+        self._model.load(parsed)
+        self._view.expandToDepth(0)
 
 
 def show_explorer(dump):

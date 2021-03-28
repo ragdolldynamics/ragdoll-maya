@@ -36,6 +36,7 @@ import copy
 import json
 import time
 import logging
+import traceback
 import functools
 import contextlib
 
@@ -90,7 +91,6 @@ _recorded_actions = []
 
 def _print_exception():
     if RAGDOLL_DEVELOPER:
-        import traceback
         traceback.print_exc()
 
 
@@ -223,6 +223,7 @@ def uninstall():
     uninstall_logger()
     uninstall_callbacks()
     uninstall_menu()
+    uninstall_ui()
     options.uninstall()
     cmdx.uninstall()
 
@@ -232,7 +233,6 @@ def uninstall():
 
     except RuntimeError:
         # This is fine, for development
-        import traceback
         traceback.print_exc()
 
     # Erase all trace
@@ -357,6 +357,24 @@ def uninstall_plugin(force=True):
         os.environ["XBMLANGPATH"].replace(
             _resource(__.xbmlangpath) + os.pathsep, "")
     )
+
+
+def uninstall_ui():
+    for title, widget in __.widgets.items():
+        try:
+            widget.close()
+
+        except RuntimeError:
+            # May already have been deleted, and that's OK
+            pass
+
+        except Exception:
+            traceback.print_exc()
+            log.error(
+                "An unexpected error occurred during uninstall of widgets."
+            )
+
+    __.widgets.clear()
 
 
 def install_menu():
@@ -663,7 +681,6 @@ def _upgrade():
             log.warning("Ragdoll nodes already up to date!")
 
     except Exception:
-        import traceback
         traceback.print_exc()
         log.warning(
             "I had trouble upgrading, it should still "
@@ -964,7 +981,6 @@ def _replayable(func):
                     _record(sel)
                 except Exception:
                     # This *cannot* cause function to not get called
-                    import traceback
                     traceback.print_exc()
 
         # Pass the original selection into the target
@@ -1001,7 +1017,7 @@ def _filtered_selection(node_type):
     shapes = list(shapes) + selection
     shapes = filter(lambda shape: shape.type() == node_type, shapes)
 
-    return shapes
+    return list(shapes)
 
 
 @commands.with_undo_chunk
@@ -2109,11 +2125,9 @@ def multiply_rigids(selection=None):
     if not rigids:
         return False
 
-    root = rigids[0].parent()
-
     selected_channels = _selected_channels()
     mult = commands.multiply_rigids(
-        rigids, parent=root, channels=selected_channels
+        rigids, channels=selected_channels
     )
 
     cmds.select(str(mult))
@@ -2127,11 +2141,10 @@ def multiply_constraints(selection=None):
     if not constraints:
         return False
 
-    root = constraints[0].parent()
     selected_channels = _selected_channels()
 
     mult = commands.multiply_constraints(
-        constraints, parent=root, channels=selected_channels
+        constraints, channels=selected_channels
     )
 
     cmds.select(str(mult))
@@ -2285,6 +2298,7 @@ def import_physics(selection=None):
     try:
         dump.load(data)
     except Exception:
+        _print_exception()
         return log.error("Could not load %s" % fname)
 
     options.write("lastVisitedPath", os.path.dirname(fname))

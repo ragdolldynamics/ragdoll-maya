@@ -16,6 +16,16 @@ If you've ever worked with Photoshop and it's "Actions" panel, you'll know what 
 
 Animators can now apply physics onto a character rig in one scene, export it, and then import it onto the same character in another scene!
 
+- Import to selection
+- Import everything from file
+- Regenerate Maya scene from file
+- Reinterpret commands from file
+- Examples
+
+### Introduction
+
+Did you see Snyder's Justice League? In it, they introduce and explain the "mother box" which is capable of turning the dust of a burnt house *back* into a house.
+
 ### Supported Data
 
 On export, physics is converted to text and written to a file. Not all relevant information is captured by that export, only the things that related to Ragdoll.

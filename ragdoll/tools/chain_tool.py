@@ -60,6 +60,7 @@ class Chain(object):
         self._new_rigids = []
         self._new_constraints = []
         self._new_userattrs = []
+        self._new_multipliers = []
 
         self._scene = scene
         self._defaults = defaults
@@ -266,6 +267,10 @@ class Chain(object):
         return transform, shape
 
     def do_it(self):
+        self._new_rigids[:] = []
+        self._new_constraints[:] = []
+        self._new_userattrs[:] = []
+        self._new_multipliers[:] = []
 
         # May be called ahead of time by the user
         if not self._pre_flighted:
@@ -273,7 +278,13 @@ class Chain(object):
             self._pre_flighted = True
 
         self._do_all()
-        return self._new_rigids[:]
+
+        return {
+            "rigids": self._new_rigids,
+            "constraints": self._new_constraints,
+            "multipliers": self._new_multipliers,
+            "userAttributes": self._new_userattrs,
+        }
 
     def _do_all(self):
         tree_root_transform, tree_root_shape = self._tree_root
@@ -285,6 +296,8 @@ class Chain(object):
                 tree_root_rigid = self._make_root(mod,
                                                   tree_root_transform,
                                                   tree_root_shape)
+
+                self._new_rigids.append(tree_root_rigid)
 
         self._make_simulated_attr(tree_root_rigid, tree_root_transform)
 
@@ -522,7 +535,15 @@ class Chain(object):
 
         assert isinstance(dgmod, cmdx.DGModifier)
 
+        root, _ = self._tree_root
+        root_rigid = root.shape(type="rdRigid")
+
         for rigid in self._new_rigids:
+
+            # Don't bother with the root
+            if rigid == root_rigid:
+                continue
+
             transform = rigid.parent()
             blend = self._add_pairblend(dgmod, rigid, transform)
             self._auto_influence(dgmod, rigid, blend)
@@ -639,6 +660,8 @@ class Chain(object):
             multiplier_attrs = commands.UserAttributes(mult, root)
             multiplier_attrs.add("driveStrength",
                                  nice_name="Strength Multiplier")
+
+            self._new_multipliers.append(mult)
             self._new_userattrs += [multiplier_attrs]
 
         return mult

@@ -2017,6 +2017,9 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
 
 def show_explorer(dump):
+    if Explorer.instance and shiboken2.isValid(Explorer.instance):
+        return Explorer.instance
+
     exp = Explorer(parent=MayaWindow())
     exp.load(dump)
     return exp

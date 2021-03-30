@@ -1819,7 +1819,11 @@ def edit_constraint_frames(selection=None):
         con = node
 
         if con.isA(cmdx.kTransform):
-            con = node.shape(type="rdConstraint")
+            cons = list(node.shapes(type="rdConstraint"))
+
+            if cons:
+                # Last created constraint
+                con = cons[-1]
 
         if not con:
             log.warning("%s had no constraint", node)
@@ -2244,9 +2248,10 @@ def welcome_user(*args):
 
 @_format_exception
 def export_physics(selection=None):
-    data = cmds.ragdollDump()
+    dump = cmds.ragdollDump()
+    data = json.loads(dump)
 
-    if not json.loads(data)["entities"]:
+    if not data["entities"]:
         return log.error("Nothing to export")
 
     from PySide2 import QtWidgets
@@ -2264,17 +2269,20 @@ def export_physics(selection=None):
 
     try:
         with open(fname, "w") as f:
-            f.write(data)
+            f.write(dump)
     except Exception:
         _print_exception()
         return log.error("Could not write to %s" % fname)
 
     options.write("lastVisitedPath", os.path.dirname(fname))
-    log.info("Successfully exported to %s" % fname)
+    log.info(
+        "Successfully exported to %s in %.2f ms"
+        % (fname, data["serialisationTimeMs"])
+    )
 
 
 @_format_exception
-def import_physics(selection=None):
+def import_physics(selection=None, **opts):
     from PySide2 import QtWidgets
     fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
         ui.MayaWindow(),
@@ -2291,12 +2299,20 @@ def import_physics(selection=None):
     try:
         with open(fname) as f:
             data = json.load(f)
+
     except Exception:
         _print_exception()
         return log.error("Could not read from %s" % fname)
 
+    method = _opt("importMethod", opts)
+    merge = _opt("importMergePhysics", opts)
+
     try:
-        dump.load(data)
+        if method == "Load":
+            dump.load(data, merge=merge)
+        else:
+            dump.reinterpret(data)
+
     except Exception:
         _print_exception()
         return log.error("Could not load %s" % fname)

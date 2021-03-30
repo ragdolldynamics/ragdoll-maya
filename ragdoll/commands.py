@@ -404,15 +404,6 @@ def _connect_active_blend(mod, rigid, transform):
     mod.set_attr(compose["isHistoricallyInteresting"], False)
     mod.set_attr(mult["isHistoricallyInteresting"], False)
 
-    uas = UserAttributes(rigid, transform)
-    uas.add_divider("Ragdoll")
-    uas.add("kinematic")
-    uas.add("collide")
-    uas.add("mass")
-    uas.add("friction")
-    uas.add("restitution")
-    uas.do_it()
-
     return pair_blend
 
 
@@ -465,19 +456,24 @@ def _remove_pivots(mod, transform):
 
 
 @with_undo_chunk
-def create_scene():
+def create_scene(name=None, parent=None):
     time = cmdx.encode("time1")
     up = global_up_axis()
+    name = name or _unique_name("rScene")
 
     with cmdx.DagModifier() as mod:
-        tm = mod.create_node("transform", name=_unique_name("rScene"))
+        if parent is None:
+            parent = mod.create_node("transform", name=name)
 
-        # Not yet supported
-        mod.set_keyable(tm["scale"], False)
-        mod.set_locked(tm["scale"])
+            # Not yet supported
+            mod.set_keyable(parent["scale"], False)
+            mod.set_locked(parent["scale"])
 
-        scene = _rdscene(mod, "rSceneShape", parent=tm)
-        mod.connect(tm["worldMatrix"][0], scene["inputMatrix"])
+        else:
+            name = parent.name(namespace=False)
+
+        scene = _rdscene(mod, _shape_name(name), parent=parent)
+        mod.connect(parent["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
         mod.set_attr(scene["gravity"], up * -98.2)
@@ -489,11 +485,11 @@ def create_scene():
         else:
             mod.set_keyable(scene["gravityZ"])
             mod.set_nice_name(scene["gravityZ"], "Gravity")
-            mod.set_attr(tm["rotateX"], cmdx.radians(90))
+            mod.set_attr(parent["rotateX"], cmdx.radians(90))
 
         # Record for backwards compatibility
         mod.set_attr(scene["version"], _version())
-        mod.connect(tm["message"], scene["exclusiveNodes"][0])
+        mod.connect(parent["message"], scene["exclusiveNodes"][0])
 
     return scene
 
@@ -597,6 +593,15 @@ def create_rigid(node,
                 rigid["extentsZ"].read() *
                 0.01
             ))
+
+    uas = UserAttributes(rigid, transform)
+    uas.add_divider("Ragdoll")
+    uas.add("kinematic")
+    uas.add("collide")
+    uas.add("mass")
+    uas.add("friction")
+    uas.add("restitution")
+    uas.do_it()
 
     # Make the connections
     with cmdx.DagModifier() as mod:
@@ -2409,10 +2414,7 @@ def delete_physics(nodes):
     if not ragdoll_nodes:
         return result
 
-    # Delete transforms exclusively made for each ragdoll node
-    # These are connected from a rigid into a dynamic
-    # `_ragdollExclusive` attribute.
-    #
+    # Delete transforms exclusively made for Ragdoll nodes.
     #  _____________________       ___________________
     # |                     |     |                   |
     # | Rigid               |     | Transform         |
@@ -2434,15 +2436,15 @@ def delete_physics(nodes):
                 exclusives.append(other)
 
     # Delete attributes from Ragdoll interfaces,
-    # such as the original animation controls.
+    # such as on the original animation controls.
     #
-    #  _____________________       ___________________
-    # |                     |     |                   |
-    # | Rigid               |     | Transform         |
-    # |                     |     |                   |
-    # |   userAttribute [0] o<----o mass              |
-    # |                 [1] o<----o stiffness         |
-    # |_____________________|     |___________________|
+    #  ______________________       ___________________
+    # |                      |     |                   |
+    # | Rigid                |     | Transform         |
+    # |                      |     |                   |
+    # |   userAttributes [0] o<----o mass              |
+    # |                  [1] o<----o stiffness         |
+    # |______________________|     |___________________|
     #
     #
     user_attributes = set()
@@ -2466,12 +2468,16 @@ def delete_physics(nodes):
     with cmdx.DagModifier() as mod:
         for attr in user_attributes:
             mod.delete_attr(attr)
-
-    with cmdx.DagModifier() as mod:
-        for node in ragdoll_nodes + exclusives:
-            if node.exists:
-                mod.delete_node(node)
             mod.do_it()
+
+    for node in ragdoll_nodes + exclusives:
+        try:
+            # Use cmds rather than cmdx, as cmdx doesn't play nice
+            # with the undo stack.. :(
+            cmds.delete(node.path())
+        except RuntimeError:
+            # Already gone, good riddance
+            pass
 
     return result
 

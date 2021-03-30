@@ -341,12 +341,20 @@
     "#": "----------------",
 
 
-    "importIntegratePhysics": {
-        "name": "importIntegratePhysics",
-        "label": "Integrate",
+    "importMergePhysics": {
+        "name": "importMergePhysics",
+        "label": "Merge",
         "type": "Boolean",
         "default": true,
         "help": "Apply physics to existing objects in the currently opened Maya scene."
+    },
+
+    "importMethod": {
+        "name": "importMethod",
+        "type": "Enum",
+        "items": ["Load", "Reinterpret"],
+        "default": "Reinterpret",
+        "help": "Load each individual Ragdoll node as they existed at the time of export, or *reinterpret* the exported file to try and figure out what commands were used to create it, and then execute those same commands to the currently opened scene."
     },
 
     "exportIncludeAnimation": {

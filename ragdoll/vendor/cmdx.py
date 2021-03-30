@@ -5251,6 +5251,12 @@ class _BaseModifier(object):
 
         _python_to_mod(value, plug, self._modifier)
 
+    def trySetAttr(self, plug, value):
+        try:
+            self.setAttr(plug, value)
+        except Exception:
+            pass
+
     def resetAttr(self, plug):
         self.setAttr(plug, plug.default)
 
@@ -5587,6 +5593,7 @@ class _BaseModifier(object):
         rename_node = renameNode
         add_attr = addAttr
         set_attr = setAttr
+        try_set_attr = trySetAttr
         delete_attr = deleteAttr
         reset_attr = resetAttr
         lock_attr = lockAttr

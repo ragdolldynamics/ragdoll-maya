@@ -105,11 +105,20 @@ def _is_standalone():
     return not hasattr(cmds, "about") or cmds.about(batch=True)
 
 
-def _on_scene_open(*args):
+def _after_scene_open(*args):
     """Handle upgrades of nodes saved with an older version of Ragdoll"""
 
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
+
+
+def _before_scene_open(*args):
+    # Let go of all memory, to allow Ragdoll plug-in to be unloaded
+    cmdx.uninstall()
+
+
+def _before_scene_new(*args):
+    cmdx.uninstall()
 
 
 def requires_ui(func):
@@ -199,7 +208,6 @@ def install():
     install_plugin()
     licence.install(RAGDOLL_AUTO_SERIAL)
     options.install()
-    cmdx.install()
 
     if not _is_standalone():
         install_callbacks()
@@ -296,7 +304,17 @@ def _on_licence_expired(clientData=None):
 def install_callbacks():
     __.callbacks.append(
         om.MSceneMessage.addCallback(
-            om.MSceneMessage.kAfterOpen, _on_scene_open)
+            om.MSceneMessage.kBeforeOpen, _before_scene_open)
+    )
+
+    __.callbacks.append(
+        om.MSceneMessage.addCallback(
+            om.MSceneMessage.kAfterOpen, _after_scene_open)
+    )
+
+    __.callbacks.append(
+        om.MSceneMessage.addCallback(
+            om.MSceneMessage.kBeforeNew, _before_scene_new)
     )
 
     __.callbacks.append(

@@ -1175,8 +1175,10 @@ def convert_rigid(rigid, passive=None):
             mod.disconnect(transform["rotateX"])
             mod.disconnect(transform["rotateY"])
             mod.disconnect(transform["rotateZ"])
+
+            mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
+
             mod.set_attr(rigid["kinematic"], True)
-            mod.doIt()
 
         #
         # Convert passive --> active
@@ -1186,9 +1188,6 @@ def convert_rigid(rigid, passive=None):
 
             # The user will expect a newly-turned active rigid to collide
             mod.set_attr(rigid["collide"], True)
-
-            # Make sure inputMatrix has been disconnected
-            mod.doIt()
 
             _remove_pivots(mod, transform)
             _connect_active_blend(mod, rigid, transform)

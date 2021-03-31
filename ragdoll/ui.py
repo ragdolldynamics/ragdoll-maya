@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import json
 import logging
 import datetime
 
@@ -1960,8 +1961,6 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         __.widgets[self.windowTitle()] = self
 
     def parse(self, dump, simple=False):
-        import json
-
         # "Deep copy"
         dump = json.loads(json.dumps(dump))
 
@@ -2008,6 +2007,9 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
         if callable(dump):
             dump = dump()
+
+        if isinstance(dump, string_types):
+            dump = json.loads(dump)
 
         assert isinstance(dump, dict)
 

@@ -1217,19 +1217,19 @@ def create_active_rigid(selection=None, **opts):
             )
 
         try:
-            rigid = commands.create_rigid(node, scene,
-                                          defaults=defaults,
-                                          **kwargs)
+            new_nodes = commands.create_rigid(node, scene,
+                                              defaults=defaults,
+                                              **kwargs)
         except Exception as e:
             _print_exception()
             log.error(str(e))
             continue
 
         # There may have been an error
-        if not rigid:
+        if not new_nodes:
             continue
 
-        created.append(rigid)
+        created += new_nodes
 
     if created:
         if select:

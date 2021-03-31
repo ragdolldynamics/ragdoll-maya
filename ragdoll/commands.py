@@ -312,7 +312,6 @@ def _connect_active(mod, rigid, transform, existing=Overwrite):
 
     elif existing == Blend:
         _connect_active_blend(mod, rigid, transform)
-        _anim_constraint(rigid)
 
     else:  # Abort
         raise ValueError(
@@ -500,7 +499,7 @@ def create_rigid(node,
                  passive=False,
                  compute_mass=False,
                  existing=Overwrite,
-                 constraint=None,
+                 constraint=True,
                  defaults=None,
                  _cache=None):
     """Create a new rigid
@@ -603,6 +602,8 @@ def create_rigid(node,
     uas.add("restitution")
     uas.do_it()
 
+    new_nodes = [rigid]
+
     # Make the connections
     with cmdx.DagModifier() as mod:
         if passive:
@@ -611,11 +612,15 @@ def create_rigid(node,
             _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform, existing=existing)
 
+        if constraint:
+            con = _anim_constraint(rigid)
+            new_nodes += [con]
+
         # Apply provided default attribute values
         for key, value in defaults.items():
             mod.set_attr(rigid[key], value)
 
-    return rigid
+    return new_nodes
 
 
 def _anim_constraint(rigid):
@@ -695,24 +700,6 @@ def create_constraint(parent, child):
 
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(child["ragdollId"], con["childRigid"])
-
-        # Was there already a constraint here?
-        # Does it have an input drive matrix?
-        excon = child["ragdollId"].connection(type="rdConstraint")
-        if excon:
-            world_matrix = excon["driveMatrix"].connection(
-                type="multMatrix", destination=False)
-
-            if world_matrix is not None:
-                local_matrix = world_matrix["matrixIn"][0].connection(
-                    type="composeMatrix", destination=False)
-
-                if local_matrix is not None:
-                    mod.connect(local_matrix["outputMatrix"],
-                                con["driveMatrix"])
-
-                    # Take priority
-                    mod.set_attr(excon["driveStrength"], 0.0)
 
         _reset_constraint(mod, con)
 

@@ -47,10 +47,6 @@ class Chain(object):
         options["passiveRoot"] = options.get("passiveRoot", True)
         options["autoLimits"] = options.get("autoLimits", False)
         options["addUserAttributes"] = options.get("addUserAttributes", True)
-        options["autoInfluence"] = (
-            options.get("autoInfluence", False) and
-            options.get("autoBlend", False)
-        )
 
         defaults = defaults or {}
         defaults["shapeType"] = defaults.get(
@@ -660,6 +656,7 @@ class Chain(object):
             # Forward some convenience attributes
             multiplier_attrs = commands.UserAttributes(mult, root)
             multiplier_attrs.add("driveStrength",
+                                 long_name="strengthMultiplier",
                                  nice_name="Strength Multiplier")
 
             self._new_multipliers.append(mult)

@@ -212,9 +212,16 @@ class Loader(object):
 
         """
 
-        return Component(
-            self._dump["entities"][entity]["components"][component]
-        )
+        try:
+            return Component(
+                self._dump["entities"][entity]["components"][component]
+            )
+
+        except KeyError:
+            Name = self._dump["entities"][entity]
+            Name = Name["components"]["NameComponent"]
+            Name = Component(Name)
+            raise KeyError("%s did not have %s" % (Name["path"], component))
 
     def load(self, merge=True):
         """Apply JSON to existing nodes in the scene
@@ -261,7 +268,7 @@ class Loader(object):
             "rigid_multipliers": rigid_multipliers,
         }
 
-    def reinterpret(self):
+    def reinterpret(self, dry_run=False):
         """Interpret dump back into the UI-commands used to create them.
 
         For example, if two chains were created using the `Active Chain`
@@ -287,50 +294,112 @@ class Loader(object):
 
         """
 
-        self._visited.clear()
-
         transforms = self._find_transforms()
         rigids, chains = self._find_chains(transforms)
+        multipliers = []
+        constraints = []
 
-        # Only bother making scenes that related to these rigids
+        # Only create a scene if it's related to an interesting rigid
         scenes = self._find_scenes(rigids)
 
         for chain in chains:
-            scenes += self._find_scenes(chain)
+            scenes += self._find_scenes(chain["rigids"])
+            constraints += chain["constraints"][:]
+            multipliers += chain["multipliers"][:]
 
-        assert scenes, "There no scenes!"
+        # Remove duplicates
+        scenes = list(set(scenes))
+
+        assert scenes, "No scenes would get made!"  # Could have been filtered
         assert self._has_transforms(rigids, transforms), "This is a bug"
-        assert all(
-            self._has_transforms(chain, transforms) for chain in chains
-        ), "Some rigids in the discovered chains didn't have a transform, bug."
+        assert all(self._has_transforms(chain["rigids"], transforms)
+                   for chain in chains)
 
-        scenes = self._create_scenes(scenes, transforms)
-        rigids = self._create_rigids(rigids, scenes, transforms)
-        chains = self._create_chains(chains, scenes, transforms)
+        # What got created on-top of rigids and chains? These are our leftovers
+        visited = set()
+        visited.update(scenes)
+        visited.update(rigids)
+        visited.update(constraints)
+        visited.update(multipliers)
 
-        # Anything added on-top of new rigids and chains, like
+        for chain in chains:
+            visited.update(chain["rigids"])
+
+        leftovers = self._find_leftovers(visited, transforms)
+
+        self._report(
+            list(visited) +
+            leftovers["constraints"] +
+            leftovers["multipliers"]
+        )
+
+        if dry_run:
+            return {}
+
+        # Ok, let's start making things!
+        new_scenes = self._create_scenes(scenes, transforms)
+        new_rigids = self._create_rigids(rigids, new_scenes, transforms)
+
+        new_chains = []
+        for chain in chains:
+            new_chain = self._create_chain(chain, new_scenes, transforms)
+            new_chains += [new_chain]
+
+        # Anything added on-top of new rigids and new_chains, like
         # custom constraints or multipliers, are yet to be created
-        rigids.update(chains["rigids"])
-        constraints = chains["constraints"]
-        multipliers = chains["multipliers"]
+        new_constraints = {}
+        new_multipliers = {}
+        for chain, new_chain in zip(chains, new_chains):
+            for rigid, new_rigid in zip(chain["rigids"], new_chain["rigids"]):
+                new_rigids[rigid] = new_rigid
 
-        leftovers = self._find_leftovers(transforms)
+            for constraint, new_constraint in zip(chain["constraints"],
+                                                  new_chain["constraints"]):
+                new_constraints[constraint] = new_constraint
 
-        constraints.update(
+            for multiplier, new_multiplier in zip(chain["multipliers"],
+                                                  new_chain["multipliers"]):
+                new_multipliers[multiplier] = new_multiplier
+
+        new_constraints.update(
             self._create_constraints(
                 leftovers["constraints"],
-                scenes,
-                rigids,
-                multipliers
+                new_scenes,
+                new_rigids,
+                new_multipliers
             )
         )
 
         return {
-            "scenes": scenes,
-            "rigids": rigids,
-            "constraints": constraints,
-            "multipliers": multipliers,
+            "scenes": new_scenes,
+            "rigids": new_rigids,
+            "constraints": new_constraints,
+            "multipliers": new_multipliers,
         }
+
+    def _report(self, entities):
+        def _name(entity):
+            return self.component(entity, "NameComponent")["shortestPath"]
+
+        log.info("Scenes:")
+        for entity in entities:
+            if self.has(entity, "SolverComponent"):
+                log.info("  %s.." % _name(entity))
+
+        log.info("Rigids:")
+        for entity in entities:
+            if self.has(entity, "RigidUIComponent"):
+                log.info("  %s.." % _name(entity))
+
+        log.info("Constraints:")
+        for entity in entities:
+            if self.has(entity, "ConstraintUIComponent"):
+                log.info("  %s.." % _name(entity))
+
+        log.info("Multipliers:")
+        for entity in entities:
+            if self.has(entity, "ConstraintMultiplierUIComponent"):
+                log.info("  %s.." % _name(entity))
 
     def _make_transforms(self):
         transforms = {}
@@ -411,26 +480,10 @@ class Loader(object):
 
     def _find_scenes(self, rigids):
         """Find and associate each entity with a Maya transform"""
+
         scenes = set()
-        all_scenes = set()
-
-        for entity, data in self._dump["entities"].items():
-            comps = data["components"]
-
-            if "SolverComponent" not in comps:
-                continue
-
-            all_scenes.add(entity)
-
         for rigid in rigids:
-            Name = self.component(rigid, "NameComponent")
             Scene = self.component(rigid, "SceneComponent")
-
-            assert Scene["entity"] in all_scenes, (
-                "%s was part of scene %d which was not found in this dump"
-                % (Name["path"], Scene["entity"])
-            )
-
             scenes.add(Scene["entity"])
 
         return list(scenes)
@@ -460,33 +513,10 @@ class Loader(object):
         """
 
         def _rigids():
-            for entity, data in self._dump["entities"].items():
-                comps = data["components"]
-
-                if "RigidComponent" not in comps:
-                    continue
-
-                if "SolverComponent" in comps:
-                    continue
-
-                Scene = self.component(entity, "SceneComponent")
-
-                # The scene is in itself a rigid
-                if entity == Scene["entity"]:
-                    continue
-
+            for rigid in self.view("RigidUIComponent"):
                 # Only consider entities with a transform
-                if entity in transforms:
-                    yield entity
-
-        def _scenes():
-            for entity, data in self._dump["entities"].items():
-                comps = data["components"]
-
-                if "SolverComponent" not in comps:
-                    continue
-
-                yield entity
+                if rigid in transforms:
+                    yield rigid
 
         # Create a vertex for each rigid
         #
@@ -503,7 +533,7 @@ class Loader(object):
         for entity in _rigids():
             graph[entity] = []
 
-        for entity in _scenes():
+        for entity in self.view("SolverComponent"):
             graph[entity] = []
 
         # Connect vertices based on the `.parentRigid` attribute
@@ -536,7 +566,6 @@ class Loader(object):
         #
         #  Chain 1               Chain 2               Chain 3
         #
-        rigids = []
         chains = []
 
         def walk(graph, entity, chain=None):
@@ -552,35 +581,159 @@ class Loader(object):
             for neighbour in graph[entity]:
                 walk(graph, neighbour, chain)
 
-        for scene in _scenes():
+        for scene in self.view("SolverComponent"):
             # Chains start at the scene, but let's not *include* the scene
             for neighbour in graph[scene]:
                 walk(graph, neighbour)
 
-        # Sanity checks
-        all_scenes = list(_scenes())
-        for chain in chains:
-            # Just warn. It'll still work, in fact it will
-            # be *repaired* by creating each link using the
-            # scene from the first link. It just might not
-            # be what the user expects.
-            self._validate_same_scene(chain)
-
-            for link in chain:
-                Name = self.component(link, "NameComponent")
-                Scene = self.component(link, "SceneComponent")
-                assert Scene["entity"] in all_scenes, (
-                    "The rigid '%s' belongs to a scene '%s' which was not "
-                    "found in this dump." % (Name["path"], Scene["entity"])
-                )
-
         # Separate chains from individual rigids
+        rigids = []
         for chain in chains[:]:
             if len(chain) == 1:
                 rigids += chain
                 chains.remove(chain)
 
+        # Consider each chain its own object, with unique constraints
+        chains = [
+            {
+                "rigids": chain,
+                "constraints": [],
+                "multipliers": [],
+
+                # If part of a tree, indicate whether this particular
+                # chain is the root of that tree.
+                "partOfTree": True,
+            }
+            for chain in chains
+        ]
+
+        # The root of this chain may or may not have a parent
+        # If it doesn't, then this is the root of a tree
+        #
+        #    o   o
+        #     \ /
+        #  o   o  <-- root of chain
+        #   \ /
+        #    o
+        #    |
+        #    o  <-- root of tree
+        #
+        for chain in chains:
+            Rigid = self.component(chain["rigids"][0], "RigidComponent")
+
+            if Rigid["parentRigid"]:
+                chain["rigids"].insert(0, Rigid["parentRigid"])
+            else:
+                chain["partOfTree"] = False
+
+        # Find constraints associated to links in each chain
+        #
+        #  o link0       <-- Root, no constraint
+        #   \
+        #    \
+        #     \
+        #      \
+        #       o link1  <-- con0
+        #       |
+        #       |
+        #       |
+        #       |
+        #       o link2  <-- con1
+        #
+        for chain in chains:
+            rigid_to_constraints = {}
+
+            for rigid in chain["rigids"][1:]:
+                for entity in self._siblings(rigid):
+
+                    if not self.has(entity, "JointComponent"):
+                        continue
+
+                    # In the off chance this constraint resides outside
+                    # of the chain hierarchy, ensure filtering picks it up.
+                    if entity not in transforms:
+                        continue
+
+                    Joint = self.component(entity, "JointComponent")
+
+                    # There may be more than one constraint to a given
+                    # rigid, if the user made a chain and *then* constrained
+                    # it some more. It is however unlikely to be two
+                    # constraints between the same two rigids. An edgecase
+                    # is having two or more constraints for independent
+                    # control of their limits and strengths.
+                    if Joint["child"] != rigid:
+                        continue
+
+                    Rigid = self.component(rigid, "RigidComponent")
+
+                    # It's guaranteed to have the same parent as the
+                    # rigid itself; it's what makes it a chain.
+                    if Joint["parent"] != Rigid["parentRigid"]:
+                        continue
+
+                    log.debug("%s.sibling: %s", (
+                        comp["shortestPath"] for comp in (
+                            self.component(rigid, "NameComponent"),
+                            self.component(entity, "NameComponent"),
+                        )
+                    ))
+
+                    if rigid not in rigid_to_constraints:
+                        rigid_to_constraints[rigid] = []
+
+                    rigid_to_constraints[rigid].append(entity)
+
+            # In the off chance that there are two constraints between
+            # the same two links, we'll pick the one first in the Maya
+            # outliner hierarchy. That'll be the one created when the
+            # transform is first turned into a chain, the rest being
+            # added afterwards.
+            for rigid in chain["rigids"][1:]:
+                constraints = rigid_to_constraints[rigid]
+                assert len(constraints) > 0
+
+                # This will be the common case
+                if len(constraints) == 1:
+                    chain["constraints"] += constraints
+
+                else:
+                    indices = []
+                    for constraint in constraints:
+                        ConstraintUi = self.component(constraint,
+                                                      "ConstraintUIComponent")
+                        index = ConstraintUi["childIndex"]
+                        indices.append((index, constraint))
+
+                    chain["constraints"] += sorted(
+                        indices, key=lambda i: i[0]
+                    )[:1]
+
+            # The root *may* have a multiplier, it's optional and only
+            # occurs at the root of a tree.
+            if not chain["partOfTree"]:
+                root = chain["rigids"][0]
+                for entity in self._siblings(root):
+                    if self.has(entity, "ConstraintMultiplierUIComponent"):
+                        chain["multipliers"].append(entity)
+
+        # Sanity checks
+        for chain in chains:
+
+            # Just warn. It'll still work, in fact it will
+            # be *repaired* by creating each link using the
+            # scene from the first link. It just might not
+            # be what the user expects.
+            self._validate_same_scene(chain["rigids"])
+            self._validate_same_scene(chain["constraints"])
+
         return rigids, chains
+
+    def view(self, *components):
+        """Iterate over every entity that has all of `components`"""
+        for entity in self._dump["entities"]:
+            if all(self.has(entity, comp) for comp in components):
+                yield entity
 
     def _load_scenes(self, transforms):
         scenes = {}
@@ -706,6 +859,7 @@ class Loader(object):
             # These are guaranteed to be associated to any entity
             # with a `RigidComponent`
             Name = self.component(entity, "NameComponent")
+            Rigid = self.component(entity, "RigidComponent")
             RigidUi = self.component(entity, "RigidUIComponent")
             Scene = self.component(entity, "SceneComponent")
 
@@ -721,8 +875,12 @@ class Loader(object):
                 )
                 continue
 
+            opts = {
+                "passive": Rigid["kinematic"]
+            }
+
             scene = scenes[Scene["entity"]]
-            rigid = commands.create_rigid(transform, scene)
+            rigid = commands.create_rigid(transform, scene, **opts)
 
             with cmdx.DagModifier() as mod:
                 self._apply_rigid(mod, entity, rigid)
@@ -765,8 +923,8 @@ class Loader(object):
             if parent_path == sibling_parent_path:
                 yield entity
 
-    def _create_chains(self, chains, scenes, transforms):
-        """Create `chains` for `transforms` belonging to `scenes`
+    def _create_chain(self, chain, scenes, entity_to_transform):
+        """Create `chains` for `entity_to_transform` belonging to `scenes`
 
         Chains are provided as a list-of-lists, each entry being an
         individual chain.
@@ -782,131 +940,29 @@ class Loader(object):
 
         """
 
-        # Chain -> List of link entities
-        # Link -> Rigid entity
-        # Transform -> Maya transform
+        root_rigid = chain["rigids"][0]
+        Name = self.component(root_rigid, "NameComponent")
+        Scene = self.component(root_rigid, "SceneComponent")
 
-        chains_transforms = []
-        transform_to_link = {}
-        link_to_constraint = {}
-        link_to_multiplier = {}
+        try:
+            scene = scenes[Scene["entity"]]
+        except KeyError:
+            raise ValueError(
+                "The scene for %s hasn't yet been created"
+                % Name["path"]
+            )
 
         # Find a transform for each link in each chain
-        for chain in chains:
-            links = []
+        transforms = []
+        transform_to_link = {}
+        for rigid in chain["rigids"]:
+            transform = entity_to_transform[rigid]
+            transform_to_link[transform] = rigid
+            transforms.append(transform)
 
-            root = chain[0]
-            Name = self.component(root, "NameComponent")
-            Rigid = self.component(root, "RigidComponent")
-            Scene = self.component(root, "SceneComponent")
-            parent = Rigid["parentRigid"]
-
-            # The root of this chain may or may not have a parent
-            # If it doesn't, then this is the root of a tree
-            #
-            #    o   o
-            #     \ /
-            #  o   o  <-- root of chain
-            #   \ /
-            #    o
-            #    |
-            #    o  <-- root of tree
-            #
-            if parent and parent in transforms:
-                parent = transforms[parent]
-                links.append(parent)
-
-            try:
-                scene = scenes[Scene["entity"]]
-            except KeyError:
-                raise ValueError(
-                    "The scene for %s hasn't yet been created"
-                    % Name["path"]
-                )
-
-            for link in chain:
-                if link not in transforms:
-                    continue
-
-                transform = transforms[link]
-                transform_to_link[transform] = link
-                links.append(transform)
-
-            # They may have all been skipped
-            if not links:
-                continue
-
-            chains_transforms.append((scene, links))
-
-        # Find a constraint for each link in each chain
-        def _constraints():
-            for entity, data in self._dump["entities"].items():
-                comps = data["components"]
-
-                if "JointComponent" not in comps:
-                    continue
-
-                yield entity
-
-        for chain in chains:
-            for link in chain:
-                for constraint in _constraints():
-                    Joint = self.component(constraint, "JointComponent")
-
-                    if Joint["child"] != link:
-                        continue
-
-                    # There is likely multiple constraints under
-                    # each link, but only one is related to the chain.
-                    # The others are either user created or created
-                    # by some other mechanism.
-                    Rigid = self.component(link, "RigidComponent")
-
-                    # It's guaranteed to have the same parent as the
-                    # rigid itself; it's what makes it a chain.
-                    if Joint["parent"] != Rigid["parentRigid"]:
-                        continue
-
-                    if link not in link_to_constraint:
-                        link_to_constraint[link] = []
-
-                    link_to_constraint[link].append(constraint)
-
-        # In the off chance that there are *two* constraints between
-        # the same two links, we'll pick the one first in the Maya
-        # outliner hierarchy. That'll be the one created when the
-        # transform is first turned into a chain, the rest being
-        # added afterwards.
-        for link, constraints in link_to_constraint.items():
-            if len(constraints) < 2:
-                continue
-
-            indices = []
-            for constraint in constraints:
-                ConstraintUi = self.component(constraint,
-                                              "ConstraintUIComponent")
-                index = ConstraintUi["childIndex"]
-                indices.append((index, constraint))
-
-            constraints[:] = sorted(indices, key=lambda i: i[0])[:1]
-
-        # If we're making a multiplier for this chain, let's find
-        # its corresponding entity too. It'll be associated to
-        # all constraints in the chain, so let's just pick one.
-        for chain in chains:
-            root = chain[0]
-
-            for sibling in self._siblings(root):
-                if self.has(sibling, "ConstraintMultiplierUIComponent"):
-                    link_to_multiplier[root] = sibling
-
-                    log.debug(
-                        "Found multiplier for %s -> %s",
-                        self.component(root, "NameComponent")["path"],
-                        self.component(sibling, "NameComponent")["path"]
-                    )
-
-                    break
+        # They may have all been filtered out
+        if not transforms:
+            return
 
         # All done, it's time to get creative!
         #
@@ -923,79 +979,104 @@ class Loader(object):
         #   \  /
         #    \/
         #
-        active_chains = []
-        for scene, transforms in chains_transforms:
+        # We should have filtered these out already,
+        # they would be solo rigids.
+        assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
 
-            # We should have filtered these out already,
-            # they would be solo rigids.
-            assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
+        options = {
+            "autoMultiplier": chain["multipliers"] != []
+        }
 
-            options = {
-                "autoMultiplier": any(
-                    transform_to_link[link] in link_to_multiplier
-                    for link in transforms
-                )
-            }
+        active_chain = tools.create_chain(transforms, scene, options)
 
-            active_chain = tools.create_chain(transforms, scene, options)
-            active_chains.append(active_chain)
+        if len(active_chain["rigids"]) != len(chain["rigids"]):
+            log.warning(
+                "I expected %d rigids, but %d were created",
+                len(chain["rigids"]), len(active_chain["rigids"])
+            )
 
+        if len(active_chain["constraints"]) != len(chain["constraints"]):
+            log.warning(
+                "I expected %d constraints, but %d were created",
+                len(chain["constraints"]), len(active_chain["constraints"])
+            )
+
+        if len(active_chain["multipliers"]) != len(chain["multipliers"]):
+            log.warning(
+                "I expected %d multipliers, but %d were created",
+                len(chain["multipliers"]), len(active_chain["multipliers"])
+            )
+
+        # This command generated a series of nodes. We'll want to map
+        # these onto entities in the exported file such that we can
+        # apply those attributes.
+        #
+        #    _____                        ______________
+        #   |\ ___\                      |             |\
+        #   | |  - | - - - - - - - - - - -o            |_\
+        #    \|____|       ___           |               |
+        #                 /   \          |               |
+        #                 \___/          |               |
+        #                    \\          |     JSON      |
+        #                     \\         |               |
+        #     | /|             `         |               |
+        #   __|/ | - - - - - - - - - - - - - -o          |
+        #      \ |                       |               |
+        #       \|                       |_______________|
+        #
+        #
         # Map components to newly created rigids and constraints
         entity_to_rigid = {}
         entity_to_constraint = {}
         entity_to_multiplier = {}
-        for active_chain in active_chains:
-            # Find which entity in our dump corresponds
-            # to the newly created rigid.
-            for rigid in active_chain["rigids"]:
-                transform = rigid.parent()
 
-                entity = transform_to_link[transform]
-                entity_to_rigid[entity] = rigid
+        # Find which entity in our dump corresponds
+        # to the newly created rigid.
+        for rigid, new_rigid in zip(chain["rigids"], active_chain["rigids"]):
+            entity_to_rigid[rigid] = new_rigid
 
-            # Next, find the corresponding constraint link
-            for constraint in active_chain["constraints"]:
-                parent_rigid = constraint["childRigid"]
-                parent_rigid = parent_rigid.connection(type="rdRigid")
-                transform = parent_rigid.parent()
+        # Next, find the corresponding constraint link
+        for constraint, new_constraint in zip(chain["constraints"],
+                                              active_chain["constraints"]):
+            entity_to_constraint[constraint] = new_constraint
 
-                # Every new constraint is guaranteed to
-                # have a transform. Anything else would be a bug.
-                link = transform_to_link[transform]
+        # Finally, there may be a multiplier at the root
+        for multiplier, new_multiplier in zip(chain["multipliers"],
+                                              active_chain["multipliers"]):
+            entity_to_multiplier[multiplier] = new_multiplier
 
-                entity = link_to_constraint[link][0]
-                entity_to_constraint[entity] = constraint
-
-            # Finally, there may be a multiplier at the root
-            for multiplier in active_chain["multipliers"]:
-                transform = multiplier.parent()
-                link = transform_to_link[transform]
-                entity = link_to_multiplier[link]
-                entity_to_multiplier[entity] = multiplier
-
+        # Ok, we've mapped them all, let's get busy!
+        #
+        #    _____                        ______________
+        #   |\ ___\        write         |             |\
+        #   | |  - | <--------------------o            |_\
+        #    \|____|                     |               |
+        #                                |               |
+        #                                |               |
+        #                                |               |
+        #                                |               |
+        #     | /|         write         |               |
+        #   __|/ | <--------------------------o          |
+        #      \ |                       |               |
+        #       \|                       |_______________|
+        #
+        #
         with cmdx.DagModifier() as mod:
             # Apply customisation to each rigid
             for entity, rigid in entity_to_rigid.items():
                 self._apply_rigid(mod, entity, rigid)
-                self._visited.add(entity)
 
             # Apply customisation to each constraint
             for entity, con in entity_to_constraint.items():
                 self._apply_constraint(mod, entity, con)
-                self._visited.add(entity)
 
             # Apply customisation to each multiplier
             for entity, mult in entity_to_multiplier.items():
                 self._apply_constraint_multiplier(mod, entity, mult)
-                self._visited.add(entity)
 
-        return {
-            "rigids": entity_to_rigid,
-            "constraints": entity_to_constraint,
-            "multipliers": entity_to_multiplier
-        }
+        return active_chain
 
-    def _find_leftovers(self, transforms):
+    def _find_leftovers(self, visited, transforms):
 
         leftovers = {
             "constraints": [],
@@ -1003,7 +1084,7 @@ class Loader(object):
         }
 
         for entity in self._dump["entities"]:
-            if entity in self._visited:
+            if entity in visited:
                 continue
 
             if entity not in transforms:
@@ -1176,8 +1257,7 @@ class Loader(object):
         return constraints
 
     def _apply_scene(self, mod, entity, scene):
-        comps = self._dump["entities"][entity]["components"]
-        Solver = Component(comps["SolverComponent"])
+        Solver = self.component(entity, "SolverComponent")
 
         mod.try_set_attr(scene["enabled"], Solver["enabled"])
         mod.try_set_attr(scene["gravity"], Solver["gravity"])
@@ -1373,7 +1453,7 @@ class Loader(object):
         return True
 
     def _validate_same_scene(self, entities):
-        # Sanity check, all links in a chain belong to the same scene
+        # Sanity check, all `entities` belong to the same scene
         scene = self.component(entities[0], "SceneComponent")["entity"]
         same_scene = all(
             self.component(link, "SceneComponent")["entity"] == scene
@@ -1390,7 +1470,8 @@ class Loader(object):
                 )
 
             log.warning(
-                "Skipping entities with links in different scenes."
+                "Some entities that should have been "
+                "part of the same scene were not."
             )
 
         return same_scene

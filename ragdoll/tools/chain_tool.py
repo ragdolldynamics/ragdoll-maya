@@ -297,13 +297,14 @@ class Chain(object):
                                                   tree_root_transform,
                                                   tree_root_shape)
 
-                self._new_rigids.append(tree_root_rigid)
-
         self._make_simulated_attr(tree_root_rigid, tree_root_transform)
 
         # Links
         root_transform, root_shape = self._root
         root_rigid = root_transform.shape(type="rdRigid")
+
+        # Always start off with the root
+        self._new_rigids.append(root_rigid)
 
         with cmdx.DagModifier() as mod:
             previous_rigid = root_rigid
@@ -535,7 +536,7 @@ class Chain(object):
 
         assert isinstance(dgmod, cmdx.DGModifier)
 
-        root, _ = self._tree_root
+        root, _ = self._root
         root_rigid = root.shape(type="rdRigid")
 
         for rigid in self._new_rigids:

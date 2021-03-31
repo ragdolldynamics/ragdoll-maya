@@ -494,12 +494,12 @@ def create_scene(name=None, parent=None):
 
 
 @with_undo_chunk
+# @contract(returns=("rdRigid", optional("rdConstraint")))
 def create_rigid(node,
                  scene,
                  passive=False,
                  compute_mass=False,
                  existing=Overwrite,
-                 constraint=True,
                  defaults=None,
                  _cache=None):
     """Create a new rigid
@@ -602,8 +602,6 @@ def create_rigid(node,
     uas.add("restitution")
     uas.do_it()
 
-    new_nodes = [rigid]
-
     # Make the connections
     with cmdx.DagModifier() as mod:
         if passive:
@@ -612,28 +610,19 @@ def create_rigid(node,
             _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform, existing=existing)
 
-        if constraint:
-            con = _anim_constraint(rigid)
-            new_nodes += [con]
-
         # Apply provided default attribute values
         for key, value in defaults.items():
             mod.set_attr(rigid[key], value)
 
-    return new_nodes
+    return rigid
 
 
-def _anim_constraint(rigid):
+def _anim_constraint(rigid, active=False):
     """Apply inputMatrix to a new constraint"""
     scene = rigid["nextState"].connection(type="rdScene")
     assert scene is not None, "%s was not connected to a scene" % rigid
 
     transform = rigid.parent()
-
-    # Preserve animation, if any, as soft constraints
-    is_connected = any(
-        transform[attr].connected for attr in ("tx", "ty", "tz",
-                                               "rx", "ry", "rz"))
 
     with cmdx.DagModifier() as mod:
         con = _rdconstraint(mod, "rAnimConstraint", parent=transform)
@@ -643,7 +632,7 @@ def _anim_constraint(rigid):
         mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
 
         # Follow animation, if any
-        mod.set_attr(con["driveStrength"], 1.0 if is_connected else 0.0)
+        mod.set_attr(con["driveStrength"], 1.0 if active else 0.0)
 
         mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(rigid["ragdollId"], con["childRigid"])

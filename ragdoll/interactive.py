@@ -1216,20 +1216,28 @@ def create_active_rigid(selection=None, **opts):
                 commands.BoxShape
             )
 
+        # Preserve animation, if any, as soft constraints
+        is_connected = any(
+            transform[attr].connected for attr in ("tx", "ty", "tz",
+                                                   "rx", "ry", "rz"))
         try:
-            new_nodes = commands.create_rigid(node, scene,
-                                              defaults=defaults,
-                                              **kwargs)
+            rigid = commands.create_rigid(node, scene,
+                                          defaults=defaults,
+                                          **kwargs)
         except Exception as e:
             _print_exception()
             log.error(str(e))
             continue
 
         # There may have been an error
-        if not new_nodes:
+        if not rigid:
             continue
 
-        created += new_nodes
+        created += [rigid]
+
+        if _opt("existingAnimation", opts) == "Blend":
+            con = commands._anim_constraint(rigid, active=is_connected)
+            created += [con]
 
     if created:
         if select:

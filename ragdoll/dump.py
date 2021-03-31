@@ -313,9 +313,6 @@ class Loader(object):
         visited.update(s["entity"] for s in scenes)
         visited.update(r["entity"] for r in rigids)
 
-        for rigid in rigids:
-            visited.update(rigid["constraints"])
-
         for chain in chains:
             visited.update(chain["rigids"])
             visited.update(chain["constraints"])
@@ -520,71 +517,11 @@ class Loader(object):
         rigids = [
             {
                 "entity": rigid,
-                "constraints": [],
                 "options": {}
             }
             for rigid in rigids
 
         ]
-
-        # Find constraints related to each rigid
-        for rigid in rigids:
-            Scene = self.component(rigid["entity"], "SceneComponent")
-
-            rigid_to_constraints = {}
-            for entity in self._siblings(rigid["entity"]):
-
-                if not self.has(entity, "JointComponent"):
-                    continue
-
-                # In the off chance this constraint resides outside
-                # of the chain hierarchy, ensure filtering picks it up.
-                if entity not in transforms:
-                    continue
-
-                Joint = self.component(entity, "JointComponent")
-
-                # There may be more than one constraint to a given
-                # rigid, if the user made a rigid and *then* constrained
-                # it some more. It is however unlikely to be two
-                # constraints between the same two rigids. An edgecase
-                # is having two or more constraints for independent
-                # control of their limits and strengths.
-                if Joint["child"] != rigid["entity"]:
-                    continue
-
-                # If there is a constraint for the rigid, it'll be
-                # to the world.
-                if Joint["parent"] != Scene["entity"]:
-                    continue
-
-                if rigid["entity"] not in rigid_to_constraints:
-                    rigid_to_constraints[rigid["entity"]] = []
-
-                rigid_to_constraints[rigid["entity"]].append(entity)
-
-            # In case there are two constraints between the same
-            # two links, we'll pick the one first in the Maya outliner
-            # hierarchy. That'll be the one created when the transform
-            # is first turned into a chain, the rest being added afterwards.
-            constraints = rigid_to_constraints[rigid["entity"]]
-            assert len(constraints) > 0
-
-            # This will be the common case
-            if len(constraints) == 1:
-                rigid["constraints"][:] = constraints
-
-            else:
-                indices = []
-                for constraint in constraints:
-                    ConstraintUi = self.component(constraint,
-                                                  "ConstraintUIComponent")
-                    index = ConstraintUi["childIndex"]
-                    indices.append((index, constraint))
-
-                rigid["constraints"][:] = sorted(
-                    indices, key=lambda i: i[0]
-                )[:1]
 
         # Figure out options
         for rigid in rigids:
@@ -1005,41 +942,22 @@ class Loader(object):
                 continue
 
             scene = scenes[Scene["entity"]]
-            new_nodes = commands.create_rigid(transform,
-                                              scene,
-                                              **rigid["options"])
-
-            # Sanity check
-            new_rigids = [
-                node for node in new_nodes if node.type() == "rdRigid"
-            ]
-
-            new_constraints = [
-                node for node in new_nodes if node.type() == "rdConstraint"
-            ]
+            rigid = commands.create_rigid(transform,
+                                          scene,
+                                          **rigid["options"])
 
             with cmdx.DagModifier() as mod:
-                self._apply_rigid(mod, entity, new_rigids[0])
-
-                if rigid["constraints"]:
-                    if not new_constraints:
-                        log.warning(
-                            "Expected a constraint, but none was created"
-                        )
-                    else:
-                        constraint = rigid["constraints"][0]
-                        new_constraint = new_constraints[0]
-                        self._apply_constraint(mod, constraint, new_constraint)
+                self._apply_rigid(mod, entity, rigid)
 
                 # Restore it's name too
-                mod.rename(new_rigids[0], _name(Name))
+                mod.rename(rigid, _name(Name))
 
                 if RigidUi["multiplierEntity"] in multipliers:
                     multiplier = multipliers[RigidUi["multiplierEntity"]]
                     mod.connect(multiplier["ragdollId"],
-                                new_rigids[0]["multiplierNode"])
+                                rigid["multiplierNode"])
 
-            entity_to_rigid[entity] = new_rigids[0]
+            entity_to_rigid[entity] = rigid
 
             # Keep track of what we've created
             self._visited.add(entity)
@@ -1133,22 +1051,32 @@ class Loader(object):
                                           scene,
                                           options=chain["options"])
 
-        if len(active_chain["rigids"]) != len(chain["rigids"]):
+        new_rigids = [
+            n for n in active_chain if n.type() == "rdRigid"
+        ]
+        new_constraints = [
+            n for n in active_chain if n.type() == "rdConstraint"
+        ]
+        new_multipliers = [
+            n for n in active_chain if n.type() == "rdConstraintMultiplier"
+        ]
+
+        if len(new_rigids) != len(chain["rigids"]):
             log.warning(
                 "I expected %d rigids, but %d were created",
-                len(chain["rigids"]), len(active_chain["rigids"])
+                len(chain["rigids"]), len(new_rigids)
             )
 
-        if len(active_chain["constraints"]) != len(chain["constraints"]):
+        if len(new_constraints) != len(chain["constraints"]):
             log.warning(
                 "I expected %d constraints, but %d were created",
-                len(chain["constraints"]), len(active_chain["constraints"])
+                len(chain["constraints"]), len(new_constraints)
             )
 
-        if len(active_chain["multipliers"]) != len(chain["multipliers"]):
+        if len(new_multipliers) != len(chain["multipliers"]):
             log.warning(
                 "I expected %d multipliers, but %d were created",
-                len(chain["multipliers"]), len(active_chain["multipliers"])
+                len(chain["multipliers"]), len(new_multipliers)
             )
 
         # This command generated a series of nodes. We'll want to map
@@ -1176,17 +1104,17 @@ class Loader(object):
 
         # Find which entity in our dump corresponds
         # to the newly created rigid.
-        for rigid, new_rigid in zip(chain["rigids"], active_chain["rigids"]):
+        for rigid, new_rigid in zip(chain["rigids"], new_rigids):
             entity_to_rigid[rigid] = new_rigid
 
         # Next, find the corresponding constraint link
         for constraint, new_constraint in zip(chain["constraints"],
-                                              active_chain["constraints"]):
+                                              new_constraints):
             entity_to_constraint[constraint] = new_constraint
 
         # Finally, there may be a multiplier at the root
         for multiplier, new_multiplier in zip(chain["multipliers"],
-                                              active_chain["multipliers"]):
+                                              new_multipliers):
             entity_to_multiplier[multiplier] = new_multiplier
 
         # Ok, we've mapped them all, let's get busy!
@@ -1218,7 +1146,11 @@ class Loader(object):
             for entity, mult in entity_to_multiplier.items():
                 self._apply_constraint_multiplier(mod, entity, mult)
 
-        return active_chain
+        return {
+            "rigids": new_rigids,
+            "constraints": new_constraints,
+            "multipliers": new_multipliers,
+        }
 
     def _find_leftovers(self, visited, transforms):
 

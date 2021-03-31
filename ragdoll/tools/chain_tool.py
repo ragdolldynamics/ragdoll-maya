@@ -265,8 +265,8 @@ class Chain(object):
     def do_it(self):
         self._new_rigids[:] = []
         self._new_constraints[:] = []
-        self._new_userattrs[:] = []
         self._new_multipliers[:] = []
+        self._new_userattrs[:] = []
 
         # May be called ahead of time by the user
         if not self._pre_flighted:
@@ -275,12 +275,11 @@ class Chain(object):
 
         self._do_all()
 
-        return {
-            "rigids": self._new_rigids,
-            "constraints": self._new_constraints,
-            "multipliers": self._new_multipliers,
-            "userAttributes": self._new_userattrs,
-        }
+        return (
+            self._new_rigids +
+            self._new_constraints +
+            self._new_multipliers
+        )
 
     def _do_all(self):
         tree_root_transform, tree_root_shape = self._tree_root

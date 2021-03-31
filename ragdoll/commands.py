@@ -159,6 +159,10 @@ class UserAttributes(object):
         self._added = []
 
     def do_it(self):
+        # 2019 is a bastard
+        if cmdx.__maya_version__ == 2019:
+            return
+
         if not self._added:
             pass
 
@@ -184,10 +188,7 @@ class UserAttributes(object):
                 if self._target.has_attr(name):
                     cmds.deleteAttr("%s.%s" % (self._target, name))
 
-                if cmdx.__maya_version__ == 2019:
-                    plug = self.proxy_2019(attr, long_name, nice_name)
-                else:
-                    plug = self.proxy(attr, long_name, nice_name)
+                plug = self.proxy(attr, long_name, nice_name)
 
             added += [plug]
 

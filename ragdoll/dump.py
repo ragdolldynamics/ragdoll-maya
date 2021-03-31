@@ -600,6 +600,10 @@ class Loader(object):
                 "constraints": [],
                 "multipliers": [],
 
+                # Figure out what the options were at the time
+                # of creating this chain.
+                "options": {},
+
                 # If part of a tree, indicate whether this particular
                 # chain is the root of that tree.
                 "partOfTree": True,
@@ -716,6 +720,38 @@ class Loader(object):
                 for entity in self._siblings(root):
                     if self.has(entity, "ConstraintMultiplierUIComponent"):
                         chain["multipliers"].append(entity)
+
+        # Figure out what options to use to recreate this chain
+        #
+        #  _______________________________________
+        # |______________________________________x|
+        # |                                       |
+        # |   o   - - - - - - -                   |
+        # |    \  __________________              |
+        # |     o ---------------                 |
+        # |        ______                         |
+        # |   --- |______|                        |
+        # |    -- o                               |
+        # |  ---- o__________                     |
+        # |   --- |__________|                    |
+        # |                                       |
+        # |_______________________________________|
+        # |            |             |            |
+        # |____________|_____________|____________|
+        # |_______________________________________|
+        #
+        #
+        for chain in chains:
+            root = chain["rigids"][0]
+
+            RootRigid = self.component(root, "RigidComponent")
+            RootRigidUi = self.component(root, "RigidUIComponent")
+
+            chain["options"].update({
+                "passiveRoot": RootRigid["kinematic"],
+                "drawShaded": RootRigidUi["shaded"],
+                "autoMultiplier": chain["multipliers"] != [],
+            })
 
         # Sanity checks
         for chain in chains:
@@ -983,11 +1019,9 @@ class Loader(object):
         # they would be solo rigids.
         assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
 
-        options = {
-            "autoMultiplier": chain["multipliers"] != []
-        }
-
-        active_chain = tools.create_chain(transforms, scene, options)
+        active_chain = tools.create_chain(transforms,
+                                          scene,
+                                          options=chain["options"])
 
         if len(active_chain["rigids"]) != len(chain["rigids"]):
             log.warning(

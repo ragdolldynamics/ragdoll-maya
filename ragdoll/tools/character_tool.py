@@ -239,6 +239,8 @@ def create(root,
                                                             scene)
                     commands.orient(constraint)
 
+                constraint["disableCollision"] = True
+
                 # Make boxes out of these
                 if label in (Hand, Foot, Toe, Head):
                     with cmdx.DagModifier() as mod:

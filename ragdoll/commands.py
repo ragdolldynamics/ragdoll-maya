@@ -159,10 +159,6 @@ class UserAttributes(object):
         self._added = []
 
     def do_it(self):
-        # 2019 is a bastard
-        if cmdx.__maya_version__ == 2019:
-            return
-
         if not self._added:
             pass
 

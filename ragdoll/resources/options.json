@@ -374,6 +374,14 @@
         "help": "Import onto selection, ignore everything else."
     },
 
+    "exportIncludeThumbnail": {
+        "name": "exportIncludeThumbnail",
+        "label": "Include Thumbnail",
+        "type": "Boolean",
+        "default": true,
+        "help": "Include thumbnail with exported file."
+    },
+
     "exportIncludeAnimation": {
         "name": "exportIncludeAnimation",
         "label": "Include Animation",

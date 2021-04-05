@@ -1925,6 +1925,7 @@ def delete_physics(selection=None, **opts):
         return log.warning("Nothing deleted")
 
 
+@requires_ui
 def create_dynamic_control(selection=None, **opts):
     message = """\
 Dynamic Control has been updated and renamed Active Chain
@@ -2108,7 +2109,7 @@ def welcome_user(*args):
 
 
 @_format_exception
-def export_physics(selection=None):
+def export_physics(selection=None, **opts):
     dump = cmds.ragdollDump()
     data = json.loads(dump)
 
@@ -2128,9 +2129,24 @@ def export_physics(selection=None):
 
     fname = os.path.normpath(fname)
 
+    # Include optional thumbnail
+    data["ui"] = {
+
+        # Guarantee forward-slash for paths, on all OSes
+        "filename": fname.replace("\\", "/"),
+
+        "description": "",
+    }
+
+    if _opt("exportIncludeThumbnail", opts):
+        thumbnail = ui.view_to_pixmap()
+        b64 = ui.pixmap_to_base64(thumbnail)
+        data["ui"]["thumbnail"] = b64.decode("ascii")
+
     try:
         with open(fname, "w") as f:
-            f.write(dump)
+            json.dump(data, f, indent=4, sort_keys=True)
+
     except Exception:
         _print_exception()
         return log.error("Could not write to %s" % fname)
@@ -2241,8 +2257,8 @@ def _Window(key, command=None, cls=None):
 
 def global_preferences(*args):
     def callback():
-        time = cmds.currentTime(query=True)
-        cmds.evalDeferred(lambda: cmds.currentTime(time, update=True))
+        ctime = cmds.currentTime(query=True)
+        cmds.evalDeferred(lambda: cmds.currentTime(ctime, update=True))
 
     def global_preferences():
         pass

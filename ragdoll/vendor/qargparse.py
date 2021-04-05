@@ -37,7 +37,8 @@ try:
         QtGui,
     )
 
-    from shiboken2 import wrapInstance, getCppPointer
+    from shiboken2 import wrapInstance, getCppPointer, isValid
+    QtCompat.isValid = isValid
     QtCompat.wrapInstance = wrapInstance
     QtCompat.getCppPointer = getCppPointer
 
@@ -61,7 +62,8 @@ except ImportError:
         QtCore.Slot = QtCore.pyqtSlot
         QtCore.Property = QtCore.pyqtProperty
 
-        from sip import wrapinstance, unwrapinstance
+        from sip import wrapinstance, unwrapinstance, isdeleted
+        QtCompat.isValid = lambda w: not isdeleted(w)
         QtCompat.wrapInstance = wrapinstance
         QtCompat.getCppPointer = unwrapinstance
 
@@ -354,7 +356,8 @@ class QArgumentParser(QtWidgets.QWidget):
         label = _with_entered_exited2(QtWidgets.QLabel)(arg["label"])
 
         # Take condition into account
-        arg["enabled"] = arg["condition"]()
+        if arg["condition"]:
+            arg["enabled"] = arg["condition"]()
 
         if isinstance(arg, Enum):
             widget = arg.create(fillWidth=self._style["comboboxFillWidth"])
@@ -447,16 +450,17 @@ class QArgumentParser(QtWidgets.QWidget):
 
         arg["edited"] = arg.isEdited()
 
-        if arg["edited"]:
+        if arg["edited"] and not isinstance(arg, String):
             arg["_widget"].setStyleSheet("font-weight: bold")
         else:
             arg["_widget"].setStyleSheet(None)
 
         # Conditions may have changed
         for other in self._arguments.values():
-            other["enabled"] = other["condition"]()
-            other["_widget"].setEnabled(other["enabled"])
-            other["_reset"].setEnabled(other["enabled"])
+            if other["condition"]:
+                other["enabled"] = other["condition"]()
+                other["_widget"].setEnabled(other["enabled"])
+                other["_reset"].setEnabled(other["enabled"])
 
         self.changed.emit(arg)
 
@@ -501,7 +505,7 @@ class QArgument(QtCore.QObject):
         args["max"] = kwargs.pop("max", 99)
         args["enabled"] = bool(kwargs.pop("enabled", True))
         args["edited"] = False
-        args["condition"] = lambda: True
+        args["condition"] = None
 
         # Anything left is an error
         for arg in kwargs:
@@ -547,6 +551,16 @@ class QArgument(QtCore.QObject):
 
     def reset(self):
         self.write(self["default"])
+
+    def widget(self):
+        widget = self._data["_widget"]
+
+        # Let the bells chime
+        assert QtCompat.isValid(widget), (
+            "%s was no longer alive" % self["name"]
+        )
+
+        return widget
 
     def compose_reset_tip(self):
         return "Reset%s" % (
@@ -909,6 +923,51 @@ class String(QArgument):
         if current != self._previous:
             self._previous = current
             self.changed.emit()
+
+
+class Path(QArgument):
+    """Path type user interface
+
+    Represented by `QtWidgets.QLineEdit` and `QPushButton`
+
+    Arguments:
+
+
+    """
+
+    def create(self):
+        browse = _with_entered_exited(QtWidgets.QPushButton, self)()
+        widget = _with_entered_exited(QtWidgets.QLineEdit, self)()
+
+        widget.setMinimumWidth(px(50))
+
+        container = QtWidgets.QWidget()
+
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.addWidget(widget)
+        layout.addWidget(browse)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._slider = browse
+        self._widget = widget
+
+        # Synchonise spinbox with browse
+        widget.editingFinished.connect(self.changed.emit)
+        widget.valueChanged.connect(self.on_spinbox_changed)
+        browse.clicked.connect(self.on_browse)
+
+        self._read = lambda: widget.value()
+        self._write = lambda value: widget.setValue(value)
+
+        initial = self["initial"]
+
+        if initial is None:
+            initial = self["default"]
+
+        if initial != self.default:
+            self._write(initial)
+
+        return container
 
 
 class Info(String):

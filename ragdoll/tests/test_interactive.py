@@ -266,13 +266,13 @@ def test_create_character():
     assert_equals(len(cmds.ls(type="rdConstraint")), 3)
 
 
-def test_dynamic_control(**opts):
+def test_active_chain(**opts):
     _new()
 
     hierarchy = create_joint_arm()
     a, b, c = map(str, hierarchy[:3])
     cmds.select(a, b, c)
-    assert_true(interactive.create_dynamic_control(selection=None, **opts))
+    assert_true(interactive.create_active_chain(selection=None, **opts))
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
@@ -296,23 +296,23 @@ def test_chain(**opts):
     assert_equals(len(cmds.ls(type="rdConstraint")), 2)
 
 
-def test_dynamic_control_opt1_mesh():
-    test_dynamic_control(dynamicControlShapeType="Capsule")
-    test_dynamic_control(dynamicControlShapeType="Mesh")
+def test_active_chain_opt1_mesh():
+    test_active_chain(dynamicControlShapeType="Capsule")
+    test_active_chain(dynamicControlShapeType="Mesh")
 
 
-def test_dynamic_control_opt2_auto_blend():
-    test_dynamic_control(dynamicControlAutoBlend=False)
-    test_dynamic_control(dynamicControlAutoBlend=True)
+def test_active_chain_opt2_auto_blend():
+    test_active_chain(dynamicControlAutoBlend=False)
+    test_active_chain(dynamicControlAutoBlend=True)
 
 
-def test_dynamic_control_opt3_blend_method():
-    test_dynamic_control(dynamicControlBlendMethod="Each Control")
+def test_active_chain_opt3_blend_method():
+    test_active_chain(dynamicControlBlendMethod="Each Control")
 
 
-def test_dynamic_control_opt4_auto_multiplier_off():
-    test_dynamic_control(dynamicControlAutoMultiplier=False)
-    test_dynamic_control(dynamicControlAutoMultiplier=True)
+def test_active_chain_opt4_auto_multiplier_off():
+    test_active_chain(dynamicControlAutoMultiplier=False)
+    test_active_chain(dynamicControlAutoMultiplier=True)
 
 
 def test_chain_opt1_mesh():
@@ -339,14 +339,14 @@ def test_chain_opt5_auto_limits():
     test_chain(chainAutoLimits=True)
 
 
-def test_dynamic_control_with_delete_all():
-    test_dynamic_control()
+def test_active_chain_with_delete_all():
+    test_active_chain()
     interactive.delete_physics()
-    test_dynamic_control()
+    test_active_chain()
 
 
 def test_save():
-    test_dynamic_control()
+    test_active_chain()
     _save()
     _load()
 

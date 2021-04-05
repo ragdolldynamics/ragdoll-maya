@@ -61,12 +61,12 @@ def test_delete_all():
 
     assert_equals(len(cmds.ls(type="rdRigid")), 0)
 
-    # cmds.undo()
+    cmds.undo()
 
-    # assert_equals(len(cmds.ls(type="rdRigid")), 4)
+    assert_equals(len(cmds.ls(type="rdRigid")), 4)
 
-    # commands.delete_physics([a, b, c, d])
-    # assert_equals(len(cmds.ls(type="rdRigid")), 0)
+    commands.delete_physics([a, b, c, d])
+    assert_equals(len(cmds.ls(type="rdRigid")), 0)
 
 
 def test_convert_constraint():

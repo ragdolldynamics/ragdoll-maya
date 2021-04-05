@@ -21,38 +21,43 @@ from .commands import (
 # cmds-compatible versions of commands
 # Note that these still exist in commands.py, the difference being
 # the return-type; api -> strings and commands -> cmdx instances
-from .commands import to_cmds
-createScene = to_cmds("create_scene")
-createRigid = to_cmds("create_rigid")
-createActiveRigid = to_cmds("create_active_rigid")
-createPassiveRigid = to_cmds("create_passive_rigid")
-createCollider = to_cmds("create_passive_rigid")
-pointConstraint = to_cmds("point_constraint")
-orientConstraint = to_cmds("orient_constraint")
-hingeConstraint = to_cmds("hinge_constraint")
-socketConstraint = to_cmds("socket_constraint")
-parentConstraint = to_cmds("parent_constraint")
-convertRigid = to_cmds("convert_rigid")
-convertToPoint = to_cmds("convert_to_point")
-convertToOrient = to_cmds("convert_to_orient")
-convertToHinge = to_cmds("convert_to_hinge")
-convertToSocket = to_cmds("convert_to_socket")
-convertToParent = to_cmds("convert_to_parent")
-createAbsoluteControl = to_cmds("create_absolute_control")
-createRelativeControl = to_cmds("create_relative_control")
-createActiveControl = to_cmds("create_active_control")
-createKinematicControl = to_cmds("create_kinematic_control")
-transferAttributes = to_cmds("transfer_attributes")
-transferRigid = to_cmds("transfer_rigid")
-transferConstraint = to_cmds("transfer_constraint")
-editConstraintFrames = to_cmds("edit_constraint_frames")
-createForce = to_cmds("create_force")
-createSlice = to_cmds("create_slice")
-assignForce = to_cmds("assign_force")
+from .commands import _to_cmds
+createScene = _to_cmds("create_scene")
+createRigid = _to_cmds("create_rigid")
+createActiveRigid = _to_cmds("create_active_rigid")
+createPassiveRigid = _to_cmds("create_passive_rigid")
+createCollider = _to_cmds("create_passive_rigid")
+pointConstraint = _to_cmds("point_constraint")
+orientConstraint = _to_cmds("orient_constraint")
+hingeConstraint = _to_cmds("hinge_constraint")
+socketConstraint = _to_cmds("socket_constraint")
+parentConstraint = _to_cmds("parent_constraint")
+convertRigid = _to_cmds("convert_rigid")
+convertToPoint = _to_cmds("convert_to_point")
+convertToOrient = _to_cmds("convert_to_orient")
+convertToHinge = _to_cmds("convert_to_hinge")
+convertToSocket = _to_cmds("convert_to_socket")
+convertToParent = _to_cmds("convert_to_parent")
+createAbsoluteControl = _to_cmds("create_absolute_control")
+createRelativeControl = _to_cmds("create_relative_control")
+createActiveControl = _to_cmds("create_active_control")
+createKinematicControl = _to_cmds("create_kinematic_control")
+transferAttributes = _to_cmds("transfer_attributes")
+transferRigid = _to_cmds("transfer_rigid")
+transferConstraint = _to_cmds("transfer_constraint")
+editConstraintFrames = _to_cmds("edit_constraint_frames")
+createForce = _to_cmds("create_force")
+createSlice = _to_cmds("create_slice")
+assignForce = _to_cmds("assign_force")
+
+from .tools import _to_cmds
+createChain = _to_cmds("create_chain")
+createMuscle = _to_cmds("create_muscle")
+createCharacter = _to_cmds("create_character")
 
 # Backwards compatibility
-createCollider = to_cmds("create_passive_rigid")
-del to_cmds
+createCollider = _to_cmds("create_passive_rigid")
+del _to_cmds
 
 
 __all__ = [
@@ -64,9 +69,7 @@ __all__ = [
     # Camel case
     "createScene",
     "createRigid",
-    "createActiveRigid",
-    "createPassiveRigid",
-    "createCollider",
+    "createChain",
     "createAbsoluteControl",
     "createRelativeControl",
     "createActiveControl",
@@ -92,4 +95,6 @@ __all__ = [
 
     # Backwards compatibility
     "createCollider",
+    "createActiveRigid",
+    "createPassiveRigid",
 ]

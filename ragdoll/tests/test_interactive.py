@@ -401,8 +401,6 @@ def manual():
         if name.startswith("test_")
     )
 
-    setup()
-
     errors = []
     for test in tests:
         test()

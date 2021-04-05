@@ -30,14 +30,6 @@ self = sys.modules[__name__]
 self._maya_window = None
 self._dpi = None
 
-# Backwards compatibility for Python 2
-try:
-    long
-    string_types = basestring,
-except NameError:
-    long = int
-    string_types = str,
-
 # Expose some utility to interactive.py
 isValid = shiboken2.isValid
 
@@ -112,13 +104,13 @@ def _with_entered_exited_signals(cls):
 
 def hide_menuitem(item):
     ptr = MQtUtil.findMenuItem(item)
-    item = shiboken2.wrapInstance(long(ptr), QtWidgets.QAction)
+    item = shiboken2.wrapInstance(lib.long(ptr), QtWidgets.QAction)
     item.setVisible(False)
 
 
 def show_menuitem(item):
     ptr = MQtUtil.findMenuItem(item)
-    item = shiboken2.wrapInstance(long(ptr), QtWidgets.QAction)
+    item = shiboken2.wrapInstance(lib.long(ptr), QtWidgets.QAction)
     item.setVisible(True)
 
 
@@ -131,7 +123,7 @@ def MayaWindow():
 
         if ptr is not None:
             self._maya_window = shiboken2.wrapInstance(
-                long(ptr), QtWidgets.QMainWindow
+                lib.long(ptr), QtWidgets.QMainWindow
             )
 
         else:
@@ -1918,7 +1910,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         if callable(dump):
             dump = dump()
 
-        if isinstance(dump, string_types):
+        if isinstance(dump, lib.string_types):
             dump = json.loads(dump)
 
         assert isinstance(dump, dict)
@@ -2252,12 +2244,16 @@ class ImportOptions(Options):
         self.on_selection_changed()
 
     def read(self, fname):
-        assert isinstance(fname, string_types), "fname must be string"
+        assert isinstance(fname, lib.string_types), "fname must be string"
 
         self._widgets["PathField"].setText(fname)
 
-        with open(fname) as f:
-            data = json.load(f)
+        try:
+            with open(fname) as f:
+                data = json.load(f)
+
+        except Exception:
+            return log.warning("Could not read %s" % fname)
 
         self.load(data)
 
@@ -2517,12 +2513,6 @@ class ImportOptions(Options):
 def view_to_pixmap(size=None):
     """Render currently active 3D viewport as a QPixmap"""
 
-    # Python 2 backwards compatibility
-    try:
-        long
-    except NameError:
-        long = int
-
     image = om.MImage()
     view = omui.M3dView.active3dView()
     view.readColorBuffer(image, True)
@@ -2533,7 +2523,7 @@ def view_to_pixmap(size=None):
     osize = size or QtCore.QSize(512, 256)
     isize = image.getSize()
     buf = ctypes.c_ubyte * isize[0] * isize[1]
-    buf = buf.from_address(long(image.pixels()))
+    buf = buf.from_address(lib.long(image.pixels()))
 
     qimage = QtGui.QImage(
         buf, isize[0], isize[1], QtGui.QImage.Format_RGB32

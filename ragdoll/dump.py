@@ -13,15 +13,9 @@ import logging
 
 from maya import cmds
 from .vendor import cmdx
-from . import commands, tools
+from . import commands, tools, lib
 
 log = logging.getLogger("ragdoll")
-
-# Python 2 backwards compatibility
-try:
-    string_types = basestring,
-except NameError:
-    string_types = str,
 
 
 class Entity(int):
@@ -378,6 +372,7 @@ class Loader(object):
                     rigid_multipliers]):
             log.warning("Dump was empty")
 
+    @lib.with_undo_chunk
     def load(self, merge=True):
         """Apply JSON to existing nodes in the scene
 
@@ -426,6 +421,7 @@ class Loader(object):
             "rigid_multipliers": rigid_multipliers,
         }
 
+    @lib.with_undo_chunk
     def reinterpret(self, dry_run=False):
         """Interpret dump back into the UI-commands used to create them.
 
@@ -509,7 +505,8 @@ class Loader(object):
     def has(self, entity, component):
         """Return whether `entity` has `component`"""
         assert isinstance(entity, int), "entity must be int"
-        assert isinstance(component, string_types), "component must be string"
+        assert isinstance(component, lib.string_types), (
+            "component must be string")
         return component in self._dump["entities"][entity]["components"]
 
     def component(self, entity, component):

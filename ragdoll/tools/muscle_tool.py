@@ -1,8 +1,8 @@
 from ..vendor import cmdx
-from .. import commands
+from .. import commands, lib
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create(a,
            b,
            scene,

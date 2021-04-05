@@ -31,10 +31,8 @@ and can but generally *should not* be used for scripting.
 """
 
 import os
-import sys
 import copy
 import json
-import time
 import logging
 import traceback
 import functools
@@ -52,6 +50,7 @@ from . import (
     licence,
     dump,
     tools,
+    lib,
     __
 )
 
@@ -919,7 +918,7 @@ def _filtered_selection(node_type):
     return list(shapes)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_scene(selection=None):
     if not validate_evaluation_mode():
         return
@@ -1013,7 +1012,7 @@ def _opt(key, override=None):
     return override.get(key, options.read(key))
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
@@ -1131,7 +1130,7 @@ def create_active_rigid(selection=None, **opts):
         return log.warning("Nothing happened, that was unexpected")
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
@@ -1145,7 +1144,7 @@ def create_passive_rigid(selection=None, **opts):
     return create_active_rigid(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 @_format_exception
 def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
@@ -1211,7 +1210,7 @@ def create_active_chain(selection=None, **opts):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_link(*args):
     links = []
 
@@ -1235,7 +1234,7 @@ def _axis_to_vector(axis="x"):
     }[axis.lower()]
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_muscle(selection=None, **opts):
     try:
         a, b = selection or cmdx.selection()
@@ -1334,7 +1333,7 @@ def _validate_transforms(nodes, tolerance=0.01):
     return False if issues else True
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
 
@@ -1406,7 +1405,7 @@ def _find_rigid(node, autocreate=False):
     return node
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_constraint(selection=None, **opts):
     select = _opt("constraintSelect", opts)
     constraint_type = _opt("constraintType", opts)
@@ -1476,7 +1475,7 @@ def create_constraint(selection=None, **opts):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def convert_constraint(selection=None, constraint_type=None, select=False):
     converted = []
 
@@ -1525,7 +1524,7 @@ def convert_constraint(selection=None, constraint_type=None, select=False):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def convert_rigid(selection=None, passive=None):
     converted = []
 
@@ -1558,7 +1557,7 @@ def convert_rigid(selection=None, passive=None):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_socket(node):
     con = node.shape(type="rdConstraint")
 
@@ -1573,37 +1572,37 @@ def convert_to_socket(node):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_point_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Point"})
     return create_constraint(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_orient_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Orient"})
     return create_constraint(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_parent_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Parent"})
     return create_constraint(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_hinge_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Hinge"})
     return create_constraint(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Socket"})
     return create_constraint(selection, **opts)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def set_initial_state(selection=None, **opts):
     rigids = []
     selection = selection or cmdx.selection()
@@ -1627,7 +1626,7 @@ def set_initial_state(selection=None, **opts):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_driven_control(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
@@ -1669,7 +1668,7 @@ def create_driven_control(selection=None, **opts):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_kinematic_control(selection=None, **opts):
     controls = []
 
@@ -1693,7 +1692,7 @@ def create_kinematic_control(selection=None, **opts):
         return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def transfer_selected(selection=None):
     try:
         a, b = selection or cmdx.selection()
@@ -1786,7 +1785,7 @@ def _create_force(selection=None, force_type=None):
     if not scene:
         return
 
-    force = commands.create_force(force_type, rigid, scene)
+    force = commands.create_force(force_type, scene)
 
     for rigid in rigids:
         commands.assign_force(rigid, force)
@@ -1795,27 +1794,27 @@ def _create_force(selection=None, force_type=None):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_push_force(selection=None):
     return _create_force(selection, commands.PushForce)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_pull_force(selection=None):
     return _create_force(selection, commands.PullForce)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_uniform_force(selection=None):
     return _create_force(selection, commands.UniformForce)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_turbulence_force(selection=None):
     return _create_force(selection, commands.TurbulenceForce)
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create_slice(selection=None):
     scene = _find_current_scene(autocreate=False)
 
@@ -1829,7 +1828,7 @@ def create_slice(selection=None):
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def assign_force(selection=None):
     sel = selection or cmdx.selection()
 
@@ -1867,7 +1866,7 @@ def assign_force(selection=None):
         return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def duplicate_selected(selection=None, **opts):
     selection = cmdx.selection()
     cmds.select(deselect=True)
@@ -1897,7 +1896,7 @@ def duplicate_selected(selection=None, **opts):
         return log.warning("Nothing duplicated")
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def delete_physics(selection=None, **opts):
     if _opt("deleteFromSelection", opts):
         selection = selection or cmdx.selection(type="dagNode")
@@ -1940,7 +1939,7 @@ Dynamic Control has been updated and renamed Active Chain
     return kSuccess
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_polygons(selection=None):
     meshes = []
 
@@ -2120,7 +2119,7 @@ def export_physics(selection=None, **opts):
     fname, suffix = QtWidgets.QFileDialog.getSaveFileName(
         ui.MayaWindow(),
         "Save Ragdoll Scene",
-        options.read("lastVisitedPath"),
+        os.path.dirname(options.read("exportPath")),
         "Ragdoll scene files (*.rag)"
     )
 
@@ -2151,7 +2150,7 @@ def export_physics(selection=None, **opts):
         _print_exception()
         return log.error("Could not write to %s" % fname)
 
-    options.write("lastVisitedPath", os.path.dirname(fname))
+    options.write("exportPath", fname)
     log.info(
         "Successfully exported to %s in %.2f ms"
         % (fname, data["info"]["serialisationTimeMs"])
@@ -2164,7 +2163,7 @@ def import_physics_from_file(selection=None, **opts):
     fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
         ui.MayaWindow(),
         "Save Ragdoll Scene",
-        options.read("lastVisitedPath"),
+        os.path.dirname(options.read("importPath")),
         "Ragdoll scene files (*.rag)"
     )
 
@@ -2194,7 +2193,7 @@ def import_physics_from_file(selection=None, **opts):
         _print_exception()
         return log.error("Could not load %s" % fname)
 
-    options.write("lastVisitedPath", os.path.dirname(fname))
+    options.write("importPath", fname)
     log.info("Successfully imported %s" % fname)
 
 

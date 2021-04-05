@@ -374,12 +374,20 @@
         "help": "Import onto selection, ignore everything else."
     },
 
+    "exportPath": {
+        "name": "exportPath",
+        "label": "Filename",
+        "type": "String",
+        "default": "",
+        "help": "Export physics to this .rag file."
+    },
+
     "exportIncludeThumbnail": {
         "name": "exportIncludeThumbnail",
         "label": "Include Thumbnail",
         "type": "Boolean",
         "default": true,
-        "help": "Include thumbnail with exported file."
+        "help": "Include a small screenshot of the current scene at the time of export."
     },
 
     "exportIncludeAnimation": {

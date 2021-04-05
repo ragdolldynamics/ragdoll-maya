@@ -1,5 +1,5 @@
 from ..vendor import cmdx
-from .. import commands
+from .. import commands, lib
 from maya import cmds
 
 
@@ -148,7 +148,7 @@ class Character(object):
         rigid["shapeType"] = commands.BoxShape
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create(root,
            scene,
            copy=True,
@@ -280,7 +280,7 @@ def create(root,
             mod.smart_set_attr(con["driveStrength"], 0)  # Default to off
 
         # Forward the kinematic attribute to the root guide
-        root_proxies = commands.UserAttributes(rigid, root)
+        root_proxies = lib.UserAttributes(rigid, root)
         root_proxies.add_divider("Ragdoll")
         root_proxies.add("kinematic")
         root_proxies.do_it()
@@ -300,7 +300,7 @@ def create(root,
                 mod.do_it()
 
                 # Forward kinematics from children too
-                reference_proxies = commands.UserAttributes(rigid, reference)
+                reference_proxies = lib.UserAttributes(rigid, reference)
                 reference_proxies.add_divider("Ragdoll")
                 reference_proxies.add("kinematic")
                 reference_proxies.do_it()

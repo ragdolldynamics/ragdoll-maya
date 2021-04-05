@@ -9,16 +9,10 @@ convenient method of Python to C++ communication.
 
 import logging
 from maya import cmds
-from . import __
+from . import lib, __
 from .vendor import qargparse
 
 log = logging.getLogger("ragdoll")
-
-# Backwards compatibility for Python 2
-try:
-    string_types = basestring,
-except NameError:
-    string_types = str,
 
 
 def _optionvarkey(name):
@@ -27,7 +21,7 @@ def _optionvarkey(name):
 
 
 def write(arg, value=None):
-    if isinstance(arg, string_types):
+    if isinstance(arg, lib.string_types):
         arg = __.optionvars[arg]
 
     if isinstance(arg, qargparse.QArgument):
@@ -47,7 +41,7 @@ def write(arg, value=None):
     elif isinstance(value, bool):
         cmds.optionVar(intValue=(key, value))
 
-    elif isinstance(value, string_types):
+    elif isinstance(value, lib.string_types):
         cmds.optionVar(stringValue=(key, value))
 
     elif isinstance(value, (tuple, list)):
@@ -64,7 +58,7 @@ def write(arg, value=None):
 
 
 def read(arg):
-    if isinstance(arg, string_types):
+    if isinstance(arg, lib.string_types):
         arg = __.optionvars.get(arg)
 
     if isinstance(arg, qargparse.QArgument):

@@ -25,6 +25,9 @@ global proc AErdSceneTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "solverType";
+            editorTemplate -addControl "collisionDetectionType";
+            editorTemplate -addControl "enableStabilisation";
+            editorTemplate -addControl "enableEnhancedFriction";
             editorTemplate -addControl "bounceThresholdVelocity";
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";

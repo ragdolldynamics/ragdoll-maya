@@ -1,8 +1,8 @@
 from ..vendor import cmdx
-from .. import commands
+from .. import commands, lib
 
 
-@commands.with_undo_chunk
+@lib.with_undo_chunk
 def create(chain,
            scene,
            auto_blend=True,
@@ -132,13 +132,13 @@ def create(chain,
             dgmod.connect(transform["notSimulated"], rigid["kinematic"])
 
         # Forward some convenience attributes
-        transform_proxies = commands.UserAttributes(rigid, transform)
+        transform_proxies = lib.UserAttributes(rigid, transform)
         transform_proxies.add_divider("Ragdoll")
         transform_proxies.add("mass")
         transform_proxies.do_it()
 
         if constraint:
-            constraint_proxies = commands.UserAttributes(
+            constraint_proxies = lib.UserAttributes(
                 constraint, transform)
 
             # Forward some convenience attributes
@@ -293,7 +293,7 @@ def create(chain,
             mult.rename(commands._unique_name("r%sMultiplier" % name))
 
             # Forward some convenience attributes
-            proxies = commands.UserAttributes(mult, parent)
+            proxies = lib.UserAttributes(mult, parent)
             proxies.add("driveStrength", nice_name="Strength Multiplier")
             proxies.do_it()
 

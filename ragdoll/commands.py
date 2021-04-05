@@ -16,6 +16,7 @@ import functools
 
 from maya import cmds
 from maya.api import OpenMayaAnim as oma
+from . import lib
 from .vendor import cmdx
 
 log = logging.getLogger("ragdoll")
@@ -76,419 +77,8 @@ SmoothBlendMethod = 1
 
 Epsilon = 0.001
 
-# Python 2 backwards compatibility
-try:
-    string_types = basestring,
-except NameError:
-    string_types = str,
 
-
-def to_cmds(name):
-    """Convert cmdx instances to maya.cmds-compatible strings
-
-    Two types of cmdx instances are returned natively, `Node` and `Plug`
-    Any other return value remains unscathed.
-
-    """
-
-    func = getattr(sys.modules[__name__], name)
-
-    @functools.wraps(func)
-    def to_cmds_wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
-
-        if isinstance(result, (tuple, list)):
-            for index, entry in enumerate(result):
-                if isinstance(entry, cmdx.Node):
-                    result[index] = entry.shortestPath()
-
-                if isinstance(entry, cmdx.Plug):
-                    result[index] = entry.path()
-
-        elif isinstance(result, cmdx.Node):
-            result = result.shortestPath()
-
-        elif isinstance(result, cmdx.Plug):
-            result = result.path()
-
-        return result
-
-    return to_cmds_wrapper
-
-
-def with_undo_chunk(func):
-    """Consider the entire function one big giant undo chunk"""
-    @functools.wraps(func)
-    def _undo_chunk(*args, **kwargs):
-        try:
-            cmds.undoInfo(chunkName=func.__name__, openChunk=True)
-            return func(*args, **kwargs)
-        finally:
-            cmds.undoInfo(chunkName=func.__name__, closeChunk=True)
-
-    return _undo_chunk
-
-
-class UserAttributes(object):
-    """User attributes appear on the original controllers
-     __________________
-    |                  |
-    |      leftArm_ctl |
-    |                  |
-    | Translate X  0.0 |
-    | Translate Y  0.0 |
-    | Translate Z  0.0 |
-    |    Rotate X  0.0 |
-    |    Rotate Y  0.0 |
-    |    Rotate Z  0.0 |
-    |                  |
-    |          Ragdoll |
-    |        Mass  0.0 |  <----- User Attributes
-    |    Strength  0.0 |
-    |__________________|
-
-    Arguments:
-        source (cmdx.DagNode): Original node, e.g. an rdRigid
-        target (cmdx.DagNode): Typically the animation control
-
-    """
-
-    def __init__(self, source, target):
-        self._source = source
-        self._target = target
-        self._added = []
-
-    def do_it(self):
-        if not self._added:
-            pass
-
-        added = []
-
-        while self._added:
-            attr = self._added.pop(0)
-
-            if isinstance(attr, cmdx._AbstractAttribute):
-                name = attr["name"]
-
-                if self._target.has_attr(name):
-                    continue
-
-                with cmdx.DagModifier() as mod:
-                    mod.add_attr(self._target, attr)
-
-                plug = self._target[name]
-
-            else:
-                attr, long_name, nice_name = attr
-                name = long_name or attr
-
-                if self._target.has_attr(name):
-                    continue
-
-                plug = self.semi_proxy(attr, long_name, nice_name)
-
-            added += [plug]
-
-        with cmdx.DagModifier() as mod:
-            for new_plug in added:
-                index = self._source["userAttributes"].next_available_index()
-                mod.connect(new_plug, self._source["userAttributes"][index])
-
-                # Can't figure out the next available index until the
-                # current index has been occupied. And we can't simply
-                # linearly increment the index either, as indices are
-                # logical, not physical.
-                mod.do_it()
-
-    def proxy(self, attr, long_name=None, nice_name=None):
-        """Create a proxy attribute for `name` on `target`"""
-        name = long_name or attr
-
-        kwargs = {
-            "longName": name,
-        }
-
-        if nice_name is not None:
-            kwargs["niceName"] = nice_name
-
-        kwargs["proxy"] = self._source[attr].path()
-        cmds.addAttr(self._target.path(), **kwargs)
-
-        return self._target[name]
-
-    def semi_proxy(self, attr, long_name=None, nice_name=None):
-        """Maya 2019 and 2022 doesn't play well with proxy attributes
-
-        Other Maya versions simply crash ambiguously whenever they are
-        used so, stay clear.
-
-        """
-
-        name = long_name or attr
-        plug = self._source[attr]
-
-        kwargs = {
-            "default": plug.default,
-            "keyable": True,
-        }
-
-        if nice_name is not None:
-            kwargs["label"] = nice_name
-
-        # Figure out the attribute type based on original plug
-        def make_plug(plug, kwargs):
-            attr = plug.attribute()
-            Plug = None
-
-            if attr.apiType() == cmdx.om.MFn.kNumericAttribute:
-                innerType = cmdx.om.MFnNumericAttribute(attr).numericType()
-
-                if innerType == cmdx.om.MFnNumericData.kBoolean:
-                    Plug = cmdx.Boolean
-
-                elif innerType in (cmdx.om.MFnNumericData.kShort,
-                                   cmdx.om.MFnNumericData.kInt,
-                                   cmdx.om.MFnNumericData.kLong,
-                                   cmdx.om.MFnNumericData.kByte):
-                    Plug = cmdx.Int
-
-                elif innerType in (cmdx.om.MFnNumericData.kFloat,
-                                   cmdx.om.MFnNumericData.kDouble,
-                                   cmdx.om.MFnNumericData.kAddr):
-                    Plug = cmdx.Double
-
-            if Plug is None:
-                # Worst case, just assume double
-                kwargs["default"] = float(kwargs["default"])
-                Plug = cmdx.Double
-
-            return Plug(name, **kwargs)
-
-        mattr = make_plug(plug, kwargs)
-
-        with cmdx.DagModifier() as mod:
-            mod.add_attr(self._target, mattr)
-            mod.do_it()
-            mod.connect(self._target[name], self._source[attr])
-
-        return self._target[name]
-
-    def add(self, attr, long_name=None, nice_name=None):
-        assert isinstance(attr, string_types), "%s was not a string" % attr
-        self._added.append((attr, long_name, nice_name))
-
-    def add_divider(self, label):
-        assert isinstance(label, string_types), "%s was not a string" % label
-        self._added.append(cmdx.Divider(label))
-
-
-def add_rigid(mod, rigid, scene):
-    assert rigid.type() == "rdRigid", rigid
-    assert scene.type() == "rdScene", scene
-    assert rigid["startState"].connection() != scene, (
-        "%s already a member of %s" % (rigid, scene)
-    )
-
-    time = cmdx.encode("time1")
-    index = scene["outputObjects"].next_available_index()
-    mod.connect(time["outTime"], rigid["currentTime"])
-    mod.connect(scene["outputObjects"][index], rigid["nextState"])
-    mod.connect(scene["startTime"], rigid["startTime"])
-    mod.connect(rigid["startState"], scene["inputActiveStart"][index])
-    mod.connect(rigid["currentState"], scene["inputActive"][index])
-
-    # Record for backwards compatibility
-    mod.set_attr(rigid["version"], _version())
-
-
-def add_constraint(mod, con, scene):
-    assert con["startState"].connection() != scene, (
-        "%s already a member of %s" % (con, scene)
-    )
-
-    time = cmdx.encode("time1")
-    index = scene["inputConstraintStart"].next_available_index()
-
-    mod.connect(time["outTime"], con["currentTime"])
-    mod.connect(con["startState"], scene["inputConstraintStart"][index])
-    mod.connect(con["currentState"], scene["inputConstraint"][index])
-
-    # Record for backwards compatibility
-    mod.set_attr(con["version"], _version())
-
-
-def add_force(mod, force, rigid):
-    index = rigid["inputForce"].next_available_index()
-    mod.connect(force["outputForce"], rigid["inputForce"][index])
-
-    mod.set_attr(force["version"], _version())
-
-
-def _unique_name(name):
-    """Internal utility function"""
-    if cmdx.exists(name):
-        index = 1
-        while cmdx.exists("%s%d" % (name, index)):
-            index += 1
-        name = "%s%d" % (name, index)
-
-    return name
-
-
-def _connect_passive(mod, rigid, transform):
-    mod.smart_set_attr(rigid["kinematic"], True)
-    mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
-
-
-def _connect_active(mod, rigid, transform, existing=Overwrite):
-    if existing == Overwrite:
-        _connect_active_blend(mod, rigid, transform)
-
-    elif existing == Blend:
-        _connect_active_blend(mod, rigid, transform)
-
-    else:  # Abort
-        raise ValueError(
-            "%s has incoming connections to translate and/or rotate"
-            % rigid
-        )
-
-    return True
-
-
-def _connect_active_blend(mod, rigid, transform):
-    r"""Constrain rigid to original animation
-
-     ______
-    |\     \
-    | \_____\                /
-    | |     | . . . . . . - o -
-    \ |     |              /
-     \|_____|
-
-    """
-
-    with cmdx.DGModifier() as dgmod:
-        pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
-        dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
-        dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
-
-        # Establish initial values, before keyframes
-        # Use transform, rather than translate/rotate directly,
-        # to account for e.g. jointOrient.
-        tm = transform.transform()
-        dgmod.set_attr(pair_blend["inTranslate1"], tm.translation())
-        dgmod.set_attr(pair_blend["inRotate1"], tm.rotation())
-
-    pair_blend["translateXMode"].hide()
-    pair_blend["translateYMode"].hide()
-    pair_blend["translateZMode"].hide()
-    pair_blend["rotateMode"].hide()
-    pair_blend["rotInterpolation"].hide()
-
-    mod.connect(rigid["outputTranslateX"], pair_blend["inTranslateX2"])
-    mod.connect(rigid["outputTranslateY"], pair_blend["inTranslateY2"])
-    mod.connect(rigid["outputTranslateZ"], pair_blend["inTranslateZ2"])
-    mod.connect(rigid["outputRotateX"], pair_blend["inRotateX2"])
-    mod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
-    mod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
-
-    # Transfer existing animation/connections
-    prior_to_pairblend = {
-        "tx": "inTranslateX1",
-        "ty": "inTranslateY1",
-        "tz": "inTranslateZ1",
-        "rx": "inRotateX1",
-        "ry": "inRotateY1",
-        "rz": "inRotateZ1",
-    }
-
-    for attr, plug in prior_to_pairblend.items():
-        src = transform[attr].connection(destination=False, plug=True)
-
-        if src is not None:
-            pair_attr = prior_to_pairblend[attr]
-            dst = pair_blend[pair_attr]
-            mod.connect(src, dst)
-
-    _connect_transform(mod, pair_blend, transform)
-
-    mod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
-
-    # Pair blend directly feeds into the drive matrix
-    with cmdx.DGModifier() as dgmod:
-        compose = dgmod.create_node("composeMatrix", name="composePairBlend")
-
-        # Account for node being potentially parented somewhere
-        mult = dgmod.create_node("multMatrix", name="makeAbsolute")
-
-    mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
-    mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
-    mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
-
-    # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-    mod.set_attr(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
-
-    # Support hard manipulation
-    # For e.g. transitioning between active and passive
-    mod.connect(mult["matrixSum"], rigid["inputMatrix"])
-
-    # Keep channel box clean
-    mod.set_attr(compose["isHistoricallyInteresting"], False)
-    mod.set_attr(mult["isHistoricallyInteresting"], False)
-
-    return pair_blend
-
-
-def _remove_pivots(mod, transform):
-    # Remove unsupported additional transforms
-    for channel in ("rotatePivot",
-                    "rotatePivotTranslate",
-                    "scalePivot",
-                    "scalePivotTranslate",
-                    "rotateAxis"):
-
-        for axis in "XYZ":
-            attr = transform[channel + axis]
-
-            if attr.read() != 0:
-                if attr.editable:
-                    log.warning(
-                        "Zeroing out non-zero channel %s.%s%s"
-                        % (transform, channel, axis)
-                    )
-                    mod.set_attr(attr, 0.0)
-
-                else:
-                    log.warning(
-                        "%s.%s%s was locked, results might look funny"
-                        % (transform, channel, axis)
-                    )
-
-    if "jointOrient" in transform and any(transform["jointOrient"].read()):
-        # Grab full transform, ahead of resetting the jointOrient
-        # in case we reset it without connecting to `rotate`
-        tm = transform.transform()
-
-        if transform["jointOrient"].editable:
-            mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
-            log.warning(
-                "%s had a non-zero jointOrient, it was zeroed out"
-                % transform
-            )
-        else:
-            log.warning(
-                "Tried resetting %s.jointOrient but could not. "
-                "If you experience weird rotations, try resetting it to 0"
-                % transform
-            )
-
-        # "Freeze" transformations if possible
-        if transform["rotate"].editable:
-            mod.set_attr(transform["rotate"], tm.rotation())
-
-
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_scene(name=None, parent=None):
     time = cmdx.encode("time1")
     up = global_up_axis()
@@ -505,7 +95,7 @@ def create_scene(name=None, parent=None):
         else:
             name = parent.name(namespace=False)
 
-        scene = _rdscene(mod, _shape_name(name), parent=parent)
+        scene = _rdscene(mod, lib.shape_name(name), parent=parent)
         mod.connect(parent["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
@@ -520,15 +110,12 @@ def create_scene(name=None, parent=None):
             # mod.set_nice_name(scene["gravityZ"], "Gravity")
             mod.set_attr(parent["rotateX"], cmdx.radians(90))
 
-        # Record for backwards compatibility
-        mod.set_attr(scene["version"], _version())
         mod.connect(parent["message"], scene["exclusiveNodes"][0])
 
     return scene
 
 
-@with_undo_chunk
-# @contract(returns=("rdRigid", optional("rdConstraint")))
+@lib.with_undo_chunk
 def create_rigid(node,
                  scene,
                  passive=False,
@@ -556,10 +143,10 @@ def create_rigid(node,
 
     """
 
-    if isinstance(node, string_types):
+    if isinstance(node, lib.string_types):
         node = cmdx.encode(node)
 
-    if isinstance(scene, string_types):
+    if isinstance(scene, lib.string_types):
         scene = cmdx.encode(scene)
 
     assert isinstance(node, cmdx.DagNode), type(node)
@@ -597,7 +184,7 @@ def create_rigid(node,
         mod.set_attr(rigid["inputMatrix"], rest)
 
         # Add to scene
-        add_rigid(mod, rigid, scene)
+        _add_rigid(mod, rigid, scene)
 
     # Transfer geometry into rigid, if any
     #
@@ -628,7 +215,7 @@ def create_rigid(node,
                 0.01
             ))
 
-    uas = UserAttributes(rigid, transform)
+    uas = lib.UserAttributes(rigid, transform)
     uas.add_divider("Ragdoll")
     uas.add("kinematic")
     uas.add("collide")
@@ -678,9 +265,9 @@ def _anim_constraint(rigid, active=False):
         mod.connect(rigid["inputMatrix"], con["driveMatrix"])
 
         # Add to scene
-        add_constraint(mod, con, scene)
+        _add_constraint(mod, con, scene)
 
-    uas = UserAttributes(con, transform)
+    uas = lib.UserAttributes(con, transform)
     uas.add("driveStrength")
     uas.do_it()
 
@@ -728,18 +315,18 @@ def create_constraint(parent, child):
         _reset_constraint(mod, con)
 
         # Add to scene
-        add_constraint(mod, con, scene)
+        _add_constraint(mod, con, scene)
 
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_point(con,
                      maintain_offset=True,
                      auto_orient=True,
                      standalone=False):
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
@@ -762,13 +349,13 @@ def convert_to_point(con,
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_orient(con,
                       maintain_offset=True,
                       auto_orient=True,
                       standalone=False):
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
@@ -791,13 +378,13 @@ def convert_to_orient(con,
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_hinge(con,
                      maintain_offset=True,
                      auto_orient=True,
                      standalone=False):
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     """Convert `con` to Hinge Constraint
@@ -832,13 +419,13 @@ def convert_to_hinge(con,
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_socket(con,
                       maintain_offset=True,
                       auto_orient=True,
                       standalone=False):
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
@@ -865,14 +452,14 @@ def convert_to_socket(con,
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_parent(con,
                       maintain_offset=True,
                       auto_orient=True,
                       standalone=False):
     """A constraint with no degrees of freedom"""
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
@@ -898,7 +485,7 @@ def convert_to_parent(con,
 def _make_constraint(convert_function):
     """Constraint factory function, less to type = happier developer"""
 
-    @with_undo_chunk
+    @lib.with_undo_chunk
     def make(parent,
              child,
              scene,
@@ -906,10 +493,10 @@ def _make_constraint(convert_function):
              auto_orient=True,
              standalone=False):
 
-        if isinstance(parent, string_types):
+        if isinstance(parent, lib.string_types):
             parent = cmdx.encode(parent)
 
-        if isinstance(child, string_types):
+        if isinstance(child, lib.string_types):
             child = cmdx.encode(parent)
 
         con = _attach_bodies(parent, child, scene, standalone)
@@ -998,7 +585,7 @@ def _apply_scale(mat):
     return tm.asMatrix()
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def orient(con, aim=None, up=None):
     """Orient a constraint
 
@@ -1010,7 +597,7 @@ def orient(con, aim=None, up=None):
 
     """
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     assert con.type() == "rdConstraint", "%s was not a rdConstraint" % con
@@ -1080,7 +667,7 @@ def orient(con, aim=None, up=None):
         mod.set_attr(con["childFrame"], child_frame)
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def reorient(con):
     r"""Re-orient
 
@@ -1101,7 +688,7 @@ def reorient(con):
 
     """
 
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     parent = con["parentRigid"].connection()
@@ -1165,9 +752,9 @@ def _connect_transform(mod, node, transform):
         mod.try_connect(node[src], transform[dst])
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_rigid(rigid, passive=None):
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     transform = rigid.parent()
@@ -1201,7 +788,7 @@ def convert_rigid(rigid, passive=None):
             mod.set_attr(rigid["collide"], True)
 
             _remove_pivots(mod, transform)
-            _connect_active_blend(mod, rigid, transform)
+            _connect_active(mod, rigid, transform)
             _anim_constraint(rigid)
 
     return rigid
@@ -1217,44 +804,7 @@ def _rdscene(mod, name, parent=None):
     return scene
 
 
-def _rdrigid(mod, name, parent):
-    assert isinstance(parent, cmdx.DagNode) and parent.isA(cmdx.kTransform), (
-        "%s was not a transform" % parent
-    )
-
-    name = _unique_name(name)
-    rigid = mod.create_node("rdRigid", name=name, parent=parent)
-
-    # Link relevant attributes
-    # Keep up to date with initial world matrix
-    mod.connect(parent["worldMatrix"][0], rigid["restMatrix"])
-
-    # Compensate for any parents when outputting from the solver
-    mod.connect(parent["parentInverseMatrix"][0],
-                rigid["inputParentInverseMatrix"])
-
-    mod.connect(parent["rotateOrder"], rigid["rotateOrder"])
-
-    # Assign some random color, within some nice range
-    mod.set_attr(rigid["color"], _random_color())
-
-    return rigid
-
-
-def _rdcontrol(mod, name, parent=None):
-    name = _unique_name(name)
-    ctrl = mod.create_node("rdControl", name=name, parent=parent)
-    mod.set_attr(ctrl["color"], ControlColor)  # Default blue
-    return ctrl
-
-
-def _rdconstraint(mod, name, parent=None):
-    name = _unique_name(name)
-    node = mod.create_node("rdConstraint", name=name, parent=parent)
-    return node
-
-
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_absolute_control(rigid, reference=None):
     """Control a rigid body in worldspace
 
@@ -1266,7 +816,7 @@ def create_absolute_control(rigid, reference=None):
 
     """
 
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     tmat = rigid.transform(cmdx.sWorld)
@@ -1307,7 +857,7 @@ def create_absolute_control(rigid, reference=None):
         mod.connect(reference["worldMatrix"][0], con["driveMatrix"])
 
         # Add to scene
-        add_constraint(mod, con, scene)
+        _add_constraint(mod, con, scene)
 
     forwarded = (
         "driveStrength",
@@ -1317,7 +867,7 @@ def create_absolute_control(rigid, reference=None):
         "angularDriveDamping"
     )
 
-    reference_proxies = UserAttributes(con, reference)
+    reference_proxies = lib.UserAttributes(con, reference)
     reference_proxies.add_divider("Ragdoll")
 
     for attr in forwarded:
@@ -1329,9 +879,9 @@ def create_absolute_control(rigid, reference=None):
     return reference, ctrl, con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_relative_control(rigid):
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
@@ -1382,7 +932,7 @@ def create_relative_control(rigid):
     return con
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_active_control(reference, rigid):
     """Control a rigid body using a reference transform
 
@@ -1392,10 +942,10 @@ def create_active_control(reference, rigid):
 
     """
 
-    if isinstance(reference, string_types):
+    if isinstance(reference, lib.string_types):
         reference = cmdx.encode(reference)
 
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     assert reference.isA(cmdx.kTransform), "%s was not a transform" % reference
@@ -1427,7 +977,7 @@ def create_active_control(reference, rigid):
         "angularDriveDamping"
     )
 
-    reference_proxies = UserAttributes(con, reference)
+    reference_proxies = lib.UserAttributes(con, reference)
     reference_proxies.add_divider("Ragdoll")
 
     for attr in forwarded:
@@ -1439,12 +989,12 @@ def create_active_control(reference, rigid):
     return ctrl
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_kinematic_control(rigid, reference=None):
-    if reference is not None and isinstance(reference, string_types):
+    if reference is not None and isinstance(reference, lib.string_types):
         reference = cmdx.encode(reference)
 
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     with cmdx.DagModifier() as mod:
@@ -1478,7 +1028,7 @@ def create_kinematic_control(rigid, reference=None):
         "kinematic",
     )
 
-    proxies = UserAttributes(rigid, ctrl)
+    proxies = lib.UserAttributes(rigid, ctrl)
     for attr in forwarded:
         proxies.add(attr)
     proxies.do_it()
@@ -1598,7 +1148,7 @@ def _attach_bodies(parent, child, scene, standalone):
         mod.connect(child["ragdollId"], con["childRigid"])
 
         # Add to scene
-        add_constraint(mod, con, scene)
+        _add_constraint(mod, con, scene)
 
         # Was there already a constraint here?
         # Does it have an input drive matrix?
@@ -1625,12 +1175,12 @@ def _is_locked(node, channels="tr"):
     return any(not node[a].editable for a in attrs)
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def set_initial_state(rigids):
     assert isinstance(rigids, (tuple, list)), "%s was not a list" % rigids
 
     for index, rigid in enumerate(rigids):
-        if isinstance(rigid, string_types):
+        if isinstance(rigid, lib.string_types):
             rigids[index] = cmdx.encode(rigid)
 
     assert all(r.type() == "rdRigid" for r in rigids), (
@@ -1651,10 +1201,10 @@ def set_initial_state(rigids):
 
 
 def transfer_attributes(a, b, mirror=True):
-    if isinstance(a, string_types):
+    if isinstance(a, lib.string_types):
         a = cmdx.encode(a)
 
-    if isinstance(b, string_types):
+    if isinstance(b, lib.string_types):
         b = cmdx.encode(b)
 
     ra = a.shape(type="rdRigid")
@@ -1670,10 +1220,10 @@ def transfer_attributes(a, b, mirror=True):
 
 
 def transfer_rigid(ra, rb):
-    if isinstance(ra, string_types):
+    if isinstance(ra, lib.string_types):
         ra = cmdx.encode(ra)
 
-    if isinstance(rb, string_types):
+    if isinstance(rb, lib.string_types):
         rb = cmdx.encode(rb)
 
     rigid_attributes = (
@@ -1694,10 +1244,10 @@ def transfer_rigid(ra, rb):
 
 
 def transfer_constraint(ca, cb, mirror=True):
-    if isinstance(ca, string_types):
+    if isinstance(ca, lib.string_types):
         ca = cmdx.encode(ca)
 
-    if isinstance(cb, string_types):
+    if isinstance(cb, lib.string_types):
         cb = cmdx.encode(cb)
 
     constraint_attributes = (
@@ -1735,9 +1285,9 @@ def transfer_constraint(ca, cb, mirror=True):
         mod.set_attr(cb["childFrame"], child_frame.asMatrix())
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def edit_constraint_frames(con):
-    if isinstance(con, string_types):
+    if isinstance(con, lib.string_types):
         con = cmdx.encode(con)
 
     parent_rigid = con["parentRigid"].connection()
@@ -1777,9 +1327,9 @@ def edit_constraint_frames(con):
     return parent_frame, child_frame
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def edit_shape(rigid):
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     assert rigid and rigid.type() == "rdRigid", "%s was not a rigid" % rigid
@@ -1808,12 +1358,11 @@ def edit_shape(rigid):
     return shape
 
 
-@with_undo_chunk
-def create_force(type, rigid, scene):
-    if isinstance(rigid, string_types):
-        rigid = cmdx.encode(rigid)
+@lib.with_undo_chunk
+def create_force(type, scene):
+    """Create a new force of `type`"""
 
-    if isinstance(scene, string_types):
+    if isinstance(scene, lib.string_types):
         scene = cmdx.encode(scene)
 
     enum = {
@@ -1826,7 +1375,7 @@ def create_force(type, rigid, scene):
 
     with cmdx.DagModifier() as mod:
         tm = mod.create_node("transform", name="rForce1")
-        force = mod.create_node("rdForce", name="rForceShape1", parent=tm)
+        force = _rdforce(mod, "rForceShape1", parent=tm)
         mod.connect(tm["worldMatrix"][0], force["inputMatrix"])
         mod.set_attr(force["type"], enum[type])
 
@@ -1871,14 +1420,12 @@ def create_force(type, rigid, scene):
         mod.set_attr(tm["overrideRGBColors"], True)
         mod.set_attr(tm["overrideColorRGB"], (1.0, 0.63, 0.0))  # Yellowish
 
-        add_force(mod, force, rigid)
-
     return force
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def create_slice(scene):  # type: (cmdx.DagNode) -> cmdx.DagNode
-    if isinstance(scene, string_types):
+    if isinstance(scene, lib.string_types):
         scene = cmdx.encode(scene)
 
     with cmdx.DagModifier() as mod:
@@ -1899,10 +1446,10 @@ def create_slice(scene):  # type: (cmdx.DagNode) -> cmdx.DagNode
 
 
 def assign_force(rigid, force):  # type: (cmdx.DagNode, cmdx.DagNode) -> bool
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
-    if isinstance(force, string_types):
+    if isinstance(force, lib.string_types):
         force = cmdx.encode(force)
 
     with cmdx.DagModifier() as mod:
@@ -1912,9 +1459,9 @@ def assign_force(rigid, force):  # type: (cmdx.DagNode, cmdx.DagNode) -> bool
     return True
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def duplicate(rigid):
-    if isinstance(rigid, string_types):
+    if isinstance(rigid, lib.string_types):
         rigid = cmdx.encode(rigid)
 
     assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
@@ -2351,34 +1898,7 @@ def _random_color():
     return color
 
 
-def global_scale():
-    if cmds.optionVar(exists="ragdollScale"):
-        return cmds.optionVar(query="ragdollScale")
-    else:
-        return 1.0
-
-
-def edit_global_scale(scale):
-    cmds.optionVar(floatValue=("ragdollScale", scale))
-
-    affected_nodes = cmds.ls(type="rdConstraint")
-
-    if affected_nodes:
-        cmds.dgdirty(affected_nodes)
-
-
-def delete_all_physics(include_attributes=False):
-    """Nuke it from orbit
-
-    Return to simpler days, days before physics, with this one command.
-
-    """
-
-    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    return delete_physics(cmdx.ls(type=all_nodetypes))
-
-
-@with_undo_chunk
+@lib.with_undo_chunk
 def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
 
@@ -2476,25 +1996,40 @@ def delete_physics(nodes):
 
     # Delete attributes first, as they may otherwise
     # disappear along with their node.
-    for attr in user_attributes:
-        with cmdx.DagModifier() as mod:
+    with cmdx.DagModifier() as mod:
+        for attr in user_attributes:
             mod.delete_attr(attr)
 
-    for node in ragdoll_nodes + exclusives:
-        try:
-            with cmdx.DagModifier() as mod:
-                mod.delete(node)
+        mod.do_it()
 
-        except cmdx.ExistError:
-            # Deleting a shape whose parent transform has no other shape
-            # automatically deletes the transform. This is shit behavior
-            # that can be corrected in Maya 2022 onwards,
-            # via includeParents=False
-            pass
+        for node in ragdoll_nodes + exclusives:
+            try:
+                mod.delete(node)
+                mod.do_it()
+
+            except cmdx.ExistError:
+                # Deleting a shape whose parent transform has no other shape
+                # automatically deletes the transform. This is shit behavior
+                # that can be corrected in Maya 2022 onwards,
+                # via includeParents=False
+                pass
 
     return result
 
 
+def delete_all_physics(include_attributes=False):
+    """Nuke it from orbit
+
+    Return to simpler days, days before physics, with this one command.
+
+    """
+
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    return delete_physics(cmdx.ls(type=all_nodetypes))
+
+
+
+@lib.with_undo_chunk
 def normalise_shapes(root, max_delta=0.25):
     """Limit how greatly shapes can differ within a hierarchy
 
@@ -2544,19 +2079,7 @@ def normalise_shapes(root, max_delta=0.25):
             mod.set_attr(rigid["shapeExtents"], new_extents)
 
 
-def _shape_name(transform_name):
-    """Generate a suitable shape name from `transform_name`
-
-    If a shape node has the name <transform>Shape<number>
-    then Maya will keep that name updated as the transform
-    name changes.
-
-    """
-
-    components = re.split(r"(\d+)$", transform_name, 1) + [""]
-    return "Shape".join(components[:2])
-
-
+@lib.with_undo_chunk
 def multiply_rigids(rigids, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
         transform_name = _unique_name("rRigidMultiplier")
@@ -2564,7 +2087,7 @@ def multiply_rigids(rigids, parent=None, channels=None):
 
         if parent is None:
             parent = mod.createNode("transform", name=transform_name)
-            shape_name = _shape_name(transform_name)
+            shape_name = lib.shape_name(transform_name)
 
         mult = mod.createNode("rdRigidMultiplier",
                               name=shape_name,
@@ -2592,6 +2115,7 @@ def multiply_rigids(rigids, parent=None, channels=None):
     return mult
 
 
+@lib.with_undo_chunk
 def multiply_constraints(constraints, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
         transform_name = _unique_name("rConstraintMultiplier")
@@ -2599,7 +2123,7 @@ def multiply_constraints(constraints, parent=None, channels=None):
 
         if parent is None:
             parent = mod.createNode("transform", name=transform_name)
-            shape_name = _shape_name(transform_name)
+            shape_name = lib.shape_name(transform_name)
 
         mult = mod.createNode("rdConstraintMultiplier",
                               name=shape_name,
@@ -2629,7 +2153,7 @@ def multiply_constraints(constraints, parent=None, channels=None):
     return mult
 
 
-@with_undo_chunk
+@lib.with_undo_chunk
 def convert_to_polygons(actor, worldspace=True):
     """Convert rigid or control to a polygonal surface
 
@@ -2669,3 +2193,273 @@ def convert_to_polygons(actor, worldspace=True):
     lambert.add(mesh)
 
     return mesh
+
+
+"""
+
+Internal utility functions
+
+"""
+
+
+def _to_cmds(name):
+    """Convert cmdx instances to maya.cmds-compatible strings
+
+    Two types of cmdx instances are returned natively, `Node` and `Plug`
+    Any other return value remains unscathed.
+
+    """
+
+    func = getattr(sys.modules[__name__], name)
+
+    @functools.wraps(func)
+    def to_cmds_wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+
+        if isinstance(result, (tuple, list)):
+            for index, entry in enumerate(result):
+                if isinstance(entry, cmdx.Node):
+                    result[index] = entry.shortestPath()
+
+                if isinstance(entry, cmdx.Plug):
+                    result[index] = entry.path()
+
+        elif isinstance(result, cmdx.Node):
+            result = result.shortestPath()
+
+        elif isinstance(result, cmdx.Plug):
+            result = result.path()
+
+        return result
+
+    return to_cmds_wrapper
+
+
+def _rdrigid(mod, name, parent):
+    """Create a new rdRigid node"""
+    assert isinstance(parent, cmdx.DagNode) and parent.isA(cmdx.kTransform), (
+        "%s was not a transform" % parent
+    )
+
+    name = _unique_name(name)
+    rigid = mod.create_node("rdRigid", name=name, parent=parent)
+
+    # Link relevant attributes
+    # Keep up to date with initial world matrix
+    mod.connect(parent["worldMatrix"][0], rigid["restMatrix"])
+
+    # Compensate for any parents when outputting from the solver
+    mod.connect(parent["parentInverseMatrix"][0],
+                rigid["inputParentInverseMatrix"])
+
+    mod.connect(parent["rotateOrder"], rigid["rotateOrder"])
+
+    # Assign some random color, within some nice range
+    mod.set_attr(rigid["color"], _random_color())
+    mod.set_attr(rigid["version"], _version())
+
+    return rigid
+
+
+def _rdcontrol(mod, name, parent=None):
+    """Create a new rdControl node"""
+    name = _unique_name(name)
+    ctrl = mod.create_node("rdControl", name=name, parent=parent)
+    mod.set_attr(ctrl["color"], ControlColor)  # Default blue
+    mod.set_attr(ctrl["version"], _version())
+    return ctrl
+
+
+def _rdconstraint(mod, name, parent=None):
+    """Create a new rdConstraint node"""
+    name = _unique_name(name)
+    node = mod.create_node("rdConstraint", name=name, parent=parent)
+    mod.set_attr(node["version"], _version())
+    return node
+
+
+def _rdforce(mod, name, parent=None):
+    """Create a new rdForce node"""
+    name = _unique_name(name)
+    node = mod.create_node("rdForce", name=name, parent=parent)
+    mod.set_attr(node["version"], _version())
+    return node
+
+
+def _add_rigid(mod, rigid, scene):
+    """Add `rigid` to `scene`"""
+    assert rigid.type() == "rdRigid", rigid
+    assert scene.type() == "rdScene", scene
+    assert rigid["startState"].connection() != scene, (
+        "%s already a member of %s" % (rigid, scene)
+    )
+
+    time = cmdx.encode("time1")
+    index = scene["outputObjects"].next_available_index()
+    mod.connect(time["outTime"], rigid["currentTime"])
+    mod.connect(scene["outputObjects"][index], rigid["nextState"])
+    mod.connect(scene["startTime"], rigid["startTime"])
+    mod.connect(rigid["startState"], scene["inputActiveStart"][index])
+    mod.connect(rigid["currentState"], scene["inputActive"][index])
+
+
+def _add_constraint(mod, con, scene):
+    assert con["startState"].connection() != scene, (
+        "%s already a member of %s" % (con, scene)
+    )
+
+    time = cmdx.encode("time1")
+    index = scene["inputConstraintStart"].next_available_index()
+
+    mod.connect(time["outTime"], con["currentTime"])
+    mod.connect(con["startState"], scene["inputConstraintStart"][index])
+    mod.connect(con["currentState"], scene["inputConstraint"][index])
+
+
+def _unique_name(name):
+    """Internal utility function"""
+    if cmdx.exists(name):
+        index = 1
+        while cmdx.exists("%s%d" % (name, index)):
+            index += 1
+        name = "%s%d" % (name, index)
+
+    return name
+
+
+def _connect_passive(mod, rigid, transform):
+    mod.smart_set_attr(rigid["kinematic"], True)
+    mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
+
+
+def _connect_active(mod, rigid, transform, existing=Overwrite):
+    r"""Connect `rigid` to `transform` via `pairBlend`
+
+     ______
+    |\     \
+    | \_____\                /
+    | |     | . . . . . . - o -
+    \ |     |              /
+     \|_____|
+
+    """
+
+    with cmdx.DGModifier() as dgmod:
+        pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
+        dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
+        dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
+
+        # Establish initial values, before keyframes
+        # Use transform, rather than translate/rotate directly,
+        # to account for e.g. jointOrient.
+        tm = transform.transform()
+        dgmod.set_attr(pair_blend["inTranslate1"], tm.translation())
+        dgmod.set_attr(pair_blend["inRotate1"], tm.rotation())
+
+    pair_blend["translateXMode"].hide()
+    pair_blend["translateYMode"].hide()
+    pair_blend["translateZMode"].hide()
+    pair_blend["rotateMode"].hide()
+    pair_blend["rotInterpolation"].hide()
+
+    mod.connect(rigid["outputTranslateX"], pair_blend["inTranslateX2"])
+    mod.connect(rigid["outputTranslateY"], pair_blend["inTranslateY2"])
+    mod.connect(rigid["outputTranslateZ"], pair_blend["inTranslateZ2"])
+    mod.connect(rigid["outputRotateX"], pair_blend["inRotateX2"])
+    mod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
+    mod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
+
+    # Transfer existing animation/connections
+    prior_to_pairblend = {
+        "tx": "inTranslateX1",
+        "ty": "inTranslateY1",
+        "tz": "inTranslateZ1",
+        "rx": "inRotateX1",
+        "ry": "inRotateY1",
+        "rz": "inRotateZ1",
+    }
+
+    for attr, plug in prior_to_pairblend.items():
+        src = transform[attr].connection(destination=False, plug=True)
+
+        if src is not None:
+            pair_attr = prior_to_pairblend[attr]
+            dst = pair_blend[pair_attr]
+            mod.connect(src, dst)
+
+    _connect_transform(mod, pair_blend, transform)
+
+    mod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
+
+    # Pair blend directly feeds into the drive matrix
+    with cmdx.DGModifier() as dgmod:
+        compose = dgmod.create_node("composeMatrix", name="composePairBlend")
+
+        # Account for node being potentially parented somewhere
+        mult = dgmod.create_node("multMatrix", name="makeAbsolute")
+
+    mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
+    mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
+    mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
+
+    # Reproduce a parent hierarchy, but don't connect it to avoid cycle
+    mod.set_attr(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
+
+    # Support hard manipulation
+    # For e.g. transitioning between active and passive
+    mod.connect(mult["matrixSum"], rigid["inputMatrix"])
+
+    # Keep channel box clean
+    mod.set_attr(compose["isHistoricallyInteresting"], False)
+    mod.set_attr(mult["isHistoricallyInteresting"], False)
+
+    return pair_blend
+
+
+def _remove_pivots(mod, transform):
+    # Remove unsupported additional transforms
+    for channel in ("rotatePivot",
+                    "rotatePivotTranslate",
+                    "scalePivot",
+                    "scalePivotTranslate",
+                    "rotateAxis"):
+
+        for axis in "XYZ":
+            attr = transform[channel + axis]
+
+            if attr.read() != 0:
+                if attr.editable:
+                    log.warning(
+                        "Zeroing out non-zero channel %s.%s%s"
+                        % (transform, channel, axis)
+                    )
+                    mod.set_attr(attr, 0.0)
+
+                else:
+                    log.warning(
+                        "%s.%s%s was locked, results might look funny"
+                        % (transform, channel, axis)
+                    )
+
+    if "jointOrient" in transform and any(transform["jointOrient"].read()):
+        # Grab full transform, ahead of resetting the jointOrient
+        # in case we reset it without connecting to `rotate`
+        tm = transform.transform()
+
+        if transform["jointOrient"].editable:
+            mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
+            log.warning(
+                "%s had a non-zero jointOrient, it was zeroed out"
+                % transform
+            )
+        else:
+            log.warning(
+                "Tried resetting %s.jointOrient but could not. "
+                "If you experience weird rotations, try resetting it to 0"
+                % transform
+            )
+
+        # "Freeze" transformations if possible
+        if transform["rotate"].editable:
+            mod.set_attr(transform["rotate"], tm.rotation())
+

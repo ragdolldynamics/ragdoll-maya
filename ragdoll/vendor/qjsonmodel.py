@@ -100,7 +100,14 @@ class QJsonTreeItem(object):
 
         if isinstance(value, dict):
             items = (
-                sorted(value.items())
+                sorted(value.items(), key=lambda i: (
+
+                    # Put "folder-like" items at the bottom
+                    isinstance(i[1], (tuple, list, dict)),
+
+                    # Sort by key
+                    i[0],
+                ))
                 if sort else value.items()
             )
 

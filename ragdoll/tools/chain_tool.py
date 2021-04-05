@@ -15,7 +15,7 @@ figure out the constraint frames.
 """
 
 from ..vendor import cmdx
-from .. import commands, lib
+from .. import commands, internal as i__
 
 
 class Chain(object):
@@ -62,7 +62,7 @@ class Chain(object):
 
         transforms = []
         for index, link in enumerate(links):
-            if isinstance(link, lib.string_types):
+            if isinstance(link, i__.string_types):
                 link = cmdx.encode(link)
 
             assert isinstance(link, cmdx.DagNode), type(link)
@@ -336,7 +336,7 @@ class Chain(object):
             rigid = self._make_rigid(mod, transform, shape)
 
             # Add header to newly created rigid
-            transform_attrs = lib.UserAttributes(rigid, transform)
+            transform_attrs = i__.UserAttributes(rigid, transform)
             transform_attrs.add_divider("Ragdoll")
             transform_attrs.add("mass")
 
@@ -438,7 +438,7 @@ class Chain(object):
             mod.set_attr(rigid[key], value)
 
         # Forward some convenience attributes
-        constraint_attrs = lib.UserAttributes(con, transform)
+        constraint_attrs = i__.UserAttributes(con, transform)
         constraint_attrs.add("angularDriveStiffness", nice_name="Stiffness")
         constraint_attrs.add("angularDriveDamping", nice_name="Damping")
 
@@ -646,7 +646,7 @@ class Chain(object):
             mult.rename(commands._unique_name("rGuideMultiplier"))
 
             # Forward some convenience attributes
-            multiplier_attrs = lib.UserAttributes(mult, root)
+            multiplier_attrs = i__.UserAttributes(mult, root)
             multiplier_attrs.add("driveStrength",
                                  long_name="strengthMultiplier",
                                  nice_name="Strength Multiplier")
@@ -724,7 +724,7 @@ class Chain(object):
         mod.set_attr(root_rigid["shapeOffset"], geo.shape_offset)
         mod.set_attr(root_rigid["shapeExtents"], geo.extents)
 
-        transform_attrs = lib.UserAttributes(root_rigid, transform)
+        transform_attrs = i__.UserAttributes(root_rigid, transform)
         transform_attrs.add_divider("Ragdoll")
         transform_attrs.do_it()
 
@@ -766,6 +766,6 @@ class Chain(object):
         return rigid
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create(links, scene, options=None, defaults=None):
     return Chain(links, scene, options, defaults).do_it()

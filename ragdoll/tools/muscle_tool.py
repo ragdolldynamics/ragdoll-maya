@@ -1,8 +1,8 @@
 from ..vendor import cmdx
-from .. import commands, lib
+from .. import commands, internal as i__
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create(a,
            b,
            scene,

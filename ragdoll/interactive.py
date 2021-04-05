@@ -50,7 +50,7 @@ from . import (
     licence,
     dump,
     tools,
-    lib,
+    internal as i__,
     __
 )
 
@@ -918,7 +918,7 @@ def _filtered_selection(node_type):
     return list(shapes)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_scene(selection=None):
     if not validate_evaluation_mode():
         return
@@ -1012,7 +1012,7 @@ def _opt(key, override=None):
     return override.get(key, options.read(key))
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
@@ -1130,7 +1130,7 @@ def create_active_rigid(selection=None, **opts):
         return log.warning("Nothing happened, that was unexpected")
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
@@ -1144,7 +1144,7 @@ def create_passive_rigid(selection=None, **opts):
     return create_active_rigid(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 @_format_exception
 def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
@@ -1210,7 +1210,7 @@ def create_active_chain(selection=None, **opts):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_link(*args):
     links = []
 
@@ -1234,7 +1234,7 @@ def _axis_to_vector(axis="x"):
     }[axis.lower()]
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_muscle(selection=None, **opts):
     try:
         a, b = selection or cmdx.selection()
@@ -1333,7 +1333,7 @@ def _validate_transforms(nodes, tolerance=0.01):
     return False if issues else True
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
 
@@ -1405,7 +1405,7 @@ def _find_rigid(node, autocreate=False):
     return node
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_constraint(selection=None, **opts):
     select = _opt("constraintSelect", opts)
     constraint_type = _opt("constraintType", opts)
@@ -1475,7 +1475,7 @@ def create_constraint(selection=None, **opts):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def convert_constraint(selection=None, constraint_type=None, select=False):
     converted = []
 
@@ -1524,7 +1524,7 @@ def convert_constraint(selection=None, constraint_type=None, select=False):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def convert_rigid(selection=None, passive=None):
     converted = []
 
@@ -1557,7 +1557,7 @@ def convert_rigid(selection=None, passive=None):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def convert_to_socket(node):
     con = node.shape(type="rdConstraint")
 
@@ -1572,37 +1572,37 @@ def convert_to_socket(node):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_point_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Point"})
     return create_constraint(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_orient_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Orient"})
     return create_constraint(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_parent_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Parent"})
     return create_constraint(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_hinge_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Hinge"})
     return create_constraint(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Socket"})
     return create_constraint(selection, **opts)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def set_initial_state(selection=None, **opts):
     rigids = []
     selection = selection or cmdx.selection()
@@ -1626,7 +1626,7 @@ def set_initial_state(selection=None, **opts):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_driven_control(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
@@ -1668,7 +1668,7 @@ def create_driven_control(selection=None, **opts):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_kinematic_control(selection=None, **opts):
     controls = []
 
@@ -1692,7 +1692,7 @@ def create_kinematic_control(selection=None, **opts):
         return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def transfer_selected(selection=None):
     try:
         a, b = selection or cmdx.selection()
@@ -1794,27 +1794,27 @@ def _create_force(selection=None, force_type=None):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_push_force(selection=None):
     return _create_force(selection, commands.PushForce)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_pull_force(selection=None):
     return _create_force(selection, commands.PullForce)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_uniform_force(selection=None):
     return _create_force(selection, commands.UniformForce)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_turbulence_force(selection=None):
     return _create_force(selection, commands.TurbulenceForce)
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def create_slice(selection=None):
     scene = _find_current_scene(autocreate=False)
 
@@ -1828,7 +1828,7 @@ def create_slice(selection=None):
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def assign_force(selection=None):
     sel = selection or cmdx.selection()
 
@@ -1866,7 +1866,7 @@ def assign_force(selection=None):
         return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def duplicate_selected(selection=None, **opts):
     selection = cmdx.selection()
     cmds.select(deselect=True)
@@ -1896,7 +1896,7 @@ def duplicate_selected(selection=None, **opts):
         return log.warning("Nothing duplicated")
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def delete_physics(selection=None, **opts):
     if _opt("deleteFromSelection", opts):
         selection = selection or cmdx.selection(type="dagNode")
@@ -1939,7 +1939,7 @@ Dynamic Control has been updated and renamed Active Chain
     return kSuccess
 
 
-@lib.with_undo_chunk
+@i__.with_undo_chunk
 def convert_to_polygons(selection=None):
     meshes = []
 

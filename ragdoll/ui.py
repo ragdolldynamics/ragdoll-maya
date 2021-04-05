@@ -14,7 +14,7 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from PySide2 import QtCore, QtWidgets, QtGui
 import shiboken2
 
-from . import options, licence, dump, lib, __
+from . import options, licence, dump, internal as i__, __
 from .vendor import qargparse, markdown, qjsonmodel
 
 try:
@@ -104,13 +104,13 @@ def _with_entered_exited_signals(cls):
 
 def hide_menuitem(item):
     ptr = MQtUtil.findMenuItem(item)
-    item = shiboken2.wrapInstance(lib.long(ptr), QtWidgets.QAction)
+    item = shiboken2.wrapInstance(i__.long(ptr), QtWidgets.QAction)
     item.setVisible(False)
 
 
 def show_menuitem(item):
     ptr = MQtUtil.findMenuItem(item)
-    item = shiboken2.wrapInstance(lib.long(ptr), QtWidgets.QAction)
+    item = shiboken2.wrapInstance(i__.long(ptr), QtWidgets.QAction)
     item.setVisible(True)
 
 
@@ -123,7 +123,7 @@ def MayaWindow():
 
         if ptr is not None:
             self._maya_window = shiboken2.wrapInstance(
-                lib.long(ptr), QtWidgets.QMainWindow
+                i__.long(ptr), QtWidgets.QMainWindow
             )
 
         else:
@@ -1910,7 +1910,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         if callable(dump):
             dump = dump()
 
-        if isinstance(dump, lib.string_types):
+        if isinstance(dump, i__.string_types):
             dump = json.loads(dump)
 
         assert isinstance(dump, dict)
@@ -2244,7 +2244,7 @@ class ImportOptions(Options):
         self.on_selection_changed()
 
     def read(self, fname):
-        assert isinstance(fname, lib.string_types), "fname must be string"
+        assert isinstance(fname, i__.string_types), "fname must be string"
 
         self._widgets["PathField"].setText(fname)
 
@@ -2257,7 +2257,7 @@ class ImportOptions(Options):
 
         self.load(data)
 
-    @lib.with_timing
+    @i__.with_timing
     def reset(self):
         target_view = self._widgets["TargetView"]
         target_view.store()
@@ -2523,7 +2523,7 @@ def view_to_pixmap(size=None):
     osize = size or QtCore.QSize(512, 256)
     isize = image.getSize()
     buf = ctypes.c_ubyte * isize[0] * isize[1]
-    buf = buf.from_address(lib.long(image.pixels()))
+    buf = buf.from_address(i__.long(image.pixels()))
 
     qimage = QtGui.QImage(
         buf, isize[0], isize[1], QtGui.QImage.Format_RGB32

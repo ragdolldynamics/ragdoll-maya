@@ -9,7 +9,7 @@ convenient method of Python to C++ communication.
 
 import logging
 from maya import cmds
-from . import lib, __
+from . import internal as i__, __
 from .vendor import qargparse
 
 log = logging.getLogger("ragdoll")
@@ -21,7 +21,7 @@ def _optionvarkey(name):
 
 
 def write(arg, value=None):
-    if isinstance(arg, lib.string_types):
+    if isinstance(arg, i__.string_types):
         arg = __.optionvars[arg]
 
     if isinstance(arg, qargparse.QArgument):
@@ -41,7 +41,7 @@ def write(arg, value=None):
     elif isinstance(value, bool):
         cmds.optionVar(intValue=(key, value))
 
-    elif isinstance(value, lib.string_types):
+    elif isinstance(value, i__.string_types):
         cmds.optionVar(stringValue=(key, value))
 
     elif isinstance(value, (tuple, list)):
@@ -58,7 +58,7 @@ def write(arg, value=None):
 
 
 def read(arg):
-    if isinstance(arg, lib.string_types):
+    if isinstance(arg, i__.string_types):
         arg = __.optionvars.get(arg)
 
     if isinstance(arg, qargparse.QArgument):

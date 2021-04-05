@@ -10,7 +10,18 @@ This repository contains the Python package associated with the commercial *comp
 
 **Read more**
 
--  https://ragdolldynamics.com
+- https://ragdolldynamics.com
+- https://learn.ragdolldynamics.com/releases/2021.03.25
+
+<br>
+
+### Open Source
+
+Some of the work in Ragdoll has been separated out into its own smaller projects.
+
+- [cmdx](https://github.com/mottosso/cmdx)
+- [qargparse](https://github.com/mottosso/qargparse.py)
+- [qjsonmodel](https://github.com/dridk/QJsonmodel)
 
 <br>
 

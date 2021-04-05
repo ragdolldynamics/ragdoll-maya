@@ -277,7 +277,7 @@ def create(root,
         ref, _, con = commands.create_absolute_control(rigid, reference=root)
 
         with cmdx.DagModifier() as mod:
-            mod.set_attr(con["driveStrength"], 0)  # Default to off
+            mod.smart_set_attr(con["driveStrength"], 0)  # Default to off
 
         # Forward the kinematic attribute to the root guide
         root_proxies = commands.UserAttributes(rigid, root)
@@ -296,7 +296,7 @@ def create(root,
 
                 commands.create_active_control(reference, rigid)
 
-                mod.set_attr(rigid["kinematic"], False)
+                mod.smart_set_attr(rigid["kinematic"], False)
                 mod.do_it()
 
                 # Forward kinematics from children too

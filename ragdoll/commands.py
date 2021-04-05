@@ -185,7 +185,7 @@ class UserAttributes(object):
                 if self._target.has_attr(name):
                     continue
 
-                plug = self.proxy_2019(attr, long_name, nice_name)
+                plug = self.semi_proxy(attr, long_name, nice_name)
 
             added += [plug]
 
@@ -216,24 +216,60 @@ class UserAttributes(object):
 
         return self._target[name]
 
-    def proxy_2019(self, attr, long_name=None, nice_name=None):
-        """Maya 2019 doesn't play well with proxy attributes"""
+    def semi_proxy(self, attr, long_name=None, nice_name=None):
+        """Maya 2019 and 2022 doesn't play well with proxy attributes
+
+        Other Maya versions simply crash ambiguously whenever they are
+        used so, stay clear.
+
+        """
 
         name = long_name or attr
-        default = cmds.getAttr("%s.%s" % (self._source, attr))
+        plug = self._source[attr]
 
         kwargs = {
-            "longName": name,
-            "defaultValue": default,
+            "default": plug.default,
             "keyable": True,
         }
 
         if nice_name is not None:
-            kwargs["niceName"] = nice_name
+            kwargs["label"] = nice_name
 
-        cmds.addAttr(self._target.path(), **kwargs)
-        cmds.connectAttr("%s.%s" % (self._target, name),
-                         "%s.%s" % (self._source, attr))
+        # Figure out the attribute type based on original plug
+        def make_plug(plug, kwargs):
+            attr = plug.attribute()
+            Plug = None
+
+            if attr.apiType() == cmdx.om.MFn.kNumericAttribute:
+                innerType = cmdx.om.MFnNumericAttribute(attr).numericType()
+
+                if innerType == cmdx.om.MFnNumericData.kBoolean:
+                    Plug = cmdx.Boolean
+
+                elif innerType in (cmdx.om.MFnNumericData.kShort,
+                                   cmdx.om.MFnNumericData.kInt,
+                                   cmdx.om.MFnNumericData.kLong,
+                                   cmdx.om.MFnNumericData.kByte):
+                    Plug = cmdx.Int
+
+                elif innerType in (cmdx.om.MFnNumericData.kFloat,
+                                   cmdx.om.MFnNumericData.kDouble,
+                                   cmdx.om.MFnNumericData.kAddr):
+                    Plug = cmdx.Double
+
+            if Plug is None:
+                # Worst case, just assume double
+                kwargs["default"] = float(kwargs["default"])
+                Plug = cmdx.Double
+
+            return Plug(name, **kwargs)
+
+        mattr = make_plug(plug, kwargs)
+
+        with cmdx.DagModifier() as mod:
+            mod.add_attr(self._target, mattr)
+            mod.do_it()
+            mod.connect(self._target[name], self._source[attr])
 
         return self._target[name]
 
@@ -300,7 +336,7 @@ def _unique_name(name):
 
 
 def _connect_passive(mod, rigid, transform):
-    mod.set_attr(rigid["kinematic"], True)
+    mod.smart_set_attr(rigid["kinematic"], True)
     mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
 
@@ -2438,21 +2474,23 @@ def delete_physics(nodes):
     result["deletedExclusiveNodeCount"] = len(exclusives)
     result["deletedUserAttributeCount"] = len(user_attributes)
 
+    # Delete attributes first, as they may otherwise
+    # disappear along with their node.
+    for attr in user_attributes:
+        with cmdx.DagModifier() as mod:
+            mod.delete_attr(attr)
+
     for node in ragdoll_nodes + exclusives:
         try:
             with cmdx.DagModifier() as mod:
                 mod.delete(node)
 
-        except (ValueError, cmdx.ExistError):
+        except cmdx.ExistError:
             # Deleting a shape whose parent transform has no other shape
             # automatically deletes the transform. This is shit behavior
             # that can be corrected in Maya 2022 onwards,
             # via includeParents=False
             pass
-
-    for attr in user_attributes:
-        with cmdx.DagModifier() as mod:
-            mod.delete_attr(attr)
 
     return result
 

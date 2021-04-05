@@ -58,9 +58,10 @@ def create(a,
 
         muscle = commands.create_rigid(root, scene)
 
-        mod.set_attr(muscle["linearDamping"], 2.0)
-        mod.set_attr(muscle["friction"], 0.0)
-        mod.set_attr(muscle["restitution"], 0.0)
+        # These may be connected to user attributes
+        mod.smart_set_attr(muscle["linearDamping"], 2.0)
+        mod.smart_set_attr(muscle["friction"], 0.0)
+        mod.smart_set_attr(muscle["restitution"], 0.0)
 
     a_passive = a.parent().shape(type="rdRigid")
     b_passive = b.parent().shape(type="rdRigid")

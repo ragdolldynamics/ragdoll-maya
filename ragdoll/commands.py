@@ -168,23 +168,24 @@ class UserAttributes(object):
             attr = self._added.pop(0)
 
             if isinstance(attr, cmdx._AbstractAttribute):
-                if self._target.has_attr(attr["name"]):
-                    cmds.deleteAttr("%s.%s" % (self._target, attr["name"]))
+                name = attr["name"]
+
+                if self._target.has_attr(name):
+                    continue
 
                 with cmdx.DagModifier() as mod:
                     mod.add_attr(self._target, attr)
 
-                name = attr["name"]
-                plug = self._target[attr["name"]]
+                plug = self._target[name]
 
             else:
                 attr, long_name, nice_name = attr
                 name = long_name or attr
 
                 if self._target.has_attr(name):
-                    cmds.deleteAttr("%s.%s" % (self._target, name))
+                    continue
 
-                plug = self.proxy(attr, long_name, nice_name)
+                plug = self.proxy_2019(attr, long_name, nice_name)
 
             added += [plug]
 
@@ -476,11 +477,11 @@ def create_scene(name=None, parent=None):
 
         if up.y:
             mod.set_keyable(scene["gravityY"])
-            mod.set_nice_name(scene["gravityY"], "Gravity")
+            # mod.set_nice_name(scene["gravityY"], "Gravity")
 
         else:
             mod.set_keyable(scene["gravityZ"])
-            mod.set_nice_name(scene["gravityZ"], "Gravity")
+            # mod.set_nice_name(scene["gravityZ"], "Gravity")
             mod.set_attr(parent["rotateX"], cmdx.radians(90))
 
         # Record for backwards compatibility
@@ -519,9 +520,6 @@ def create_rigid(node,
 
     """
 
-    cache = _cache or {}
-    defaults = defaults or {}
-
     if isinstance(node, string_types):
         node = cmdx.encode(node)
 
@@ -529,11 +527,15 @@ def create_rigid(node,
         scene = cmdx.encode(scene)
 
     assert isinstance(node, cmdx.DagNode), type(node)
+    assert isinstance(scene, cmdx.DagNode), type(scene)
     assert scene.type() == "rdScene", scene.type()
 
     assert not node.shape(type="rdRigid"), (
         "%s is already a rigid" % node
     )
+
+    cache = _cache or {}
+    defaults = defaults or {}
 
     if node.isA(cmdx.kShape):
         transform = node.parent()
@@ -1483,11 +1485,11 @@ def _shapeattributes_from_generator(mod, shape, rigid):
 
         # Align with Maya's cylinder/capsule axis
         # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
-        mod.set_attr(rigid["shapeRotation"], map(cmdx.radians, (
+        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
             (0, 0, 90) if gen["axisY"] else
             (0, 90, 0) if gen["axisZ"] else
             (0, 0, 0)
-        )))
+        ))))
 
     elif gen.type() == "makeNurbCircle":
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
@@ -1504,11 +1506,11 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         mod.set_attr(rigid["shapeType"], CylinderShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
         mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
-        mod.set_attr(rigid["shapeRotation"], map(cmdx.radians, (
+        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
             (0, 0, 90) if gen["axisY"] else
             (0, 90, 0) if gen["axisZ"] else
             (0, 0, 0)
-        )))
+        ))))
 
 
 def _scale_from_rigid(rigid):
@@ -2436,20 +2438,21 @@ def delete_physics(nodes):
     result["deletedExclusiveNodeCount"] = len(exclusives)
     result["deletedUserAttributeCount"] = len(user_attributes)
 
-    # Ok, go ahead and start deleting stuff
-    with cmdx.DagModifier() as mod:
-        for attr in user_attributes:
-            mod.delete_attr(attr)
-            mod.do_it()
-
     for node in ragdoll_nodes + exclusives:
         try:
-            # Use cmds rather than cmdx, as cmdx doesn't play nice
-            # with the undo stack.. :(
-            cmds.delete(node.path())
-        except RuntimeError:
-            # Already gone, good riddance
+            with cmdx.DagModifier() as mod:
+                mod.delete(node)
+
+        except (ValueError, cmdx.ExistError):
+            # Deleting a shape whose parent transform has no other shape
+            # automatically deletes the transform. This is shit behavior
+            # that can be corrected in Maya 2022 onwards,
+            # via includeParents=False
             pass
+
+    for attr in user_attributes:
+        with cmdx.DagModifier() as mod:
+            mod.delete_attr(attr)
 
     return result
 

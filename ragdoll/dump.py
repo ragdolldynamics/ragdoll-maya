@@ -8,7 +8,6 @@ dedump(dump)
 
 """
 
-import copy
 import json
 import logging
 
@@ -25,6 +24,10 @@ except NameError:
     string_types = str,
 
 
+class Entity(int):
+    pass
+
+
 def Component(comp):
     """Simplified access to component members"""
 
@@ -33,6 +36,9 @@ def Component(comp):
     for key, value in comp["members"].items():
         if not isinstance(value, dict):
             pass
+
+        elif value["type"] == "Entity":
+            value = Entity(value["value"])
 
         elif value["type"] == "Vector3":
             value = cmdx.Vector(value["values"])
@@ -110,7 +116,7 @@ def dedump(dump):
             continue
 
         with cmdx.DagModifier() as mod:
-            name = Name["path"].rsplit("|", 3)[-2]
+            name = Name["path"].rsplit("|", 2)[1]
             transform = mod.createNode("transform", name=name, parent=root)
             transform["translate"] = tm.translation()
             transform["rotate"] = tm.rotation()
@@ -161,20 +167,88 @@ class Loader(object):
     with transforms in the Maya scene, typically under the root node
     an animator has got selected at the time of loading.
 
+    Arguments:
+        roots (list): Path(s) that the original path must match
+        replace (list): Search/replace pairs of strings to find and replace
+            in each original path
+
     """
 
-    def __init__(self, dump, root=None):
-        if isinstance(dump, string_types):
-            dump = json.loads(dump)
+    SupportedSchema = "ragdoll-1.0"
 
-        elif isinstance(dump, dict):
-            # Ensure we aren't accidentally modifying the input dictionary
-            dump = copy.deepcopy(dump)
+    def __init__(self, roots=None, replace=None):
+        self._dump = {"entities": {}}
+        self._roots = roots or []
+        self._replace = replace or []
+
+        # Do we need to re-analyse before use?
+        self._up_to_date = False
+
+        # Transient data, updated on changes to fname and filtering
+        self._state = {
+
+            # Map entity -> active Maya transform node
+            "transforms": {},
+
+            # Series of Scenes
+            # {
+            #    "entity": 1,
+            #
+            #    "options": {}
+            # }
+            "scenes": [],
+
+            # Series of Rigids
+            # {
+            #    "entity": 10,
+            #
+            #    "options": {}
+            # }
+            "rigids": [],
+
+            # Series of chains
+            # {
+            #    "rigids": [10, 11, 12, 13],
+            #    "constraints": [14, 15, 16]
+            #    "constraintMultipliers": [17],
+            #
+            #    "options": {},
+            # }
+            "chains": [],
+
+            # Individual constraint
+            # {
+            #    "entity": 18,
+            #    "options": {}
+            # }
+            "constraints": [],
+
+            # Individual constraint multiplier
+            # {
+            #    "entity": 19,
+            #    "options": {}
+            # }
+            "constraintMultipliers": [],
+
+            # Individual rigid multiplier
+            # {
+            #    "entity": 20,
+            #    "options": {}
+            # }
+            "rigidMultipliers": [],
+        }
+
+    def read(self, fname):
+        self._dump = {"entities": {}}
+
+        if isinstance(fname, dict):
+            dump = fname
 
         else:
-            raise TypeError("dump argument must be dict")
+            with open(fname) as f:
+                dump = json.load(f)
 
-        assert "schema" in dump and dump["schema"] == "ragdoll-1.0", (
+        assert "schema" in dump and dump["schema"] == self.SupportedSchema, (
             "Dump not compatible with this version of Ragdoll"
         )
 
@@ -182,46 +256,127 @@ class Loader(object):
 
             # Original JSON stores keys as strings, but the original
             # keys are integers; i.e. entity IDs
-            int(entity): value
+            Entity(entity): value
             for entity, value in dump["entities"].items()
         }
 
         self._dump = dump
-        self._root = root
-        self._visited = set()
+        self._up_to_date = False
 
-    def has(self, entity, component):
-        """Return whether `entity` has `component`"""
-        return component in self._dump["entities"][entity]["components"]
+    def set_roots(self, roots):
+        self._roots[:] = roots
+        self._up_to_date = False
 
-    def component(self, entity, component):
-        """Return `component` for `entity`
+    def set_replace(self, replace):
+        self._replace[:] = replace
+        self._up_to_date = False
 
-        Returns:
-            dict: The component
+    def analyse(self):
+        """Fill internal state from dump with something we can use"""
 
-        Raises:
-            KeyError: if `entity` does not have `component`
+        transforms = self._find_transforms()
+        chains = self._find_chains()
+        rigids = self._find_rigids()
 
-        Example:
-            >>> s = {}
-            >>> dump = cmds.ragdollDump()
-            >>> dump["entities"][1] = {"components": {"SceneComponent": s}}
-            >>> loader = Loader(dump)
-            >>> assert s == loader.component(1, "SceneComponent")
+        # Only create a scene if it's related to an interesting rigid
+        rigid_entities = [r["entity"] for r in rigids]
+        scenes = self._find_scenes(rigid_entities)
 
-        """
+        for chain in chains:
+            scenes += self._find_scenes(chain["rigids"])
 
-        try:
-            return Component(
-                self._dump["entities"][entity]["components"][component]
-            )
+        # Remove duplicates
+        scenes = list({s["entity"]: s for s in scenes}.values())
+        assert scenes, "No scenes would get made!"  # Could have been filtered
 
-        except KeyError:
-            Name = self._dump["entities"][entity]
-            Name = Name["components"]["NameComponent"]
-            Name = Component(Name)
-            raise KeyError("%s did not have %s" % (Name["path"], component))
+        # What got created on-top of rigids and chains? These are our leftovers
+        visited = set()
+        visited.update(s["entity"] for s in scenes)
+        visited.update(r["entity"] for r in rigids)
+
+        for chain in chains:
+            visited.update(chain["rigids"])
+            visited.update(chain["constraints"])
+            visited.update(chain["constraintMultipliers"])
+
+        leftovers = self._find_leftovers(visited)
+
+        self._state.update({
+            "transforms": transforms,
+            "scenes": scenes,
+            "rigids": rigids,
+            "chains": chains,
+            "constraints": leftovers["constraints"],
+            "constraintMultipliers": leftovers["constraintMultipliers"],
+        })
+
+        self._up_to_date = True
+
+        return self._state
+
+    def ls(self):
+        """Return current analysis"""
+        if not self._up_to_date:
+            self.analyse()
+
+        return self._state.copy()
+
+    def report(self):
+        if not self._up_to_date:
+            self.analyse()
+
+        def _name(entity):
+            Name = self.component(entity, "NameComponent")
+            name = Name["path"].rsplit("|", 2)[1]
+            return name
+
+        scenes = self._state["scenes"]
+        rigids = self._state["rigids"]
+        constraints = self._state["constraints"]
+        chains = self._state["chains"]
+        constraint_multipliers = self._state["constraintMultipliers"]
+        rigid_multipliers = self._state["rigidMultipliers"]
+
+        if scenes:
+            log.info("Scenes:")
+            for scene in scenes:
+                log.info("  %s.." % _name(scene["entity"]))
+
+        if rigids:
+            log.info("Rigids:")
+            for rigid in rigids:
+                log.info("  %s.." % _name(rigid["entity"]))
+
+        if chains:
+            log.info("Chains:")
+            for chain in chains:
+                log.info("  %s.." % _name(chain["rigids"][0]))
+
+                for entity in chain["rigids"][1:]:
+                    log.info("    -o %s.." % _name(entity))
+
+        if constraints:
+            log.info("Constraints:")
+            for constraint in constraints:
+                log.info("  %s.." % _name(constraint["entity"]))
+
+        if constraint_multipliers:
+            log.info("Constraint Multipliers:")
+            for mult in constraint_multipliers:
+                log.info("  %s.." % _name(mult["entity"]))
+
+        if rigid_multipliers:
+            log.info("Rigig Multipliers:")
+            for mult in rigid_multipliers:
+                log.info("  %s.." % _name(mult["entity"]))
+
+        if not any([scenes,
+                    rigids,
+                    constraints,
+                    chains,
+                    constraint_multipliers,
+                    rigid_multipliers]):
+            log.warning("Dump was empty")
 
     def load(self, merge=True):
         """Apply JSON to existing nodes in the scene
@@ -244,7 +399,8 @@ class Loader(object):
 
         """
 
-        self._visited.clear()
+        if not self._up_to_date:
+            self.analyse()
 
         if merge:
             transforms = self._find_transforms()
@@ -258,6 +414,8 @@ class Loader(object):
         rigids = self._load_rigids(scenes, transforms, rigid_multipliers)
         constraints = self._load_constraints(
             scenes, rigids, constraint_multipliers)
+
+        self._up_to_date = False
 
         return {
             "transforms": transforms,
@@ -289,124 +447,152 @@ class Loader(object):
 
         """
 
-        transforms = self._find_transforms()
-        chains = self._find_chains(transforms)
-        rigids = self._find_rigids(transforms)
-
-        # Only create a scene if it's related to an interesting rigid
-        rigid_entities = [r["entity"] for r in rigids]
-        scenes = self._find_scenes(rigid_entities)
-
-        for chain in chains:
-            scenes += self._find_scenes(chain["rigids"])
-
-        # Remove duplicates
-        scenes = {s["entity"]: s for s in scenes}.values()
-
-        assert scenes, "No scenes would get made!"  # Could have been filtered
-        assert self._has_transforms(rigid_entities, transforms), "Bug"
-        assert all(self._has_transforms(chain["rigids"], transforms)
-                   for chain in chains)
-
-        # What got created on-top of rigids and chains? These are our leftovers
-        visited = set()
-        visited.update(s["entity"] for s in scenes)
-        visited.update(r["entity"] for r in rigids)
-
-        for chain in chains:
-            visited.update(chain["rigids"])
-            visited.update(chain["constraints"])
-            visited.update(chain["multipliers"])
-
-        leftovers = self._find_leftovers(visited, transforms)
+        # In case the user forgot or didn't know
+        if not self._up_to_date:
+            self.analyse()
 
         if dry_run:
-            self._report(
-                list(visited) +
-                leftovers["constraints"] +
-                leftovers["multipliers"]
-            )
+            self.report()
+            return
 
-            return {}
+        scenes = self._state["scenes"]
+        rigids = self._state["rigids"]
+        chains = self._state["chains"]
+        constraints = self._state["constraints"]
+        transforms = self._state["transforms"]
 
-        # Ok, let's start making things!
-        new_scenes = self._create_scenes(scenes, transforms)
-        new_rigids = self._create_rigids(rigids, new_scenes, transforms)
+        rdscenes = self._create_scenes(scenes, transforms)
+        rdrigids = self._create_rigids(rigids, rdscenes, transforms)
 
-        new_chains = []
+        rdchains = []
         for chain in chains:
-            new_chain = self._create_chain(chain, new_scenes, transforms)
-            new_chains += [new_chain]
+            rdchain = self._create_chain(chain, rdscenes, transforms)
+            rdchains += [rdchain]
 
-        # Anything added on-top of new rigids and new_chains, like
+        # Anything added on-top of new rigids and new chains, like
         # custom constraints or multipliers, are yet to be created
-        new_constraints = {}
-        new_multipliers = {}
-        for chain, new_chain in zip(chains, new_chains):
-            for rigid, new_rigid in zip(chain["rigids"], new_chain["rigids"]):
-                new_rigids[rigid] = new_rigid
+        rdconstraints = {}
+        rdmultipliers = {}
+        for chain, rdchain in zip(chains, rdchains):
+            rdrigids.update(zip(chain["rigids"],
+                                rdchain["rigids"]))
+            rdconstraints.update(zip(chain["constraints"],
+                                     rdchain["constraints"]))
+            rdmultipliers.update(zip(chain["constraintMultipliers"],
+                                     rdchain["constraintMultipliers"]))
 
-            for constraint, new_constraint in zip(chain["constraints"],
-                                                  new_chain["constraints"]):
-                new_constraints[constraint] = new_constraint
-
-            for multiplier, new_multiplier in zip(chain["multipliers"],
-                                                  new_chain["multipliers"]):
-                new_multipliers[multiplier] = new_multiplier
-
-        new_constraints.update(
+        rdconstraints.update(
             self._create_constraints(
-                leftovers["constraints"],
-                new_scenes,
-                new_rigids,
-                new_multipliers
+                constraints,
+                rdscenes,
+                rdrigids,
+                rdmultipliers,
+                transforms
             )
         )
 
+        self._up_to_date = False
+
         return {
-            "scenes": new_scenes,
-            "rigids": new_rigids,
-            "constraints": new_constraints,
-            "multipliers": new_multipliers,
+            "scenes": rdscenes,
+            "rigids": rdrigids,
+            "constraints": rdconstraints,
+            "constraintMultipliers": rdmultipliers,
         }
 
-    def _report(self, entities):
-        def _name(entity):
-            return self.component(entity, "NameComponent")["shortestPath"]
+    def view(self, *components):
+        """Iterate over every entity that has all of `components`"""
+        for entity in self._dump["entities"]:
+            if all(self.has(entity, comp) for comp in components):
+                yield entity
 
-        log.info("Scenes:")
-        for entity in entities:
-            if self.has(entity, "SolverComponent"):
-                log.info("  %s.." % _name(entity))
+    def has(self, entity, component):
+        """Return whether `entity` has `component`"""
+        assert isinstance(entity, int), "entity must be int"
+        assert isinstance(component, string_types), "component must be string"
+        return component in self._dump["entities"][entity]["components"]
 
-        log.info("Rigids:")
-        for entity in entities:
-            if self.has(entity, "RigidUIComponent"):
-                log.info("  %s.." % _name(entity))
+    def component(self, entity, component):
+        """Return `component` for `entity`
 
-        log.info("Constraints:")
-        for entity in entities:
-            if self.has(entity, "ConstraintUIComponent"):
-                log.info("  %s.." % _name(entity))
+        Returns:
+            dict: The component
 
-        log.info("Multipliers:")
-        for entity in entities:
-            if self.has(entity, "ConstraintMultiplierUIComponent"):
-                log.info("  %s.." % _name(entity))
+        Raises:
+            KeyError: if `entity` does not have `component`
+
+        Example:
+            >>> s = {}
+            >>> dump = cmds.ragdollDump()
+            >>> dump["entities"][1] = {"components": {"SceneComponent": s}}
+            >>> loader = Loader(dump)
+            >>> assert s == loader.component(1, "SceneComponent")
+
+        """
+
+        try:
+            return Component(
+                self._dump["entities"][entity]["components"][component]
+            )
+
+        except KeyError:
+            Name = self._dump["entities"][entity]
+            Name = Name["components"]["NameComponent"]
+            Name = Component(Name)
+            raise KeyError("%s did not have %s" % (Name["path"], component))
+
+    def components(self, entity):
+        """Return *all* components for `entity`"""
+        return self._dump["entities"][entity]["components"]
+
+    def siblings(self, entity):
+        """Yield siblings of entity
+
+        -o root_grp
+          -o spine1_ctl
+             -o rRigid1
+             -o rConstraintMultiplier
+             -o rConstraint1    <--- `entity`
+
+        The siblings of this entity is `rRigid1` and `rConstrintMultiplier`
+
+        """
+
+        Name = self.component(entity, "NameComponent")
+        parent_path = Name["path"].rsplit("|", 1)[0]
+
+        for entity in self._dump["entities"]:
+            Name = self.component(entity, "NameComponent")
+            sibling_parent_path = Name["path"].rsplit("|", 1)[0]
+
+            if parent_path == sibling_parent_path:
+                yield entity
+
+    def _find_path(self, entity):
+        Name = self.component(entity, "NameComponent")
+
+        # Find original path, minus the rigid
+        # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
+        path = Name["path"]
+
+        for search, replace in self._replace:
+            path = path.replace(search, replace)
+
+        return path
 
     def _make_transforms(self):
         transforms = {}
 
-        for entity, data in self._dump["entities"].items():
+        for entity in self.view("RigidComponent"):
 
-            # There won't be any solvers in here just yet
-            if not self.has(entity, "SolverComponent"):
+            # Scenes will make their own transform
+            if self.has(entity, "SolverComponent"):
                 continue
 
             Name = self.component(entity, "NameComponent")
             Rest = self.component(entity, "RestComponent")
 
-            # Find name path, minus the rigid
+            # Find name transform name, minus the rigid
             # E.g. |root_grp|upperArm_ctrl|rRigid4 -> upperArm_ctrl
             name = Name["path"].rsplit("|", 2)[1]
 
@@ -428,46 +614,36 @@ class Loader(object):
         """Find and associate each entity with a Maya transform"""
         transforms = {}
 
-        for entity, data in self._dump["entities"].items():
+        for entity in self.view():
             Name = self.component(entity, "NameComponent")
 
             # Find original path, minus the rigid
             # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
-            path = Name["path"].rsplit("|", 1)[0]
+            path = Name["path"]
 
-            if self._root:
-                if not self.has(entity, "SolverComponent"):
-                    if not path.startswith(self._root):
-                        log.info(
-                            "Skipping %s, not part of root: %s"
-                            % (path, self._root)
-                        )
-                        continue
+            for search, replace in self._replace:
+                path = path.replace(search, replace)
+
+            # Only filter non-scenes, as we'd like to reuse these
+            if self._roots and not self.has(entity, "SolverComponent"):
+                if not any(path.startswith(root) for root in self._roots):
+                    continue
 
             try:
                 transform = cmdx.encode(path)
 
             except cmdx.ExistError:
-                # These node types may have a transform of their own
-                standalones = (
-                    "SolverComponent",
-                    "RigidMultiplierUIComponent",
-                    "ConstraintMultiplierUIComponent",
-                )
+                # Transform wasn't found in this scene, that's OK.
+                # It just means it can't actually be loaded onto anything.
+                continue
 
-                if any(self.has(entity, comp) for comp in standalones):
-                    # This is an entity that can carry its own transform
-                    pass
-
-                else:
-                    log.warning("%s was not found in this scene" % path)
-
+            # Avoid the fate of double-assigning a rigid
+            # NOTE: We might want to support import of constraints
+            # onto existing rigid bodies.. but let's cross that bridge
+            if transform.shape(type="rdRigid"):
                 continue
 
             transforms[entity] = transform
-
-        if not transforms:
-            raise RuntimeError("No target transforms found")
 
         return transforms
 
@@ -489,7 +665,7 @@ class Loader(object):
 
         return scenes
 
-    def _find_rigids(self, transforms):
+    def _find_rigids(self):
         """Identify lone rigids"""
 
         parents = set()
@@ -531,7 +707,7 @@ class Loader(object):
 
         return rigids
 
-    def _find_chains(self, transforms):
+    def _find_chains(self):
         r"""Identify chains amongst rigids
 
          o                   .                   .
@@ -557,9 +733,7 @@ class Loader(object):
 
         def _rigids():
             for rigid in self.view("RigidUIComponent"):
-                # Only consider entities with a transform
-                if rigid in transforms:
-                    yield rigid
+                yield rigid
 
         # Create a vertex for each rigid
         #
@@ -641,7 +815,7 @@ class Loader(object):
             {
                 "rigids": chain,
                 "constraints": [],
-                "multipliers": [],
+                "constraintMultipliers": [],
 
                 # Figure out what the options were at the time
                 # of creating this chain.
@@ -691,14 +865,9 @@ class Loader(object):
             rigid_to_constraints = {}
 
             for rigid in chain["rigids"][1:]:
-                for entity in self._siblings(rigid):
+                for entity in self.siblings(rigid):
 
                     if not self.has(entity, "JointComponent"):
-                        continue
-
-                    # In the off chance this constraint resides outside
-                    # of the chain hierarchy, ensure filtering picks it up.
-                    if entity not in transforms:
                         continue
 
                     Joint = self.component(entity, "JointComponent")
@@ -752,9 +921,9 @@ class Loader(object):
             # occurs at the root of a tree.
             if not chain["partOfTree"]:
                 root = chain["rigids"][0]
-                for entity in self._siblings(root):
+                for entity in self.siblings(root):
                     if self.has(entity, "ConstraintMultiplierUIComponent"):
-                        chain["multipliers"].append(entity)
+                        chain["constraintMultipliers"].append(entity)
 
         # Figure out what options to use to recreate this chain
         #
@@ -785,7 +954,7 @@ class Loader(object):
             chain["options"].update({
                 "passiveRoot": RootRigid["kinematic"],
                 "drawShaded": RootRigidUi["shaded"],
-                "autoMultiplier": chain["multipliers"] != [],
+                "autoMultiplier": chain["constraintMultipliers"] != [],
             })
 
         # Sanity checks
@@ -799,12 +968,6 @@ class Loader(object):
             self._validate_same_scene(chain["constraints"])
 
         return chains
-
-    def view(self, *components):
-        """Iterate over every entity that has all of `components`"""
-        for entity in self._dump["entities"]:
-            if all(self.has(entity, comp) for comp in components):
-                yield entity
 
     def _load_scenes(self, transforms):
         scenes = {}
@@ -838,7 +1001,7 @@ class Loader(object):
         return scenes
 
     def _create_scenes(self, scenes, transforms):
-        entity_to_scene = {}
+        rdscenes = {}
 
         for scene in scenes:
             Name = self.component(scene["entity"], "NameComponent")
@@ -851,7 +1014,7 @@ class Loader(object):
                 rdscene = transform.shape(type="rdScene")
 
                 if rdscene:
-                    entity_to_scene[scene["entity"]] = scene
+                    rdscenes[scene["entity"]] = rdscene
                     continue
 
             except KeyError:
@@ -864,33 +1027,41 @@ class Loader(object):
             with cmdx.DagModifier() as mod:
                 self._apply_scene(mod, scene["entity"], rdscene)
 
-            entity_to_scene[scene["entity"]] = rdscene
+            rdscenes[scene["entity"]] = rdscene
 
-        return entity_to_scene
+        return rdscenes
 
-    def _create_constraints(self, constraints, scenes, rigids, multipliers):
+    def _create_constraints(self,
+                            constraints,
+                            scenes,
+                            rigids,
+                            multipliers,
+                            transforms):
         entity_to_constraint = {}
 
-        for entity in constraints:
+        for constraint in constraints:
+            entity = constraint["entity"]
+
+            if entity not in transforms:
+                continue
+
             # These are guaranteed to be associated to any entity
             # with a `JointComponent`
             Name = self.component(entity, "NameComponent")
             Joint = self.component(entity, "JointComponent")
             ConstraintUi = self.component(entity, "ConstraintUIComponent")
 
-            print("Creating leftover constraint: %s" % Name["path"])
-
             parent_entity = Joint["parent"]
             child_entity = Joint["child"]
 
             assert parent_entity in rigids or parent_entity in scenes, (
-                "%s.parentRigid=%r was not found in this dump"
-                % (Name["path"], parent_entity)
+                "%s|%s.parentRigid=%r was not found in this dump"
+                % (Name["path"], Name["value"], parent_entity)
             )
 
             assert child_entity in rigids, (
-                "%s.childRigid=%r was not found in this dump"
-                % (Name["path"], child_entity)
+                "%s|%s.childRigid=%r was not found in this dump"
+                % (Name["path"], Name["value"], child_entity)
             )
 
             try:
@@ -906,7 +1077,7 @@ class Loader(object):
                 self._apply_constraint(mod, entity, con)
 
                 # Restore it's name too
-                mod.rename(con, _name(Name))
+                mod.rename(con, Name["value"])
 
                 if ConstraintUi["multiplierEntity"] in multipliers:
                     multiplier = multipliers[ConstraintUi["multiplierEntity"]]
@@ -917,14 +1088,18 @@ class Loader(object):
 
         return entity_to_constraint
 
-    def _create_rigids(self, rigids, scenes, transforms, multipliers=None):
+    def _create_rigids(self, rigids, rdscenes, transforms, multipliers=None):
         multipliers = multipliers or []
         entity_to_rigid = {}
 
         for rigid in rigids:
-            # These are guaranteed to be associated to any entity
-            # with a `RigidComponent`
             entity = rigid["entity"]
+
+            try:
+                transform = transforms[entity]
+            except KeyError:
+                continue
+
             Name = self.component(entity, "NameComponent")
             RigidUi = self.component(entity, "RigidUIComponent")
             Scene = self.component(entity, "SceneComponent")
@@ -933,24 +1108,19 @@ class Loader(object):
             if entity == Scene["entity"]:
                 continue
 
-            try:
-                transform = transforms[entity]
-            except KeyError:
-                log.warning(
-                    "Could not find transform for %s" % Name["path"]
-                )
-                continue
+            rdscene = rdscenes[Scene["entity"]]
+            assert isinstance(rdscene, cmdx.DagNode), rdscene
+            assert rdscene.type() == "rdScene", rdscene
 
-            scene = scenes[Scene["entity"]]
             rigid = commands.create_rigid(transform,
-                                          scene,
+                                          rdscene,
                                           **rigid["options"])
 
             with cmdx.DagModifier() as mod:
                 self._apply_rigid(mod, entity, rigid)
 
                 # Restore it's name too
-                mod.rename(rigid, _name(Name))
+                mod.rename(rigid, Name["value"])
 
                 if RigidUi["multiplierEntity"] in multipliers:
                     multiplier = multipliers[RigidUi["multiplierEntity"]]
@@ -959,36 +1129,10 @@ class Loader(object):
 
             entity_to_rigid[entity] = rigid
 
-            # Keep track of what we've created
-            self._visited.add(entity)
-
         return entity_to_rigid
 
-    def _siblings(self, entity):
-        """Yield siblings of entity
-
-        -o root_grp
-          -o spine1_ctl
-             -o rRigid1
-             -o rConstraintMultiplier
-             -o rConstraint1    <--- `entity`
-
-        The siblings of this entity is `rRigid1` and `rConstrintMultiplier`
-
-        """
-
-        Name = self.component(entity, "NameComponent")
-        parent_path = Name["path"].rsplit("|", 1)[0]
-
-        for entity in self._dump["entities"]:
-            Name = self.component(entity, "NameComponent")
-            sibling_parent_path = Name["path"].rsplit("|", 1)[0]
-
-            if parent_path == sibling_parent_path:
-                yield entity
-
-    def _create_chain(self, chain, scenes, entity_to_transform):
-        """Create `chains` for `entity_to_transform` belonging to `scenes`
+    def _create_chain(self, chain, rdscenes, entity_to_transform):
+        """Create `chains` for `entity_to_transform` belonging to `rdscenes`
 
         Chains are provided as a list-of-lists, each entry being an
         individual chain.
@@ -1004,12 +1148,18 @@ class Loader(object):
 
         """
 
+        result = {
+            "rigids": [],
+            "constraints": [],
+            "constraintMultipliers": [],
+        }
+
         root_rigid = chain["rigids"][0]
         Name = self.component(root_rigid, "NameComponent")
         Scene = self.component(root_rigid, "SceneComponent")
 
         try:
-            scene = scenes[Scene["entity"]]
+            rdscene = rdscenes[Scene["entity"]]
         except KeyError:
             raise ValueError(
                 "The scene for %s hasn't yet been created"
@@ -1019,9 +1169,17 @@ class Loader(object):
         # Find a transform for each link in each chain
         transforms = []
         transform_to_link = {}
-        for rigid in chain["rigids"]:
-            transform = entity_to_transform[rigid]
-            transform_to_link[transform] = rigid
+        for link in chain["rigids"]:
+
+            try:
+                transform = entity_to_transform[link]
+
+            except KeyError:
+                # Every link needs a transform, otherwise
+                # it's not really a chain
+                return result
+
+            transform_to_link[transform] = link
             transforms.append(transform)
 
         # They may have all been filtered out
@@ -1048,7 +1206,7 @@ class Loader(object):
         assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
 
         active_chain = tools.create_chain(transforms,
-                                          scene,
+                                          rdscene,
                                           options=chain["options"])
 
         new_rigids = [
@@ -1073,10 +1231,10 @@ class Loader(object):
                 len(chain["constraints"]), len(new_constraints)
             )
 
-        if len(new_multipliers) != len(chain["multipliers"]):
+        if len(new_multipliers) != len(chain["constraintMultipliers"]):
             log.warning(
                 "I expected %d multipliers, but %d were created",
-                len(chain["multipliers"]), len(new_multipliers)
+                len(chain["constraintMultipliers"]), len(new_multipliers)
             )
 
         # This command generated a series of nodes. We'll want to map
@@ -1113,7 +1271,7 @@ class Loader(object):
             entity_to_constraint[constraint] = new_constraint
 
         # Finally, there may be a multiplier at the root
-        for multiplier, new_multiplier in zip(chain["multipliers"],
+        for multiplier, new_multiplier in zip(chain["constraintMultipliers"],
                                               new_multipliers):
             entity_to_multiplier[multiplier] = new_multiplier
 
@@ -1146,28 +1304,36 @@ class Loader(object):
             for entity, mult in entity_to_multiplier.items():
                 self._apply_constraint_multiplier(mod, entity, mult)
 
-        return {
+        result.update({
             "rigids": new_rigids,
             "constraints": new_constraints,
-            "multipliers": new_multipliers,
-        }
+            "constraintMultipliers": new_multipliers,
+        })
 
-    def _find_leftovers(self, visited, transforms):
+        return result
+
+    def _find_leftovers(self, visited):
 
         leftovers = {
             "constraints": [],
-            "multipliers": [],
+            "constraintMultipliers": [],
         }
 
         for entity in self._dump["entities"]:
             if entity in visited:
                 continue
 
-            if entity not in transforms:
-                continue
-
             if self.has(entity, "ConstraintUIComponent"):
-                leftovers["constraints"].append(entity)
+                leftovers["constraints"].append({
+                    "entity": entity,
+                    "options": {}
+                })
+
+            if self.has(entity, "ConstraintMultiplierUIComponent"):
+                leftovers["constraintMultipliers"].append({
+                    "entity": entity,
+                    "options": {}
+                })
 
         return leftovers
 
@@ -1553,11 +1719,13 @@ class Loader(object):
         return same_scene
 
 
-def load(dump, root=None):
-    loader = Loader(dump, root)
+def load(fname, roots=None):
+    loader = Loader(roots)
+    loader.read(fname)
     return loader.load()
 
 
-def reinterpret(dump, root=None):
-    loader = Loader(dump, root)
+def reinterpret(fname, roots=None):
+    loader = Loader(roots)
+    loader.read(fname)
     return loader.reinterpret()

@@ -136,7 +136,7 @@
     },
     "socket": {
         "label": "Socket",
-        "icon": "socket_constraint.png",
+        "icon": "socket_constraint2.png",
         "summary": "Constraint the position and limit the orientation between two rigid bodies.",
         "description": "Constraint the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
@@ -288,10 +288,12 @@
         "summary": "Load physics from disk.",
         "description": "Import a previously exported Ragdoll scene from disk.",
         "options": [
+            "importPath",
             "importMethod",
             "importMergePhysics",
             "importIncludeAnimation",
-            "importIncludeSimulation"
+            "importIncludeSimulation",
+            "importUseSelection"
         ]
     },
     "editConstraintFrames": {

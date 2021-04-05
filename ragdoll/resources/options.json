@@ -340,12 +340,20 @@
     "#": " Import/Export  ",
     "#": "----------------",
 
+    "importPath": {
+        "name": "importPath",
+        "label": "Filename",
+        "type": "String",
+        "default": "",
+        "help": "Import physics from this .rag file."
+    },
 
     "importMergePhysics": {
         "name": "importMergePhysics",
         "label": "Merge",
         "type": "Boolean",
         "default": true,
+        "enabled": false,
         "help": "Apply physics to existing objects in the currently opened Maya scene."
     },
 
@@ -354,7 +362,16 @@
         "type": "Enum",
         "items": ["Load", "Reinterpret"],
         "default": "Reinterpret",
+        "enabled": false,
         "help": "Load each individual Ragdoll node as they existed at the time of export, or *reinterpret* the exported file to try and figure out what commands were used to create it, and then execute those same commands to the currently opened scene."
+    },
+
+    "importUseSelection": {
+        "name": "importUseSelection",
+        "label": "Use Selection",
+        "type": "Boolean",
+        "default": true,
+        "help": "Import onto selection, ignore everything else."
     },
 
     "exportIncludeAnimation": {
@@ -362,6 +379,7 @@
         "label": "Include Animation",
         "type": "Boolean",
         "default": false,
+        "enabled": false,
         "help": "Include animation in exported file."
     },
 
@@ -370,6 +388,7 @@
         "label": "Include Simulation",
         "type": "Boolean",
         "default": false,
+        "enabled": false,
         "help": "Include simulation in exported file."
     },
 
@@ -378,6 +397,7 @@
         "label": "Include Animation",
         "type": "Boolean",
         "default": false,
+        "enabled": false,
         "help": "Include animation from imported file (if any)."
     },
 
@@ -386,6 +406,7 @@
         "label": "Include Simulation",
         "type": "Boolean",
         "default": false,
+        "enabled": false,
         "help": "Include simulation from imported file (if any)."
     },
 

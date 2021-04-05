@@ -6,13 +6,15 @@ import json
 import logging
 import datetime
 
+from maya import cmds
+from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import shiboken2
 
-from . import options, licence, __
-from .vendor import qargparse, markdown, qjsonmodel
+from . import options, licence, dump, lib, __
+from .vendor import qargparse, markdown, qjsonmodel, cmdx
 
 try:
     from maya.cmds import optionVar
@@ -34,6 +36,9 @@ try:
 except NameError:
     long = int
     string_types = str,
+
+# Expose some utility to interactive.py
+isValid = shiboken2.isValid
 
 
 def camel_to_title(text):
@@ -1100,7 +1105,7 @@ class Options(QtWidgets.QMainWindow):
         widgets["Parser"].setIcon(icon)
         widgets["Parser"].setDescription(description)
 
-        layout = QtWidgets.QHBoxLayout(widgets["Options"])
+        layout = QtWidgets.QVBoxLayout(widgets["Options"])
         layout.addWidget(widgets["Parser"], 1)
         layout.setContentsMargins(px(50), px(5), px(5), px(5))
 
@@ -1298,12 +1303,22 @@ class Options(QtWidgets.QMainWindow):
         self._widgets["Hint"].setText(default)
 
 
-def MessageBox(title, text):
+YesButton = QtWidgets.QMessageBox.Yes
+NoButton = QtWidgets.QMessageBox.No
+CancelButton = QtWidgets.QMessageBox.Cancel
+OkButton = QtWidgets.QMessageBox.Ok
+
+
+def MessageBox(title, text, buttons=None):
     parent = MayaWindow()
     message = QtWidgets.QMessageBox(parent)
 
-    message.setStandardButtons(QtWidgets.QMessageBox.Yes |
-                               QtWidgets.QMessageBox.No)
+    buttons = buttons or (
+        QtWidgets.QMessageBox.Yes |
+        QtWidgets.QMessageBox.No
+    )
+
+    message.setStandardButtons(buttons)
 
     message.setWindowTitle(title)
     message.setText(text)
@@ -1803,127 +1818,7 @@ class MessageBoard(QtWidgets.QDialog):
         self._widgets = widgets
 
 
-class Replayer(QtWidgets.QDialog):
-    replay_clicked = QtCore.Signal(object)
-
-    def __init__(self, actions, parent=None):
-        super(Replayer, self).__init__(parent)
-        self.setWindowTitle("Ragdoll Replay")
-        self.setMinimumWidth(px(600))
-        self.setMinimumHeight(px(300))
-
-        panels = {
-            "body": QtWidgets.QWidget(),
-            "footer": QtWidgets.QWidget(),
-        }
-
-        widgets = {
-            "queue": QtWidgets.QListWidget(),
-            "selection": QtWidgets.QWidget(),
-            "sidepanel": QtWidgets.QWidget(),
-            "replayAll": QtWidgets.QPushButton("Replay All"),
-            "replaySelected": QtWidgets.QPushButton("Replay Selected"),
-            "close": QtWidgets.QPushButton("Close"),
-        }
-
-        for index, action in enumerate(actions):
-            key = __.actiontokey[action["name"]]
-            menuitem = __.menuitems[key]
-
-            label = menuitem["label"]
-            icon = _resource("icons", menuitem["icon"])
-            icon = QtGui.QIcon(icon)
-
-            item = QtWidgets.QListWidgetItem(icon, label)
-            widgets["queue"].addItem(item)
-
-        layout = QtWidgets.QHBoxLayout(panels["body"])
-        layout.addWidget(widgets["queue"])
-        layout.addWidget(widgets["sidepanel"], 1)
-
-        layout = QtWidgets.QHBoxLayout(panels["footer"])
-        layout.addWidget(widgets["replayAll"])
-        layout.addWidget(widgets["replaySelected"])
-        layout.addWidget(widgets["close"])
-
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(panels["body"])
-        layout.addWidget(panels["footer"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        widgets["sidepanel"].setMinimumWidth(px(300))
-
-        widgets["replayAll"].clicked.connect(
-            self.on_replay_all_clicked)
-        widgets["replaySelected"].clicked.connect(
-            self.on_replay_selected_clicked)
-        widgets["close"].clicked.connect(self.close)
-        widgets["queue"].currentRowChanged.connect(self.on_action_changed)
-
-        self._actions = actions
-        self._panels = panels
-        self._widgets = widgets
-
-    def on_replay_all_clicked(self):
-        self.replay_clicked.emit(self._actions)
-
-    def on_replay_selected_clicked(self):
-        self.replay_clicked.emit(self._actions)
-
-    def on_action_changed(self, index):
-        self._widgets["sidepanel"].deleteLater()
-
-        action = self._actions[index]
-        key = __.actiontokey[action["name"]]
-        menuitem = __.menuitems[key]
-
-        def _Arg(opt):
-            import copy
-            var = __.optionvars[opt]
-            var = copy.deepcopy(var)  # Allow edits to internal lists etc.
-
-            cls = getattr(qargparse, var.pop("type"))
-            arg = cls(**var)
-            return arg
-
-        args = map(_Arg, menuitem.get("options", []))
-
-        parser = qargparse.QArgumentParser(args, style={
-            "comboboxFillWidth": False,
-
-            # We'll defer these to the footer
-            "useTooltip": False,
-        })
-
-        icon = _resource("icons", menuitem["icon"])
-        parser.setIcon(icon)
-        parser.setDescription(menuitem["summary"])
-
-        selection = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(selection)
-
-        for sel in action["selection"]:
-            line = QtWidgets.QLineEdit()
-            line.setText(sel)
-            line.setEnabled(False)
-            layout.addWidget(line)
-
-        sidepanel = QtWidgets.QWidget()
-        sidepanel.setMinimumWidth(px(300))
-
-        layout = QtWidgets.QVBoxLayout(sidepanel)
-        layout.addWidget(selection)
-        layout.addWidget(parser)
-
-        layout = self._panels["body"].layout()
-        layout.addWidget(sidepanel, 1)
-
-        self._widgets["sidepanel"] = sidepanel
-
-
 class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
-    label = "Ragdoll Explorer"
     instance = None
 
     def __init__(self, parent=None):
@@ -1939,11 +1834,15 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         view.setModel(model)
         view.header().resizeSection(0, px(200))
 
+        raw = QtWidgets.QCheckBox("Show Raw")
+        raw.stateChanged.connect(self.on_raw_changed)
+
         refresh = QtWidgets.QPushButton("Refresh")
         refresh.clicked.connect(self.reload)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(view)
+        layout.addWidget(raw)
         layout.addWidget(refresh)
 
         timer = QtCore.QTimer(parent=self)  # Delete on close
@@ -1954,42 +1853,52 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self._model = model
         self._timer = timer
         self._dump = None
+        self._raw = False
 
         Explorer.instance = self
 
         # For uninstall
         __.widgets[self.windowTitle()] = self
 
-    def parse(self, dump, simple=False):
-        # "Deep copy"
-        dump = json.loads(json.dumps(dump))
+    def on_raw_changed(self, state):
+        self._raw = bool(state)
+        self.load(self._dump)
 
-        if simple:
+    def parse(self, dump, raw=False):
+        if self._raw:
             dump["entities"] = {
                 int(entity): value
                 for entity, value in dump["entities"].items()
             }
         else:
-            for key, value in dump["entities"].copy().items():
-                if "NameComponent" in value["components"]:
-                    name = value["components"]["NameComponent"]
+            for key in dump["entities"].copy():
+                value = dump["entities"].pop(key)
 
-                    # E.g. _:|root_grp|upperArm_ctl|rRigid2
-                    name = name["members"]["path"]
+                if "NameComponent" not in value["components"]:
+                    continue
 
-                    # E.g. _:upperArm_ctl|rRigid2
-                    name = "|".join(name.rsplit("|", 2)[1:])
+                name = value["components"]["NameComponent"]
 
-                    # E.g. upperArm_ctl|rRigid2
-                    name = name.rsplit(":", 1)[-1]
+                # E.g. _:|root_grp|upperArm_ctl|rRigid1
+                name = "|".join([name["members"]["shortestPath"],
+                                 name["members"]["value"]])
 
-                    index = 1
-                    orig = name
-                    while name in dump["entities"]:
-                        name = "%s(%d)" % (orig, index)
-                        index += 1
+                # E.g. upperArm_ctl|rRigid1
+                name = name.rsplit(":", 1)[-1]
 
-                    dump["entities"][name] = dump["entities"].pop(key)
+                # This should never really happen, it means
+                # there are two entities for a Ragdoll node.
+                index = 1
+                orig = name
+                while name in dump["entities"]:
+                    name = "%s (%d!)" % (orig, index)
+                    index += 1
+
+                # Move members directly under the component
+                dump["entities"][name] = {
+                    k: v["members"]
+                    for k, v in value["components"].items()
+                }
 
         return dump
 
@@ -2018,10 +1927,587 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self._view.expandToDepth(0)
 
 
-def show_explorer(dump):
-    if Explorer.instance and shiboken2.isValid(Explorer.instance):
-        return Explorer.instance
+EntityRole = QtCore.Qt.UserRole + 0
+TransformRole = QtCore.Qt.UserRole + 1
+OptionsRole = QtCore.Qt.UserRole + 2
 
-    exp = Explorer(parent=MayaWindow())
-    exp.load(dump)
-    return exp
+
+class ImportDetails(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super(ImportDetails, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
+
+        panels = {
+            "Header": QtWidgets.QWidget(),
+            "Body": QtWidgets.QWidget(),
+        }
+
+        widgets = {
+            "Icon": QtWidgets.QLabel(),
+            "Title": QtWidgets.QLabel("rScene"),
+            "Description": QtWidgets.QLabel(),
+
+            "TargetIcon": QtWidgets.QPushButton(),
+            "SourceIcon": QtWidgets.QPushButton(),
+
+            "TargetLabel": QtWidgets.QLineEdit(),
+            "SourceLabel": QtWidgets.QLineEdit(),
+        }
+
+        font = widgets["Title"].font()
+        font.setWeight(font.Bold)
+        widgets["Title"].setFont(font)
+
+        left_icon = QtGui.QPixmap(_resource("icons", "left.png"))
+        right_icon = QtGui.QPixmap(_resource("icons", "right.png"))
+
+        widgets["TargetIcon"].setIcon(left_icon)
+        widgets["SourceIcon"].setIcon(right_icon)
+        widgets["TargetIcon"].clicked.connect(self.on_target_clicked)
+        widgets["SourceIcon"].clicked.connect(self.on_source_clicked)
+
+        for w in ("TargetIcon", "SourceIcon"):
+            widgets[w].setFixedSize(px(20), px(20))
+            widgets[w].setIconSize(QtCore.QSize(px(20), px(20)))
+
+        widgets["TargetLabel"].setReadOnly(True)
+        widgets["SourceLabel"].setReadOnly(True)
+        layout = QtWidgets.QGridLayout(panels["Header"])
+        layout.addWidget(widgets["Icon"], 0, 0, 2, 1)
+        layout.addWidget(widgets["Title"], 0, 1)
+        layout.addWidget(widgets["Description"], 1, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout = QtWidgets.QGridLayout(panels["Body"])
+        layout.addWidget(widgets["TargetIcon"], 0, 0)
+        layout.addWidget(widgets["TargetLabel"], 0, 1)
+        layout.addWidget(widgets["SourceIcon"], 1, 0)
+        layout.addWidget(widgets["SourceLabel"], 1, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(panels["Header"])
+        layout.addWidget(panels["Body"])
+
+        self.setStyleSheet(_scaled_stylesheet("""
+            ImportDetails {
+                border: 2px solid #333;
+                margin-bottom: 2px;
+                background: #555;
+            }
+        """))
+
+        self._panels = panels
+        self._widgets = widgets
+        self._state = {}
+
+    def on_target_clicked(self):
+        index = 1 - self._state["targetLabelIndex"]
+        label = self._state["targetLabels"][index]
+        self._widgets["TargetLabel"].setText(label)
+        self._state["targetLabelIndex"] = index
+
+    def on_source_clicked(self):
+        index = 1 - self._state["sourceLabelIndex"]
+        label = self._state["sourceLabels"][index]
+        self._widgets["SourceLabel"].setText(label)
+        self._state["sourceLabelIndex"] = index
+
+    def reset(self,
+              name,
+              icon,
+              description,
+              target_label,
+              source_label):
+
+        icon = QtGui.QPixmap(icon)
+
+        self._state.update({
+            "targetLabels": target_label,
+            "sourceLabels": source_label,
+            "targetLabelIndex": 0,
+            "sourceLabelIndex": 0,
+        })
+
+        self._widgets["Title"].setText(name)
+        self._widgets["Icon"].setPixmap(icon)
+        self._widgets["Description"].setText(description)
+        self._widgets["TargetLabel"].setText(target_label[0])
+        self._widgets["SourceLabel"].setText(source_label[0])
+
+
+class TreeWidget(QtWidgets.QTreeWidget):
+    def __init__(self, parent=None):
+        super(TreeWidget, self).__init__(parent)
+
+        self._current_index = 0
+        self._expanded_items = []
+
+    def store(self):
+        # Preserve currently selected index
+        current_item = self.currentItem()
+        if current_item:
+            while current_item.parent():
+                current_item = current_item.parent()
+
+            self._current_index = self.indexOfTopLevelItem(current_item)
+
+        # Remember which items were expanded
+        self._expanded_items[:] = []
+        for item in range(self.topLevelItemCount()):
+            item = self.topLevelItem(item)
+            self._expanded_items.append(item.isExpanded())
+
+    def restore(self):
+        item = self.topLevelItem(self._current_index)
+        self.setCurrentItem(item)
+
+        for index in range(self.topLevelItemCount()):
+            try:
+                expanded = self._expanded_items[index]
+            except IndexError:
+                # It's possible there are less items now
+                continue
+
+            item = self.topLevelItem(index)
+            item.setExpanded(expanded)
+
+
+Load = "Load"
+Reinterpret = "Reinterpret"
+
+
+class ImportOptions(Options):
+    instance = None
+
+    def __init__(self, *args, **kwargs):
+        super(ImportOptions, self).__init__(*args, **kwargs)
+
+        self.setWindowTitle("Import Options")
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
+
+        # Map know options to this widget
+        parser = self._widgets["Parser"]
+        import_path = parser.find("importPath")
+        use_selection = parser.find("importUseSelection")
+
+        panels = {
+            "ImportBody": QtWidgets.QWidget(),
+
+            "ImportLeft": QtWidgets.QWidget(),
+            "ImportRight": QtWidgets.QWidget(),
+        }
+
+        widgets = {
+            "PathField": import_path.widget(),
+            "UseSelection": use_selection.widget(),
+
+            "ImportDetails": ImportDetails(),
+
+            "TargetView": TreeWidget(),
+            "SourceView": QtWidgets.QTreeView(),
+        }
+
+        models = {
+            "SourceView": qjsonmodel.QJsonModel(editable=False),
+        }
+
+        for name, wid in panels.items():
+            wid.setObjectName(name)
+
+        for name, wid in widgets.items():
+            wid.setObjectName(name)
+
+        # Setup
+
+        widgets["SourceView"].setModel(models["SourceView"])
+        widgets["SourceView"].header().resizeSection(0, px(200))
+        widgets["SourceView"].setHeaderHidden(True)
+
+        # Layout
+
+        layout = QtWidgets.QVBoxLayout(panels["ImportLeft"])
+        layout.addWidget(widgets["TargetView"])
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout = QtWidgets.QVBoxLayout(panels["ImportRight"])
+        layout.addWidget(widgets["ImportDetails"])
+        layout.addWidget(widgets["SourceView"], 1)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout = QtWidgets.QHBoxLayout(panels["ImportBody"])
+        layout.addWidget(panels["ImportLeft"], 2)
+        layout.addWidget(panels["ImportRight"], 3)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout = self._panels["Central"].layout()
+        layout.insertWidget(1, panels["ImportBody"], 1)
+
+        use_selection.changed.connect(self.on_selection_changed)
+        import_path.changed.connect(self.on_path_changed)
+
+        widgets["TargetView"].setHeaderHidden(True)
+        widgets["TargetView"].currentItemChanged.connect(
+            self.on_target_changed)
+
+        self._widgets.update(widgets)
+        self._panels.update(panels)
+
+        self._models = models
+        self._loader = dump.Loader()
+        self._selection_callback = None
+
+        ImportOptions.instance = self
+
+        # For uninstall
+        __.widgets[self.windowTitle()] = self
+
+        last_path = import_path.read()
+
+        if last_path:
+            self.read(last_path)
+
+    @classmethod
+    def import_last_file(cls):
+        instance = cls.instance
+
+        if instance is None:
+            print("Instantiating new instance")
+            instance = ImportOptions()
+
+        cmds.evalDeferred(instance.import_file)
+
+    def import_file(self):
+        if options.read("importMethod") == Load:
+            method = self._loader.load
+        else:
+            method = self._loader.reinterpret
+
+        def do_it():
+            method()
+            self.reset()
+
+        # Allow UI to finish drawing the click of a button
+        QtCore.QTimer.singleShot(5, do_it)
+
+    def showEvent(self, event):
+        # Keep an eye on the current selection
+        self._selection_callback = om.MModelMessage.addCallback(
+            om.MModelMessage.kActiveListModified,
+            self.on_selection_changed
+        )
+
+        super(ImportOptions, self).showEvent(event)
+
+    def closeEvent(self, event):
+        if self._selection_callback is not None:
+            om.MMessage.removeCallback(self._selection_callback)
+
+        self._selection_callback = None
+        super(ImportOptions, self).closeEvent(event)
+
+    def on_selection_changed(self, _=None):
+        parser = self._widgets["Parser"]
+        use_selection = parser.find("importUseSelection")
+
+        if use_selection.read():
+            roots = cmds.ls(selection=True, type="transform", long=True)
+            self._loader.set_roots(roots)
+        else:
+            self._loader.set_roots([])
+        self.reset()
+
+    def on_browsed(self):
+        fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
+            MayaWindow(),
+            "Open Ragdoll Scene",
+            options.read("lastVisitedPath"),
+            "Ragdoll scene files (*.rag)"
+        )
+
+        if not fname:
+            return log.warning("Cancelled")
+
+        fname = os.path.normpath(fname)
+        self._widgets["PathField"].setText(fname)
+        self.on_path_changed()
+
+    def on_path_changed(self):
+        fname = self._widgets["PathField"].text()
+        self.read(fname)
+
+    def load(self, data):
+        assert isinstance(data, dict), "data must be a dictionary"
+
+        try:
+            self._loader.read(data)
+        except Exception:
+            pass
+
+        self.on_selection_changed()
+
+    def read(self, fname):
+        assert isinstance(fname, string_types), "fname must be string"
+
+        self._widgets["PathField"].setText(fname)
+
+        with open(fname) as f:
+            data = json.load(f)
+
+        self.load(data)
+
+    @lib.with_timing
+    def reset(self):
+        target_view = self._widgets["TargetView"]
+        target_view.store()
+        target_view.clear()
+
+        state = self._loader.ls()
+
+        def _transform(item, entity):
+            try:
+                transform = state["transforms"][entity]
+                item.setData(0, TransformRole, transform)
+                item.setToolTip(0, transform.path())
+
+            except KeyError:
+                # Dim any transform that isn't getting imported
+                color = self.palette().color(self.foregroundRole())
+                color.setAlpha(100)
+                item.setData(0, QtCore.Qt.ForegroundRole, color)
+
+        def _rigid_icon(item, entity):
+            Desc = self._loader.component(
+                entity, "GeometryDescriptionComponent"
+            )
+
+            icon = {
+                "Box": "box.png",
+                "Capsule": "capsule.png",
+                "Cylinder": "cylinder.png",
+                "Sphere": "sphere.png",
+                "ConvexHull": "mesh.png",
+            }.get(
+                Desc["type"],
+
+                # In case the format is all whack
+                "rigid.png"
+            )
+
+            icon = _resource("icons", icon)
+            icon = QtGui.QIcon(icon)
+            item.setIcon(0, icon)
+
+        def _add_scenes():
+            pass
+
+        def _add_chains():
+            for chain in state["chains"]:
+                entity = chain["rigids"][0]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+                icon = _resource("icons", "chain.png")
+                icon = QtGui.QIcon(icon)
+
+                item = QtWidgets.QTreeWidgetItem()
+                item.setIcon(0, icon)
+                item.setText(0, label)
+                item.setData(0, OptionsRole, chain["options"])
+                item.setData(0, EntityRole, dump.Entity(entity))
+                _transform(item, entity)
+
+                for entity in chain["rigids"]:
+
+                    name = self._loader.component(entity, "NameComponent")
+                    label = name["value"]
+
+                    child = QtWidgets.QTreeWidgetItem()
+                    child.setText(0, label)
+                    child.setData(0, EntityRole, dump.Entity(entity))
+                    _rigid_icon(child, entity)
+                    _transform(child, entity)
+
+                    if not item.data(0, TransformRole):
+                        color = self.palette().color(self.foregroundRole())
+                        color.setAlpha(100)
+                        child.setData(0, QtCore.Qt.ForegroundRole, color)
+
+                    item.addChild(child)
+
+                for entity in chain["constraints"]:
+                    icon = _resource("icons", "constraint.png")
+                    icon = QtGui.QIcon(icon)
+
+                    name = self._loader.component(entity, "NameComponent")
+                    label = name["path"].rsplit("|", 1)[-1]
+
+                    child = QtWidgets.QTreeWidgetItem()
+                    child.setIcon(0, icon)
+                    child.setText(0, label)
+                    child.setData(0, EntityRole, dump.Entity(entity))
+                    _transform(child, entity)
+
+                    if not item.data(0, TransformRole):
+                        color = self.palette().color(self.foregroundRole())
+                        color.setAlpha(100)
+                        child.setData(0, QtCore.Qt.ForegroundRole, color)
+
+                    item.addChild(child)
+
+                target_view.addTopLevelItem(item)
+
+        def _add_rigids():
+            for rigid in state["rigids"]:
+                entity = rigid["entity"]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+                icon = _resource("icons", "rigid.png")
+                icon = QtGui.QIcon(icon)
+
+                item = QtWidgets.QTreeWidgetItem()
+                item.setText(0, label)
+                item.setIcon(0, icon)
+                item.setData(0, OptionsRole, rigid["options"])
+                item.setData(0, EntityRole, dump.Entity(entity))
+                _transform(item, entity)
+
+                child = QtWidgets.QTreeWidgetItem()
+                child.setText(0, name["value"])
+                child.setData(0, EntityRole, dump.Entity(entity))
+                _rigid_icon(child, entity)
+                _transform(child, entity)
+
+                item.addChild(child)
+
+                target_view.addTopLevelItem(item)
+
+        def _add_constraints():
+            for constraint in state["constraints"]:
+                entity = constraint["entity"]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+
+                icon = _resource("icons", "constraint.png")
+                icon = QtGui.QIcon(icon)
+
+                item = QtWidgets.QTreeWidgetItem()
+                item.setIcon(0, icon)
+                item.setText(0, label)
+                item.setData(0, OptionsRole, constraint["options"])
+                item.setData(0, EntityRole, dump.Entity(entity))
+                _transform(item, entity)
+
+                child = QtWidgets.QTreeWidgetItem()
+                child.setIcon(0, icon)
+                child.setText(0, name["value"])
+                child.setData(0, EntityRole, dump.Entity(entity))
+                _transform(child, entity)
+
+                item.addChild(child)
+
+                target_view.addTopLevelItem(item)
+
+        def _add_rigid_multipliers():
+            for mult in state["rigidMultipliers"]:
+                entity = mult["entity"]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+
+                icon = _resource("icons", "rigid_multiplier.png")
+                icon = QtGui.QIcon(icon)
+
+                item = QtWidgets.QTreeWidgetItem()
+                item.setIcon(0, icon)
+                item.setText(0, label)
+                item.setData(0, EntityRole, dump.Entity(entity))
+                item.setData(0, OptionsRole, mult["options"])
+                _transform(item, entity)
+
+                child = QtWidgets.QTreeWidgetItem()
+                child.setIcon(0, icon)
+                child.setText(0, name["value"])
+                child.setData(0, EntityRole, dump.Entity(entity))
+                _transform(child, entity)
+
+                item.addChild(child)
+
+                target_view.addTopLevelItem(item)
+
+        def _add_constraint_multipliers():
+            for mult in state["constraintMultipliers"]:
+                entity = mult["entity"]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+
+                icon = _resource("icons", "constraint_multiplier.png")
+                icon = QtGui.QIcon(icon)
+
+                item = QtWidgets.QTreeWidgetItem()
+                item.setIcon(0, icon)
+                item.setText(0, label)
+                item.setData(0, EntityRole, dump.Entity(entity))
+                item.setData(0, OptionsRole, mult["options"])
+                _transform(item, entity)
+
+                child = QtWidgets.QTreeWidgetItem()
+                child.setIcon(0, icon)
+                child.setText(0, name["value"])
+                child.setData(0, EntityRole, dump.Entity(entity))
+                child.setData(0, OptionsRole, mult["options"])
+                _transform(child, entity)
+
+                item.addChild(child)
+
+                target_view.addTopLevelItem(item)
+
+        _add_chains()
+        _add_rigids()
+        _add_constraints()
+        _add_rigid_multipliers()
+        _add_constraint_multipliers()
+
+        target_view.restore()
+
+    def on_target_changed(self, item, previous):
+        if not item:
+            # Nothing selected
+            return
+
+        entity = item.data(0, EntityRole)
+        transform = item.data(0, TransformRole)
+
+        components = self._loader.components(entity)
+
+        # Move members directly under the component
+        components = {
+            k: v["members"]
+            for k, v in components.items()
+        }
+
+        self._models["SourceView"].load(components)
+
+        if transform:
+            target = transform.shortestPath()
+            target_full = transform.path()
+        else:
+            target = ""
+            target_full = ""
+
+        Name = self._loader.component(entity, "NameComponent")
+
+        self._widgets["ImportDetails"].reset(
+            name=Name["value"],
+            icon=_resource("icons", "rigid.png"),
+            description="A salty rigid body, straight from the oven",
+            target_label=(target, target_full),
+            source_label=(Name["shortestPath"], Name["path"]),
+        )

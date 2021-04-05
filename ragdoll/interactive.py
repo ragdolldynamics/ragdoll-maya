@@ -51,13 +51,8 @@ from . import (
     options,
     licence,
     dump,
+    tools,
     __
-)
-from .tools import (
-    chain_tool,
-    character_tool,
-    muscle_tool,
-    dynamic_control_tool,
 )
 
 # Environment variables
@@ -535,7 +530,7 @@ def install_menu():
 
         item("bakeSimulation")
         item("exportPhysics", export_physics, export_physics_options)
-        item("importPhysics", import_physics, import_physics_options)
+        item("importPhysics", import_physics_from_file, import_physics_options)
 
         divider()
 
@@ -601,26 +596,6 @@ def show_messageboard():
     # Auto-clear on show, message has been received
     RagdollGuiLogHandler.history[:] = []
     update_menu()
-
-
-def replay(actions):
-    this = sys.modules[__name__]
-
-    for action in actions:
-        func = getattr(this, action["action"])
-
-        # Avoid recursion
-        func = this._replay(func)
-
-        options = action["options"]
-        cmds.select(action["selection"])
-        func(**options)
-
-
-def show_replayer():
-    win = ui.Replayer(_recorded_actions, parent=ui.MayaWindow())
-    win.replay_clicked.connect(replay)
-    win.show()
 
 
 def update_menu():
@@ -915,100 +890,6 @@ def validate_legacy_opengl():
     )
 
 
-def _replay(func):
-    @functools.wraps(func)
-    def replay_wrapper(*args, **kwargs):
-
-        # Hint to the recorder that we're playing back this
-        # command, and that it shouldn't be recorded
-        kwargs["_replaying"] = True
-
-        return func(*args, **kwargs)
-    return replay_wrapper
-
-
-def _replayable(func):
-    """Enable replay of this action
-
-    The animator can save a series of commands as a script,
-    and recall these later with optional customisations on e.g.
-    options and selection.
-
-    """
-
-    # We need to get rid of string attributes..
-    return func
-
-    def _append(root, action):
-        if not root.has_attr("_ragdollHistory"):
-            cmds.addAttr(root.path(),
-                         longName="_ragdollHistory",
-                         dataType="string")
-
-        with cmdx.DagModifier() as mod:
-            history = root["_ragdollHistory"].read() or "[]"
-
-            try:
-                history = json.loads(history)
-
-            except Exception:
-                log.warning(
-                    "Malformatted Ragdoll history on %s, clearing"
-                    % root
-                )
-                history = []
-
-            history.append(action)
-            mod.set_attr(root["_ragdollHistory"], json.dumps(history))
-
-    def _record(selection):
-        key = __.actiontokey[func.__name__]
-        item = __.menuitems[key]
-        opt = item.get("options", [])
-
-        action = {
-            "name": func.__name__,
-
-            # For posterity and UI
-            "time": time.time(),
-
-            # Include explicitly passed selection, in case
-            # the call is being made from a script.
-            # Questionable whether we should record these at all (?)
-            "selection": [
-                node.shortest_path()
-                for node in selection
-            ],
-
-            # Store options at the time of calling
-            "options": {
-                key: options.read(key)
-                for key in opt
-            }
-        }
-
-        _recorded_actions.append(action)
-        _append(selection[0], action)
-
-    @functools.wraps(func)
-    def replayabale_wrapper(selection=None, **kwargs):
-        if not kwargs.get("_replaying") and not _is_standalone():
-            sel = selection or cmdx.selection()
-            if sel:
-                try:
-                    _record(sel)
-                except Exception:
-                    # This *cannot* cause function to not get called
-                    traceback.print_exc()
-
-        # Pass the original selection into the target
-        # function, to let it handle selection types
-        # e.g. joints versus transforms
-        return func(selection, **kwargs)
-
-    return replayabale_wrapper
-
-
 def _filtered_selection(node_type):
     """Interpret user selection
 
@@ -1133,7 +1014,6 @@ def _opt(key, override=None):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
 
@@ -1252,7 +1132,6 @@ def create_active_rigid(selection=None, **opts):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
@@ -1263,11 +1142,10 @@ def create_passive_rigid(selection=None, **opts):
         cmds.select(transform.path())
 
     opts["createRigidType"] = "Passive"
-    return _replay(create_active_rigid)(selection, **opts)
+    return create_active_rigid(selection, **opts)
 
 
 @commands.with_undo_chunk
-@_replayable
 @_format_exception
 def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
@@ -1325,7 +1203,7 @@ def create_active_chain(selection=None, **opts):
     if not scene:
         return
 
-    chain_tool.create(links, scene, options=opts, defaults=defaults)
+    tools.create_chain(links, scene, options=opts, defaults=defaults)
 
     root = links[0]
     cmds.select(str(root))
@@ -1395,7 +1273,7 @@ def create_muscle(selection=None, **opts):
         "radius": _opt("muscleRadius", opts),
     }
 
-    muscle, root, tip = muscle_tool.create(a, b, scene, **kwargs)
+    muscle, root, tip = tools.create_muscle(a, b, scene, **kwargs)
 
     cmds.select(muscle.parent().path())
     return kSuccess
@@ -1457,7 +1335,6 @@ def _validate_transforms(nodes, tolerance=0.01):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_character(selection=None, **opts):
     scene = _find_current_scene()
 
@@ -1495,7 +1372,7 @@ def create_character(selection=None, **opts):
         "normalise_shapes": _opt("characterNormalise", opts),
     }
 
-    character_tool.create(root, scene, **kwargs)
+    tools.create_character(root, scene, **kwargs)
 
     cmds.select(str(root))
     log.info("Successfully created character from %s", root)
@@ -1697,35 +1574,30 @@ def convert_to_socket(node):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_point_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Point"})
     return create_constraint(selection, **opts)
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_orient_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Orient"})
     return create_constraint(selection, **opts)
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_parent_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Parent"})
     return create_constraint(selection, **opts)
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_hinge_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Hinge"})
     return create_constraint(selection, **opts)
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Socket"})
     return create_constraint(selection, **opts)
@@ -1756,7 +1628,6 @@ def set_initial_state(selection=None, **opts):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_driven_control(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
@@ -1799,7 +1670,6 @@ def create_driven_control(selection=None, **opts):
 
 
 @commands.with_undo_chunk
-@_replayable
 def create_kinematic_control(selection=None, **opts):
     controls = []
 
@@ -2041,6 +1911,8 @@ def delete_physics(selection=None, **opts):
     else:
         result = commands.delete_all_physics()
 
+    cmds.select(deselect=True)
+
     if any(result.values()):
         log.info(
             "Deleted {deletedRagdollNodeCount} Ragdoll nodes, "
@@ -2053,57 +1925,16 @@ def delete_physics(selection=None, **opts):
         return log.warning("Nothing deleted")
 
 
-@commands.with_undo_chunk
-@_replayable
 def create_dynamic_control(selection=None, **opts):
-    chain = selection or cmdx.selection(type="transform")
+    message = """\
+Dynamic Control has been updated and renamed Active Chain
+"""
 
-    if not chain or len(chain) < 2:
-        return log.warning(
-            "Select two or more animation controls, "
-            "in the order they should be connected. "
-            "The first selection will be passive (i.e. animated)."
-        )
-
-    for link in chain:
-        if not is_valid_transform(link):
-            return
-
-    # Protect against accidental duplicates
-    for link in chain[1:]:
-        if link.shape("rdRigid") is not None:
-            return log.warning("Already a dynamic control: '%s'" % link)
-
-    scene = _find_current_scene()
-
-    # Cancelled by user
-    if not scene:
-        return
-
-    kwargs = {
-        "use_capsules": _opt("dynamicControlShapeType", opts) == "Capsule",
-        "auto_blend": _opt("dynamicControlAutoBlend", opts),
-        "auto_influence": _opt("dynamicControlAutoInfluence", opts),
-        "auto_multiplier": _opt("dynamicControlAutoMultiplier", opts),
-        "central_blend": True,
-    }
-
-    for ctrl in chain:
-        if not is_valid_transform(ctrl):
-            return
-
-    try:
-        dynamic_control_tool.create(chain, scene, **kwargs)
-
-    except Exception as e:
-        # Turn this into a friendly warning
-        _print_exception()
-        log.warning(str(e))
-        return kFailure
-
-    else:
-        root = chain[0]
-        cmds.select(str(root))
+    ui.MessageBox(
+        "Command Renamed",
+        message,
+        buttons=ui.OkButton
+    )
 
     return kSuccess
 
@@ -2213,7 +2044,11 @@ def show_explorer(selection=None):
     def get_fresh_dump():
         return json.loads(cmds.ragdollDump())
 
-    win = ui.show_explorer(get_fresh_dump)
+    if ui.Explorer.instance and ui.isValid(ui.Explorer.instance):
+        return ui.Explorer.instance.show()
+
+    win = ui.Explorer(parent=ui.MayaWindow())
+    win.load(get_fresh_dump)
     win.show(dockable=True)
 
 
@@ -2303,12 +2138,12 @@ def export_physics(selection=None):
     options.write("lastVisitedPath", os.path.dirname(fname))
     log.info(
         "Successfully exported to %s in %.2f ms"
-        % (fname, data["serialisationTimeMs"])
+        % (fname, data["info"]["serialisationTimeMs"])
     )
 
 
 @_format_exception
-def import_physics(selection=None, **opts):
+def import_physics_from_file(selection=None, **opts):
     from PySide2 import QtWidgets
     fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
         ui.MayaWindow(),
@@ -2380,15 +2215,15 @@ def _Arg(var, label=None, callback=None):
     return arg
 
 
-def _Window(key, command):
+def _Window(key, command=None, cls=None):
     parent = ui.MayaWindow()
     menuitem = __.menuitems[key]
     args = map(_Arg, menuitem.get("options", []))
 
-    win = ui.Options(
+    win = (cls or ui.Options)(
         key,
         args,
-        command=repeatable(command),
+        command=repeatable(command) if command else None,
         icon=_resource("icons", menuitem["icon"]),
         description=menuitem["summary"],
         media=menuitem.get("media", []),
@@ -2518,7 +2353,7 @@ def create_muscle_options(*args):
 
 
 def create_dynamic_control_options(*args):
-    return _Window("createDynamicControl", create_dynamic_control)
+    return create_chain_options()
 
 
 def _st_options(key, typ):
@@ -2538,7 +2373,15 @@ def delete_physics_options(*args):
 
 
 def import_physics_options(*args):
-    return _Window("importPhysics", import_physics)
+    win = None
+
+    def import_physics():
+        win.import_file()
+
+    win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
+    win.resize(win.width(), ui.px(750))
+    ui.center_window(win)
+    return win
 
 
 def export_physics_options(*args):

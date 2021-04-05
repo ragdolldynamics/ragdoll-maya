@@ -2,7 +2,9 @@
   <img class="hero-image" src=/yoga13.png>
 </div>
 
-Ragdoll consists of custom (locator) nodes written in C++, but everything involved in connecting these up and generating the dependency network happens in Python. This API is exposed to you for integration with auto-rigging, tools development and generally just extend the capabilities of the system.
+Ragdoll consists of custom ([`MPxLocatorNode`](https://help.autodesk.com/view/MAYAUL/2020/ENU/?guid=__cpp_ref_class_m_px_locator_node_html)) nodes written in C++, but everything involved in connecting these up and generating the dependency network happens in Python. This API is exposed to you for integration with auto-rigging, tools development and to generally just extend the capabilities of the system.
+
+The API is also [available on GitHub](https://github.com/mottosso/ragdoll) for issue tracking and user contributions.
 
 <br>
 

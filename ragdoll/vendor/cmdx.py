@@ -5178,7 +5178,8 @@ class _BaseModifier(object):
             plug = Plug(plug.node(), plug)
 
         assert not plug._mplug.isNull
-        assert plug.editable, "%s was locked or connected" % plug.path()
+        if not plug.editable:
+            raise LockedError("%s was locked or connected" % plug.path())
 
         # Support passing a cmdx.Plug as value
         if isinstance(value, Plug):
@@ -5192,6 +5193,38 @@ class _BaseModifier(object):
 
         if SAFE_MODE:
             self._modifier.doIt()
+
+    def smartSetAttr(self, plug, value):
+        """Convenience method for setAttr
+
+        If the plug being set is driven by another attribute,
+        attempt to set *its* value instead.
+
+        This is intended for semi-proxy attributes, which take
+        the place of an attribute elsewhere. When actual proxy
+        attributes are not possible (as they are garbage).
+
+        """
+
+        if plug.editable:
+            # No smarts necessary
+            return self.set_attr(plug, value)
+
+        if plug.locked:
+            # No amount of smarts is going to save us from this one
+            raise LockedError("%s was locked" % plug.path())
+
+        # Let's try and set the attribute on the connected plug instead
+        connection = plug.connection(plug=True,
+                                     source=True,
+                                     destination=False)
+
+        assert connection is not None, (
+            "Attribute was not locked, but also not connected? "
+            "Then what is it? This case isn't handled and is a bug."
+        )
+
+        return self.set_attr(connection, value)
 
     def trySetAttr(self, plug, value):
         try:
@@ -5603,6 +5636,7 @@ class _BaseModifier(object):
         add_attr = addAttr
         set_attr = setAttr
         try_set_attr = trySetAttr
+        smart_set_attr = smartSetAttr
         delete_attr = deleteAttr
         reset_attr = resetAttr
         try_connect = tryConnect

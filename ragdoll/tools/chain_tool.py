@@ -667,7 +667,7 @@ class Chain(object):
         if "simulated" not in transform:
             with cmdx.DGModifier() as dgmod:
                 if self._opts["blendMethod"] == commands.SmoothBlendMethod:
-                    simulated = dgmod.add_attr(transform, cmdx.Double(
+                    dgmod.add_attr(transform, cmdx.Double(
                         "simulated",
                         min=0.0,
                         max=1.0,
@@ -675,32 +675,39 @@ class Chain(object):
                         default=True)
                     )
                 else:
-                    simulated = dgmod.add_attr(transform, cmdx.Boolean(
+                    dgmod.add_attr(transform, cmdx.Boolean(
                         "simulated",
                         keyable=True,
                         default=True)
                     )
 
+                dgmod.doIt()
+
                 index = rigid["userAttributes"].next_available_index()
-                dgmod.connect_attrs(transform, simulated,
-                                    rigid, rigid["userAttributes"][index])
+                dgmod.connect(transform["simulated"],
+                              rigid["userAttributes"][index])
 
         if "notSimulated" not in transform:
             with cmdx.DGModifier() as dgmod:
-                not_simulated = dgmod.add_attr(transform, cmdx.Boolean(
+                dgmod.add_attr(transform, cmdx.Boolean(
                     "notSimulated", keyable=False)
                 )
 
+                dgmod.doIt()
+
                 index = rigid["userAttributes"].next_available_index()
-                dgmod.connect_attrs(transform, not_simulated,
-                                    rigid, rigid["userAttributes"][index])
+                dgmod.connect(transform["notSimulated"],
+                              rigid["userAttributes"][index])
 
                 reverse = dgmod.create_node("reverse")
+
+                dgmod.doIt()
+
                 dgmod.set_attr(reverse["isHistoricallyInteresting"], False)
-                dgmod.connect_attrs(transform, transform["simulated"],
-                                    reverse, reverse["inputX"])
-                dgmod.connect_attrs(reverse, reverse["outputX"],
-                                    transform, not_simulated)
+                dgmod.connect(transform["simulated"],
+                              reverse["inputX"])
+                dgmod.connect(reverse["outputX"],
+                              transform["notSimulated"])
 
     def _make_root(self, mod, transform, shape):
         root_rigid = self._make_rigid(

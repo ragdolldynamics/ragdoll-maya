@@ -2105,8 +2105,8 @@ def welcome_user(*args):
 
 @_format_exception
 def export_physics(selection=None, **opts):
-    dump = cmds.ragdollDump()
-    data = json.loads(dump)
+    data = cmds.ragdollDump()
+    data = json.loads(data)
 
     if not data["entities"]:
         return log.error("Nothing to export")
@@ -2139,12 +2139,10 @@ def export_physics(selection=None, **opts):
         data["ui"]["thumbnail"] = b64.decode("ascii")
 
     try:
-        with open(fname, "w") as f:
-            json.dump(data, f, indent=4, sort_keys=True)
-
+        dump.export(fname, data=data)
     except Exception:
         _print_exception()
-        return log.error("Could not write to %s" % fname)
+        return log.warning("Could not export %s" % fname)
 
     options.write("exportPath", fname)
     log.info(

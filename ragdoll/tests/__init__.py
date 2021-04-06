@@ -2,7 +2,8 @@ from maya import cmds
 from ..vendor import cmdx
 
 __ = type("internal", (object,), {})()
-__.fname = "test.ma"
+__.fname = cmds.file("test.ma", expandName=True, query=True)
+__.export = cmds.file("tempexport.rag", expandName=True, query=True)
 
 
 def _new(start=1, end=120):

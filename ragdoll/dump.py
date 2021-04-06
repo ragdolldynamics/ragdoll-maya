@@ -54,6 +54,65 @@ def Component(comp):
     return data
 
 
+class Registry(object):
+    def __init__(self, dump):
+        dump["entities"] = {
+
+            # Original JSON stores keys as strings, but the original
+            # keys are integers; i.e. entity IDs
+            Entity(entity): value
+            for entity, value in dump["entities"].items()
+        }
+
+        self._dump = dump
+
+    def view(self, *components):
+        """Iterate over every entity that has all of `components`"""
+        for entity in self._dump["entities"]:
+            if all(self.has(entity, comp) for comp in components):
+                yield entity
+
+    def has(self, entity, component):
+        """Return whether `entity` has `component`"""
+        assert isinstance(entity, int), "entity must be int"
+        assert isinstance(component, i__.string_types), (
+            "component must be string")
+        return component in self._dump["entities"][entity]["components"]
+
+    def get(self, entity, component):
+        """Return `component` for `entity`
+
+        Returns:
+            dict: The component
+
+        Raises:
+            KeyError: if `entity` does not have `component`
+
+        Example:
+            >>> s = {}
+            >>> dump = cmds.ragdollDump()
+            >>> dump["entities"][1] = {"components": {"SceneComponent": s}}
+            >>> loader = Loader(dump)
+            >>> assert s == loader.component(1, "SceneComponent")
+
+        """
+
+        try:
+            return Component(
+                self._dump["entities"][entity]["components"][component]
+            )
+
+        except KeyError:
+            Name = self._dump["entities"][entity]
+            Name = Name["components"]["NameComponent"]
+            Name = Component(Name)
+            raise KeyError("%s did not have %s" % (Name["path"], component))
+
+    def components(self, entity):
+        """Return *all* components for `entity`"""
+        return self._dump["entities"][entity]["components"]
+
+
 def dedump(dump):
     """Recreate Maya scene from `dump`"""
 
@@ -988,7 +1047,7 @@ class Loader(object):
                 pass
 
             name = _name(Name, -2)
-            scene = commands.create_scene(name)
+            scene = commands.create_scene(name=name)
 
             with cmdx.DagModifier() as mod:
                 self._apply_scene(mod, entity, scene)
@@ -1019,7 +1078,7 @@ class Loader(object):
                 pass
 
             name = _name(Name, -2)
-            rdscene = commands.create_scene(name)
+            rdscene = commands.create_scene(name=name)
 
             with cmdx.DagModifier() as mod:
                 self._apply_scene(mod, scene["entity"], rdscene)
@@ -1111,7 +1170,7 @@ class Loader(object):
 
             rigid = commands.create_rigid(transform,
                                           rdscene,
-                                          **rigid["options"])
+                                          opts=rigid["options"])
 
             with cmdx.DagModifier() as mod:
                 self._apply_rigid(mod, entity, rigid)
@@ -1204,7 +1263,7 @@ class Loader(object):
 
         active_chain = tools.create_chain(transforms,
                                           rdscene,
-                                          options=chain["options"])
+                                          opts=chain["options"])
 
         new_rigids = [
             n for n in active_chain if n.type() == "rdRigid"
@@ -1217,21 +1276,24 @@ class Loader(object):
         ]
 
         if len(new_rigids) != len(chain["rigids"]):
+            word = "were" if len(new_rigids) < 2 else "was"
             log.warning(
-                "I expected %d rigids, but %d were created",
-                len(chain["rigids"]), len(new_rigids)
+                "I expected %d rigids, but %d %s created",
+                len(chain["rigids"]), word, len(new_rigids)
             )
 
         if len(new_constraints) != len(chain["constraints"]):
+            word = "were" if len(new_constraints) < 2 else "was"
             log.warning(
-                "I expected %d constraints, but %d were created",
-                len(chain["constraints"]), len(new_constraints)
+                "I expected %d constraints, but %d %s created",
+                len(chain["constraints"]), word, len(new_constraints)
             )
 
         if len(new_multipliers) != len(chain["constraintMultipliers"]):
+            word = "were" if len(new_multipliers) < 2 else "was"
             log.warning(
-                "I expected %d multipliers, but %d were created",
-                len(chain["constraintMultipliers"]), len(new_multipliers)
+                "I expected %d multipliers, but %d %s created",
+                len(chain["constraintMultipliers"]), word, len(new_multipliers)
             )
 
         # This command generated a series of nodes. We'll want to map
@@ -1702,10 +1764,12 @@ class Loader(object):
         if not same_scene:
             for link in entities:
                 Name = self.component(link, "NameComponent")
+                print(Name["path"])
                 Scene = self.component(link, "SceneComponent")
                 SName = self.component(Scene["entity"], "NameComponent")
                 log.warning(
-                    "%s.scene = %s" % (Name["path"], SName["path"])
+                    "%s.scene = %s" % (Name["shortestPath"],
+                                       SName["shortestPath"])
                 )
 
             log.warning(
@@ -1726,3 +1790,22 @@ def reinterpret(fname, roots=None):
     loader = Loader(roots)
     loader.read(fname)
     return loader.reinterpret()
+
+
+def export(fname, data=None):
+    import json
+    data = data or json.loads(cmds.ragdollDump())
+
+    # Validate a few things
+    registry = Registry(data)
+    for entity in registry.view("SceneComponent", "NameComponent"):
+        Name = registry.get(entity, "NameComponent")
+        Scene = registry.get(entity, "SceneComponent")
+
+        # This would be an invalid, non-exising scene
+        assert Scene["entity"] != 0, "%s has no scene" % Name["shortestPath"]
+
+    with open(fname, "w") as f:
+        json.dump(data, f, indent=4, sort_keys=True)
+
+    return True

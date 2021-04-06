@@ -1653,6 +1653,7 @@ class DagNode(Node):
         if not type or type == self._fn.__class__(mobject).typeName:
             return cls(mobject)
 
+    @protected
     def lineage(self, type=None):
         """Yield parents all the way up a hierarchy
 
@@ -1677,6 +1678,7 @@ class DagNode(Node):
             yield parent
             parent = parent.parent(type)
 
+    @protected
     def children(self,
                  type=None,
                  filter=om.MFn.kTransform,
@@ -5759,6 +5761,7 @@ class DagModifier(_BaseModifier):
         >>> mod = DagModifier()
         >>> parent = mod.createNode("transform", name="myParent")
         >>> child = mod.createNode("transform", name="myChild", parent=parent)
+        >>> _ = mod.createNode("transform", name="keepAlive", parent=parent)
         >>> mod.doIt()
         >>> "myParent" in cmds.ls()
         True
@@ -5769,7 +5772,7 @@ class DagModifier(_BaseModifier):
         >>> mod = DagModifier()
         >>> _ = mod.delete(child)
         >>> mod.doIt()
-        >>> parent.child() is None
+        >>> parent.child().name() == 'keepAlive'
         True
         >>> "myChild" in cmds.ls()
         False

@@ -2095,7 +2095,7 @@ class ImportOptions(Options):
         }
 
         widgets = {
-            "PathField": import_path.widget(),
+            "PathField": import_path,
             "UseSelection": use_selection.widget(),
 
             "ImportDetails": ImportDetails(),
@@ -2142,6 +2142,7 @@ class ImportOptions(Options):
 
         use_selection.changed.connect(self.on_selection_changed)
         import_path.changed.connect(self.on_path_changed)
+        import_path.browsed.connect(self.on_browsed)
 
         widgets["TargetView"].setHeaderHidden(True)
         widgets["TargetView"].currentItemChanged.connect(
@@ -2226,11 +2227,11 @@ class ImportOptions(Options):
             return log.warning("Cancelled")
 
         fname = os.path.normpath(fname)
-        self._widgets["PathField"].setText(fname)
+        self._widgets["PathField"].setPath(fname)
         self.on_path_changed()
 
     def on_path_changed(self):
-        fname = self._widgets["PathField"].text()
+        fname = self._widgets["PathField"].path()
         self.read(fname)
 
     def load(self, data):
@@ -2246,7 +2247,7 @@ class ImportOptions(Options):
     def read(self, fname):
         assert isinstance(fname, i__.string_types), "fname must be string"
 
-        self._widgets["PathField"].setText(fname)
+        self._widgets["PathField"].setPath(fname)
 
         try:
             with open(fname) as f:
@@ -2341,7 +2342,7 @@ class ImportOptions(Options):
                     icon = QtGui.QIcon(icon)
 
                     name = self._loader.component(entity, "NameComponent")
-                    label = name["path"].rsplit("|", 1)[-1]
+                    label = name["value"]
 
                     child = QtWidgets.QTreeWidgetItem()
                     child.setIcon(0, icon)
@@ -2482,7 +2483,12 @@ class ImportOptions(Options):
         entity = item.data(0, EntityRole)
         transform = item.data(0, TransformRole)
 
-        components = self._loader.components(entity)
+        try:
+            components = self._loader.components(entity)
+        except KeyError:
+            # Entity doesn't exist, probably opened a new scene,
+            # drawing stale a stale match.
+            return self.reset()
 
         # Move members directly under the component
         components = {

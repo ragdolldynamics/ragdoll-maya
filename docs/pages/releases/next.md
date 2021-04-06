@@ -1,27 +1,23 @@
 ---
-title: Maya 2022
-description: Ragdoll 2021.03.25 is released! Now compatible with Maya 2022 (and Python 3!)
+title: Import Physics
+description: Ragdoll 2021.04.08 is released! Save your physics contraptions to disk, and load them into another scene onto the same or similar character controls.
 ---
 
-Highlight for this release is **import**!
+Highlight for this release is **import** of physics from one character to another!
 
 - [**ADDED** Import](#import) Animator-friendly export/import workflow for physics
-- [**IMPROVED** Explorer](#explorer) Next iteration of the Ragdoll Explorer
+- [**ADDED** Edit Shape](#edit-shape) Edit shapes using normal Maya manipulators
+- [**IMPROVED** Undo/Redo Stability](#undo-redo-stability) Rock-solid undo support, go nuts!
 - [**IMPROVED** Maya 2022 Stability](#maya-2022-stability]) Things now works more reliably with Maya 2022
-
-<br>
-
-## Replay
-
-Ever set-up a character with physics, only to have to do it all over again on some other shot or character? With **Replay** this can be a thing of the past! :)
-
-If you've ever worked with Photoshop and it's "Actions" panel, you'll know what to expect. It'll record the things you do, such that you can replay them later. For every recorded action, selection and preferences are stored. You can edit the names of selected nodes with *wildcards* to support alternative naming conventions, for example if a control has a different namespace than originally recorded at. Preferences can be manipulated post-recording as well, such as the initial shapes of things.
+- [**IMPROVED** Explorer](#explorer) Next iteration of the Ragdoll Explorer
+- [**CHANGED** Proxy Attributes](#proxy-attributes]) A small sacrifice for stability
+- [**CHANGED** Python API Consistency](#python-api-consistency]) More to come
 
 <br>
 
 ## Import
 
-Animators can now apply physics onto a character rig in one scene, export it, and then import it onto the same character in another scene!
+Animators can now apply physics onto a character rig in one scene, export it, and then import it onto similar characters - with different pose and/or animation - in another scene!
 
 - [Import to selection](#import-to-selection)
 - [Import everything from file](#import-everything)
@@ -98,7 +94,9 @@ They are meant to cover user elements in Maya such that they can be accurately r
 - `RigidMultiplierUIComponent`
 - `ConstraintMultiplierUIComponent`
 
-!!! Examples
+<br>
+
+??? Show Examples
     Here's what the new components may look like in your exported file.
     <br>
     ```json
@@ -143,6 +141,8 @@ They are meant to cover user elements in Maya such that they can be accurately r
     }
     ```
 
+<br>
+
 In addition, some values were entities themselves, but there wasn't any way of knowing unless you explicitly new that `JointComponent.parent` is in fact an entity. This has now been addressed, and all entities now carry a `["type"]` signature.
 
 ```json
@@ -172,6 +172,21 @@ There's also an added section for "ui" related data, most interestingly a base64
     }
 ```
 
+That can be converted like this.
+
+```py
+from ragdoll import ui
+pixmap = ui.base64_to_pixmap(data["ui"]["thumbnail"])
+```
+
+<br>
+
+## Edit Shape
+
+A new menu item got added for manipulating shapes with a native Maya transform, as an alternative to fiddling with numbers in the Channel Box.
+
+![editshape](https://user-images.githubusercontent.com/2152766/113729903-5574cc00-96ef-11eb-9c14-37f177c4b219.gif)
+
 <br>
 
 ## Maya 2022 Stability
@@ -193,7 +208,88 @@ There were also crashes happening on deleting rigid bodies from your scene, thes
 
 <br>
 
-### Ragdoll Explorer
+## Undo/Redo Stability
+
+Ragdoll and Undo has a had a checkered past. Will it undo everything in one go? Will it crash Maya? Flip a coin, find out.
+
+This release includes a boatload of improvements to undo, along with a test-suite specifically for undoing of commands. Undo, redo, undoing a redo and redoing and undone redo. These all now work great and will no longer put Maya at risk of crashing.
+
+<br>
+
+## Proxy Attributes
+
+In Maya 2018 and 2020, the attributes added to your original animation controls that mirror those of Ragdoll were "proxy attributes". That is, they could be edited from either their original attribute, or the one connected to by your control.
+
+That's really convenient.
+
+Turns out, it is also really unstable. Most of the crashes happening so far, especially on deleting physics or starting a new scene, has come from proxy attributes messing everything up. It should't be surprising, even Maya struggles with them.
+
+```py
+node = cmds.createNode("transform")
+shape = cmds.createNode("nurbsCurve", parent=node)
+cmds.addAttr(node, ln="proxyVisibility", proxy=shape + ".visibility")
+assert cmds.objExists(node + ".proxyVisibility")
+assert cmds.getAttr(node + ".proxyVisibility") == 1
+
+# What should happen to the proxy attribute? :O
+cmds.delete(shape)
+
+cmds.getAttr(node + ".proxyVisibility")
+# RuntimeError: The value for the attribute could not be retrieved. # 
+```
+
+The same thing applies with access from the API. It just doesn't know what's going on. If we're lucky - which we have been so far - it'll just fail and tell you about it. Other times it'll fail and take Maya down with it. That's just bad.
+
+In Maya 2019, the problem was so severe that proxy attributes were simply not used. With this release, no proxy attributes are used.
+
+I hope to reintroduce them at a later date, once I discover is a safe method (read: workaround) to using them.
+
+<br>
+
+## Python API Consistency
+
+The good news is, the Python API is maturing. The bad news is, this release introduces backwards incompatible changes.
+
+```py
+from maya import cmds
+from ragdoll import api
+
+cube, _ = cmds.polyCube()
+cmds.move(0, 5, 0)
+cmds.rotate(0, 45, 45)
+scene = api.createScene()
+rigid = api.createRigid(cube)
+```
+
+So far so good.
+
+```py
+# Before
+api.socketConstraint(parent, child, maintain_offset=False)
+
+# After
+api.socketConstraint(parent, child, opts={"maintainOffset": False})
+```
+
+Here's the change. These behavior-like arguments have been moved into an `opts={}` argument, and is now consistent across any commands that take "options". It's to faciliate a large number of options, both from the UI and scripting and enhance compatibility over time; with a dictionary, you can test for availability of arguments at run-time, as opposed to suffer the consequences of not being able to call an update function.
+
+I'm still exploring ways of getting more options into commands, without polluting the argument signature, without changing their order when an argument is deprecated, or changing an argument name when jargon inevitably changes. Using a dictionary for options-like arguments enables us to pass arbitrary sized options to functions, they can also be passed to functions that don't necessarily *need* all contained options, meaning you can establish a single options dictionary up-front and pass that to all relevant functions.
+
+It's too soon to tell whether the cons of this approach outweighs the pros. This is one reason for the API still going through changes.
+
+The non-optional arguments are those that are never intended to change, like the `createRigid(node)` argument. Every rigid needs something to make rigid. (Or so you'd think, as you can now also create a rigid from a new empty transform).
+
+So, the API has changed and will continue changing for a while longer.
+
+**Node/Attribute format**
+
+The Ragdoll scene format is stable and has been for months. It will remain compatible with future versions of Ragdoll, which means anything you build today (or months ago) will continue to work identically.
+
+The Python API on the other hand is not yet refined and is still changing. So when you build tools ontop of Ragdoll, keep in mind that nodes, their attributes and their connections are *stable*, but the means of creating those connections are not. So if you need stability *today*, look at what nodes and connections are made by the API, and do it yourself.
+
+<br>
+
+## Ragdoll Explorer
 
 > For developers
 

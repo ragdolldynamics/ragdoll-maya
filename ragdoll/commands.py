@@ -5,6 +5,8 @@ manipulation and are meant for use in automation, pipeline and rigging.
 
 These do not depend on scene selection, user preferences or Maya state.
 
+NOTE: Every function in here MUST be undoable as-one.
+
 """
 
 import os
@@ -79,7 +81,7 @@ Epsilon = 0.001
 @i__.with_undo_chunk
 def create_scene(name=None, parent=None):
     time = cmdx.encode("time1")
-    up = global_up_axis()
+    up = cmdx.up_axis()
     name = name or i__.unique_name("rScene")
 
     with cmdx.DagModifier() as mod:
@@ -243,6 +245,48 @@ def create_active_rigid(node, scene, **kwargs):
 
 def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=True, **kwargs)
+
+
+@i__.with_undo_chunk
+def convert_rigid(rigid, passive=None):
+    if isinstance(rigid, i__.string_types):
+        rigid = cmdx.encode(rigid)
+
+    transform = rigid.parent()
+
+    if passive is None:
+        passive = not rigid["kinematic"].read()
+
+    with cmdx.DagModifier() as mod:
+        #
+        # Convert active --> passive
+        #
+        if not rigid["kinematic"] and passive:
+            mod.disconnect(transform["translateX"])
+            mod.disconnect(transform["translateY"])
+            mod.disconnect(transform["translateZ"])
+            mod.disconnect(transform["rotateX"])
+            mod.disconnect(transform["rotateY"])
+            mod.disconnect(transform["rotateZ"])
+
+            mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
+
+            mod.set_attr(rigid["kinematic"], True)
+
+        #
+        # Convert passive --> active
+        #
+        elif not passive:
+            mod.set_attr(rigid["kinematic"], False)
+
+            # The user will expect a newly-turned active rigid to collide
+            mod.set_attr(rigid["collide"], True)
+
+            _remove_pivots(mod, transform)
+            _connect_active(mod, rigid, transform)
+            _anim_constraint(rigid)
+
+    return rigid
 
 
 @i__.with_undo_chunk
@@ -602,6 +646,35 @@ def orient(con, aim=None, up=None):
     if up is None:
         up = parent_rigid.transform(cmdx.sWorld).translation()
 
+    def orient_from_positions(a, b, c=None):
+        """Look at `a` from `b`, with an optional up-vector `c`
+
+                a
+                o
+               /|
+              / |
+             /  |
+            /   |
+         c o____o b
+
+        """
+
+        assert isinstance(a, cmdx.Vector)
+        assert isinstance(b, cmdx.Vector)
+        assert c is None or isinstance(c, cmdx.Vector)
+
+        aim = (b - a).normal()
+        up = (c - a).normal() if c else cmdx.up_axis()
+
+        cross = aim ^ up  # Make axes perpendicular
+        up = cross ^ aim
+
+        orient = cmdx.Quaternion()
+        orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
+        orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
+
+        return orient
+
     origin = child_tm.translation()
     orient = orient_from_positions(origin, aim, up)
     mat = cmdx.Tm(translate=origin, rotate=orient).asMatrix()
@@ -663,48 +736,6 @@ def reorient(con):
         with cmdx.DagModifier() as mod:
             mod.set_attr(con["parentFrame"], parent_frame)
             mod.set_attr(con["childFrame"], child_frame)
-
-
-@i__.with_undo_chunk
-def convert_rigid(rigid, passive=None):
-    if isinstance(rigid, i__.string_types):
-        rigid = cmdx.encode(rigid)
-
-    transform = rigid.parent()
-
-    if passive is None:
-        passive = not rigid["kinematic"].read()
-
-    with cmdx.DagModifier() as mod:
-        #
-        # Convert active --> passive
-        #
-        if not rigid["kinematic"] and passive:
-            mod.disconnect(transform["translateX"])
-            mod.disconnect(transform["translateY"])
-            mod.disconnect(transform["translateZ"])
-            mod.disconnect(transform["rotateX"])
-            mod.disconnect(transform["rotateY"])
-            mod.disconnect(transform["rotateZ"])
-
-            mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
-
-            mod.set_attr(rigid["kinematic"], True)
-
-        #
-        # Convert passive --> active
-        #
-        elif not passive:
-            mod.set_attr(rigid["kinematic"], False)
-
-            # The user will expect a newly-turned active rigid to collide
-            mod.set_attr(rigid["collide"], True)
-
-            _remove_pivots(mod, transform)
-            _connect_active(mod, rigid, transform)
-            _anim_constraint(rigid)
-
-    return rigid
 
 
 @i__.with_undo_chunk
@@ -943,65 +974,6 @@ def create_kinematic_control(rigid, reference=None):
 create_passive_control = create_kinematic_control
 
 
-def _shapeattributes_from_generator(mod, shape, rigid):
-    """Look at `shape` history for a e.g. polyCube or polySphere"""
-
-    gen = None
-
-    if "inMesh" in shape and shape["inMesh"].connected:
-        gen = shape["inMesh"].connection()
-
-    elif "create" in shape and shape["create"].connected:
-        gen = shape["create"].connection()
-
-    else:
-        return
-
-    if gen.type() == "polyCube":
-        mod.set_attr(rigid["shapeType"], BoxShape)
-        mod.set_attr(rigid["shapeExtentsX"], gen["width"])
-        mod.set_attr(rigid["shapeExtentsY"], gen["height"])
-        mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
-
-    elif gen.type() == "polySphere":
-        mod.set_attr(rigid["shapeType"], SphereShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "polyCylinder" and gen["roundCap"]:
-        mod.set_attr(rigid["shapeType"], CylinderShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["height"])
-
-        # Align with Maya's cylinder/capsule axis
-        # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
-        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
-            (0, 0, 90) if gen["axisY"] else
-            (0, 90, 0) if gen["axisZ"] else
-            (0, 0, 0)
-        ))))
-
-    elif gen.type() == "makeNurbCircle":
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "makeNurbSphere":
-        mod.set_attr(rigid["shapeType"], SphereShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "makeNurbCone":
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
-
-    elif gen.type() == "makeNurbCylinder":
-        mod.set_attr(rigid["shapeType"], CylinderShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
-        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
-            (0, 0, 90) if gen["axisY"] else
-            (0, 90, 0) if gen["axisZ"] else
-            (0, 0, 0)
-        ))))
-
-
 @i__.with_undo_chunk
 def set_initial_state(rigids):
     assert isinstance(rigids, (tuple, list)), "%s was not a list" % rigids
@@ -1027,6 +999,7 @@ def set_initial_state(rigids):
             mod.set_attr(rigid["cachedRestMatrix"], rest)
 
 
+@i__.with_undo_chunk
 def transfer_attributes(a, b, mirror=True):
     if isinstance(a, i__.string_types):
         a = cmdx.encode(a)
@@ -1046,6 +1019,7 @@ def transfer_attributes(a, b, mirror=True):
         transfer_constraint(ca, cb, mirror)
 
 
+@i__.with_undo_chunk
 def transfer_rigid(ra, rb):
     if isinstance(ra, i__.string_types):
         ra = cmdx.encode(ra)
@@ -1070,6 +1044,7 @@ def transfer_rigid(ra, rb):
             mod.set_attr(rb[attr], ra[attr])
 
 
+@i__.with_undo_chunk
 def transfer_constraint(ca, cb, mirror=True):
     if isinstance(ca, i__.string_types):
         ca = cmdx.encode(ca)
@@ -1272,6 +1247,7 @@ def create_slice(scene):  # type: (cmdx.DagNode) -> cmdx.DagNode
     return slice
 
 
+@i__.with_undo_chunk
 def assign_force(rigid, force):  # type: (cmdx.DagNode, cmdx.DagNode) -> bool
     if isinstance(rigid, i__.string_types):
         rigid = cmdx.encode(rigid)
@@ -1329,41 +1305,6 @@ def duplicate(rigid):
         dup[attr] = rigid[attr].read()
 
     return dup
-
-
-def add_to_set(node, name, mod=None):
-    try:
-        collection = cmdx.encode(name)
-    except cmdx.ExistError:
-        with cmdx.DGModifier() as mod:
-            collection = mod.create_node(
-                "objectSet", name=name
-            )
-
-    collection.add(node)
-    return collection
-
-
-def global_up_axis():
-    try:
-        # Supported since Maya 2019
-        return cmdx.Vector(cmdx.om.MGlobal.upAxis())
-    except AttributeError:
-        return cmdx.Vector(0, 1, 0)
-
-
-def orient_from_positions(a, b, c=None):
-    aim = (b - a).normal()
-    up = (c - a).normal() if c else global_up_axis()
-
-    cross = aim ^ up  # Make axes perpendicular
-    up = cross ^ aim
-
-    orient = cmdx.Quaternion()
-    orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
-    orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
-
-    return orient
 
 
 def infer_geometry(root, parent=None, children=None):
@@ -1482,7 +1423,7 @@ def infer_geometry(root, parent=None, children=None):
                 up = parent.transform(cmdx.sWorld).translation()
                 up = (up - root_pos).normal()
             else:
-                up = global_up_axis()
+                up = cmdx.up_axis()
 
             aim = (pos2 - root_pos).normal()
             cross = aim ^ up  # Make axes perpendicular
@@ -1548,6 +1489,66 @@ def infer_geometry(root, parent=None, children=None):
         geometry.radius = radius
 
     else:
+        def local_bounding_size(root):
+            """Bounding size taking immediate children into account
+
+                    _________
+                 o |    a    |
+            ---o-|-o----o----o--
+                 | |_________|
+                 |      |
+                o-o    bbox of a
+                | |
+                | |
+                o o
+                | |
+                | |
+               -o o-
+
+            DagNode.boundingBox on the other hand takes an entire
+            hierarchy into account.
+
+            """
+
+            pos1 = root.transform(cmdx.sWorld).translation()
+            positions = [pos1]
+
+            # Start by figuring out a center point
+            for child in root.children(type=root.type()):
+                positions += [child.transform(cmdx.sWorld).translation()]
+
+            center = cmdx.Vector()
+            for pos in positions:
+                center += pos
+            center /= len(positions)
+
+            # Then figure out a bounding box, relative this center
+            min_ = cmdx.Vector()
+            max_ = cmdx.Vector()
+
+            for pos2 in positions:
+                dist = pos2 - center
+
+                min_.x = min(min_.x, dist.x)
+                min_.y = min(min_.y, dist.y)
+                min_.z = min(min_.z, dist.z)
+
+                max_.x = max(max_.x, dist.x)
+                max_.y = max(max_.y, dist.y)
+                max_.z = max(max_.z, dist.z)
+
+            size = cmdx.Vector(
+                max_.x - min_.x,
+                max_.y - min_.y,
+                max_.z - min_.z,
+            )
+
+            # Keep smallest value within some sensible range
+            minimum = list(size).index(min(size))
+            size[minimum] = max(size) * 0.5
+
+            return size, center
+
         size, center = local_bounding_size(root)
         offset = center - root_pos
 
@@ -1582,116 +1583,6 @@ def infer_geometry(root, parent=None, children=None):
     root.data["_rdGeometry"] = geometry
 
     return geometry
-
-
-def _interpret_shape(mod, rigid, shape):
-    """Translate `shape` into rigid shape attributes
-
-    For example, if the shape is a `mesh`, we'll plug that in as
-    a mesh for convex hull generation.
-
-    """
-
-    assert isinstance(rigid, cmdx.DagNode), "%s was not a cmdx.DagNode" % rigid
-    assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
-    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
-    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
-
-    bbox = shape.bounding_box
-    extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-    center = cmdx.Vector(bbox.center)
-
-    mod.set_attr(rigid["shapeOffset"], center)
-    mod.set_attr(rigid["shapeExtents"], extents)
-    mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
-
-    # Account for flat shapes, like a circle
-    mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
-
-    if shape.type() == "mesh":
-        mod.connect(shape["outMesh"], rigid["inputMesh"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
-
-    elif shape.type() == "nurbsCurve":
-        mod.connect(shape["local"], rigid["inputCurve"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
-
-    elif shape.type() == "nurbsSurface":
-        mod.connect(shape["local"], rigid["inputSurface"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
-
-    # In case the shape is connected to a common
-    # generator, like polyCube or polyCylinder
-    _shapeattributes_from_generator(mod, shape, rigid)
-
-
-def _interpret_transform(mod, rigid, transform):
-    """Translate `transform` into rigid shape attributes
-
-    Primarily joints, that have a radius and length.
-
-    """
-
-    if transform.isA(cmdx.kJoint):
-        mod.set_attr(rigid["shapeType"], CapsuleShape)
-
-        # Orient inner shape to wherever the joint is pointing
-        # as opposed to whatever its jointOrient is facing
-        geometry = infer_geometry(transform)
-
-        mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
-        mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
-        mod.set_attr(rigid["shapeLength"], geometry.length)
-        mod.set_attr(rigid["shapeRadius"], geometry.radius)
-        mod.set_attr(rigid["shapeExtents"], geometry.extents)
-
-
-def local_bounding_size(root):
-    """Bounding size taking immediate children into account
-
-    DagNode.boundingBox on the other hand takes an entire
-    hierarchy into account.
-
-    """
-
-    pos1 = root.transform(cmdx.sWorld).translation()
-    positions = [pos1]
-
-    # Start by figuring out a center point
-    for child in root.children(type=root.type()):
-        positions += [child.transform(cmdx.sWorld).translation()]
-
-    center = cmdx.Vector()
-    for pos in positions:
-        center += pos
-    center /= len(positions)
-
-    # Then figure out a bounding box, relative this center
-    min_ = cmdx.Vector()
-    max_ = cmdx.Vector()
-
-    for pos2 in positions:
-        dist = pos2 - center
-
-        min_.x = min(min_.x, dist.x)
-        min_.y = min(min_.y, dist.y)
-        min_.z = min(min_.z, dist.z)
-
-        max_.x = max(max_.x, dist.x)
-        max_.y = max(max_.y, dist.y)
-        max_.z = max(max_.z, dist.z)
-
-    size = cmdx.Vector(
-        max_.x - min_.x,
-        max_.y - min_.y,
-        max_.z - min_.z,
-    )
-
-    # Keep smallest value within some sensible range
-    minimum = list(size).index(min(size))
-    size[minimum] = max(size) * 0.5
-
-    return size, center
 
 
 @i__.with_undo_chunk
@@ -1992,9 +1883,140 @@ def convert_to_polygons(actor, worldspace=True):
 
 """
 
-Internal utility functions
+Internal helper functions
+
+These things just help readability for the above functions,
+and aren't meant for use outside of this module.
 
 """
+
+
+def _shapeattributes_from_generator(mod, shape, rigid):
+    """Look at `shape` history for a e.g. polyCube or polySphere
+
+    This function interprets a simple shape, like a box, as a box
+    rather than treat it like an arbitrary convex hull. That enables
+    us to leverage the simpler shape types for improved
+    performance, editability and visibility.
+
+    """
+
+    gen = None
+
+    if "inMesh" in shape and shape["inMesh"].connected:
+        gen = shape["inMesh"].connection()
+
+    elif "create" in shape and shape["create"].connected:
+        gen = shape["create"].connection()
+
+    else:
+        return
+
+    if gen.type() == "polyCube":
+        mod.set_attr(rigid["shapeType"], BoxShape)
+        mod.set_attr(rigid["shapeExtentsX"], gen["width"])
+        mod.set_attr(rigid["shapeExtentsY"], gen["height"])
+        mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
+
+    elif gen.type() == "polySphere":
+        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "polyCylinder" and gen["roundCap"]:
+        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["height"])
+
+        # Align with Maya's cylinder/capsule axis
+        # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
+        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
+            (0, 0, 90) if gen["axisY"] else
+            (0, 90, 0) if gen["axisZ"] else
+            (0, 0, 0)
+        ))))
+
+    elif gen.type() == "makeNurbCircle":
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "makeNurbSphere":
+        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+
+    elif gen.type() == "makeNurbCone":
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
+
+    elif gen.type() == "makeNurbCylinder":
+        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeRadius"], gen["radius"])
+        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
+        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
+            (0, 0, 90) if gen["axisY"] else
+            (0, 90, 0) if gen["axisZ"] else
+            (0, 0, 0)
+        ))))
+
+
+def _interpret_shape(mod, rigid, shape):
+    """Translate `shape` into rigid shape attributes
+
+    For example, if the shape is a `mesh`, we'll plug that in as
+    a mesh for convex hull generation.
+
+    """
+
+    assert isinstance(rigid, cmdx.DagNode), "%s was not a cmdx.DagNode" % rigid
+    assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
+    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
+    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
+
+    bbox = shape.bounding_box
+    extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+    center = cmdx.Vector(bbox.center)
+
+    mod.set_attr(rigid["shapeOffset"], center)
+    mod.set_attr(rigid["shapeExtents"], extents)
+    mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
+
+    # Account for flat shapes, like a circle
+    mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
+
+    if shape.type() == "mesh":
+        mod.connect(shape["outMesh"], rigid["inputMesh"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    elif shape.type() == "nurbsCurve":
+        mod.connect(shape["local"], rigid["inputCurve"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    elif shape.type() == "nurbsSurface":
+        mod.connect(shape["local"], rigid["inputSurface"])
+        mod.set_attr(rigid["shapeType"], MeshShape)
+
+    # In case the shape is connected to a common
+    # generator, like polyCube or polyCylinder
+    _shapeattributes_from_generator(mod, shape, rigid)
+
+
+def _interpret_transform(mod, rigid, transform):
+    """Translate `transform` into rigid shape attributes
+
+    Primarily joints, that have a radius and length.
+
+    """
+
+    if transform.isA(cmdx.kJoint):
+        mod.set_attr(rigid["shapeType"], CapsuleShape)
+
+        # Orient inner shape to wherever the joint is pointing
+        # as opposed to whatever its jointOrient is facing
+        geometry = infer_geometry(transform)
+
+        mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
+        mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
+        mod.set_attr(rigid["shapeLength"], geometry.length)
+        mod.set_attr(rigid["shapeRadius"], geometry.radius)
+        mod.set_attr(rigid["shapeExtents"], geometry.extents)
 
 
 def _to_cmds(name):
@@ -2405,8 +2427,3 @@ def _scale_from_rigid(rigid):
         return rigid["shapeLength"].read() * 0.25 * scale
     else:
         return sum(rigid["shapeExtents"].read()) / 3.0 * scale
-
-
-def _is_locked(node, channels="tr"):
-    attrs = [chan + ax for chan in channels for ax in "xyz"]
-    return any(not node[a].editable for a in attrs)

@@ -16,89 +16,6 @@ string_types = cmdx.string_types
 long = cmdx.long
 
 
-def with_timing(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        t0 = time.time()
-
-        try:
-            return func(*args, **kwargs)
-        finally:
-            t1 = time.time()
-            duration = t1 - t0
-            log.info("%s in %.2fms" % (func.__name__, duration * 1000))
-
-    return wrapper
-
-
-def with_undo_chunk(func):
-    """Consider the entire function one big giant undo chunk"""
-    @functools.wraps(func)
-    def _undo_chunk(*args, **kwargs):
-        try:
-            cmds.undoInfo(chunkName=func.__name__, openChunk=True)
-            return func(*args, **kwargs)
-        finally:
-            cmds.undoInfo(chunkName=func.__name__, closeChunk=True)
-
-    return _undo_chunk
-
-
-def unique_name(name):
-    """Internal utility function"""
-    if cmdx.exists(name):
-        index = 1
-        while cmdx.exists("%s%d" % (name, index)):
-            index += 1
-        name = "%s%d" % (name, index)
-
-    return name
-
-
-def shape_name(transform_name):
-    """Generate a suitable shape name from `transform_name`
-
-    If a shape node has the name <transform>Shape<number>
-    then Maya will keep that name updated as the transform
-    name changes.
-
-    """
-
-    components = re.split(r"(\d+)$", transform_name, 1) + [""]
-    return "Shape".join(components[:2])
-
-
-def version():
-    version = cmds.pluginInfo("ragdoll", query=True, version=True)
-    version = "".join(version.split(".")[:3])
-
-    try:
-        return int(version.replace(".", ""))
-    except ValueError:
-        # No version during local or CI testing
-        return 0
-
-
-def random_color():
-    """Return a nice random color"""
-
-    # Rather than any old color, limit colors to
-    # the first 250 degress, out of 360 total
-    # These all fall into a nice pastel-scheme
-    # that fits with the overall look of Ragdoll
-    hue = int(random.random() * 250)
-
-    value = 0.7
-    saturation = 0.7
-
-    color = cmdx.ColorType()
-    color.setColor((hue, value, saturation),
-                   cmdx.ColorType.kHSV,
-                   cmdx.ColorType.kFloat)
-
-    return color
-
-
 class UserAttributes(object):
     """User attributes appear on the original controllers
      __________________
@@ -250,3 +167,99 @@ class UserAttributes(object):
     def add_divider(self, label):
         assert isinstance(label, string_types), "%s was not a string" % label
         self._added.append(cmdx.Divider(label))
+
+
+def with_timing(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        t0 = time.time()
+
+        try:
+            return func(*args, **kwargs)
+        finally:
+            t1 = time.time()
+            duration = t1 - t0
+            log.info("%s in %.2fms" % (func.__name__, duration * 1000))
+
+    return wrapper
+
+
+def with_undo_chunk(func):
+    """Consider the entire function one big giant undo chunk"""
+    @functools.wraps(func)
+    def _undo_chunk(*args, **kwargs):
+        try:
+            cmds.undoInfo(chunkName=func.__name__, openChunk=True)
+            return func(*args, **kwargs)
+        finally:
+            cmds.undoInfo(chunkName=func.__name__, closeChunk=True)
+
+    return _undo_chunk
+
+
+def unique_name(name):
+    """Internal utility function"""
+    if cmdx.exists(name):
+        index = 1
+        while cmdx.exists("%s%d" % (name, index)):
+            index += 1
+        name = "%s%d" % (name, index)
+
+    return name
+
+
+def shape_name(transform_name):
+    """Generate a suitable shape name from `transform_name`
+
+    If a shape node has the name <transform>Shape<number>
+    then Maya will keep that name updated as the transform
+    name changes.
+
+    """
+
+    components = re.split(r"(\d+)$", transform_name, 1) + [""]
+    return "Shape".join(components[:2])
+
+
+def version():
+    version = cmds.pluginInfo("ragdoll", query=True, version=True)
+    version = "".join(version.split(".")[:3])
+
+    try:
+        return int(version.replace(".", ""))
+    except ValueError:
+        # No version during local or CI testing
+        return 0
+
+
+def random_color():
+    """Return a nice random color"""
+
+    # Rather than any old color, limit colors to
+    # the first 250 degress, out of 360 total
+    # These all fall into a nice pastel-scheme
+    # that fits with the overall look of Ragdoll
+    hue = int(random.random() * 250)
+
+    value = 0.7
+    saturation = 0.7
+
+    color = cmdx.ColorType()
+    color.setColor((hue, value, saturation),
+                   cmdx.ColorType.kHSV,
+                   cmdx.ColorType.kFloat)
+
+    return color
+
+
+def add_to_set(node, name, mod=None):
+    try:
+        collection = cmdx.encode(name)
+    except cmdx.ExistError:
+        with cmdx.DGModifier() as mod:
+            collection = mod.create_node(
+                "objectSet", name=name
+            )
+
+    collection.add(node)
+    return collection

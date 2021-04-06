@@ -506,6 +506,7 @@ class QArgument(QtCore.QObject):
         args["enabled"] = bool(kwargs.pop("enabled", True))
         args["edited"] = False
         args["condition"] = None
+        args["suffix"] = kwargs.pop("suffix", None)
 
         # Anything left is an error
         for arg in kwargs:
@@ -925,6 +926,10 @@ class String(QArgument):
             self.changed.emit()
 
 
+class String2(QArgument):
+    """A pair of 2 strings"""
+
+
 class Path(QArgument):
     """Path type user interface
 
@@ -932,11 +937,12 @@ class Path(QArgument):
 
     Arguments:
 
-
     """
 
+    browsed = QtCore.Signal()
+
     def create(self):
-        browse = _with_entered_exited(QtWidgets.QPushButton, self)()
+        browse = _with_entered_exited(QtWidgets.QPushButton, self)("Browse")
         widget = _with_entered_exited(QtWidgets.QLineEdit, self)()
 
         widget.setMinimumWidth(px(50))
@@ -953,11 +959,10 @@ class Path(QArgument):
 
         # Synchonise spinbox with browse
         widget.editingFinished.connect(self.changed.emit)
-        widget.valueChanged.connect(self.on_spinbox_changed)
-        browse.clicked.connect(self.on_browse)
+        browse.clicked.connect(self.browsed.emit)
 
-        self._read = lambda: widget.value()
-        self._write = lambda value: widget.setValue(value)
+        self._read = lambda: widget.text()
+        self._write = lambda value: widget.setText(value)
 
         initial = self["initial"]
 
@@ -968,6 +973,12 @@ class Path(QArgument):
             self._write(initial)
 
         return container
+
+    def path(self):
+        return self._widget.text()
+
+    def setPath(self, path):
+        self._widget.setText(path)
 
 
 class Info(String):

@@ -4,11 +4,18 @@ These members differ from ragdoll.commands and friends
 in that they take and return native Maya strings as
 is typical of the maya.cmds module.
 
-Everything exposed in this module is permanent
-and backwards compatible with every version of
-Ragdoll for all time.
+Everything exposed in this module is permanent and backwards
+compatible with every version of Ragdoll for all time.
 
 """
+
+# Internals, temporary
+from . import commands as _commands, tools as _tools
+from .vendor import cmdx as _cmdx
+
+# Inherit docstring from source command
+import functools as _functools
+
 
 # Constants
 from .commands import (
@@ -18,46 +25,172 @@ from .commands import (
     ConvexHullShape,
 )
 
-# cmds-compatible versions of commands
-# Note that these still exist in commands.py, the difference being
-# the return-type; api -> strings and commands -> cmdx instances
-from .commands import _to_cmds
-createScene = _to_cmds("create_scene")
-createRigid = _to_cmds("create_rigid")
-createActiveRigid = _to_cmds("create_active_rigid")
-createPassiveRigid = _to_cmds("create_passive_rigid")
-createCollider = _to_cmds("create_passive_rigid")
-pointConstraint = _to_cmds("point_constraint")
-orientConstraint = _to_cmds("orient_constraint")
-hingeConstraint = _to_cmds("hinge_constraint")
-socketConstraint = _to_cmds("socket_constraint")
-parentConstraint = _to_cmds("parent_constraint")
-convertRigid = _to_cmds("convert_rigid")
-convertToPoint = _to_cmds("convert_to_point")
-convertToOrient = _to_cmds("convert_to_orient")
-convertToHinge = _to_cmds("convert_to_hinge")
-convertToSocket = _to_cmds("convert_to_socket")
-convertToParent = _to_cmds("convert_to_parent")
-createAbsoluteControl = _to_cmds("create_absolute_control")
-createRelativeControl = _to_cmds("create_relative_control")
-createActiveControl = _to_cmds("create_active_control")
-createKinematicControl = _to_cmds("create_kinematic_control")
-transferAttributes = _to_cmds("transfer_attributes")
-transferRigid = _to_cmds("transfer_rigid")
-transferConstraint = _to_cmds("transfer_constraint")
-editConstraintFrames = _to_cmds("edit_constraint_frames")
-createForce = _to_cmds("create_force")
-createSlice = _to_cmds("create_slice")
-assignForce = _to_cmds("assign_force")
+#
+# cmds-compatible versions of _commands
+#
 
-from .tools import _to_cmds
-createChain = _to_cmds("create_chain")
-createMuscle = _to_cmds("create_muscle")
-createCharacter = _to_cmds("create_character")
 
-# Backwards compatibility
-createCollider = _to_cmds("create_passive_rigid")
-del _to_cmds
+@_functools.wraps(_commands.create_scene)
+def createScene(name=None, parent=None):
+    parent = _converted(parent)
+    return _output(_commands.create_scene(name=name, parent=parent))
+
+
+@_functools.wraps(_commands.create_rigid)
+def createRigid(node, scene, opts=None):
+    node = _converted(node)
+    scene = _converted(scene)
+    return _output(_commands.create_rigid(node, scene, opts=opts))
+
+
+@_functools.wraps(_tools.create_chain)
+def createChain(links, scene, opts=None):
+    assert isinstance(links, (tuple, list)), "links must be list"
+    links = [_converted(link) for link in links]
+    scene = _converted(scene)
+    return _output(_tools.create_chain(links, scene, opts=opts))
+
+
+@_functools.wraps(_commands.create_active_rigid)
+def createActiveRigid(node, scene, opts=None):
+    return createRigid(node, scene, opts=dict({"passive": False}, **opts))
+
+
+@_functools.wraps(_commands.create_passive_rigid)
+def createPassiveRigid(node, scene, opts=None):
+    return createRigid(node, scene, opts=dict({"passive": True}, **opts))
+
+
+@_functools.wraps(_commands.create_constraint)
+def createConstraint(parent, child):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.create_constraint(parent, child))
+
+
+@_functools.wraps(_commands.point_constraint)
+def pointConstraint(parent, child, opts=None):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.point_constraint(parent, child, opts=opts))
+
+
+@_functools.wraps(_commands.orient_constraint)
+def orientConstraint(parent, child, opts=None):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.orient_constraint(parent, child, opts=opts))
+
+
+@_functools.wraps(_commands.hinge_constraint)
+def hingeConstraint(parent, child, opts=None):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.hinge_constraint(parent, child, opts=opts))
+
+
+@_functools.wraps(_commands.socket_constraint)
+def socketConstraint(parent, child, opts=None):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.socket_constraint(parent, child, opts=opts))
+
+
+@_functools.wraps(_commands.parent_constraint)
+def parentConstraint(parent, child, opts=None):
+    parent = _converted(parent)
+    child = _converted(child)
+    return _output(_commands.parent_constraint(parent, child, opts=opts))
+
+
+@_functools.wraps(_commands.convert_rigid)
+def convertRigid(rigid, opts=None):
+    rigid = _converted(rigid)
+    return _output(_commands.convert_rigid(rigid, opts=opts))
+
+
+@_functools.wraps(_commands.convert_to_point)
+def convertToPoint(constraint, opts=None):
+    constraint = _converted(constraint)
+    return _output(_commands.convert_to_point(constraint, opts=opts))
+
+
+@_functools.wraps(_commands.convert_to_orient)
+def convertToOrient(constraint, opts=None):
+    constraint = _converted(constraint)
+    return _output(_commands.convert_to_orient(constraint, opts=opts))
+
+
+@_functools.wraps(_commands.convert_to_hinge)
+def convertToHinge(constraint, opts=None):
+    constraint = _converted(constraint)
+    return _output(_commands.convert_to_hinge(constraint, opts=opts))
+
+
+@_functools.wraps(_commands.convert_to_socket)
+def convertToSocket(constraint, opts=None):
+    constraint = _converted(constraint)
+    return _output(_commands.convert_to_socket(constraint, opts=opts))
+
+
+@_functools.wraps(_commands.convert_to_parent)
+def convertToParent(constraint, opts=None):
+    constraint = _converted(constraint)
+    return _output(_commands.convert_to_parent(constraint, opts=opts))
+
+
+@_functools.wraps(_commands.transfer_attributes)
+def transferAttributes(a, b, opts=None):
+    a = _converted(a)
+    b = _converted(b)
+    return _output(_commands.transfer_attributes(a, b, opts=opts))
+
+
+@_functools.wraps(_commands.edit_constraint_frames)
+def editConstraintFrames(constraint):
+    constraint = _converted(constraint)
+    return _output(_commands.edit_constraint_frames(constraint))
+
+
+@_functools.wraps(_commands.create_force)
+def createForce(type, scene):
+    scene = _converted(scene)
+    return _output(_commands.create_force(type, scene))
+
+
+@_functools.wraps(_commands.assign_force)
+def assignForce(rigid, force):
+    rigid = _converted(rigid)
+    force = _converted(force)
+    return _output(_commands.assign_force(rigid, force))
+
+
+@_functools.wraps(_commands.create_slice)
+def createSlice(scene):
+    scene = _converted(scene)
+    return _output(_commands.create_slice(scene))
+
+
+def _converted(node):
+    if isinstance(node, _cmdx.string_types):
+        node = _cmdx.encode(node)
+    return node
+
+
+def _output(result):
+    if isinstance(result, (tuple, list)):
+        for index, value in enumerate(result):
+            if isinstance(value, _cmdx.Node):
+                result[index] = value.shortestPath()
+            if isinstance(value, _cmdx.Plug):
+                result[index] = value.path()
+    else:
+        if isinstance(result, _cmdx.Node):
+            result = result.shortestPath()
+        if isinstance(result, _cmdx.Plug):
+            result = result.path()
+
+    return result
 
 
 __all__ = [
@@ -70,10 +203,6 @@ __all__ = [
     "createScene",
     "createRigid",
     "createChain",
-    "createAbsoluteControl",
-    "createRelativeControl",
-    "createActiveControl",
-    "createKinematicControl",
     "pointConstraint",
     "orientConstraint",
     "hingeConstraint",
@@ -85,16 +214,9 @@ __all__ = [
     "convertToHinge",
     "convertToSocket",
     "convertToParent",
-    "transferRigid",
     "transferAttributes",
-    "transferConstraint",
     "editConstraintFrames",
     "createForce",
     "createSlice",
     "assignForce",
-
-    # Backwards compatibility
-    "createCollider",
-    "createActiveRigid",
-    "createPassiveRigid",
 ]

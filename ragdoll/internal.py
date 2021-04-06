@@ -169,6 +169,92 @@ class UserAttributes(object):
         self._added.append(cmdx.Divider(label))
 
 
+def with_contract(args=None, kwargs=None, returns=None):
+    args = args or []
+    kwargs = kwargs or {}
+    returns = returns or []
+
+    def with_contract_decorator(func):
+        @functools.wraps(func)
+        def with_contract_wrapper(*_args, **_kwargs):
+
+            assert len(_args) == len(args), (
+                "Unexpected number of arguments: %s != %s" % (
+                    len(_args), len(args)
+                )
+            )
+
+            for arg, _arg in zip(_args, args):
+                assert isinstance(arg, _arg), (
+                    "Type mismatch, %s != %s" % (type(arg), _arg)
+                )
+
+            for key, value in kwargs.items():
+                assert isinstance(value, (list, tuple)), (
+                    "Misformatted contract, kwargs value must be tuple of "
+                    "(type, default) pair"
+                )
+
+                # If the user didn't pass this kwarg, that's ok.
+                if key not in _kwargs:
+                    continue
+
+                _value = _kwargs[key]
+                typ, default = value
+                assert _value is default or isinstance(_value, typ), (
+                    "Type mismatch, %s != %s" % (type(_value), typ)
+                )
+
+            result = func(*_args, **_kwargs)
+
+            if not returns:
+                if result is not None:
+                    raise AssertionError(
+                        "Function should not have returned anything"
+                    )
+
+            else:
+                if isinstance(result, (tuple, list)):
+                    assert len(result) == len(returns), (
+                        "Unexpected number of returned values: %s != %s" % (
+                            len(result), len(returns)
+                        )
+                    )
+
+                    for ret, _ret in zip(result, returns):
+                        assert isinstance(ret, _ret), (
+                            "Unexpected return type: %s != %s" % (
+                                type(ret), _ret
+                            )
+                        )
+                else:
+                    assert isinstance(result, returns[0]), (
+                        "Unexpected return type: %s != %s" % (
+                            type(result, returns[0])
+                        )
+                    )
+
+            return result
+
+        # Store for someone else to inspect
+        with_contract_wrapper.contract = {
+            "args": args,
+            "kwargs": kwargs,
+            "returns": returns,
+        }
+
+        return with_contract_wrapper
+
+    return with_contract_decorator
+
+
+# @with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+#                kwargs={"opts": dict},
+#                returns=(cmdx.DagNode,))
+# def test(parent, child, opts=None):
+#     pass
+
+
 def with_timing(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

@@ -79,7 +79,18 @@ Epsilon = 0.001
 
 
 @i__.with_undo_chunk
+@i__.with_contract(kwargs={"name": (cmdx.string_types, None),
+                           "parent": (cmdx.DagNode, None)},
+                   returns=(cmdx.DagNode,))
 def create_scene(name=None, parent=None):
+    """Create a new Ragdoll scene
+
+    Arguments:
+        name (str, optional): Override defaut name
+        parent (DagNode, optional): Do not create a new transform, use this
+
+    """
+
     time = cmdx.encode("time1")
     up = cmdx.up_axis()
     name = name or i__.unique_name("rScene")
@@ -116,13 +127,10 @@ def create_scene(name=None, parent=None):
 
 
 @i__.with_undo_chunk
-def create_rigid(node,
-                 scene,
-                 passive=False,
-                 compute_mass=False,
-                 existing=Overwrite,
-                 defaults=None,
-                 _cache=None):
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
+def create_rigid(node, scene, opts=None, _cache=None):
     """Create a new rigid
 
     Create a new rigid from `node`, which may be a transform or
@@ -157,8 +165,9 @@ def create_rigid(node,
         "%s is already a rigid" % node
     )
 
+    opts = opts or {}
     cache = _cache or {}
-    defaults = defaults or {}
+    defaults = opts.get("defaults", {})
 
     if node.isA(cmdx.kShape):
         transform = node.parent()
@@ -204,7 +213,7 @@ def create_rigid(node,
         else:
             _interpret_transform(mod, rigid, transform)
 
-        if compute_mass:
+        if opts.get("computeMass"):
             # Establish a sensible default mass, also taking into
             # consideration that joints must be comparable to meshes.
             # Mass unit is kg, whereas lengths are in centimeters
@@ -226,11 +235,12 @@ def create_rigid(node,
 
     # Make the connections
     with cmdx.DagModifier() as mod:
-        if passive:
+        if opts.get("passive"):
             _connect_passive(mod, rigid, transform)
         else:
             _remove_pivots(mod, transform)
-            _connect_active(mod, rigid, transform, existing=existing)
+            _connect_active(mod, rigid, transform,
+                            existing=opts.get("existing"))
 
         # Apply provided default attribute values
         for key, value in defaults.items():
@@ -240,28 +250,35 @@ def create_rigid(node,
 
 
 def create_active_rigid(node, scene, **kwargs):
-    return create_rigid(node, scene, passive=False, **kwargs)
+    return create_rigid(node, scene, opts={"passive": False}, **kwargs)
 
 
 def create_passive_rigid(node, scene, **kwargs):
-    return create_rigid(node, scene, passive=True, **kwargs)
+    return create_rigid(node, scene, opts={"passive": True}, **kwargs)
 
 
 @i__.with_undo_chunk
-def convert_rigid(rigid, passive=None):
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
+def convert_rigid(rigid, opts=None):
     if isinstance(rigid, i__.string_types):
         rigid = cmdx.encode(rigid)
 
+    opts = opts or {}
+    opts = dict({"passive": True}, **opts)
+
     transform = rigid.parent()
 
-    if passive is None:
-        passive = not rigid["kinematic"].read()
+    # Toggle between active and passive
+    if opts["passive"] is None:
+        opts["passive"] = not rigid["kinematic"].read()
 
     with cmdx.DagModifier() as mod:
         #
         # Convert active --> passive
         #
-        if not rigid["kinematic"] and passive:
+        if not rigid["kinematic"] and opts["passive"]:
             mod.disconnect(transform["translateX"])
             mod.disconnect(transform["translateY"])
             mod.disconnect(transform["translateZ"])
@@ -276,7 +293,7 @@ def convert_rigid(rigid, passive=None):
         #
         # Convert passive --> active
         #
-        elif not passive:
+        elif not opts["passive"]:
             mod.set_attr(rigid["kinematic"], False)
 
             # The user will expect a newly-turned active rigid to collide
@@ -290,6 +307,9 @@ def convert_rigid(rigid, passive=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs=None,
+                   returns=(cmdx.DagNode,))
 def create_constraint(parent, child):
     assert child.type() == "rdRigid", child.type()
     assert parent.type() in ("rdRigid", "rdScene"), (
@@ -329,6 +349,9 @@ def create_constraint(parent, child):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def point_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -339,11 +362,14 @@ def point_constraint(parent, child, opts=None):
     }, **opts)
 
     con = create_constraint(parent, child)
-    convert_to_point(con, opts)
+    convert_to_point(con, opts=opts)
     return con
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def orient_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -354,11 +380,14 @@ def orient_constraint(parent, child, opts=None):
     }, **opts)
 
     con = create_constraint(parent, child)
-    convert_to_orient(con, opts)
+    convert_to_orient(con, opts=opts)
     return con
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def parent_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -369,11 +398,14 @@ def parent_constraint(parent, child, opts=None):
     }, **opts)
 
     con = create_constraint(parent, child)
-    convert_to_parent(con, opts)
+    convert_to_parent(con, opts=opts)
     return con
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def hinge_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -384,11 +416,14 @@ def hinge_constraint(parent, child, opts=None):
     }, **opts)
 
     con = create_constraint(parent, child)
-    convert_to_hinge(con, opts)
+    convert_to_hinge(con, opts=opts)
     return con
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def socket_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -399,11 +434,14 @@ def socket_constraint(parent, child, opts=None):
     }, **opts)
 
     con = create_constraint(parent, child)
-    convert_to_socket(con, opts)
+    convert_to_socket(con, opts=opts)
     return con
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def convert_to_point(con, opts=None):
     opts = opts or {}
 
@@ -417,7 +455,7 @@ def convert_to_point(con, opts=None):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod, con, opts)
+        _reset_constraint(mod, con, opts=opts)
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rPointConstraint"))
@@ -435,6 +473,9 @@ def convert_to_point(con, opts=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def convert_to_orient(con, opts=None):
     opts = opts or {}
 
@@ -448,7 +489,7 @@ def convert_to_orient(con, opts=None):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod, con, opts)
+        _reset_constraint(mod, con, opts=opts)
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rOrientConstraint"))
@@ -466,6 +507,9 @@ def convert_to_orient(con, opts=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def convert_to_hinge(con, opts=None):
     opts = opts or {}
 
@@ -489,7 +533,7 @@ def convert_to_hinge(con, opts=None):
     """
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod, con, opts)
+        _reset_constraint(mod, con, opts=opts)
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rHingeConstraint"))
@@ -509,6 +553,9 @@ def convert_to_hinge(con, opts=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def convert_to_socket(con, opts=None):
     opts = opts or {}
 
@@ -522,7 +569,7 @@ def convert_to_socket(con, opts=None):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod, con, opts)
+        _reset_constraint(mod, con, opts=opts)
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rSocketConstraint"))
@@ -544,6 +591,9 @@ def convert_to_socket(con, opts=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def convert_to_parent(con, opts=None):
     """A constraint with no degrees of freedom, a.k.a. Fixed Constraint"""
 
@@ -559,7 +609,7 @@ def convert_to_parent(con, opts=None):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod, con, opts)
+        _reset_constraint(mod, con, opts=opts)
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rParentConstraint"))
@@ -577,6 +627,10 @@ def convert_to_parent(con, opts=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"aim": (cmdx.Vector, None),
+                           "opts": (dict, None)},
+                   returns=None)
 def orient(con, aim=None, up=None):
     """Orient a constraint
 
@@ -688,6 +742,9 @@ def orient(con, aim=None, up=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs=None,
+                   returns=None)
 def reorient(con):
     r"""Re-orient
 
@@ -739,6 +796,11 @@ def reorient(con):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"reference": (cmdx.DagNode, None)},
+                   returns=(cmdx.DagNode,
+                            cmdx.DagNode,
+                            cmdx.DagNode))
 def create_absolute_control(rigid, reference=None):
     """Control a rigid body in worldspace
 
@@ -814,6 +876,9 @@ def create_absolute_control(rigid, reference=None):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs=None,
+                   returns=(cmdx.DagNode,))
 def create_relative_control(rigid):
     if isinstance(rigid, i__.string_types):
         rigid = cmdx.encode(rigid)
@@ -867,6 +932,9 @@ def create_relative_control(rigid):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs=None,
+                   returns=(cmdx.DagNode,))
 def create_active_control(reference, rigid):
     """Control a rigid body using a reference transform
 
@@ -924,6 +992,9 @@ def create_active_control(reference, rigid):
 
 
 @i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"reference": (cmdx.DagNode, None)},
+                   returns=(cmdx.DagNode,))
 def create_kinematic_control(rigid, reference=None):
     if reference is not None and isinstance(reference, i__.string_types):
         reference = cmdx.encode(reference)
@@ -1000,12 +1071,15 @@ def set_initial_state(rigids):
 
 
 @i__.with_undo_chunk
-def transfer_attributes(a, b, mirror=True):
+def transfer_attributes(a, b, opts=None):
     if isinstance(a, i__.string_types):
         a = cmdx.encode(a)
 
     if isinstance(b, i__.string_types):
         b = cmdx.encode(b)
+
+    opts = opts or {}
+    opts = dict({"mirror": True}, **opts)
 
     ra = a.shape(type="rdRigid")
     rb = b.shape(type="rdRigid")
@@ -1016,7 +1090,7 @@ def transfer_attributes(a, b, mirror=True):
         transfer_rigid(ra, rb)
 
     if ca and cb:
-        transfer_constraint(ca, cb, mirror)
+        transfer_constraint(ca, cb, opts=opts)
 
 
 @i__.with_undo_chunk
@@ -1045,12 +1119,15 @@ def transfer_rigid(ra, rb):
 
 
 @i__.with_undo_chunk
-def transfer_constraint(ca, cb, mirror=True):
+def transfer_constraint(ca, cb, opts=None):
     if isinstance(ca, i__.string_types):
         ca = cmdx.encode(ca)
 
     if isinstance(cb, i__.string_types):
         cb = cmdx.encode(cb)
+
+    opts = opts or {}
+    opts = dict({"mirror": True}, **opts)
 
     constraint_attributes = (
         "type",
@@ -1078,7 +1155,7 @@ def transfer_constraint(ca, cb, mirror=True):
         tm.setTranslation(t)
         tm.setRotation(r)
 
-    if mirror:
+    if opts["mirror"]:
         _mirror(parent_frame)
         _mirror(child_frame)
 
@@ -2029,10 +2106,56 @@ def _to_cmds(name):
 
     func = getattr(sys.modules[__name__], name)
 
+    contract = getattr(func, "contract", {})
+
     @functools.wraps(func)
     def to_cmds_wrapper(*args, **kwargs):
+
+        # Convert cmdx arguments to string
+        #
+        # ---> cmdx --> string ---> func()
+        #
+        for index in range(len(args)):
+            arg = args[index]
+            _arg = contract["args"][index]
+
+            if issubclass(_arg, cmdx.Node):
+                # It's supposed to be string, and may already be
+                if isinstance(arg, cmdx.string_types):
+                    continue
+
+                args[index] = arg.shortestPath()
+
+            if issubclass(_arg, cmdx.Plug):
+                # It's supposed to be string, and may already be
+                if isinstance(arg, cmdx.string_types):
+                    continue
+
+                args[index] = arg.shortestPath()
+
+        for key, value in kwargs.items():
+            kwarg = contract["kwargs"][key]
+
+            if issubclass(kwarg, cmdx.Node):
+                # It's supposed to be string, and may already be
+                if isinstance(value, cmdx.string_types):
+                    continue
+
+                kwargs[key] = value.shortestPath()
+
+            if issubclass(kwarg, cmdx.Plug):
+                # It's supposed to be string, and may already be
+                if isinstance(value, cmdx.string_types):
+                    continue
+
+                kwargs[key] = value.path()
+
         result = func(*args, **kwargs)
 
+        # Convert cmdx return values to string
+        #
+        # ----> cmdx ---> string
+        #
         if isinstance(result, (tuple, list)):
             for index, entry in enumerate(result):
                 if isinstance(entry, cmdx.Node):

@@ -87,7 +87,7 @@ class Character(object):
         rigid = commands.create_rigid(joint, self._scene)
 
         if parent is not None:
-            constraint = commands.hinge_constraint(parent, rigid, self._scene)
+            constraint = commands.hinge_constraint(parent, rigid)
             commands.orient(constraint)
             commands.reorient(constraint)
 
@@ -106,7 +106,7 @@ class Character(object):
         rigid = commands.create_rigid(joint, self._scene)
 
         if parent is not None:
-            constraint = commands.socket_constraint(parent, rigid, self._scene)
+            constraint = commands.socket_constraint(parent, rigid)
             commands.orient(constraint)
         else:
             constraint = None
@@ -221,9 +221,7 @@ def create(root,
 
             if parent is not None:
                 if label in (Knee, Elbow, Finger):
-                    constraint = commands.hinge_constraint(parent,
-                                                           rigid,
-                                                           scene)
+                    constraint = commands.hinge_constraint(parent, rigid)
                     commands.orient(constraint)
                     commands.reorient(constraint)
 
@@ -234,9 +232,7 @@ def create(root,
                         mod.set_attr(constraint["linearDriveDamping"], 0)
 
                 else:
-                    constraint = commands.socket_constraint(parent,
-                                                            rigid,
-                                                            scene)
+                    constraint = commands.socket_constraint(parent, rigid)
                     commands.orient(constraint)
 
                 constraint["disableCollision"] = True

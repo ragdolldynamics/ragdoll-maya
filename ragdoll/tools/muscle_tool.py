@@ -72,14 +72,9 @@ def create(a,
     if not b_passive:
         b_passive = commands.create_passive_rigid(b.parent(), scene)
 
-    con1 = commands.point_constraint(a_passive,
-                                     muscle,
-                                     scene,
-                                     maintain_offset=False)
-    con2 = commands.point_constraint(b_passive,
-                                     muscle,
-                                     scene,
-                                     maintain_offset=False)
+    opts = {"maintainOffset": False}
+    con1 = commands.point_constraint(a_passive, muscle, opts=opts)
+    con2 = commands.point_constraint(b_passive, muscle, opts=opts)
 
     def parentframe_to_anchorpoints(mod):
         # Move parent frames to anchor points

@@ -290,7 +290,7 @@ def create(chain,
 
         else:
             mult = commands.multiply_constraints(constraints, parent=parent)
-            mult.rename(commands._unique_name("r%sMultiplier" % name))
+            mult.rename(i__.unique_name("r%sMultiplier" % name))
 
             # Forward some convenience attributes
             proxies = i__.UserAttributes(mult, parent)
@@ -388,9 +388,7 @@ def create(chain,
             # shapeLength is used during constraint creation, for initial size
             mod.do_it()
 
-            con = commands.socket_constraint(
-                previous_rigid, child_rigid, scene
-            )
+            con = commands.socket_constraint(previous_rigid, child_rigid)
 
             aim = None
             up = None

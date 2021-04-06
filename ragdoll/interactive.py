@@ -1018,13 +1018,12 @@ def create_active_rigid(selection=None, **opts):
 
     created = []
     selection = selection or cmdx.selection(type="dagNode")
-    defaults = opts.pop("defaults", {})
 
     if not selection:
 
         # Make a new rigid from scratch
         with cmdx.DagModifier() as mod:
-            name = commands._unique_name("rigid")
+            name = i__.unique_name("rigid")
             transform = mod.create_node("transform", name=name)
 
         selection = [transform]
@@ -1072,10 +1071,11 @@ def create_active_rigid(selection=None, **opts):
             "Blend": commands.Blend,
         }.get(_opt("existingAnimation", opts), "Overwrite")
 
-        kwargs = {
-            "compute_mass": _opt("computeMass", opts),
+        opts = {
+            "computeMass": _opt("computeMass", opts),
             "passive": passive,
             "existing": existing,
+            "defaults": {}
         }
 
         # Translate UI options into attribute defaults
@@ -1088,7 +1088,7 @@ def create_active_rigid(selection=None, **opts):
                 "Mesh": commands.ConvexHullShape,
             }
 
-            defaults["shapeType"] = shapes.get(
+            opts["defaults"]["shapeType"] = shapes.get(
                 initial_shape,
 
                 # Fallback, this should never really happen
@@ -1101,8 +1101,7 @@ def create_active_rigid(selection=None, **opts):
                                                    "rx", "ry", "rz"))
         try:
             rigid = commands.create_rigid(node, scene,
-                                          defaults=defaults,
-                                          **kwargs)
+                                          opts=opts)
         except Exception as e:
             _print_exception()
             log.error(str(e))
@@ -1135,7 +1134,7 @@ def create_passive_rigid(selection=None, **opts):
     # Special case of nothing selected, just make a default sphere
     if not selection and not cmdx.selection():
         with cmdx.DagModifier() as mod:
-            name = commands._unique_name("rPassive")
+            name = i__.unique_name("rPassive")
             transform = mod.create_node("transform", name=name)
 
         cmds.select(transform.path())
@@ -1202,7 +1201,7 @@ def create_active_chain(selection=None, **opts):
     if not scene:
         return
 
-    tools.create_chain(links, scene, options=opts, defaults=defaults)
+    tools.create_chain(links, scene, opts=opts, defaults=defaults)
 
     root = links[0]
     cmds.select(str(root))
@@ -1435,28 +1434,25 @@ def create_constraint(selection=None, **opts):
     if any(node is None for node in (parent, child)):
         return log.warning("Must select two rigids")
 
-    kwargs = {
-        "parent": parent,
-        "child": child,
-        "scene": scene,
-        "maintain_offset": _opt("maintainOffset", opts),
+    opts = {
+        "maintainOffset": _opt("maintainOffset", opts),
         "standalone": _opt("constraintStandalone", opts),
     }
 
     if constraint_type == "Point":
-        con = commands.point_constraint(**kwargs)
+        con = commands.point_constraint(parent, child, opts=opts)
 
     elif constraint_type == "Orient":
-        con = commands.orient_constraint(**kwargs)
+        con = commands.orient_constraint(parent, child, opts=opts)
 
     elif constraint_type == "Hinge":
-        con = commands.hinge_constraint(**kwargs)
+        con = commands.hinge_constraint(parent, child, opts=opts)
 
     elif constraint_type == "Socket":
-        con = commands.socket_constraint(**kwargs)
+        con = commands.socket_constraint(parent, child, opts=opts)
 
     elif constraint_type == "Parent":
-        con = commands.parent_constraint(**kwargs)
+        con = commands.parent_constraint(parent, child, opts=opts)
 
     else:
         return log.warning(
@@ -1525,7 +1521,7 @@ def convert_constraint(selection=None, constraint_type=None, select=False):
 
 
 @i__.with_undo_chunk
-def convert_rigid(selection=None, passive=None):
+def convert_rigid(selection=None, **opts):
     converted = []
 
     for node in selection or cmdx.selection():
@@ -1537,7 +1533,7 @@ def convert_rigid(selection=None, passive=None):
         if not rigid or rigid.type() != "rdRigid":
             log.warning("Couldn't convert %s" % node)
 
-        if passive is None:
+        if opts.get("passive") is None:
             # Unless specified, invert the current rigid type
             typ = options.read("convertRigidType")
 
@@ -1545,9 +1541,9 @@ def convert_rigid(selection=None, passive=None):
                 # Toggle between kinematic and dynamic
                 typ = "Dynamic" if rigid["kinematic"] else "Kinematic"
 
-            passive = typ == "Kinematic"
+            opts["passive"] = typ == "Kinematic"
 
-        commands.convert_rigid(rigid, passive)
+        commands.convert_rigid(rigid, opts=opts)
         converted.append(rigid)
 
     if not converted:

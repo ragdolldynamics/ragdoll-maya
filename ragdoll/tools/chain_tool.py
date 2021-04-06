@@ -26,20 +26,20 @@ class Chain(object):
 
     """
 
-    def __init__(self, links, scene, options=None, defaults=None):
+    def __init__(self, links, scene, opts=None, defaults=None):
         assert isinstance(links, (list, tuple)), "links was not a list"
         assert links, "links was empty"
 
-        options = options or {}
-        options["autoKey"] = options.get("autoKey", False)
-        options["drawShaded"] = options.get("drawShaded", False)
-        options["blendMethod"] = options.get("blendMethod",
-                                             commands.SteppedBlendMethod)
-        options["computeMass"] = options.get("computeMass", False)
-        options["autoMultiplier"] = options.get("autoMultiplier", True)
-        options["passiveRoot"] = options.get("passiveRoot", True)
-        options["autoLimits"] = options.get("autoLimits", False)
-        options["addUserAttributes"] = options.get("addUserAttributes", True)
+        opts = opts or {}
+        opts["autoKey"] = opts.get("autoKey", False)
+        opts["drawShaded"] = opts.get("drawShaded", False)
+        opts["blendMethod"] = opts.get("blendMethod",
+                                       commands.SteppedBlendMethod)
+        opts["computeMass"] = opts.get("computeMass", False)
+        opts["autoMultiplier"] = opts.get("autoMultiplier", True)
+        opts["passiveRoot"] = opts.get("passiveRoot", True)
+        opts["autoLimits"] = opts.get("autoLimits", False)
+        opts["addUserAttributes"] = opts.get("addUserAttributes", True)
 
         defaults = defaults or {}
         defaults["shapeType"] = defaults.get(
@@ -54,7 +54,7 @@ class Chain(object):
         self._scene = scene
         self._defaults = defaults
         self._cache = {}
-        self._opts = options
+        self._opts = opts
         self._pre_flighted = False
 
         # Separate input into transforms and (optional) shapes
@@ -400,9 +400,7 @@ class Chain(object):
         # to figure out draw scale
         mod.do_it()
 
-        con = commands.socket_constraint(
-            previous_rigid, rigid, self._scene
-        )
+        con = commands.socket_constraint(previous_rigid, rigid)
 
         # Rigids will overlap per default
         mod.set_attr(con["disableCollision"], True)
@@ -426,7 +424,7 @@ class Chain(object):
         if previous:
             up = previous.translation(cmdx.sWorld)
 
-        commands.orient(con, aim, up)
+        commands.orient(con, aim=aim, up=up)
 
         # Let the user manually add these, if needed
         mod.set_attr(con["driveStrength"], 0.5)
@@ -643,7 +641,7 @@ class Chain(object):
             # There isn't any, let's make one
             mult = commands.multiply_constraints(self._new_constraints,
                                                  parent=root)
-            mult.rename(commands._unique_name("rGuideMultiplier"))
+            mult.rename(i__.unique_name("rGuideMultiplier"))
 
             # Forward some convenience attributes
             multiplier_attrs = i__.UserAttributes(mult, root)
@@ -767,5 +765,5 @@ class Chain(object):
 
 
 @i__.with_undo_chunk
-def create(links, scene, options=None, defaults=None):
-    return Chain(links, scene, options, defaults).do_it()
+def create(links, scene, opts=None, defaults=None):
+    return Chain(links, scene, opts, defaults).do_it()

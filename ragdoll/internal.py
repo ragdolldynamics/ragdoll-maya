@@ -2,6 +2,7 @@
 
 import re
 import time
+import random
 import logging
 import functools
 
@@ -43,6 +44,17 @@ def with_undo_chunk(func):
     return _undo_chunk
 
 
+def unique_name(name):
+    """Internal utility function"""
+    if cmdx.exists(name):
+        index = 1
+        while cmdx.exists("%s%d" % (name, index)):
+            index += 1
+        name = "%s%d" % (name, index)
+
+    return name
+
+
 def shape_name(transform_name):
     """Generate a suitable shape name from `transform_name`
 
@@ -54,6 +66,37 @@ def shape_name(transform_name):
 
     components = re.split(r"(\d+)$", transform_name, 1) + [""]
     return "Shape".join(components[:2])
+
+
+def version():
+    version = cmds.pluginInfo("ragdoll", query=True, version=True)
+    version = "".join(version.split(".")[:3])
+
+    try:
+        return int(version.replace(".", ""))
+    except ValueError:
+        # No version during local or CI testing
+        return 0
+
+
+def random_color():
+    """Return a nice random color"""
+
+    # Rather than any old color, limit colors to
+    # the first 250 degress, out of 360 total
+    # These all fall into a nice pastel-scheme
+    # that fits with the overall look of Ragdoll
+    hue = int(random.random() * 250)
+
+    value = 0.7
+    saturation = 0.7
+
+    color = cmdx.ColorType()
+    color.setColor((hue, value, saturation),
+                   cmdx.ColorType.kHSV,
+                   cmdx.ColorType.kFloat)
+
+    return color
 
 
 class UserAttributes(object):

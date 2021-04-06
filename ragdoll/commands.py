@@ -9,7 +9,6 @@ These do not depend on scene selection, user preferences or Maya state.
 
 import os
 import sys
-import random
 import logging
 import functools
 
@@ -81,7 +80,7 @@ Epsilon = 0.001
 def create_scene(name=None, parent=None):
     time = cmdx.encode("time1")
     up = global_up_axis()
-    name = name or _unique_name("rScene")
+    name = name or i__.unique_name("rScene")
 
     with cmdx.DagModifier() as mod:
         if parent is None:
@@ -238,41 +237,6 @@ def create_rigid(node,
     return rigid
 
 
-def _anim_constraint(rigid, active=False):
-    """Apply inputMatrix to a new constraint"""
-    scene = rigid["nextState"].connection(type="rdScene")
-    assert scene is not None, "%s was not connected to a scene" % rigid
-
-    transform = rigid.parent()
-
-    with cmdx.DagModifier() as mod:
-        con = _rdconstraint(mod, "rAnimConstraint", parent=transform)
-
-        mod.set_attr(con["limitEnabled"], False)
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
-
-        # Follow animation, if any
-        mod.set_attr(con["driveStrength"], 1.0 if active else 0.0)
-
-        mod.connect(scene["ragdollId"], con["parentRigid"])
-        mod.connect(rigid["ragdollId"], con["childRigid"])
-
-        mod.do_it()
-
-        # Support soft manipulation
-        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
-
-        # Add to scene
-        _add_constraint(mod, con, scene)
-
-    uas = i__.UserAttributes(con, transform)
-    uas.add("driveStrength")
-    uas.do_it()
-
-    return con
-
-
 def create_active_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=False, **kwargs)
 
@@ -281,6 +245,7 @@ def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, passive=True, **kwargs)
 
 
+@i__.with_undo_chunk
 def create_constraint(parent, child):
     assert child.type() == "rdRigid", child.type()
     assert parent.type() in ("rdRigid", "rdScene"), (
@@ -299,7 +264,7 @@ def create_constraint(parent, child):
         "%s and %s was not part of the same scene" % (parent, child)
     )
 
-    name = _unique_name("rConstraint")
+    name = i__.unique_name("rConstraint")
 
     with cmdx.DagModifier() as mod:
         transform = child.parent()
@@ -320,21 +285,98 @@ def create_constraint(parent, child):
 
 
 @i__.with_undo_chunk
-def convert_to_point(con,
-                     maintain_offset=True,
-                     auto_orient=True,
-                     standalone=False):
+def point_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
+
+    con = create_constraint(parent, child)
+    convert_to_point(con, opts)
+    return con
+
+
+@i__.with_undo_chunk
+def orient_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
+
+    con = create_constraint(parent, child)
+    convert_to_orient(con, opts)
+    return con
+
+
+@i__.with_undo_chunk
+def parent_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
+
+    con = create_constraint(parent, child)
+    convert_to_parent(con, opts)
+    return con
+
+
+@i__.with_undo_chunk
+def hinge_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
+
+    con = create_constraint(parent, child)
+    convert_to_hinge(con, opts)
+    return con
+
+
+@i__.with_undo_chunk
+def socket_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
+
+    con = create_constraint(parent, child)
+    convert_to_socket(con, opts)
+    return con
+
+
+@i__.with_undo_chunk
+def convert_to_point(con, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
 
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod,
-                          con,
-                          maintain_offset=maintain_offset)
+        _reset_constraint(mod, con, opts)
 
-        node = con.parent() if standalone else con
-        mod.rename(node, _unique_name("rPointConstraint"))
+        node = con.parent() if opts["standalone"] else con
+        mod.rename(node, i__.unique_name("rPointConstraint"))
         mod.set_attr(con["type"], PointConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -349,21 +391,23 @@ def convert_to_point(con,
 
 
 @i__.with_undo_chunk
-def convert_to_orient(con,
-                      maintain_offset=True,
-                      auto_orient=True,
-                      standalone=False):
+def convert_to_orient(con, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
 
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod,
-                          con,
-                          maintain_offset=maintain_offset)
+        _reset_constraint(mod, con, opts)
 
-        node = con.parent() if standalone else con
-        mod.rename(node, _unique_name("rOrientConstraint"))
+        node = con.parent() if opts["standalone"] else con
+        mod.rename(node, i__.unique_name("rOrientConstraint"))
         mod.set_attr(con["type"], OrientConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -378,10 +422,14 @@ def convert_to_orient(con,
 
 
 @i__.with_undo_chunk
-def convert_to_hinge(con,
-                     maintain_offset=True,
-                     auto_orient=True,
-                     standalone=False):
+def convert_to_hinge(con, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
 
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
@@ -397,12 +445,10 @@ def convert_to_hinge(con,
     """
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod,
-                          con,
-                          maintain_offset=maintain_offset)
+        _reset_constraint(mod, con, opts)
 
-        node = con.parent() if standalone else con
-        mod.rename(node, _unique_name("rHingeConstraint"))
+        node = con.parent() if opts["standalone"] else con
+        mod.rename(node, i__.unique_name("rHingeConstraint"))
         mod.set_attr(con["type"], HingeConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -419,21 +465,23 @@ def convert_to_hinge(con,
 
 
 @i__.with_undo_chunk
-def convert_to_socket(con,
-                      maintain_offset=True,
-                      auto_orient=True,
-                      standalone=False):
+def convert_to_socket(con, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
 
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod,
-                          con,
-                          maintain_offset=maintain_offset)
+        _reset_constraint(mod, con, opts)
 
-        node = con.parent() if standalone else con
-        mod.rename(node, _unique_name("rSocketConstraint"))
+        node = con.parent() if opts["standalone"] else con
+        mod.rename(node, i__.unique_name("rSocketConstraint"))
         mod.set_attr(con["type"], SocketConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -452,22 +500,25 @@ def convert_to_socket(con,
 
 
 @i__.with_undo_chunk
-def convert_to_parent(con,
-                      maintain_offset=True,
-                      auto_orient=True,
-                      standalone=False):
-    """A constraint with no degrees of freedom"""
+def convert_to_parent(con, opts=None):
+    """A constraint with no degrees of freedom, a.k.a. Fixed Constraint"""
+
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "standalone": False,
+    }, **opts)
 
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
 
     with cmdx.DagModifier() as mod:
-        _reset_constraint(mod,
-                          con,
-                          maintain_offset=maintain_offset)
+        _reset_constraint(mod, con, opts)
 
-        node = con.parent() if standalone else con
-        mod.rename(node, _unique_name("rParentConstraint"))
+        node = con.parent() if opts["standalone"] else con
+        mod.rename(node, i__.unique_name("rParentConstraint"))
         mod.set_attr(con["type"], ParentConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
@@ -479,109 +530,6 @@ def convert_to_parent(con,
         mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
 
     return con
-
-
-def _make_constraint(convert_function):
-    """Constraint factory function, less to type = happier developer"""
-
-    @i__.with_undo_chunk
-    def make(parent,
-             child,
-             scene,
-             maintain_offset=True,
-             auto_orient=True,
-             standalone=False):
-
-        if isinstance(parent, i__.string_types):
-            parent = cmdx.encode(parent)
-
-        if isinstance(child, i__.string_types):
-            child = cmdx.encode(parent)
-
-        con = _attach_bodies(parent, child, scene, standalone)
-
-        kwargs = {
-            "maintain_offset": maintain_offset,
-            "auto_orient": auto_orient,
-            "standalone": standalone,
-        }
-
-        return convert_function(con, **kwargs)
-
-    return make
-
-
-point_constraint = _make_constraint(convert_to_point)
-orient_constraint = _make_constraint(convert_to_orient)
-parent_constraint = _make_constraint(convert_to_parent)
-hinge_constraint = _make_constraint(convert_to_hinge)
-socket_constraint = _make_constraint(convert_to_socket)
-
-
-def _unscaled(mat):
-    tm = cmdx.Tm(mat)
-    tm.setScale((1, 1, 1))
-    return tm.asMatrix()
-
-
-def _reset_constraint(mod, con,
-                      maintain_offset=True):
-    """Reset a constraint
-
-    Arguments:
-        mod (cmdx.DagModifier): Current modifier in use
-        con (rdConstraint): The constraint to reset
-        auto_orient (bool): Use current axis, or compute one from hierarchy
-
-    """
-
-    assert con.type() == "rdConstraint", "%s must be an rdConstraint" % con
-
-    def reset_attr(attr):
-        if not attr.editable:
-            return
-        mod.reset_attr(attr)
-
-    reset_attr(con["disableCollision"])
-    reset_attr(con["limitEnabled"])
-    reset_attr(con["limitStrength"])
-    reset_attr(con["driveEnabled"])
-    reset_attr(con["driveStrength"])
-    reset_attr(con["linearLimitX"])
-    reset_attr(con["linearLimitY"])
-    reset_attr(con["linearLimitZ"])
-    reset_attr(con["angularLimitX"])
-    reset_attr(con["angularLimitY"])
-    reset_attr(con["angularLimitZ"])
-
-    # Initialise parent frame
-    parent_rigid = con["parentRigid"].connection(type="rdRigid")
-    child_rigid = con["childRigid"].connection(type="rdRigid")
-
-    # Align constraint to whatever the local transformation is
-    if maintain_offset and parent_rigid and child_rigid:
-        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
-        parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
-        parent_frame = child_matrix * parent_matrix.inverse()
-
-        # Drive to where you currently are
-        if con["driveMatrix"].writable:
-            mod.set_attr(con["driveMatrix"], parent_frame)
-
-        mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], cmdx.Mat4())
-
-
-def _apply_scale(mat):
-    tm = cmdx.Tm(mat)
-    scale = tm.scale()
-    translate = tm.translation()
-    translate.x *= scale.x
-    translate.y *= scale.y
-    translate.z *= scale.z
-    tm.setTranslation(translate)
-    tm.setScale((1, 1, 1))
-    return tm.asMatrix()
 
 
 @i__.with_undo_chunk
@@ -717,40 +665,6 @@ def reorient(con):
             mod.set_attr(con["childFrame"], child_frame)
 
 
-def _connect_transform(mod, node, transform):
-    assert transform.isA(cmdx.kTransform), "%s was not a transform" % transform
-    attributes = {}
-
-    if node.type() == "rdRigid":
-        attributes = {
-            "outputTranslateX": "translateX",
-            "outputTranslateY": "translateY",
-            "outputTranslateZ": "translateZ",
-            "outputRotateX": "rotateX",
-            "outputRotateY": "rotateY",
-            "outputRotateZ": "rotateZ",
-        }
-
-    elif node.type() == "pairBlend":
-        attributes = {
-            "outTranslateX": "translateX",
-            "outTranslateY": "translateY",
-            "outTranslateZ": "translateZ",
-            "outRotateX": "rotateX",
-            "outRotateY": "rotateY",
-            "outRotateZ": "rotateZ",
-        }
-
-    else:
-        raise TypeError(
-            "I don't know how to connect '%s' -> '%s"
-            % (type(node), type(transform))
-        )
-
-    for src, dst in attributes.items():
-        mod.try_connect(node[src], transform[dst])
-
-
 @i__.with_undo_chunk
 def convert_rigid(rigid, passive=None):
     if isinstance(rigid, i__.string_types):
@@ -817,7 +731,7 @@ def create_absolute_control(rigid, reference=None):
 
     with cmdx.DagModifier() as mod:
         if reference is None:
-            name = _unique_name("rAbsoluteControl")
+            name = i__.unique_name("rAbsoluteControl")
             reference = mod.create_node("transform", name=name)
             mod.set_attr(reference["translate"], tmat.translation())
             mod.set_attr(reference["rotate"], tmat.rotation())
@@ -989,7 +903,7 @@ def create_kinematic_control(rigid, reference=None):
     with cmdx.DagModifier() as mod:
 
         if reference is None:
-            name = _unique_name("rPassive1")
+            name = i__.unique_name("rPassive1")
             reference = mod.create_node("transform", name=name)
 
             tmat = rigid.transform(cmdx.sWorld)
@@ -1002,7 +916,7 @@ def create_kinematic_control(rigid, reference=None):
             mod.set_keyable(reference["scale"], False)
 
         ctrl = mod.create_node("rdControl",
-                               name=_unique_name("rPassiveShape1"),
+                               name=i__.unique_name("rPassiveShape1"),
                                parent=reference)
 
         if rigid["kinematic"].connected:
@@ -1086,82 +1000,6 @@ def _shapeattributes_from_generator(mod, shape, rigid):
             (0, 90, 0) if gen["axisZ"] else
             (0, 0, 0)
         ))))
-
-
-def _scale_from_rigid(rigid):
-    rest_tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
-
-    scale = sum(rest_tm.scale()) / 3.0
-
-    if rigid.parent().type() == "joint":
-        return rigid["shapeLength"].read() * 0.25 * scale
-    else:
-        return sum(rigid["shapeExtents"].read()) / 3.0 * scale
-
-
-def _attach_bodies(parent, child, scene, standalone):
-    assert child.type() == "rdRigid", child.type()
-    assert parent.type() in ("rdRigid", "rdScene"), (
-        "%s must be a rigid or scene" % parent.type()
-    )
-
-    name = "rConstraint"
-    excon = child["ragdollId"].connection(type="rdConstraint")
-
-    with cmdx.DagModifier() as mod:
-
-        if standalone:
-            transform = mod.create_node("transform", name=name)
-            mod.set_locked(transform["translate"])
-            mod.set_locked(transform["rotate"])
-            mod.set_locked(transform["scale"])
-            con = _rdconstraint(mod, name + "Shape", parent=transform)
-
-        else:
-            transform = child.parent()
-            con = _rdconstraint(mod, name, parent=transform)
-
-        mod.set_attr(con["standalone"], standalone)
-        mod.set_attr(con["disableCollision"], True)
-        mod.set_attr(con["angularLimitX"], 0)  # Free
-        mod.set_attr(con["angularLimitY"], 0)
-        mod.set_attr(con["angularLimitZ"], 0)
-
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["driveEnabled"], True)
-
-        draw_scale = _scale_from_rigid(child)
-        mod.set_attr(con["drawScale"], draw_scale)
-
-        mod.connect(parent["ragdollId"], con["parentRigid"])
-        mod.connect(child["ragdollId"], con["childRigid"])
-
-        # Add to scene
-        _add_constraint(mod, con, scene)
-
-        # Was there already a constraint here?
-        # Does it have an input drive matrix?
-        if excon:
-            world_matrix = excon["driveMatrix"].connection(
-                type="multMatrix", destination=False)
-
-            if world_matrix is not None:
-                local_matrix = world_matrix["matrixIn"][0].connection(
-                    type="composeMatrix", destination=False)
-
-                if local_matrix is not None:
-                    mod.connect(local_matrix["outputMatrix"],
-                                con["driveMatrix"])
-
-                    # Take priority
-                    mod.set_attr(excon["driveStrength"], 0.0)
-
-    return con
-
-
-def _is_locked(node, channels="tr"):
-    attrs = [chan + ax for chan in channels for ax in "xyz"]
-    return any(not node[a].editable for a in attrs)
 
 
 @i__.with_undo_chunk
@@ -1372,34 +1210,34 @@ def create_force(type, scene):
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["minDistance"], 0)
             mod.set_attr(force["maxDistance"], 20)
-            mod.rename(tm, _unique_name("rPointForce"))
-            mod.rename(force, _unique_name("rPointForceShape"))
+            mod.rename(tm, i__.unique_name("rPointForce"))
+            mod.rename(force, i__.unique_name("rPointForceShape"))
 
         elif type == PushForce:
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["minDistance"], 0)
             mod.set_attr(force["maxDistance"], 20)
-            mod.rename(tm, _unique_name("rPushForce"))
-            mod.rename(force, _unique_name("rPushForceShape"))
+            mod.rename(tm, i__.unique_name("rPushForce"))
+            mod.rename(force, i__.unique_name("rPushForceShape"))
 
         elif type == PullForce:
             mod.set_attr(force["magnitude"], -100)
             mod.set_attr(force["minDistance"], 1)
             mod.set_attr(force["maxDistance"], 20)
-            mod.rename(tm, _unique_name("rPullForce"))
-            mod.rename(force, _unique_name("rPullForceShape"))
+            mod.rename(tm, i__.unique_name("rPullForce"))
+            mod.rename(force, i__.unique_name("rPullForceShape"))
 
         elif type == UniformForce:
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["direction"], (0, -1, 0))
-            mod.rename(tm, _unique_name("rUniformForce"))
-            mod.rename(force, _unique_name("rUniformForceShape"))
+            mod.rename(tm, i__.unique_name("rUniformForce"))
+            mod.rename(force, i__.unique_name("rUniformForceShape"))
 
         elif type == TurbulenceForce:
             mod.set_attr(force["magnitude"], 200)
             mod.set_attr(tm["scale"], (5, 5, 5))
-            mod.rename(tm, _unique_name("rTurbulence"))
-            mod.rename(force, _unique_name("rTurbulence"))
+            mod.rename(tm, i__.unique_name("rTurbulence"))
+            mod.rename(force, i__.unique_name("rTurbulence"))
 
         elif type == WindForce:
             pass
@@ -1856,37 +1694,6 @@ def local_bounding_size(root):
     return size, center
 
 
-def _version():
-    version = cmds.pluginInfo("ragdoll", query=True, version=True)
-    version = "".join(version.split(".")[:3])
-
-    try:
-        return int(version.replace(".", ""))
-    except ValueError:
-        # No version during local or CI testing
-        return 0
-
-
-def _random_color():
-    """Return a nice random color"""
-
-    # Rather than any old color, limit colors to
-    # the first 250 degress, out of 360 total
-    # These all fall into a nice pastel-scheme
-    # that fits with the overall look of Ragdoll
-    hue = int(random.random() * 250)
-
-    value = 0.7
-    saturation = 0.7
-
-    color = cmdx.ColorType()
-    color.setColor((hue, value, saturation),
-                   cmdx.ColorType.kHSV,
-                   cmdx.ColorType.kFloat)
-
-    return color
-
-
 @i__.with_undo_chunk
 def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
@@ -2070,7 +1877,7 @@ def normalise_shapes(root, max_delta=0.25):
 @i__.with_undo_chunk
 def multiply_rigids(rigids, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
-        transform_name = _unique_name("rRigidMultiplier")
+        transform_name = i__.unique_name("rRigidMultiplier")
         shape_name = transform_name
 
         if parent is None:
@@ -2106,7 +1913,7 @@ def multiply_rigids(rigids, parent=None, channels=None):
 @i__.with_undo_chunk
 def multiply_constraints(constraints, parent=None, channels=None):
     with cmdx.DagModifier() as mod:
-        transform_name = _unique_name("rConstraintMultiplier")
+        transform_name = i__.unique_name("rConstraintMultiplier")
         shape_name = transform_name
 
         if parent is None:
@@ -2224,12 +2031,12 @@ def _to_cmds(name):
 
 
 def _rdscene(mod, name, parent=None):
-    name = _unique_name(name)
+    name = i__.unique_name(name)
     node = mod.create_node("rdScene", name=name, parent=parent)
 
     # Improve drive strength ranges
     mod.set_attr(node["positionIterations"], 4)
-    mod.set_attr(node["version"], _version())
+    mod.set_attr(node["version"], i__.version())
 
     return node
 
@@ -2240,7 +2047,7 @@ def _rdrigid(mod, name, parent):
         "%s was not a transform" % parent
     )
 
-    name = _unique_name(name)
+    name = i__.unique_name(name)
     node = mod.create_node("rdRigid", name=name, parent=parent)
 
     # Link relevant attributes
@@ -2254,34 +2061,34 @@ def _rdrigid(mod, name, parent):
     mod.connect(parent["rotateOrder"], node["rotateOrder"])
 
     # Assign some random color, within some nice range
-    mod.set_attr(node["color"], _random_color())
-    mod.set_attr(node["version"], _version())
+    mod.set_attr(node["color"], i__.random_color())
+    mod.set_attr(node["version"], i__.version())
 
     return node
 
 
 def _rdcontrol(mod, name, parent=None):
     """Create a new rdControl node"""
-    name = _unique_name(name)
+    name = i__.unique_name(name)
     node = mod.create_node("rdControl", name=name, parent=parent)
     mod.set_attr(node["color"], ControlColor)  # Default blue
-    mod.set_attr(node["version"], _version())
+    mod.set_attr(node["version"], i__.version())
     return node
 
 
 def _rdconstraint(mod, name, parent=None):
     """Create a new rdConstraint node"""
-    name = _unique_name(name)
+    name = i__.unique_name(name)
     node = mod.create_node("rdConstraint", name=name, parent=parent)
-    mod.set_attr(node["version"], _version())
+    mod.set_attr(node["version"], i__.version())
     return node
 
 
 def _rdforce(mod, name, parent=None):
     """Create a new rdForce node"""
-    name = _unique_name(name)
+    name = i__.unique_name(name)
     node = mod.create_node("rdForce", name=name, parent=parent)
-    mod.set_attr(node["version"], _version())
+    mod.set_attr(node["version"], i__.version())
     return node
 
 
@@ -2300,7 +2107,7 @@ def _add_rigid(mod, rigid, scene):
     mod.connect(scene["startTime"], rigid["startTime"])
     mod.connect(rigid["startState"], scene["inputActiveStart"][index])
     mod.connect(rigid["currentState"], scene["inputActive"][index])
-    mod.set_attr(rigid["version"], _version())
+    mod.set_attr(rigid["version"], i__.version())
 
 
 def _add_constraint(mod, con, scene):
@@ -2314,18 +2121,41 @@ def _add_constraint(mod, con, scene):
     mod.connect(time["outTime"], con["currentTime"])
     mod.connect(con["startState"], scene["inputConstraintStart"][index])
     mod.connect(con["currentState"], scene["inputConstraint"][index])
-    mod.set_attr(con["version"], _version())
+    mod.set_attr(con["version"], i__.version())
 
 
-def _unique_name(name):
-    """Internal utility function"""
-    if cmdx.exists(name):
-        index = 1
-        while cmdx.exists("%s%d" % (name, index)):
-            index += 1
-        name = "%s%d" % (name, index)
+def _connect_transform(mod, node, transform):
+    assert transform.isA(cmdx.kTransform), "%s was not a transform" % transform
+    attributes = {}
 
-    return name
+    if node.type() == "rdRigid":
+        attributes = {
+            "outputTranslateX": "translateX",
+            "outputTranslateY": "translateY",
+            "outputTranslateZ": "translateZ",
+            "outputRotateX": "rotateX",
+            "outputRotateY": "rotateY",
+            "outputRotateZ": "rotateZ",
+        }
+
+    elif node.type() == "pairBlend":
+        attributes = {
+            "outTranslateX": "translateX",
+            "outTranslateY": "translateY",
+            "outTranslateZ": "translateZ",
+            "outRotateX": "rotateX",
+            "outRotateY": "rotateY",
+            "outRotateZ": "rotateZ",
+        }
+
+    else:
+        raise TypeError(
+            "I don't know how to connect '%s' -> '%s"
+            % (type(node), type(transform))
+        )
+
+    for src, dst in attributes.items():
+        mod.try_connect(node[src], transform[dst])
 
 
 def _connect_passive(mod, rigid, transform):
@@ -2464,3 +2294,119 @@ def _remove_pivots(mod, transform):
         if transform["rotate"].editable:
             mod.set_attr(transform["rotate"], tm.rotation())
 
+
+def _anim_constraint(rigid, active=False):
+    """Apply inputMatrix to a new constraint"""
+    scene = rigid["nextState"].connection(type="rdScene")
+    assert scene is not None, "%s was not connected to a scene" % rigid
+
+    transform = rigid.parent()
+
+    with cmdx.DagModifier() as mod:
+        con = _rdconstraint(mod, "rAnimConstraint", parent=transform)
+
+        mod.set_attr(con["limitEnabled"], False)
+        mod.set_attr(con["driveEnabled"], True)
+        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
+
+        # Follow animation, if any
+        mod.set_attr(con["driveStrength"], 1.0 if active else 0.0)
+
+        mod.connect(scene["ragdollId"], con["parentRigid"])
+        mod.connect(rigid["ragdollId"], con["childRigid"])
+
+        mod.do_it()
+
+        # Support soft manipulation
+        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
+
+        # Add to scene
+        _add_constraint(mod, con, scene)
+
+    uas = i__.UserAttributes(con, transform)
+    uas.add("driveStrength")
+    uas.do_it()
+
+    return con
+
+
+def _reset_constraint(mod, con, opts=None):
+    """Reset a constraint
+
+    Arguments:
+        mod (cmdx.DagModifier): Current modifier in use
+        con (rdConstraint): The constraint to reset
+        auto_orient (bool): Use current axis, or compute one from hierarchy
+
+    """
+
+    assert con.type() == "rdConstraint", "%s must be an rdConstraint" % con
+
+    opts = opts or {}
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+    }, **opts)
+
+    def reset_attr(attr):
+        if not attr.editable:
+            return
+        mod.reset_attr(attr)
+
+    reset_attr(con["disableCollision"])
+    reset_attr(con["limitEnabled"])
+    reset_attr(con["limitStrength"])
+    reset_attr(con["driveEnabled"])
+    reset_attr(con["driveStrength"])
+    reset_attr(con["linearLimitX"])
+    reset_attr(con["linearLimitY"])
+    reset_attr(con["linearLimitZ"])
+    reset_attr(con["angularLimitX"])
+    reset_attr(con["angularLimitY"])
+    reset_attr(con["angularLimitZ"])
+
+    # Initialise parent frame
+    parent_rigid = con["parentRigid"].connection(type="rdRigid")
+    child_rigid = con["childRigid"].connection(type="rdRigid")
+
+    # Align constraint to whatever the local transformation is
+    if opts["maintainOffset"] and parent_rigid and child_rigid:
+        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
+        parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+        parent_frame = child_matrix * parent_matrix.inverse()
+
+        # Drive to where you currently are
+        if con["driveMatrix"].writable:
+            mod.set_attr(con["driveMatrix"], parent_frame)
+
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], cmdx.Mat4())
+
+
+def _apply_scale(mat):
+    tm = cmdx.Tm(mat)
+    scale = tm.scale()
+    translate = tm.translation()
+    translate.x *= scale.x
+    translate.y *= scale.y
+    translate.z *= scale.z
+    tm.setTranslation(translate)
+    tm.setScale((1, 1, 1))
+    return tm.asMatrix()
+
+
+def _scale_from_rigid(rigid):
+    rest_tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
+
+    scale = sum(rest_tm.scale()) / 3.0
+
+    if rigid.parent().type() == "joint":
+        return rigid["shapeLength"].read() * 0.25 * scale
+    else:
+        return sum(rigid["shapeExtents"].read()) / 3.0 * scale
+
+
+def _is_locked(node, channels="tr"):
+    attrs = [chan + ax for chan in channels for ax in "xyz"]
+    return any(not node[a].editable for a in attrs)

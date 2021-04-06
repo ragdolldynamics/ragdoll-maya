@@ -6166,7 +6166,7 @@ if __maya_version__ >= 2019:
 
         """
 
-        return om.MGlobal.upAxis()
+        return Vector(om.MGlobal.upAxis())
 
     def setUpAxis(axis=Y):
         if axis == Y:
@@ -6176,7 +6176,12 @@ if __maya_version__ >= 2019:
 
 else:
     def upAxis():
-        return cmds.optionVar(query="upAxisDirection")
+        if cmds.optionVar(query="upAxisDirection").lower() == "y":
+            return Vector(0, 1, 0)
+
+        else:
+            # Maya only supports two axes
+            return Vector(0, 0, 1)
 
     def setUpAxis(axis=Y):
         cmds.optionVar(stringValue=("upAxisDirection", axis))

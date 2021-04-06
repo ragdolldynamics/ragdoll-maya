@@ -270,6 +270,19 @@ def with_timing(func):
     return wrapper
 
 
+def with_refresh_suspended(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        cmds.refresh(suspend=True)
+
+        try:
+            return func(*args, **kwargs)
+        finally:
+            cmds.refresh(suspend=False)
+
+    return wrapper
+
+
 def with_undo_chunk(func):
     """Consider the entire function one big giant undo chunk"""
     @functools.wraps(func)

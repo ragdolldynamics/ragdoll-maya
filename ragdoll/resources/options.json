@@ -343,7 +343,7 @@
     "importPath": {
         "name": "importPath",
         "label": "Filename",
-        "type": "String",
+        "type": "Path",
         "default": "",
         "help": "Import physics from this .rag file."
     },

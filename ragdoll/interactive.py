@@ -1906,6 +1906,8 @@ def delete_physics(selection=None, **opts):
     else:
         result = commands.delete_all_physics()
 
+    any_node = cmds.ls()[0]
+    cmds.select(any_node)  # Trigger a change to selection
     cmds.select(deselect=True)
 
     if any(result.values()):

@@ -1636,6 +1636,7 @@ def infer_geometry(root, parent=None, children=None):
 
 
 @i__.with_undo_chunk
+@i__.with_refresh_suspended
 def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
 

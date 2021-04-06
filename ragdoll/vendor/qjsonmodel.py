@@ -199,6 +199,10 @@ class QJsonModel(QtCore.QAbstractItemModel):
             if index.column() == 1:
                 return item.value
 
+        elif role == QtCore.Qt.ToolTipRole:
+            if index.column() == 1:
+                return item.value
+
     def setData(self, index, value, role):
         if role == QtCore.Qt.EditRole:
             if index.column() == 1:

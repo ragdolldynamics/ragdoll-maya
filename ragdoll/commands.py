@@ -37,6 +37,12 @@ CylinderShape = 2
 ConvexHullShape = 4
 MeshShape = 4  # Alias
 
+BoxIndex = 0
+SphereIndex = 1
+CapsuleIndex = 2
+CylinderIndex = 3
+MeshIndex = 4
+
 # Dynamic states
 Off = 0
 On = 1
@@ -288,13 +294,14 @@ def convert_rigid(rigid, opts=None):
 
             mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
-            mod.set_attr(rigid["kinematic"], True)
+            # May be connected
+            mod.force_set_attr(rigid["kinematic"], True)
 
         #
         # Convert passive --> active
         #
         elif not opts["passive"]:
-            mod.set_attr(rigid["kinematic"], False)
+            mod.force_set_attr(rigid["kinematic"], False)
 
             # The user will expect a newly-turned active rigid to collide
             mod.set_attr(rigid["collide"], True)
@@ -876,62 +883,6 @@ def create_absolute_control(rigid, reference=None):
 
 
 @i__.with_undo_chunk
-@i__.with_contract(args=(cmdx.DagNode,),
-                   kwargs=None,
-                   returns=(cmdx.DagNode,))
-def create_relative_control(rigid):
-    if isinstance(rigid, i__.string_types):
-        rigid = cmdx.encode(rigid)
-
-    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
-
-    con = rigid.sibling(type="rdConstraint")
-    assert con is not None, "Relative to what?"
-
-    scene = rigid["nextState"].connection()
-    assert scene and scene.type() == "rdScene", (
-        "%s was not part of a scene" % rigid
-    )
-
-    parent_rigid = con["parentRigid"].connection()
-
-    # Look for parent via constraint, rather than Maya hierarchy,
-    # as there may be joints between two connected rigid bodies.
-    assert parent_rigid and parent_rigid.type() == "rdRigid", (
-        "Can't create relative control to world"
-    )
-
-    rigid_node = rigid.parent()
-    tmat = rigid_node.transform()
-    parent = parent_rigid.parent()
-
-    with cmdx.DagModifier() as mod:
-        tm = mod.create_node("joint", name="rRelativeControl1", parent=parent)
-        ctrl = _rdcontrol(mod, "rAbsoluteControlShape1", tm)
-        mod.connect(rigid["ragdollId"], ctrl["rigid"])
-
-        mod.set_attr(tm["radius"], 0)
-        mod.set_attr(tm["translate"], tmat.translation())
-
-        # Zero out the rotate part for a truly relative orientation
-        parent_frame = con["parentFrame"].asMatrix()
-        parent_frame = cmdx.TransformationMatrix(parent_frame)
-        mod.set_attr(tm["jointOrient"], parent_frame.rotation())
-
-        mod.connect(tm["matrix"], con["driveMatrix"])
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["driveStrength"], 1.0)
-        mod.set_attr(con["angularDriveStiffness"], 10000.0)
-        mod.set_attr(con["angularDriveDamping"], 1000.0)
-
-    # Cosmetics
-    tm["translate"].lock_and_hide()
-    tm["scale"].lock_and_hide()
-
-    return con
-
-
-@i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs=None,
                    returns=(cmdx.DagNode,))
@@ -1047,6 +998,8 @@ create_passive_control = create_kinematic_control
 
 @i__.with_undo_chunk
 def set_initial_state(rigids):
+    """Use current world transformation as initial state for `rigids"""
+
     assert isinstance(rigids, (tuple, list)), "%s was not a list" % rigids
 
     for index, rigid in enumerate(rigids):
@@ -1222,6 +1175,14 @@ def edit_shape(rigid):
         mod.set_attr(shape["displayHandle"], True)
         mod.set_attr(shape["displayLocalAxis"], True)
 
+        mod.add_attr(shape, cmdx.Enum(
+            "shapeType", fields=[(BoxIndex, "Box"),
+                                 (SphereIndex, "Sphere"),
+                                 (CapsuleIndex, "Capsule"),
+                                 (MeshIndex, "Mesh")]))
+
+        mod.do_it()
+
         # Transfer current values
         mod.set_attr(shape["translateX"], rigid["shapeOffsetX"])
         mod.set_attr(shape["translateY"], rigid["shapeOffsetY"])
@@ -1231,8 +1192,20 @@ def edit_shape(rigid):
         mod.set_attr(shape["rotateY"], rigid["shapeRotationY"])
         mod.set_attr(shape["rotateZ"], rigid["shapeRotationZ"])
 
+        mod.set_attr(shape["shapeType"], rigid["shapeType"])
+
+        if rigid["shapeType"] in (BoxShape, MeshShape):
+            mod.set_attr(shape["scale"], rigid["shapeExtents"])
+        else:
+            mod.set_attr(shape["scaleX"], rigid["shapeLength"])
+            mod.set_attr(shape["scaleY"], rigid["shapeRadius"])
+
         mod.connect(shape["translate"], rigid["shapeOffset"])
         mod.connect(shape["rotate"], rigid["shapeRotation"])
+        mod.connect(shape["scale"], rigid["shapeExtents"])
+        mod.connect(shape["scaleX"], rigid["shapeLength"])
+        mod.connect(shape["scaleY"], rigid["shapeRadius"])
+        mod.connect(shape["shapeType"], rigid["shapeType"])
 
     return shape
 
@@ -1781,7 +1754,7 @@ def delete_physics(nodes):
     return result
 
 
-def delete_all_physics(include_attributes=False):
+def delete_all_physics():
     """Nuke it from orbit
 
     Return to simpler days, days before physics, with this one command.

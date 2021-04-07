@@ -2039,6 +2039,9 @@ class TreeWidget(QtWidgets.QTreeWidget):
         self._expanded_items = []
 
     def store(self):
+        # See restore()
+        return
+
         # Preserve currently selected index
         current_item = self.currentItem()
         if current_item:
@@ -2054,6 +2057,11 @@ class TreeWidget(QtWidgets.QTreeWidget):
             self._expanded_items.append(item.isExpanded())
 
     def restore(self):
+        # This next part easily crashes Maya, for some reason :(
+        # Something is not right with topLevelItem, it seems
+        # to sometime return a nullptr to Python
+        return
+
         item = self.topLevelItem(self._current_index)
         self.setCurrentItem(item)
 
@@ -2385,7 +2393,7 @@ class ImportOptions(Options):
                 icon = _resource("icons", "chain.png")
                 icon = QtGui.QIcon(icon)
 
-                item = QtWidgets.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem(parent=target_view)
                 item.setIcon(0, icon)
                 item.setText(0, label)
                 item.setData(0, OptionsRole, chain["options"])
@@ -2397,7 +2405,7 @@ class ImportOptions(Options):
                     name = self._loader.component(entity, "NameComponent")
                     label = name["value"]
 
-                    child = QtWidgets.QTreeWidgetItem()
+                    child = QtWidgets.QTreeWidgetItem(parent=item)
                     child.setText(0, label)
                     child.setData(0, EntityRole, dump.Entity(entity))
                     _rigid_icon(child, entity)
@@ -2417,7 +2425,7 @@ class ImportOptions(Options):
                     name = self._loader.component(entity, "NameComponent")
                     label = name["value"]
 
-                    child = QtWidgets.QTreeWidgetItem()
+                    child = QtWidgets.QTreeWidgetItem(parent=item)
                     child.setIcon(0, icon)
                     child.setText(0, label)
                     child.setData(0, EntityRole, dump.Entity(entity))
@@ -2441,14 +2449,14 @@ class ImportOptions(Options):
                 icon = _resource("icons", "rigid.png")
                 icon = QtGui.QIcon(icon)
 
-                item = QtWidgets.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem(parent=target_view)
                 item.setText(0, label)
                 item.setIcon(0, icon)
                 item.setData(0, OptionsRole, rigid["options"])
                 item.setData(0, EntityRole, dump.Entity(entity))
                 _transform(item, entity)
 
-                child = QtWidgets.QTreeWidgetItem()
+                child = QtWidgets.QTreeWidgetItem(parent=item)
                 child.setText(0, name["value"])
                 child.setData(0, EntityRole, dump.Entity(entity))
                 _rigid_icon(child, entity)
@@ -2468,14 +2476,14 @@ class ImportOptions(Options):
                 icon = _resource("icons", "constraint.png")
                 icon = QtGui.QIcon(icon)
 
-                item = QtWidgets.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem(parent=target_view)
                 item.setIcon(0, icon)
                 item.setText(0, label)
                 item.setData(0, OptionsRole, constraint["options"])
                 item.setData(0, EntityRole, dump.Entity(entity))
                 _transform(item, entity)
 
-                child = QtWidgets.QTreeWidgetItem()
+                child = QtWidgets.QTreeWidgetItem(parent=item)
                 child.setIcon(0, icon)
                 child.setText(0, name["value"])
                 child.setData(0, EntityRole, dump.Entity(entity))
@@ -2495,14 +2503,14 @@ class ImportOptions(Options):
                 icon = _resource("icons", "rigid_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
-                item = QtWidgets.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem(parent=target_view)
                 item.setIcon(0, icon)
                 item.setText(0, label)
                 item.setData(0, EntityRole, dump.Entity(entity))
                 item.setData(0, OptionsRole, mult["options"])
                 _transform(item, entity)
 
-                child = QtWidgets.QTreeWidgetItem()
+                child = QtWidgets.QTreeWidgetItem(parent=item)
                 child.setIcon(0, icon)
                 child.setText(0, name["value"])
                 child.setData(0, EntityRole, dump.Entity(entity))
@@ -2522,14 +2530,14 @@ class ImportOptions(Options):
                 icon = _resource("icons", "constraint_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
-                item = QtWidgets.QTreeWidgetItem()
+                item = QtWidgets.QTreeWidgetItem(parent=target_view)
                 item.setIcon(0, icon)
                 item.setText(0, label)
                 item.setData(0, EntityRole, dump.Entity(entity))
                 item.setData(0, OptionsRole, mult["options"])
                 _transform(item, entity)
 
-                child = QtWidgets.QTreeWidgetItem()
+                child = QtWidgets.QTreeWidgetItem(parent=item)
                 child.setIcon(0, icon)
                 child.setText(0, name["value"])
                 child.setData(0, EntityRole, dump.Entity(entity))

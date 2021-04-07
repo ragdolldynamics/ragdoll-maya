@@ -755,15 +755,15 @@ class Loader(object):
         for rigid in self.view("RigidUIComponent"):
             Rigid = self.component(rigid, "RigidComponent")
 
-            if Rigid["parentRigid"]:
-                parents.add(Rigid["parentRigid"])
+            if Rigid.get("parentRigid"):
+                parents.add(Rigid.get("parentRigid"))
 
         rigids = list()
         for rigid in self.view("RigidUIComponent"):
             Rigid = self.component(rigid, "RigidComponent")
 
             # Ignore chains
-            if Rigid["parentRigid"]:
+            if Rigid.get("parentRigid"):
                 continue
 
             # Root of chains don't have a parent,
@@ -850,7 +850,8 @@ class Loader(object):
             Rigid = self.component(entity, "RigidComponent")
             Scene = self.component(entity, "SceneComponent")
 
-            parent = Rigid["parentRigid"] or Scene["entity"]
+            # ParentRigid was added 2021.04.09
+            parent = Rigid.get("parentRigid") or Scene["entity"]
             graph[parent].append(entity)
 
         # Identify chains
@@ -925,8 +926,8 @@ class Loader(object):
         for chain in chains:
             Rigid = self.component(chain["rigids"][0], "RigidComponent")
 
-            if Rigid["parentRigid"]:
-                chain["rigids"].insert(0, Rigid["parentRigid"])
+            if Rigid.get("parentRigid"):
+                chain["rigids"].insert(0, Rigid.get("parentRigid"))
             else:
                 chain["partOfTree"] = False
 
@@ -968,7 +969,7 @@ class Loader(object):
 
                     # It's guaranteed to have the same parent as the
                     # rigid itself; it's what makes it a chain.
-                    if Joint["parent"] != Rigid["parentRigid"]:
+                    if Joint["parent"] != Rigid.get("parentRigid"):
                         continue
 
                     if rigid not in rigid_to_constraints:

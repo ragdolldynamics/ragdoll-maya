@@ -304,7 +304,7 @@ def convert_rigid(rigid, opts=None):
             mod.force_set_attr(rigid["kinematic"], False)
 
             # The user will expect a newly-turned active rigid to collide
-            mod.set_attr(rigid["collide"], True)
+            mod.smart_set_attr(rigid["collide"], True)
 
             _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform)

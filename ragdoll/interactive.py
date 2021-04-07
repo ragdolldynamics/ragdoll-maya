@@ -1033,12 +1033,12 @@ def create_active_rigid(selection=None, **opts):
     if selection[0].isA(cmdx.kShape):
         if selection[0].type() == "rdRigid":
             # The user meant to convert the selection
-            return convert_rigid(selection, opts)
+            return convert_rigid(selection, **opts)
 
     elif selection[0].isA(cmdx.kTransform):
         if selection[0].shape("rdRigid"):
             # The user meant to convert the selection
-            return convert_rigid(selection, opts)
+            return convert_rigid(selection, **opts)
 
     if not _validate_transforms(selection):
         return
@@ -1412,7 +1412,7 @@ def create_constraint(selection=None, **opts):
 
     if selection and selection[0].type() == "rdConstraint":
         # The user meant to convert/restore a constraint
-        return convert_constraint(selection, constraint_type, select)
+        return convert_constraint(selection, **opts)
 
     try:
         parent, child = selection
@@ -1439,19 +1439,19 @@ def create_constraint(selection=None, **opts):
         "standalone": _opt("constraintStandalone", opts),
     }
 
-    if constraint_type == "Point":
+    if constraint_type in ("Point", commands.PointConstraint):
         con = commands.point_constraint(parent, child, opts=opts)
 
-    elif constraint_type == "Orient":
+    elif constraint_type in ("Orient", commands.OrientConstraint):
         con = commands.orient_constraint(parent, child, opts=opts)
 
-    elif constraint_type == "Hinge":
+    elif constraint_type in ("Hinge", commands.HingeConstraint):
         con = commands.hinge_constraint(parent, child, opts=opts)
 
-    elif constraint_type == "Socket":
+    elif constraint_type in ("Socket", commands.SocketConstraint):
         con = commands.socket_constraint(parent, child, opts=opts)
 
-    elif constraint_type == "Parent":
+    elif constraint_type in ("Parent", commands.ParentConstraint):
         con = commands.parent_constraint(parent, child, opts=opts)
 
     else:
@@ -1472,8 +1472,11 @@ def create_constraint(selection=None, **opts):
 
 
 @i__.with_undo_chunk
-def convert_constraint(selection=None, constraint_type=None, select=False):
+def convert_constraint(selection=None, **opts):
     converted = []
+
+    select = _opt("constraintSelect", opts)
+    constraint_type = _opt("constraintType", opts)
 
     if constraint_type is None:
         constraint_type = options.read("convertConstraintType")
@@ -1488,19 +1491,19 @@ def convert_constraint(selection=None, constraint_type=None, select=False):
             log.warning("No constraint found for %s", node)
             continue
 
-        if constraint_type == "Point":
+        if constraint_type in ("Point", commands.PointConstraint):
             converted += [commands.convert_to_point(con)]
 
-        elif constraint_type == "Orient":
+        elif constraint_type in ("Orient", commands.OrientConstraint):
             converted += [commands.convert_to_orient(con)]
 
-        elif constraint_type == "Parent":
+        elif constraint_type in ("Parent", commands.ParentConstraint):
             converted += [commands.convert_to_parent(con)]
 
-        elif constraint_type == "Hinge":
+        elif constraint_type in ("Hinge", commands.HingeConstraint):
             converted += [commands.convert_to_hinge(con)]
 
-        elif constraint_type == "Socket":
+        elif constraint_type in ("Socket", commands.SocketConstraint):
             converted += [commands.convert_to_socket(con)]
 
         else:
@@ -1523,6 +1526,7 @@ def convert_constraint(selection=None, constraint_type=None, select=False):
 @i__.with_undo_chunk
 def convert_rigid(selection=None, **opts):
     converted = []
+    passive = _opt("convertRigidType", opts) == "Passive"
 
     for node in selection or cmdx.selection():
         rigid = node
@@ -1533,7 +1537,7 @@ def convert_rigid(selection=None, **opts):
         if not rigid or rigid.type() != "rdRigid":
             log.warning("Couldn't convert %s" % node)
 
-        if opts.get("passive") is None:
+        if passive is None:
             # Unless specified, invert the current rigid type
             typ = options.read("convertRigidType")
 
@@ -1541,9 +1545,9 @@ def convert_rigid(selection=None, **opts):
                 # Toggle between kinematic and dynamic
                 typ = "Dynamic" if rigid["kinematic"] else "Kinematic"
 
-            opts["passive"] = typ == "Kinematic"
+            passive = typ == "Kinematic"
 
-        commands.convert_rigid(rigid, opts=opts)
+        commands.convert_rigid(rigid, opts={"passive": passive})
         converted.append(rigid)
 
     if not converted:

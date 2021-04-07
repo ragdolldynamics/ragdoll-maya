@@ -1014,14 +1014,24 @@ class Loader(object):
             })
 
         # Sanity checks
+        all_same_scene = True
         for chain in chains:
 
             # Just warn. It'll still work, in fact it will
             # be *repaired* by creating each link using the
             # scene from the first link. It just might not
             # be what the user expects.
-            self._validate_same_scene(chain["rigids"])
-            self._validate_same_scene(chain["constraints"])
+            if not self._validate_same_scene(chain["rigids"]):
+                all_same_scene = False
+
+            if not self._validate_same_scene(chain["constraints"]):
+                all_same_scene = False
+
+        if not all_same_scene:
+            log.warning(
+                "Some entities that should have been "
+                "part of the same scene were not."
+            )
 
         return chains
 
@@ -1764,18 +1774,17 @@ class Loader(object):
         if not same_scene:
             for link in entities:
                 Name = self.component(link, "NameComponent")
-                print(Name["path"])
                 Scene = self.component(link, "SceneComponent")
-                SName = self.component(Scene["entity"], "NameComponent")
-                log.warning(
-                    "%s.scene = %s" % (Name["shortestPath"],
-                                       SName["shortestPath"])
-                )
 
-            log.warning(
-                "Some entities that should have been "
-                "part of the same scene were not."
-            )
+                try:
+                    SName = self.component(Scene["entity"], "NameComponent")
+                except KeyError:
+                    # This would be a bad export, a bug
+                    SName = {"shortestPath": "<None>"}
+
+                # The entity may be invalid altogether, with no path stored
+                path = Name["shortestPath"] or Name["value"]
+                log.warning("%s.scene = %s" % (path, SName["shortestPath"]))
 
         return same_scene
 

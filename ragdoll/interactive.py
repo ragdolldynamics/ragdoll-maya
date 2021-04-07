@@ -84,7 +84,7 @@ _recorded_actions = []
 
 
 def _print_exception():
-    if RAGDOLL_DEVELOPER:
+    if bool(os.getenv("RAGDOLL_DEVELOPER")):
         traceback.print_exc()
 
 
@@ -2122,7 +2122,7 @@ def export_physics(selection=None, **opts):
     )
 
     if not fname:
-        return log.warning("Cancelled")
+        return cmds.warning("Cancelled")
 
     fname = os.path.normpath(fname)
 
@@ -2164,7 +2164,7 @@ def import_physics_from_file(selection=None, **opts):
     )
 
     if not fname:
-        return log.warning("Cancelled")
+        return cmds.warning("Cancelled")
 
     fname = os.path.normpath(fname)
 

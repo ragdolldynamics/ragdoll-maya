@@ -295,6 +295,7 @@
             "importIncludeAnimation",
             "importIncludeSimulation",
             "importAutoNamespace",
+            "importAutoScene",
             "importUseSelection"
         ]
     },

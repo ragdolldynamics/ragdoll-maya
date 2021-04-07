@@ -1821,6 +1821,10 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self.setMinimumWidth(px(200))
         self.setMinimumHeight(px(100))
 
+        # widgets = {
+        #     ""
+        # }
+
         model = qjsonmodel.QJsonModel(editable=False)
 
         view = QtWidgets.QTreeView()
@@ -2204,15 +2208,43 @@ class ImportOptions(Options):
         self._selection_callback = None
         super(ImportOptions, self).closeEvent(event)
 
+    def on_search_and_replace(self):
+        pass
+
     def on_selection_changed(self, _=None):
         parser = self._widgets["Parser"]
         use_selection = parser.find("importUseSelection")
 
         if use_selection.read():
             roots = cmds.ls(selection=True, type="transform", long=True)
-            self._loader.set_roots(roots)
+
+            if roots:
+                self._loader.set_namespace(None)
+                self._loader.set_roots(roots)
+
+            auto_namespace = parser.find("importAutoNamespace")
+            if auto_namespace.read():
+                namespaces = set()
+
+                for root in roots:
+                    namespaces = root.split("|")
+                    namespaces = [node.rsplit(":", 1)[0]
+                                  for node in namespaces]
+                    namespaces = filter(None, namespaces)  # Remove `None`
+                    namespaces = tuple(set(namespaces))  # Remove duplicates
+
+                if len(namespaces) > 1:
+                    log.warning("Selection had multiple namespaces: %s"
+                                % str(namespaces))
+
+                elif len(namespaces) > 0:
+                    target_namespace = tuple(namespaces)[0]
+                    self._loader.set_namespace(target_namespace)
+
         else:
+            self._loader.set_namespace(None)
             self._loader.set_roots([])
+
         self.reset()
 
     def on_browsed(self):

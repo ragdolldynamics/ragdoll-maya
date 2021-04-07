@@ -229,10 +229,11 @@ class Loader(object):
 
     SupportedSchema = "ragdoll-1.0"
 
-    def __init__(self, roots=None, replace=None):
+    def __init__(self, roots=None, replace=None, namespace=None):
         self._dump = {"entities": {}}
         self._roots = roots or []
         self._replace = replace or []
+        self._namespace = namespace or None
 
         # Do we need to re-analyse before use?
         self._up_to_date = False
@@ -322,6 +323,13 @@ class Loader(object):
 
     def set_replace(self, replace):
         self._replace[:] = replace
+        self._up_to_date = False
+
+    def set_namespace(self, namespace):
+        # Support passing namespace with or without suffix ":"
+        namespace = namespace.rstrip(":") + ":"
+
+        self._namespace = namespace
         self._up_to_date = False
 
     def analyse(self):
@@ -679,6 +687,21 @@ class Loader(object):
 
             for search, replace in self._replace:
                 path = path.replace(search, replace)
+
+            if self._namespace:
+                # Find all namespaces for the original node
+                namespaces = path.split("|")
+                namespaces = [node.rsplit(":", 1)[0] for node in namespaces]
+                namespaces = filter(None, namespaces)  # Remove `None`
+                namespaces = tuple(set(namespaces))  # Remove duplicates
+
+                if len(namespaces) > 1:
+                    log.warning("%s had multiple namespaces" % path)
+
+                elif len(namespaces) > 0:
+                    namespace = namespaces[0]
+                    namespace = namespace.rstrip(":") + ":"
+                    path = path.replace(namespace, self._namespace)
 
             # Only filter non-scenes, as we'd like to reuse these
             if self._roots and not self.has(entity, "SolverComponent"):

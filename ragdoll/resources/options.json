@@ -356,10 +356,19 @@
         "help": "Replace namespace from file with selected namespace."
     },
 
+    "importAutoScene": {
+        "name": "importAutoScene",
+        "label": "Auto Scene",
+        "type": "Boolean",
+        "default": true,
+        "help": "Preserve the original scene from the exported .rag file. If not, create a new scene for every import."
+    },
+
     "importSearchAndReplace": {
         "name": "importSearchAndReplace",
         "label": "Search and Replace",
         "type": "String2",
+        "default": ["", ""],
         "placeholder": ["Search", "Replace"],
         "help": "Replace namespace from file with selected namespace."
     },

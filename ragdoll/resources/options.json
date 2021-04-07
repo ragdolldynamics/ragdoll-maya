@@ -348,6 +348,22 @@
         "help": "Import physics from this .rag file."
     },
 
+    "importAutoNamespace": {
+        "name": "importAutoNamespace",
+        "label": "Auto Namespace",
+        "type": "Boolean",
+        "default": true,
+        "help": "Replace namespace from file with selected namespace."
+    },
+
+    "importSearchAndReplace": {
+        "name": "importSearchAndReplace",
+        "label": "Search and Replace",
+        "type": "String2",
+        "placeholder": ["Search", "Replace"],
+        "help": "Replace namespace from file with selected namespace."
+    },
+
     "importMergePhysics": {
         "name": "importMergePhysics",
         "label": "Merge",

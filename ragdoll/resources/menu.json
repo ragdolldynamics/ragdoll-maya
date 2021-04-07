@@ -290,9 +290,11 @@
         "options": [
             "importPath",
             "importMethod",
+            "importSearchAndReplace",
             "importMergePhysics",
             "importIncludeAnimation",
             "importIncludeSimulation",
+            "importAutoNamespace",
             "importUseSelection"
         ]
     },

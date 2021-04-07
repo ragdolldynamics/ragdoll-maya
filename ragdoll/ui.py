@@ -1279,7 +1279,7 @@ class Options(QtWidgets.QMainWindow):
 
         options.write(key, value)
 
-        log.info("Edited %s=%s" % (key, value))
+        log.debug("Edited %s=%s" % (key, value))
 
     def on_help_entered(self):
         self._widgets["Hint"].setText(
@@ -1821,10 +1821,6 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self.setMinimumWidth(px(200))
         self.setMinimumHeight(px(100))
 
-        # widgets = {
-        #     ""
-        # }
-
         model = qjsonmodel.QJsonModel(editable=False)
 
         view = QtWidgets.QTreeView()
@@ -2089,6 +2085,7 @@ class ImportOptions(Options):
         # Map know options to this widget
         parser = self._widgets["Parser"]
         import_path = parser.find("importPath")
+        import_paths = parser.find("importPaths")
         use_selection = parser.find("importUseSelection")
 
         panels = {
@@ -2124,6 +2121,8 @@ class ImportOptions(Options):
         widgets["SourceView"].header().resizeSection(0, px(200))
         widgets["SourceView"].setHeaderHidden(True)
 
+        import_paths.setHeader("File", "Description")
+
         # Layout
 
         layout = QtWidgets.QVBoxLayout(panels["ImportLeft"])
@@ -2147,6 +2146,7 @@ class ImportOptions(Options):
         use_selection.changed.connect(self.on_selection_changed)
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
+        import_paths.doubleClicked.connect(self.on_filename_changed)
 
         widgets["TargetView"].setHeaderHidden(True)
         widgets["TargetView"].currentItemChanged.connect(
@@ -2164,10 +2164,8 @@ class ImportOptions(Options):
         # For uninstall
         __.widgets[self.windowTitle()] = self
 
-        last_path = import_path.read()
-
-        if last_path:
-            self.read(last_path)
+        # Kick things off, a few ms after opening
+        QtCore.QTimer.singleShot(500, self.on_path_changed)
 
     @classmethod
     def import_last_file(cls):
@@ -2248,23 +2246,65 @@ class ImportOptions(Options):
         self.reset()
 
     def on_browsed(self):
-        fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
+        path, suffix = QtWidgets.QFileDialog.getOpenFileName(
             MayaWindow(),
             "Open Ragdoll Scene",
             options.read("lastVisitedPath"),
             "Ragdoll scene files (*.rag)"
         )
 
-        if not fname:
+        if not path:
             return log.warning("Cancelled")
 
-        fname = os.path.normpath(fname)
-        self._widgets["PathField"].setPath(fname)
-        self.on_path_changed()
+        path = os.path.normpath(path)
+        dirname, fname = os.path.split(path)
+        self._widgets["PathField"].setPath(path, notify=True)
 
     def on_path_changed(self):
-        fname = self._widgets["PathField"].path()
-        self.read(fname)
+        import_paths = self.parser.find("importPaths")
+        import_path = self.parser.find("importPath").read()
+
+        # Could be empty
+        if not import_path:
+            return
+
+        dirname, selected_fname = os.path.split(import_path)
+
+        fnames = []
+        try:
+            for fname in os.listdir(dirname):
+                if fname.endswith(".rag"):
+                    fnames += [fname]
+        except Exception:
+            # Whatever is going on, it's not important
+            pass
+
+        icon = _resource("icons", "logo2.png")
+        icon = QtGui.QIcon(icon)
+
+        items = []
+        for fname in fnames:
+            description = "My long description"
+            items += [qargparse.TableItem(**{
+                (0, QtCore.Qt.DecorationRole): icon,
+                (0, QtCore.Qt.DisplayRole): fname,
+                (1, QtCore.Qt.DisplayRole): description,
+            })]
+
+        try:
+            import_paths.reset(items, selected_fname)
+        except ValueError:
+            # selected_fname might not be there
+            pass
+
+        self.read(import_path)
+
+    def on_filename_changed(self, filename):
+        current_path = self.parser.find("importPath")
+        import_path = current_path.read()
+        dirname, _ = os.path.split(import_path)
+        path = os.path.join(dirname, filename)
+        current_path.write(path)
 
     def load(self, data):
         assert isinstance(data, dict), "data must be a dictionary"
@@ -2279,7 +2319,8 @@ class ImportOptions(Options):
     def read(self, fname):
         assert isinstance(fname, i__.string_types), "fname must be string"
 
-        self._widgets["PathField"].setPath(fname)
+        current_path = self.parser.find("importPath")
+        current_path.setPath(fname, notify=False)
 
         try:
             with open(fname) as f:
@@ -2539,12 +2580,22 @@ class ImportOptions(Options):
 
         Name = self._loader.component(entity, "NameComponent")
 
+        try:
+            source = Name["shortestPath"]
+            source_full = Name["path"]
+
+        except KeyError:
+            # Badly formatted dump
+            source = Name["value"]
+            source_full = source
+            log.warning("Badly formatted dump, missing `shortestPath`")
+
         self._widgets["ImportDetails"].reset(
             name=Name["value"],
             icon=_resource("icons", "rigid.png"),
             description="A salty rigid body, straight from the oven",
             target_label=(target, target_full),
-            source_label=(Name["shortestPath"], Name["path"]),
+            source_label=(source, source_full),
         )
 
 

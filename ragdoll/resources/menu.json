@@ -289,8 +289,9 @@
         "description": "Import a previously exported Ragdoll scene from disk.",
         "options": [
             "importPath",
-            "importMethod",
+            "importPaths",
             "importSearchAndReplace",
+            "importMethod",
             "importMergePhysics",
             "importIncludeAnimation",
             "importIncludeSimulation",

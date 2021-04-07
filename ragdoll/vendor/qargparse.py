@@ -41,6 +41,7 @@ try:
     QtCompat.isValid = isValid
     QtCompat.wrapInstance = wrapInstance
     QtCompat.getCppPointer = getCppPointer
+    QtCompat.setSectionResizeMode = QtWidgets.QHeaderView.setSectionResizeMode
 
     try:
         from PySide2 import QtUiTools
@@ -66,6 +67,8 @@ except ImportError:
         QtCompat.isValid = lambda w: not isdeleted(w)
         QtCompat.wrapInstance = wrapinstance
         QtCompat.getCppPointer = unwrapinstance
+        QtCompat.setSectionResizeMode = (
+            QtWidgets.QHeaderView.setSectionResizeMode)
 
         try:
             from PyQt5 import uic
@@ -387,7 +390,11 @@ class QArgumentParser(QtWidgets.QWidget):
         # Align label on top of row if widget is over two times higher
         height = (lambda w: w.sizeHint().height())
         label_on_top = height(label) * 2 < height(widget)
-        alignment = (QtCore.Qt.AlignTop,) if label_on_top else ()
+
+        if label_on_top:
+            alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
+        else:
+            alignment = (QtCore.Qt.AlignRight,)
 
         # Layout
         layout = QtWidgets.QVBoxLayout(reset_container)
@@ -402,9 +409,9 @@ class QArgumentParser(QtWidgets.QWidget):
         # |_________|_________________________|_______|
         #
 
+        # Checkboxes have their own label to the right
         if not isinstance(arg, Boolean):
-            # Checkboxes have their own label to the right
-            layout.addWidget(label, self._row, 0, QtCore.Qt.AlignRight)
+            layout.addWidget(label, self._row, 0, *alignment)
 
         layout.addWidget(widget, self._row, 1)
         layout.addWidget(reset_container, self._row, 2, *alignment)
@@ -985,7 +992,7 @@ class Path(String):
         widget = super(Path, self).create()
 
         browse = _with_entered_exited(QtWidgets.QPushButton, self)("Browse")
-
+        browse.setMaximumHeight(px(19))
         widget.setMinimumWidth(px(50))
 
         container = QtWidgets.QWidget()
@@ -1018,8 +1025,11 @@ class Path(String):
     def path(self):
         return self._widget.text()
 
-    def setPath(self, path):
+    def setPath(self, path, notify=True):
         self._widget.setText(path)
+
+        if notify:
+            self.changed.emit()
 
 
 class Info(String):
@@ -1216,6 +1226,183 @@ class Choice(QArgument):
         reset(self["items"], self["default"])
 
         return widget
+
+
+class ListItem(dict):
+    pass
+
+
+class List(QArgument):
+    def isEdited(self):
+        return False
+
+    def create(self):
+        assert all(isinstance(item, ListItem) for item in self["items"]), (
+            "Items of a List must be of type ListItem"
+        )
+
+        widget = _with_entered_exited(QtWidgets.QListWidget, self)()
+
+        def reset(items, current=0):
+            for item in items:
+                qitem = QtWidgets.QListWidgetItem()
+
+                for role, value in item.items():
+                    qitem.setData(role, value)
+
+                widget.addItem(qitem)
+
+            if items:
+                widget.setCurrentRow(current)
+
+        reset(self["items"])
+
+        def read():
+            item = widget.currentItem()
+            if item is not None:
+                return item.text()
+            return ""
+
+        def write(value):
+            item = widget.currentItem()
+            if item is not None:
+                item.setText(value)
+
+        self._read = read
+        self._write = write
+        self._reset = reset
+
+        return widget
+
+    def reset(self, items, current=0):
+        self["items"][:] = items
+        self._reset(items, current)
+
+
+class TableItem(dict):
+    pass
+
+
+class _TreeWidget(QtWidgets.QTreeWidget):
+    def __init__(self, parent=None):
+        super(_TreeWidget, self).__init__(parent)
+
+        self._current_index = 0
+        self._expanded_items = []
+
+    def store(self):
+        # Preserve currently selected index
+        current_item = self.currentItem()
+        if current_item:
+            while current_item.parent():
+                current_item = current_item.parent()
+
+            self._current_index = self.indexOfTopLevelItem(current_item)
+
+        # Remember which items were expanded
+        self._expanded_items[:] = []
+        for item in range(self.topLevelItemCount()):
+            item = self.topLevelItem(item)
+            self._expanded_items.append(item.isExpanded())
+
+    def restore(self):
+        item = self.topLevelItem(self._current_index)
+        self.setCurrentItem(item)
+        self.scrollToItem(item)
+
+        for index in range(self.topLevelItemCount()):
+            try:
+                expanded = self._expanded_items[index]
+            except IndexError:
+                # It's possible there are less items now
+                continue
+
+            item = self.topLevelItem(index)
+            item.setExpanded(expanded)
+
+
+class Table(QArgument):
+    doubleClicked = QtCore.Signal(str)
+
+    def isEdited(self):
+        return False
+
+    def create(self):
+        assert all(isinstance(item, TableItem) for item in self["items"]), (
+            "Items of a Table must be of type TableItem"
+        )
+
+        widget = _with_entered_exited(QtWidgets.QTreeWidget, self)()
+        widget.setIndentation(0)
+        widget.setHeaderHidden(True)
+
+        def reset(items, current=None):
+            widget.clear()
+
+            columns = set()
+
+            for item in items:
+                qitem = QtWidgets.QTreeWidgetItem()
+
+                for (column, role), value in item.items():
+                    qitem.setData(column, role, value)
+                    columns.add(column)
+
+                widget.addTopLevelItem(qitem)
+
+            if items and isinstance(current, int):
+                item = widget.topLevelItem(current)
+                widget.setCurrentItem(current)
+
+            widget.setColumnCount(len(columns))
+
+            # Establish a sensible default
+            widget.header().resizeSection(0, px(200))
+
+        reset(self["items"])
+
+        def read():
+            item = widget.currentItem()
+            if item is not None:
+                return item.text(0)
+            return ""
+
+        def write(column, value):
+            item = widget.currentItem()
+            if item is not None:
+                item.setText(column, value)
+
+        widget.currentItemChanged.connect(self.onItemChanged)
+        widget.itemDoubleClicked.connect(self.onItemDoubleClicked)
+
+        self._read = read
+        self._write = write
+        self._reset = reset
+        self._widget = widget
+
+        return widget
+
+    def reset(self, items, current=None):
+        self["items"][:] = items
+        self._reset(items, current)
+
+    def setHeader(self, *columns):
+        header = self._widget.headerItem()
+        for index, label in enumerate(columns):
+            header.setText(index, label)
+
+        if columns:
+            self._widget.setHeaderHidden(True)
+        else:
+            self._widget.setHeaderHidden(False)
+
+    def onItemChanged(self, current, previous):
+        self.changed.emit()
+
+    def onItemDoubleClicked(self, item, column):
+        row = self._widget.indexOfTopLevelItem(item)
+        item = self._widget.topLevelItem(row)
+        self.doubleClicked.emit(item.text(0))
 
 
 class Separator(QArgument):

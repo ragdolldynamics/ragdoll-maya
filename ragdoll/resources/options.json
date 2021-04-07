@@ -342,10 +342,19 @@
 
     "importPath": {
         "name": "importPath",
-        "label": "Filename",
+        "label": "Directory",
         "type": "Path",
         "default": "",
         "help": "Import physics from this .rag file."
+    },
+
+    "importPaths": {
+        "name": "importPaths",
+        "label": "Filename",
+        "type": "Table",
+        "items": [],
+        "default": "",
+        "help": "Other .rag files in the same directory."
     },
 
     "importAutoNamespace": {

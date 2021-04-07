@@ -325,9 +325,10 @@ class Loader(object):
         self._replace[:] = replace
         self._up_to_date = False
 
-    def set_namespace(self, namespace):
+    def set_namespace(self, namespace=None):
         # Support passing namespace with or without suffix ":"
-        namespace = namespace.rstrip(":") + ":"
+        if namespace is not None:
+            namespace = namespace.rstrip(":") + ":"
 
         self._namespace = namespace
         self._up_to_date = False
@@ -348,7 +349,10 @@ class Loader(object):
 
         # Remove duplicates
         scenes = list({s["entity"]: s for s in scenes}.values())
-        assert scenes, "No scenes would get made!"  # Could have been filtered
+
+        if not scenes:
+            # No scenes would get made, probably filtered away
+            return self._state.clear()
 
         # What got created on-top of rigids and chains? These are our leftovers
         visited = set()

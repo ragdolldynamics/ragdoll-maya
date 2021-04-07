@@ -1245,7 +1245,7 @@ class List(QArgument):
 
         def reset(items, current=0):
             for item in items:
-                qitem = QtWidgets.QListWidgetItem(parent=widget)
+                qitem = QtWidgets.QListWidgetItem()
 
                 for role, value in item.items():
                     qitem.setData(role, value)
@@ -1294,59 +1294,71 @@ class Table(QArgument):
             "Items of a Table must be of type TableItem"
         )
 
-        widget = _with_entered_exited(QtWidgets.QTreeWidget, self)()
-        widget.setIndentation(0)
-        widget.setHeaderHidden(True)
+        model = GenericTreeModel()
+        view = _with_entered_exited(GenericTreeView, self)()
+        view.setIndentation(0)
+        view.setHeaderHidden(True)
+        view.setModel(model)
 
-        def reset(items, current=None):
-            widget.clear()
-
-            columns = set()
+        def reset(items, header, current=None):
+            root_item = GenericTreeItem({
+                QtCore.Qt.DisplayRole: header,
+            })
 
             for item in items:
-                qitem = QtWidgets.QTreeWidgetItem(parent=widget)
+                child_item = GenericTreeItem(item)
+                root_item.addChild(child_item)
 
-                for (column, role), value in item.items():
-                    qitem.setData(column, role, value)
-                    columns.add(column)
-
-                widget.addTopLevelItem(qitem)
-
-            if items and isinstance(current, int):
-                item = widget.topLevelItem(current)
-                widget.setCurrentItem(current)
-
-            widget.setColumnCount(len(columns))
+            # if items and isinstance(current, int):
+            #     item = widget.topLevelItem(current)
+            #     widget.setCurrentItem(current)
 
             # Establish a sensible default
-            widget.header().resizeSection(0, px(200))
+            model.reset(root_item, current)
+            view.header().resizeSection(0, px(200))
 
-        reset(self["items"])
+        reset(self["items"], ("key", "value"))
 
         def read():
-            item = widget.currentItem()
-            if item is not None:
-                return item.text(0)
-            return ""
+            selection = view.selectionModel().selection()
+            index = selection.indexes()
+
+            if not len(index):
+                return
+
+            index = index[0]
+            if not index.isValid():
+                return
+
+            # Find column 0, in case another column was selected
+            index = model.index(index.row(), 0, index.parent())
+
+            if not index.isValid():
+                return
+
+            return index.data(QtCore.Qt.DisplayRole)
 
         def write(column, value):
-            item = widget.currentItem()
-            if item is not None:
-                item.setText(column, value)
+            return
+            # item = widget.currentItem()
+            # if item is not None:
+            #     item.setText(column, value)
 
-        widget.currentItemChanged.connect(self.onItemChanged)
-        widget.itemDoubleClicked.connect(self.onItemDoubleClicked)
+        selection = view.selectionModel()
+        selection.currentRowChanged.connect(self.onItemChanged)
+        view.doubleClicked.connect(self.onItemDoubleClicked)
 
         self._read = read
         self._write = write
         self._reset = reset
-        self._widget = widget
+        self._widget = view
+        self._model = model
 
-        return widget
+        return view
 
-    def reset(self, items, current=None):
+    def reset(self, items, header, current=None):
         self["items"][:] = items
-        self._reset(items, current)
+        self._reset(items, header, current)
 
     def setHeader(self, *columns):
         header = self._widget.headerItem()
@@ -1361,12 +1373,11 @@ class Table(QArgument):
     def onItemChanged(self, current, previous):
         self.changed.emit()
 
-    def onItemDoubleClicked(self, item, column):
-        row = self._widget.indexOfTopLevelItem(item)
-        item = self._widget.topLevelItem(row)
+    def onItemDoubleClicked(self):
+        text = self.read()
 
         def emit():
-            self.doubleClicked.emit(item.text(0))
+            self.doubleClicked.emit(text)
 
         # Give widget a chance to render
         QtCore.QTimer.singleShot(10, emit)
@@ -1446,7 +1457,7 @@ class _Table(QArgument):
 
     def setHeader(self, *columns):
         for index, label in enumerate(columns):
-            item = QtWidgets.QTableWidgetItem(label, parent=self._widget)
+            item = QtWidgets.QTableWidgetItem(label)
             self._widget.setHorizontalHeaderItem(index, item)
 
     def onItemChanged(self, current, previous):
@@ -1621,6 +1632,151 @@ def camelToTitle(text):
 
 
 camel_to_title = camelToTitle
+
+
+class GenericTreeView(QtWidgets.QTreeView):
+    doubleClicked = QtCore.Signal()
+
+    def mouseDoubleClickEvent(self, event):
+        self.doubleClicked.emit()
+        return super(GenericTreeView, self).mouseDoubleClickEvent(event)
+
+
+class GenericTreeItem(object):
+    def __init__(self, data=None, parent=None):
+        self.data = data or {
+            # Role                 # Columns
+            QtCore.Qt.DisplayRole: ("key", "value")
+        }
+
+        self._children = list()
+        self._parent = parent
+
+    def __hash__(self):
+        return "%x" % id(self)
+
+    def addChild(self, child):
+        child._parent = self
+        self._children.append(child)
+
+    def childCount(self):
+        return len(self._children)
+
+    def child(self, row):
+        return self._children[row]
+
+    def parent(self):
+        return self._parent
+
+    def row(self):
+        if self._parent:
+            return self._parent._children.index(self)
+        else:
+            return 0
+
+    @classmethod
+    def load(self, targets, parent=None):
+        root_item = GenericTreeItem()
+        root_item.key = "root"
+
+        for target in targets:
+            assert isinstance(target, dict), "%s not dict" % target
+            child = GenericTreeItem(target, parent=root_item)
+            root_item.addChild(child)
+
+        return root_item
+
+
+class GenericTreeModel(QtCore.QAbstractItemModel):
+    def __init__(self, parent=None):
+        super(GenericTreeModel, self).__init__(parent)
+
+        self._rootItem = GenericTreeItem()
+        # self._headers = ("key", "value")
+
+    def reset(self, root, current=None):
+        """Set a new root item
+
+        Arguments:
+            targets (list): List of { Role : [Col1, Col2] } pairs
+
+        """
+
+        assert isinstance(root, GenericTreeItem)
+
+        self.beginResetModel()
+        self._rootItem = root
+        self.endResetModel()
+
+        return True
+
+    def data(self, index, role):
+        if not index.isValid():
+            return None
+
+        item = index.internalPointer()
+
+        if role not in item.data:
+            return
+
+        try:
+            columns = item.data[role]
+        except KeyError:
+            pass
+
+        else:
+            try:
+                return columns[index.column()]
+            except IndexError:
+                pass
+
+    def headerData(self, section, orientation, role):
+        if role != QtCore.Qt.DisplayRole:
+            return None
+
+        if orientation == QtCore.Qt.Horizontal:
+            return self._rootItem.data[QtCore.Qt.DisplayRole][section]
+
+    def index(self, row, column, parent=QtCore.QModelIndex()):
+        if not self.hasIndex(row, column, parent):
+            return QtCore.QModelIndex()
+
+        if not parent.isValid():
+            parentItem = self._rootItem
+        else:
+            parentItem = parent.internalPointer()
+
+        childItem = parentItem.child(row)
+        if childItem:
+            return self.createIndex(row, column, childItem)
+        else:
+            return QtCore.QModelIndex()
+
+    def parent(self, index):
+        if not index.isValid():
+            return QtCore.QModelIndex()
+
+        childItem = index.internalPointer()
+        parentItem = childItem.parent()
+
+        if parentItem == self._rootItem:
+            return QtCore.QModelIndex()
+
+        return self.createIndex(parentItem.row(), 0, parentItem)
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        if parent.column() > 0:
+            return 0
+
+        if not parent.isValid():
+            parentItem = self._rootItem
+        else:
+            parentItem = parent.internalPointer()
+
+        return parentItem.childCount()
+
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        return len(self._rootItem.data[QtCore.Qt.DisplayRole])
 
 
 def _demo():

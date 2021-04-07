@@ -1956,6 +1956,8 @@ class ImportDetails(QtWidgets.QWidget):
 
         widgets["TargetIcon"].setIcon(left_icon)
         widgets["SourceIcon"].setIcon(right_icon)
+        widgets["TargetIcon"].setToolTip("Target Path")
+        widgets["SourceIcon"].setToolTip("Source Path")
         widgets["TargetIcon"].clicked.connect(self.on_target_clicked)
         widgets["SourceIcon"].clicked.connect(self.on_source_clicked)
 
@@ -1965,6 +1967,8 @@ class ImportDetails(QtWidgets.QWidget):
 
         widgets["TargetLabel"].setReadOnly(True)
         widgets["SourceLabel"].setReadOnly(True)
+        widgets["TargetLabel"].setToolTip("Target Path")
+        widgets["SourceLabel"].setToolTip("Source Path")
         layout = QtWidgets.QGridLayout(panels["Header"])
         layout.addWidget(widgets["Icon"], 0, 0, 2, 1)
         layout.addWidget(widgets["Title"], 0, 1)
@@ -1973,10 +1977,10 @@ class ImportDetails(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QGridLayout(panels["Body"])
-        layout.addWidget(widgets["TargetIcon"], 0, 0)
-        layout.addWidget(widgets["TargetLabel"], 0, 1)
-        layout.addWidget(widgets["SourceIcon"], 1, 0)
-        layout.addWidget(widgets["SourceLabel"], 1, 1)
+        layout.addWidget(widgets["SourceIcon"], 0, 0)
+        layout.addWidget(widgets["SourceLabel"], 0, 1)
+        layout.addWidget(widgets["TargetIcon"], 1, 0)
+        layout.addWidget(widgets["TargetLabel"], 1, 1)
         layout.setColumnStretch(1, 1)
         layout.setContentsMargins(0, 0, 0, 0)
 

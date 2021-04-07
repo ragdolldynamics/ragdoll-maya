@@ -290,14 +290,14 @@
         "options": [
             "importPath",
             "importPaths",
-            "importSearchAndReplace",
             "importMethod",
             "importMergePhysics",
             "importIncludeAnimation",
             "importIncludeSimulation",
-            "importAutoNamespace",
+            "importUseSelection",
             "importAutoScene",
-            "importUseSelection"
+            "importAutoNamespace",
+            "importSearchAndReplace"
         ]
     },
     "editConstraintFrames": {

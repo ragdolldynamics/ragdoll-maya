@@ -51,6 +51,9 @@ class QJsonTreeItem(object):
         self._type = None
         self._children = list()
 
+    def __hash__(self):
+        return "%x" % id(self)
+
     def appendChild(self, item):
         self._children.append(item)
 
@@ -206,12 +209,13 @@ class QJsonModel(QtCore.QAbstractItemModel):
     def setData(self, index, value, role):
         if role == QtCore.Qt.EditRole:
             if index.column() == 1:
-                item = index.internalPointer()
-                item.value = str(value)
+                if index.isValid():
+                    item = index.internalPointer()
+                    item.value = str(value)
 
-                self.dataChanged.emit(index, index, [QtCore.Qt.EditRole])
+                    self.dataChanged.emit(index, index, [QtCore.Qt.EditRole])
 
-                return True
+                    return True
 
         return False
 

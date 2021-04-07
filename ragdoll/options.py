@@ -46,9 +46,34 @@ def write(arg, value=None):
 
     elif isinstance(value, (tuple, list)):
         # Double3
-        cmds.optionVar(floatValue=(key, value[0]))
-        cmds.optionVar(floatValueAppend=(key, value[1]))
-        cmds.optionVar(floatValueAppend=(key, value[2]))
+        if isinstance(value[0], float):
+
+            # If we don't reset the first value, it'll just keep appending
+            cmds.optionVar(floatValue=(key, value[0]))
+
+            for v in value[1:]:
+                cmds.optionVar(floatValueAppend=(key, v))
+
+        # Int2
+        elif isinstance(value[0], int):
+            cmds.optionVar(intValue=(key, value[0]))
+
+            for v in value[1:]:
+                cmds.optionVar(intValueAppend=(key, v))
+
+        # Bool2
+        elif isinstance(value[0], bool):
+            cmds.optionVar(intValue=(key, value[0]))
+
+            for v in value[1:]:
+                cmds.optionVar(intValueAppend=(key, v))
+
+        # String2
+        elif isinstance(value[0], i__.string_types):
+            cmds.optionVar(stringValue=(key, value[0]))
+
+            for v in value[1:]:
+                cmds.optionVar(stringValueAppend=(key, v))
 
     else:
         raise TypeError(

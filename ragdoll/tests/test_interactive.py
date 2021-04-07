@@ -185,6 +185,43 @@ def test_create_constraint():
     assert_equals(len(cmds.ls(type="rdConstraint")), 5)
 
 
+def test_convert_rigid():
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    sphere1, _ = map(cmdx.encode, cmds.polySphere())
+
+    cube1["translate"] = (1, 2, 0)
+
+    # Use commands, in case the interactive function is failing
+    scene = commands.create_scene()
+    commands.create_rigid(cube1, scene)
+
+    cmds.select(str(cube1))
+    opts = {"passive": True}
+    assert_true(interactive.convert_rigid(**opts))
+
+
+def test_convert_constraint():
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    sphere1, _ = map(cmdx.encode, cmds.polySphere())
+
+    cube1["translate"] = (1, 2, 0)
+    sphere1["translate"] = (1, 4, 0)
+
+    # Use commands, in case the interactive function is failing
+    scene = commands.create_scene()
+    a = commands.create_rigid(cube1, scene)
+    b = commands.create_rigid(sphere1, scene)
+    con = commands.point_constraint(a, b)
+
+    cmds.select(str(con))
+    opts = {"constraintType": commands.PointConstraint}
+    assert_true(interactive.convert_constraint(**opts))
+
+
 def test_create_kinematic_control():
     _new()
 

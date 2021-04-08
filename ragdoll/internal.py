@@ -248,13 +248,6 @@ def with_contract(args=None, kwargs=None, returns=None):
     return with_contract_decorator
 
 
-# @with_contract(args=(cmdx.DagNode, cmdx.DagNode),
-#                kwargs={"opts": dict},
-#                returns=(cmdx.DagNode,))
-# def test(parent, child, opts=None):
-#     pass
-
-
 def with_timing(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

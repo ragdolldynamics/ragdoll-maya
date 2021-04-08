@@ -1277,10 +1277,6 @@ class List(QArgument):
         self._reset(items, current)
 
 
-class TableItem(dict):
-    pass
-
-
 class Table(QArgument):
     doubleClicked = QtCore.Signal()
 
@@ -1288,10 +1284,6 @@ class Table(QArgument):
         return False
 
     def create(self):
-        assert all(isinstance(item, TableItem) for item in self["items"]), (
-            "Items of a Table must be of type TableItem"
-        )
-
         model = GenericTreeModel()
         view = _with_entered_exited(GenericTreeView, self)()
         view.setIndentation(0)
@@ -1303,16 +1295,30 @@ class Table(QArgument):
                 QtCore.Qt.DisplayRole: header or ("",),
             })
 
-            for item in items:
+            current_row = None
+            for row, item in enumerate(items):
                 child_item = GenericTreeModelItem(item)
                 root_item.addChild(child_item)
 
-            # if items and isinstance(current, int):
-            #     item = widget.topLevelItem(current)
-            #     widget.setCurrentItem(current)
+                if current is not None:
+                    other = item.get(QtCore.Qt.DisplayRole, ("",))[0]
+                    if current == other:
+                        current_row = row
 
             # Establish a sensible default
-            model.reset(root_item, current)
+            model.reset(root_item)
+
+            if current_row is not None:
+                index = model.index(current_row, 0)
+
+                if index.isValid():
+                    sel_model = view.selectionModel()
+                    sel_model.select(
+                        index,
+                        selection.ClearAndSelect | selection.Rows
+                    )
+                    view.scrollTo(index)
+
             view.header().resizeSection(0, px(200))
 
         reset(self["items"], ("key", "value"))
@@ -1377,90 +1383,6 @@ class Table(QArgument):
 
         # Give widget a chance to render
         QtCore.QTimer.singleShot(10, emit)
-
-
-class _Table(QArgument):
-    doubleClicked = QtCore.Signal(int, int)
-
-    def isEdited(self):
-        return False
-
-    def create(self):
-        assert all(isinstance(item, TableItem) for item in self["items"]), (
-            "Items of a Table must be of type TableItem"
-        )
-
-        widget = _with_entered_exited(QtWidgets.QTableWidget, self)()
-        widget.setColumnCount(2)
-
-        def reset(items, current=None):
-            widget.clear()
-
-            widget.setRowCount(len(items))
-
-            # columns = set()
-
-            for row, item in enumerate(items):
-
-                for (column, role), value in item.items():
-                    qitem = QtWidgets.QTableWidgetItem()
-                    qitem.setData(role, value)
-                    widget.setItem(row, column, qitem)
-
-            # if items and isinstance(current, int):
-            #     item = widget.topLevelItem(current)
-            #     widget.setCurrentItem(current)
-
-            # widget.setColumnCount(len(columns))
-
-            # Establish a sensible default
-            # widget.header().resizeSection(0, px(200))
-
-        reset(self["items"])
-
-        def read(row=None, column=None):
-            if row is not None and column is not None:
-                item = widget.item(row, column)
-            else:
-                item = widget.currentItem()
-
-            if item is not None:
-                return item.text()
-
-            return ""
-
-        def write(column, value):
-            item = widget.currentItem()
-            if item is not None:
-                item.setText(column, value)
-
-        widget.currentItemChanged.connect(self.onItemChanged)
-        widget.itemDoubleClicked.connect(self.onItemDoubleClicked)
-
-        self._read = read
-        self._write = write
-        self._reset = reset
-        self._widget = widget
-
-        return widget
-
-    def read(self, row=None, column=None):
-        return self._read(row, column)
-
-    def reset(self, items=None, current=None):
-        self["items"][:] = items or []
-        self._reset(items, current)
-
-    def setHeader(self, *columns):
-        for index, label in enumerate(columns):
-            item = QtWidgets.QTableWidgetItem(label)
-            self._widget.setHorizontalHeaderItem(index, item)
-
-    def onItemChanged(self, current, previous):
-        self.changed.emit()
-
-    def onItemDoubleClicked(self, item):
-        self.doubleClicked.emit(item.row(), item.column())
 
 
 class Separator(QArgument):
@@ -1764,7 +1686,7 @@ class GenericTreeModelItem(object):
         return "%x" % id(self)
 
     def data(self, role):
-        return self._data[role]
+        return self._data.get(role)
 
     def hasData(self, role):
         return role in self._data

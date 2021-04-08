@@ -2109,6 +2109,7 @@ class ImportOptions(Options):
         parser = self._widgets["Parser"]
         import_path = parser.find("importPath")
         import_paths = parser.find("importPaths")
+        search_replace = parser.find("importSearchAndReplace")
         use_selection = parser.find("importUseSelection")
 
         panels = {
@@ -2175,6 +2176,7 @@ class ImportOptions(Options):
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
         import_paths.changed.connect(self.on_filename_changed)
+        search_replace.changed.connect(self.on_search_and_replace)
 
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
@@ -2234,7 +2236,8 @@ class ImportOptions(Options):
         super(ImportOptions, self).closeEvent(event)
 
     def on_search_and_replace(self):
-        pass
+        # It'll get fetched during reset
+        self.reset()
 
     def on_selection_changed(self, _=None):
         parser = self._widgets["Parser"]
@@ -2378,6 +2381,10 @@ class ImportOptions(Options):
 
     @i__.with_timing
     def reset(self):
+        search_replace = self.parser.find("importSearchAndReplace")
+        search, replace = search_replace.read()
+        self._loader.set_replace([(search, replace)])
+
         state = self._loader.ls()
         root_item = qargparse.GenericTreeModelItem()
 
@@ -2480,7 +2487,7 @@ class ImportOptions(Options):
 
                 name = self._loader.component(entity, "NameComponent")
                 label = name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "logo2.png")
+                icon = _resource("icons", "scene.png")
                 icon = QtGui.QIcon(icon)
 
                 transform_data = {

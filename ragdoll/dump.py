@@ -350,6 +350,8 @@ class Loader(object):
         self._is_up_to_date = False
 
     def set_replace(self, replace):
+        assert isinstance(replace, (tuple, list))
+        assert all(isinstance(i, tuple) for i in replace)
         self._replace[:] = replace
         self._is_up_to_date = False
 

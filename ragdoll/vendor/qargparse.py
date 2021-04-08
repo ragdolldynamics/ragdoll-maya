@@ -458,7 +458,9 @@ class QArgumentParser(QtWidgets.QWidget):
         arg["edited"] = arg.isEdited()
 
         if arg["edited"]:
-            arg["_widget"].setStyleSheet("font-weight: bold")
+            arg["_widget"].setStyleSheet("""\
+                QLabel, QCheckBox { font-weight: bold }
+            """)
         else:
             arg["_widget"].setStyleSheet(None)
 
@@ -942,6 +944,9 @@ class String(QArgument):
 class String2(String):
     """A pair of 2 strings"""
 
+    def isEdited(self):
+        return any(self.read())
+
     def create(self):
         a = _with_entered_exited(QtWidgets.QLineEdit, self)()
         b = _with_entered_exited(QtWidgets.QLineEdit, self)()
@@ -1267,8 +1272,8 @@ class List(QArgument):
 
         return widget
 
-    def reset(self, items, current=0):
-        self["items"][:] = items
+    def reset(self, items=None, current=0):
+        self["items"][:] = items or []
         self._reset(items, current)
 
 
@@ -1293,9 +1298,9 @@ class Table(QArgument):
         view.setHeaderHidden(True)
         view.setModel(model)
 
-        def reset(items, header, current=None):
+        def reset(items, header=None, current=None):
             root_item = GenericTreeModelItem({
-                QtCore.Qt.DisplayRole: header,
+                QtCore.Qt.DisplayRole: header or ("",),
             })
 
             for item in items:
@@ -1348,8 +1353,8 @@ class Table(QArgument):
 
         return view
 
-    def reset(self, items, header, current=None):
-        self["items"][:] = items
+    def reset(self, items=None, header=None, current=None):
+        self["items"][:] = items or []
         self._reset(items, header, current)
 
     def setHeader(self, *columns):
@@ -1442,8 +1447,8 @@ class _Table(QArgument):
     def read(self, row=None, column=None):
         return self._read(row, column)
 
-    def reset(self, items, current=None):
-        self["items"][:] = items
+    def reset(self, items=None, current=None):
+        self["items"][:] = items or []
         self._reset(items, current)
 
     def setHeader(self, *columns):

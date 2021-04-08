@@ -553,9 +553,11 @@ class QArgument(QtCore.QObject):
     def read(self):
         return self._read()
 
-    def write(self, value):
+    def write(self, value, notify=True):
         self._write(value)
-        self.changed.emit()
+
+        if notify:
+            self.changed.emit()
 
     def reset(self):
         self.write(self["default"])
@@ -992,7 +994,7 @@ class Path(String):
         widget = super(Path, self).create()
 
         browse = _with_entered_exited(QtWidgets.QPushButton, self)("Browse")
-        browse.setMaximumHeight(px(19))
+        browse.setMaximumHeight(px(22))
         widget.setMinimumWidth(px(50))
 
         container = QtWidgets.QWidget()
@@ -1000,13 +1002,13 @@ class Path(String):
         layout = QtWidgets.QHBoxLayout(container)
         layout.addWidget(widget)
         layout.addWidget(browse)
+        layout.setSpacing(px(2))
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._slider = browse
         self._widget = widget
 
         # Synchonise spinbox with browse
-        # widget.editingFinished.connect(self.changed.emit)
         browse.clicked.connect(self.browsed.emit)
 
         self._read = lambda: widget.text()
@@ -1021,15 +1023,6 @@ class Path(String):
             self._write(initial)
 
         return container
-
-    def path(self):
-        return self._widget.text()
-
-    def setPath(self, path, notify=True):
-        self._widget.setText(path)
-
-        if notify:
-            self.changed.emit()
 
 
 class Info(String):
@@ -1284,7 +1277,7 @@ class TableItem(dict):
 
 
 class Table(QArgument):
-    doubleClicked = QtCore.Signal(str)
+    doubleClicked = QtCore.Signal()
 
     def isEdited(self):
         return False
@@ -1301,12 +1294,12 @@ class Table(QArgument):
         view.setModel(model)
 
         def reset(items, header, current=None):
-            root_item = GenericTreeItem({
+            root_item = GenericTreeModelItem({
                 QtCore.Qt.DisplayRole: header,
             })
 
             for item in items:
-                child_item = GenericTreeItem(item)
+                child_item = GenericTreeModelItem(item)
                 root_item.addChild(child_item)
 
             # if items and isinstance(current, int):
@@ -1320,21 +1313,20 @@ class Table(QArgument):
         reset(self["items"], ("key", "value"))
 
         def read():
-            selection = view.selectionModel().selection()
-            index = selection.indexes()
+            index = view.selectionModel().selectedIndexes()
 
             if not len(index):
-                return
+                return ""
 
             index = index[0]
             if not index.isValid():
-                return
+                return ""
 
             # Find column 0, in case another column was selected
             index = model.index(index.row(), 0, index.parent())
 
             if not index.isValid():
-                return
+                return ""
 
             return index.data(QtCore.Qt.DisplayRole)
 
@@ -1345,7 +1337,7 @@ class Table(QArgument):
             #     item.setText(column, value)
 
         selection = view.selectionModel()
-        selection.currentRowChanged.connect(self.onItemChanged)
+        selection.currentChanged.connect(self.onItemChanged)
         view.doubleClicked.connect(self.onItemDoubleClicked)
 
         self._read = read
@@ -1371,13 +1363,12 @@ class Table(QArgument):
             self._widget.setHeaderHidden(False)
 
     def onItemChanged(self, current, previous):
-        self.changed.emit()
+        # Give selection model a chance to update its selection
+        QtCore.QTimer.singleShot(10, self.changed.emit)
 
     def onItemDoubleClicked(self):
-        text = self.read()
-
         def emit():
-            self.doubleClicked.emit(text)
+            self.doubleClicked.emit()
 
         # Give widget a chance to render
         QtCore.QTimer.singleShot(10, emit)
@@ -1642,57 +1633,17 @@ class GenericTreeView(QtWidgets.QTreeView):
         return super(GenericTreeView, self).mouseDoubleClickEvent(event)
 
 
-class GenericTreeItem(object):
-    def __init__(self, data=None, parent=None):
-        self.data = data or {
-            # Role                 # Columns
-            QtCore.Qt.DisplayRole: ("key", "value")
-        }
-
-        self._children = list()
-        self._parent = parent
-
-    def __hash__(self):
-        return "%x" % id(self)
-
-    def addChild(self, child):
-        child._parent = self
-        self._children.append(child)
-
-    def childCount(self):
-        return len(self._children)
-
-    def child(self, row):
-        return self._children[row]
-
-    def parent(self):
-        return self._parent
-
-    def row(self):
-        if self._parent:
-            return self._parent._children.index(self)
-        else:
-            return 0
-
-    @classmethod
-    def load(self, targets, parent=None):
-        root_item = GenericTreeItem()
-        root_item.key = "root"
-
-        for target in targets:
-            assert isinstance(target, dict), "%s not dict" % target
-            child = GenericTreeItem(target, parent=root_item)
-            root_item.addChild(child)
-
-        return root_item
-
-
 class GenericTreeModel(QtCore.QAbstractItemModel):
+    """A tree model able to display any number of roles and columns
+
+    Items are of GenericItemModel type.
+
+    """
+
     def __init__(self, parent=None):
         super(GenericTreeModel, self).__init__(parent)
 
-        self._rootItem = GenericTreeItem()
-        # self._headers = ("key", "value")
+        self._rootItem = GenericTreeModelItem()
 
     def reset(self, root, current=None):
         """Set a new root item
@@ -1702,7 +1653,7 @@ class GenericTreeModel(QtCore.QAbstractItemModel):
 
         """
 
-        assert isinstance(root, GenericTreeItem)
+        assert isinstance(root, GenericTreeModelItem)
 
         self.beginResetModel()
         self._rootItem = root
@@ -1716,26 +1667,25 @@ class GenericTreeModel(QtCore.QAbstractItemModel):
 
         item = index.internalPointer()
 
-        if role not in item.data:
-            return
-
         try:
-            columns = item.data[role]
-        except KeyError:
-            pass
+            column = item.data(role)
 
-        else:
-            try:
-                return columns[index.column()]
-            except IndexError:
-                pass
+            # Passed as either single-value or tuple of columns
+            # (column1, column2, column3, ...)
+            if isinstance(column, (tuple, list)):
+                return column[index.column()]
+            elif index.column() == 0:
+                return column
+
+        except (KeyError, IndexError):
+            pass
 
     def headerData(self, section, orientation, role):
         if role != QtCore.Qt.DisplayRole:
             return None
 
         if orientation == QtCore.Qt.Horizontal:
-            return self._rootItem.data[QtCore.Qt.DisplayRole][section]
+            return self._rootItem.data(QtCore.Qt.DisplayRole)[section]
 
     def index(self, row, column, parent=QtCore.QModelIndex()):
         if not self.hasIndex(row, column, parent):
@@ -1776,7 +1726,62 @@ class GenericTreeModel(QtCore.QAbstractItemModel):
         return parentItem.childCount()
 
     def columnCount(self, parent=QtCore.QModelIndex()):
-        return len(self._rootItem.data[QtCore.Qt.DisplayRole])
+        return len(self._rootItem.data(QtCore.Qt.DisplayRole))
+
+
+class GenericTreeModelItem(object):
+    """An item for the GenericTreeModel
+
+    Items take `data` in the form:
+
+    {
+        role: column0
+    }
+
+    For multiple columns, pass value as tuple.
+
+    {
+        role: (column0, column1, ...)
+    }
+
+    """
+
+    def __init__(self, data=None, parent=None):
+        self._data = data or {
+            # Role                 # Columns
+            QtCore.Qt.DisplayRole: ("key", "value")
+        }
+
+        self._children = list()
+        self._parent = parent
+
+    def __hash__(self):
+        return "%x" % id(self)
+
+    def data(self, role):
+        return self._data[role]
+
+    def hasData(self, role):
+        return role in self._data
+
+    def addChild(self, child):
+        child._parent = self
+        self._children.append(child)
+
+    def childCount(self):
+        return len(self._children)
+
+    def child(self, row):
+        return self._children[row]
+
+    def parent(self):
+        return self._parent
+
+    def row(self):
+        if self._parent:
+            return self._parent._children.index(self)
+        else:
+            return 0
 
 
 def _demo():

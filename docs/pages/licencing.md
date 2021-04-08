@@ -49,6 +49,14 @@ Reach out to us if this is relevant to you. We're contemplating a permanently ac
 
 <br>
 
+#### Can I open scenes made with the trial version in the commercial version?
+
+No.
+
+Files made with the trial version will appear scrambled with a commercial version. The trial version is however able to use files saved with a commercial version.
+
+<br>
+
 #### Can I use my licence on more than one machine?
 
 Yes.

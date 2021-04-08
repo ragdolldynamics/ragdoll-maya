@@ -1,11 +1,12 @@
 from maya import cmds
 from .. import interactive, commands, options
 from ..vendor import cmdx
-from . import _new, _play, _save, _load
+from . import _new, _play
 
 from nose.tools import (
     assert_equals,
     assert_true,
+    assert_almost_equals,
 )
 
 # A simple arm
@@ -220,6 +221,30 @@ def test_convert_constraint():
     cmds.select(str(con))
     opts = {"constraintType": commands.PointConstraint}
     assert_true(interactive.convert_constraint(**opts))
+
+
+def test_transfer_attributes():
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    sphere1, _ = map(cmdx.encode, cmds.polySphere())
+
+    cube1["translate"] = (1, 2, 0)
+    sphere1["translate"] = (1, 4, 0)
+
+    # Use commands, in case the interactive function is failing
+    scene = commands.create_scene()
+    a = commands.create_rigid(cube1, scene)
+    b = commands.create_rigid(sphere1, scene)
+
+    # Transfer this
+    a["shapeRadius"] = 5.6
+
+    assert_equals(b["shapeRadius"].read(), 1.0)
+
+    cmds.select(str(a), str(b))
+    assert_true(interactive.transfer_selected())
+    assert_almost_equals(b["shapeRadius"].read(), 5.6, 3)
 
 
 def test_create_kinematic_control():

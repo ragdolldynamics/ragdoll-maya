@@ -1034,10 +1034,16 @@ def transfer_attributes(a, b, opts=None):
     opts = opts or {}
     opts = dict({"mirror": True}, **opts)
 
-    ra = a.shape(type="rdRigid")
-    rb = b.shape(type="rdRigid")
-    ca = a.shape(type="rdConstraint")
-    cb = b.shape(type="rdConstraint")
+    def translate(node, typ):
+        if node.type() == typ:
+            return node
+        elif node.isA(cmdx.kTransform):
+            return node.shape(type=typ)
+
+    ra = translate(a, "rdRigid")
+    rb = translate(b, "rdRigid")
+    ca = translate(a, "rdConstraint")
+    cb = translate(b, "rdConstraint")
 
     if ra and rb:
         transfer_rigid(ra, rb)
@@ -1068,7 +1074,15 @@ def transfer_rigid(ra, rb):
 
     with cmdx.DagModifier() as mod:
         for attr in rigid_attributes:
-            mod.set_attr(rb[attr], ra[attr])
+
+            # Account for locked attributes
+            try:
+                # Account for user attributes
+                mod.smart_set_attr(rb[attr], ra[attr])
+            except cmdx.LockedError:
+                log.warning(
+                    "%s was locked and wasn't changed" % rb[attr].path()
+                )
 
 
 @i__.with_undo_chunk

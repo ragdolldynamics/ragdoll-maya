@@ -1726,7 +1726,7 @@ def transfer_selected(selection=None):
             "Select source and destination rigids, in that order"
         )
 
-    commands.transfer_attributes(a, b, mirror=True)
+    commands.transfer_attributes(a, b, opts={"mirror": True})
 
     log.info("Transferred attributes from %s -> %s", a, b)
     return kSuccess

@@ -517,7 +517,7 @@ class Loader(object):
                     chains,
                     constraint_multipliers,
                     rigid_multipliers]):
-            log.warning("Dump was empty")
+            log.debug("Dump was empty")
 
     @i__.with_undo_chunk
     def load(self, merge=True):
@@ -786,7 +786,7 @@ class Loader(object):
 
                 # Let them know
                 if len(namespaces) > 1:
-                    log.warning(
+                    log.debug(
                         "%s had multiple namespaces, using first: %s"
                         % (path, ", ".join(namespaces))
                     )
@@ -1385,21 +1385,21 @@ class Loader(object):
 
         if len(new_rigids) != len(chain["rigids"]):
             word = "were" if len(new_rigids) < 2 else "was"
-            log.warning(
+            log.debug(
                 "I expected %d rigids, but %d %s created",
                 len(chain["rigids"]), word, len(new_rigids)
             )
 
         if len(new_constraints) != len(chain["constraints"]):
             word = "were" if len(new_constraints) < 2 else "was"
-            log.warning(
+            log.debug(
                 "I expected %d constraints, but %d %s created",
                 len(chain["constraints"]), word, len(new_constraints)
             )
 
         if len(new_multipliers) != len(chain["constraintMultipliers"]):
             word = "were" if len(new_multipliers) < 2 else "was"
-            log.warning(
+            log.debug(
                 "I expected %d multipliers, but %d %s created",
                 len(chain["constraintMultipliers"]), word, len(new_multipliers)
             )
@@ -1564,7 +1564,7 @@ class Loader(object):
             try:
                 transform = transforms[entity]
             except KeyError:
-                log.warning(
+                log.debug(
                     "Could not find transform for %s" % Name["path"]
                 )
                 continue
@@ -1742,7 +1742,7 @@ class Loader(object):
             mod.try_set_attr(rigid["shapeType"], commands.MeshShape)
 
         else:
-            log.warning(
+            log.debug(
                 "Unsupported shape type: %s.type=%s"
                 % (Name["path"], Desc["type"])
             )
@@ -1882,7 +1882,7 @@ class Loader(object):
 
                 # The entity may be invalid altogether, with no path stored
                 path = Name["shortestPath"] or Name["value"]
-                log.warning("%s.scene = %s" % (path, SName["shortestPath"]))
+                log.debug("%s.scene = %s" % (path, SName["shortestPath"]))
 
         return same_scene
 

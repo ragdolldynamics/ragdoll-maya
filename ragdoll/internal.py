@@ -265,7 +265,7 @@ def with_timing(func):
         finally:
             t1 = time.time()
             duration = t1 - t0
-            log.info("%s in %.2fms" % (func.__name__, duration * 1000))
+            log.debug("%s in %.2fms" % (func.__name__, duration * 1000))
 
     return wrapper
 

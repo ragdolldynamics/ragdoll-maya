@@ -1923,6 +1923,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 EntityRole = QtCore.Qt.UserRole + 0
 TransformRole = QtCore.Qt.UserRole + 1
 OptionsRole = QtCore.Qt.UserRole + 2
+OccupiedRole = QtCore.Qt.UserRole + 3
 
 
 class ImportDetails(QtWidgets.QWidget):
@@ -1985,16 +1986,17 @@ class ImportDetails(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(panels["Header"])
+        # layout.addWidget(panels["Header"])
         layout.addWidget(panels["Body"])
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        self.setStyleSheet(_scaled_stylesheet("""
-            ImportDetails {
-                border: 2px solid #333;
-                margin-bottom: 2px;
-                background: #555;
-            }
-        """))
+        # self.setStyleSheet(_scaled_stylesheet("""
+        #     ImportDetails {
+        #         border: 2px solid #333;
+        #         margin-bottom: 2px;
+        #         background: #555;
+        #     }
+        # """))
 
         self._panels = panels
         self._widgets = widgets
@@ -2011,6 +2013,15 @@ class ImportDetails(QtWidgets.QWidget):
         label = self._state["sourceLabels"][index]
         self._widgets["SourceLabel"].setText(label)
         self._state["sourceLabelIndex"] = index
+
+    def clear(self):
+        self.reset(
+            name="",
+            icon="",
+            description="",
+            target_label=("", ""),
+            source_label=("", "")
+        )
 
     def reset(self,
               name,
@@ -2084,142 +2095,6 @@ Load = "Load"
 Reinterpret = "Reinterpret"
 
 
-class TargetItem(object):
-    def __init__(self, data=None, parent=None):
-        self.data = data or {
-            # Role                 # Columns
-            QtCore.Qt.DisplayRole: ("key", "value")
-        }
-
-        self._children = list()
-        self._parent = parent
-
-    def __hash__(self):
-        return "%x" % id(self)
-
-    def addChild(self, child):
-        child._parent = self
-        self._children.append(child)
-
-    def childCount(self):
-        return len(self._children)
-
-    def child(self, row):
-        return self._children[row]
-
-    def parent(self):
-        return self._parent
-
-    def row(self):
-        if self._parent:
-            return self._parent._children.index(self)
-        else:
-            return 0
-
-    @classmethod
-    def load(self, targets, parent=None):
-        root_item = TargetItem()
-        root_item.key = "root"
-
-        for target in targets:
-            assert isinstance(target, dict), "%s not dict" % target
-            child = TargetItem(target, parent=root_item)
-            root_item.addChild(child)
-
-        return root_item
-
-
-class TargetModel(QtCore.QAbstractItemModel):
-    def __init__(self, parent=None):
-        super(TargetModel, self).__init__(parent)
-
-        self._rootItem = TargetItem()
-
-    def reset(self, root):
-        """Set a new root item
-
-        Arguments:
-            targets (list): List of { Role : [Col1, Col2] } pairs
-
-        """
-
-        assert isinstance(root, TargetItem)
-
-        self.beginResetModel()
-        self._rootItem = root
-        self.endResetModel()
-
-        return True
-
-    def data(self, index, role):
-        if not index.isValid():
-            return None
-
-        item = index.internalPointer()
-
-        if role not in item.data:
-            return
-
-        try:
-            columns = item.data[role]
-        except KeyError:
-            pass
-
-        else:
-            try:
-                return columns[index.column()]
-            except IndexError:
-                pass
-
-    def headerData(self, section, orientation, role):
-        if role != QtCore.Qt.DisplayRole:
-            return None
-
-        if orientation == QtCore.Qt.Horizontal:
-            return self._rootItem.data[QtCore.Qt.DisplayRole][section]
-
-    def index(self, row, column, parent=QtCore.QModelIndex()):
-        if not self.hasIndex(row, column, parent):
-            return QtCore.QModelIndex()
-
-        if not parent.isValid():
-            parentItem = self._rootItem
-        else:
-            parentItem = parent.internalPointer()
-
-        childItem = parentItem.child(row)
-        if childItem:
-            return self.createIndex(row, column, childItem)
-        else:
-            return QtCore.QModelIndex()
-
-    def parent(self, index):
-        if not index.isValid():
-            return QtCore.QModelIndex()
-
-        childItem = index.internalPointer()
-        parentItem = childItem.parent()
-
-        if parentItem == self._rootItem:
-            return QtCore.QModelIndex()
-
-        return self.createIndex(parentItem.row(), 0, parentItem)
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        if parent.column() > 0:
-            return 0
-
-        if not parent.isValid():
-            parentItem = self._rootItem
-        else:
-            parentItem = parent.internalPointer()
-
-        return parentItem.childCount()
-
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        return len(self._rootItem.data[QtCore.Qt.DisplayRole])
-
-
 class ImportOptions(Options):
     instance = None
 
@@ -2254,7 +2129,7 @@ class ImportOptions(Options):
         }
 
         models = {
-            "TargetModel": TargetModel(),
+            "TargetModel": qargparse.GenericTreeModel(),
             "SourceModel": qjsonmodel.QJsonModel(editable=False),
         }
 
@@ -2270,6 +2145,7 @@ class ImportOptions(Options):
         widgets["SourceView"].header().resizeSection(0, px(200))
         widgets["SourceView"].setHeaderHidden(True)
 
+        widgets["TargetView"].expanded.connect(self.on_target_expanded)
         widgets["TargetView"].setModel(models["TargetModel"])
         widgets["TargetView"].setSelectionBehavior(
             QtWidgets.QTreeView.SelectRows)
@@ -2285,7 +2161,6 @@ class ImportOptions(Options):
         layout = QtWidgets.QVBoxLayout(panels["ImportRight"])
         layout.addWidget(widgets["ImportDetails"])
         layout.addWidget(widgets["SourceView"], 1)
-        layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QHBoxLayout(panels["ImportBody"])
@@ -2299,7 +2174,7 @@ class ImportOptions(Options):
         use_selection.changed.connect(self.on_selection_changed)
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
-        import_paths.doubleClicked.connect(self.on_filename_changed)
+        import_paths.changed.connect(self.on_filename_changed)
 
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
@@ -2309,6 +2184,7 @@ class ImportOptions(Options):
         self._models = models
         self._loader = dump.Loader()
         self._selection_callback = None
+        self._previous_dirname = None
 
         ImportOptions.instance = self
 
@@ -2367,9 +2243,8 @@ class ImportOptions(Options):
         if use_selection.read():
             roots = cmds.ls(selection=True, type="transform", long=True)
 
-            if roots:
-                self._loader.set_namespace(None)
-                self._loader.set_roots(roots)
+            self._loader.set_namespace(None)
+            self._loader.set_roots(roots)
 
             auto_namespace = parser.find("importAutoNamespace")
             if auto_namespace.read():
@@ -2409,109 +2284,170 @@ class ImportOptions(Options):
 
         path = os.path.normpath(path)
         dirname, fname = os.path.split(path)
-        self._widgets["PathField"].setPath(path, notify=True)
+
+        # Update directory listing, even if it's unchanged
+        # (in case the contents has actually changed)
+        self._previous_dirname = None
+
+        import_path = self.parser.find("importPath")
+        import_path.write(path)
 
     def on_path_changed(self):
         import_paths = self.parser.find("importPaths")
         import_path = self.parser.find("importPath")
 
-        # # Could be empty
+        # Could be empty
         if not import_path.read():
             return
 
         dirname, selected_fname = os.path.split(import_path.read())
 
-        fnames = []
-        try:
-            for fname in os.listdir(dirname):
-                if fname.endswith(".rag"):
-                    fnames += [fname]
-        except Exception:
-            # Whatever is going on, it's not important
-            pass
-
-        icon = _resource("icons", "logo2.png")
-        icon = QtGui.QIcon(icon)
-
-        items = []
-
-        for fname in fnames:
-            description = ""
-
+        # No need to refresh the directory listing if it's the same directory
+        if self._previous_dirname != dirname:
+            fnames = []
             try:
-                path = os.path.join(dirname, fname)
-                with open(path) as f:
-                    data = json.load(f)
-                description = data.get("info", {}).get("description")
-
+                for fname in os.listdir(dirname):
+                    if fname.endswith(".rag"):
+                        fnames += [fname]
             except Exception:
+                # Whatever is going on, it's not important
                 pass
 
-            item = {
-                QtCore.Qt.DecorationRole: (icon,),
-                QtCore.Qt.DisplayRole: (fname, description),
-            }
+            icon = _resource("icons", "logo2.png")
+            icon = QtGui.QIcon(icon)
 
-            items += [item]
+            items = []
 
-        import_paths.reset(items,
-                           header=("Filename", "Description"),
-                           current=selected_fname)
+            for fname in fnames:
+                description = ""
 
+                try:
+                    path = os.path.join(dirname, fname)
+                    with open(path) as f:
+                        data = json.load(f)
+                    description = data.get("info", {}).get("description")
+
+                except Exception:
+                    pass
+
+                item = {
+                    QtCore.Qt.DecorationRole: icon,
+                    QtCore.Qt.DisplayRole: (fname, description),
+                }
+
+                items += [item]
+
+            import_paths.reset(items,
+                               header=("Filename", "Description"),
+                               current=selected_fname)
+
+        self._previous_dirname = dirname
         self.read(import_path.read())
 
-    def on_filename_changed(self, filename):
+    def on_filename_changed(self):
+        current_paths = self.parser.find("importPaths")
+        filename = current_paths.read()
+
+        # Swap out the filename from the currently loaded path
         current_path = self.parser.find("importPath")
         import_path = current_path.read()
+
         dirname, _ = os.path.split(import_path)
         path = os.path.join(dirname, filename)
+
+        # Make it official
         current_path.write(path)
 
     def load(self, data):
         assert isinstance(data, dict), "data must be a dictionary"
 
-        try:
-            self._loader.read(data)
-        except Exception:
-            pass
+        current_path = self.parser.find("importPath")
+        current_path.write("<raw>", notify=False)
 
+        self._loader.read(data)
         self.on_selection_changed()
 
     def read(self, fname):
         assert isinstance(fname, i__.string_types), "fname must be string"
 
         current_path = self.parser.find("importPath")
-        current_path.setPath(fname, notify=False)
+        current_path.write(fname, notify=False)
 
-        try:
-            with open(fname) as f:
-                data = json.load(f)
-
-        except Exception:
-            return log.warning("Could not read %s" % fname)
-
-        self.load(data)
+        self._loader.read(fname)
+        self.on_selection_changed()
 
     @i__.with_timing
     def reset(self):
         state = self._loader.ls()
-        root_item = TargetItem()
+        root_item = qargparse.GenericTreeModelItem()
+
+        def update_data(data, other):
+            for key, value in other.items():
+                if key in data:
+                    if isinstance(data[key], (tuple, list)):
+                        data[key] = list(data[key])
+                    else:
+                        data[key] = [data[key]]
+
+                    if isinstance(other, (tuple, list)):
+                        data[key].extend(value)
+                    else:
+                        data[key].append(value)
+
+                    data[key] = tuple(data[key])
+
+                else:
+                    data[key] = value
 
         def _transform(entity):
             try:
                 transform = state["transforms"][entity]
                 return {
-                    TransformRole: (transform,),
-                    QtCore.Qt.ToolTipRole: (transform.path(),)
+                    TransformRole: transform,
+                    QtCore.Qt.ToolTipRole: transform.path()
                 }
 
             except KeyError:
                 # Dim any transform that isn't getting imported
                 color = self.palette().color(self.foregroundRole())
                 color.setAlpha(100)
-                return {
-                    QtCore.Qt.ForegroundRole: (color,)
-                }
+
+                alignment = (
+                    QtCore.Qt.AlignLeft,
+                    QtCore.Qt.AlignLeft
+                )
+
+                try:
+                    # Is there a transform, except it's oppupied?
+                    transform = state["occupied"][entity]
+                    icon = _resource("icons", "check.png")
+                    icon = QtGui.QIcon(icon)
+                    tooltip = "Node already has a rigid"
+
+                    return {
+                        TransformRole: transform,
+                        OccupiedRole: True,
+                        # QtCore.Qt.DecorationRole: icon,
+                        QtCore.Qt.DisplayRole: " *",
+                        QtCore.Qt.ForegroundRole: (color, color),
+                        QtCore.Qt.TextAlignmentRole: alignment,
+                        QtCore.Qt.ToolTipRole: (tooltip, tooltip),
+                    }
+
+                except KeyError:
+                    # There simply isn't a transform for this entity
+                    icon = _resource("icons", "questionmark.png")
+                    icon = QtGui.QIcon(icon)
+                    tooltip = "No transform could be found for this rigid"
+
+                    return {
+                        OccupiedRole: False,
+                        # QtCore.Qt.DecorationRole: icon,
+                        QtCore.Qt.DisplayRole: " ?",
+                        QtCore.Qt.ForegroundRole: (color, color),
+                        QtCore.Qt.TextAlignmentRole: alignment,
+                        QtCore.Qt.ToolTipRole: (tooltip, tooltip),
+                    }
 
         def _rigid_icon(entity):
             Desc = self._loader.component(
@@ -2539,7 +2475,36 @@ class ImportOptions(Options):
             }
 
         def _add_scenes():
-            pass
+            for scene in state["scenes"]:
+                entity = scene["entity"]
+
+                name = self._loader.component(entity, "NameComponent")
+                label = name["path"].rsplit("|", 1)[-1]
+                icon = _resource("icons", "logo2.png")
+                icon = QtGui.QIcon(icon)
+
+                transform_data = {
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: scene["options"],
+                }
+
+                update_data(transform_data, _transform(entity))
+
+                entity_data = {
+                    QtCore.Qt.DisplayRole: name["value"],
+                    EntityRole: dump.Entity(entity),
+                }
+
+                update_data(entity_data, _rigid_icon(entity))
+                update_data(entity_data, _transform(entity))
+
+                transform_item = qargparse.GenericTreeModelItem(transform_data)
+                entity_item = qargparse.GenericTreeModelItem(entity_data)
+
+                root_item.addChild(transform_item)
+                transform_item.addChild(entity_item)
 
         def _add_chains():
             for chain in state["chains"]:
@@ -2551,15 +2516,15 @@ class ImportOptions(Options):
                 icon = QtGui.QIcon(icon)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (label,),
-                    QtCore.Qt.DecorationRole: (icon,),
-                    EntityRole: (dump.Entity(entity),),
-                    OptionsRole: (chain["options"],),
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: chain["options"],
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                chain_item = TargetItem(data)
+                chain_item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(chain_item)
 
                 for entity in chain["rigids"]:
@@ -2569,20 +2534,15 @@ class ImportOptions(Options):
                     icon = QtGui.QIcon(icon)
 
                     data = {
-                        QtCore.Qt.DisplayRole: (Name["value"],),
-                        EntityRole: (dump.Entity(entity),),
-                        QtCore.Qt.DecorationRole: (icon,),
+                        QtCore.Qt.DisplayRole: Name["value"],
+                        EntityRole: dump.Entity(entity),
+                        QtCore.Qt.DecorationRole: icon,
                     }
 
-                    data.update(_rigid_icon(entity))
-                    data.update(_transform(entity))
+                    update_data(data, _rigid_icon(entity))
+                    update_data(data, _transform(entity))
 
-                    if TransformRole not in data:
-                        color = self.palette().color(self.foregroundRole())
-                        color.setAlpha(100)
-                        data[QtCore.Qt.ForegroundRole] = (color,)
-
-                    chain_item.addChild(TargetItem(data))
+                    chain_item.addChild(qargparse.GenericTreeModelItem(data))
 
                 for entity in chain["constraints"]:
                     icon = _resource("icons", "constraint.png")
@@ -2592,19 +2552,14 @@ class ImportOptions(Options):
                     label = Name["value"]
 
                     data = {
-                        QtCore.Qt.DisplayRole: (label,),
-                        EntityRole: (dump.Entity(entity),),
-                        QtCore.Qt.DecorationRole: (icon,),
+                        QtCore.Qt.DisplayRole: label,
+                        EntityRole: dump.Entity(entity),
+                        QtCore.Qt.DecorationRole: icon,
                     }
 
-                    data.update(_transform(entity))
+                    update_data(data, _transform(entity))
 
-                    if TransformRole not in data:
-                        color = self.palette().color(self.foregroundRole())
-                        color.setAlpha(100)
-                        data[QtCore.Qt.ForegroundRole] = (color,)
-
-                    chain_item.addChild(TargetItem(data))
+                    chain_item.addChild(qargparse.GenericTreeModelItem(data))
 
         def _add_rigids():
             for rigid in state["rigids"]:
@@ -2616,26 +2571,26 @@ class ImportOptions(Options):
                 icon = QtGui.QIcon(icon)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (label,),
-                    QtCore.Qt.DecorationRole: (icon,),
-                    EntityRole: (dump.Entity(entity),),
-                    OptionsRole: (rigid["options"],),
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: rigid["options"],
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                item = TargetItem(data)
+                item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (name["value"],),
-                    EntityRole: (dump.Entity(entity),),
+                    QtCore.Qt.DisplayRole: name["value"],
+                    EntityRole: dump.Entity(entity),
                 }
 
-                data.update(_rigid_icon(entity))
-                data.update(_transform(entity))
+                update_data(data, _rigid_icon(entity))
+                update_data(data, _transform(entity))
 
-                child = TargetItem(data)
+                child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
         def _add_constraints():
@@ -2648,26 +2603,26 @@ class ImportOptions(Options):
                 icon = QtGui.QIcon(icon)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (label,),
-                    QtCore.Qt.DecorationRole: (icon,),
-                    EntityRole: (dump.Entity(entity),),
-                    OptionsRole: (constraint["options"],),
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: constraint["options"],
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                item = TargetItem(data)
+                item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (name["value"],),
-                    EntityRole: (dump.Entity(entity),),
-                    QtCore.Qt.DecorationRole: (icon,),
+                    QtCore.Qt.DisplayRole: name["value"],
+                    EntityRole: dump.Entity(entity),
+                    QtCore.Qt.DecorationRole: icon,
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                child = TargetItem(data)
+                child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
         def _add_rigid_multipliers():
@@ -2680,26 +2635,26 @@ class ImportOptions(Options):
                 icon = QtGui.QIcon(icon)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (label,),
-                    QtCore.Qt.DecorationRole: (icon,),
-                    EntityRole: (dump.Entity(entity),),
-                    OptionsRole: (mult["options"],),
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: mult["options"],
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                item = TargetItem(data)
+                item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (name["value"],),
-                    EntityRole: (dump.Entity(entity),),
-                    QtCore.Qt.DecorationRole: (icon,),
+                    QtCore.Qt.DisplayRole: name["value"],
+                    EntityRole: dump.Entity(entity),
+                    QtCore.Qt.DecorationRole: icon,
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                child = TargetItem(data)
+                child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
         def _add_constraint_multipliers():
@@ -2712,47 +2667,72 @@ class ImportOptions(Options):
                 icon = QtGui.QIcon(icon)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (label,),
-                    QtCore.Qt.DecorationRole: (icon,),
-                    EntityRole: (dump.Entity(entity),),
-                    OptionsRole: (mult["options"],),
+                    QtCore.Qt.DisplayRole: label,
+                    QtCore.Qt.DecorationRole: icon,
+                    EntityRole: dump.Entity(entity),
+                    OptionsRole: mult["options"],
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                item = TargetItem(data)
+                item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
                 data = {
-                    QtCore.Qt.DisplayRole: (name["value"],),
-                    EntityRole: (dump.Entity(entity),),
-                    QtCore.Qt.DecorationRole: (icon,),
+                    QtCore.Qt.DisplayRole: name["value"],
+                    EntityRole: dump.Entity(entity),
+                    QtCore.Qt.DecorationRole: icon,
                 }
 
-                data.update(_transform(entity))
+                update_data(data, _transform(entity))
 
-                child = TargetItem(data)
+                child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
-        _add_chains()
-        _add_rigids()
-        _add_constraints()
-        _add_rigid_multipliers()
-        _add_constraint_multipliers()
+        if not self._loader.is_valid():
+            icon = _resource("icons", "error.png")
+            icon = QtGui.QIcon(icon)
+            invalid_item = qargparse.GenericTreeModelItem({
+                QtCore.Qt.DisplayRole: "Invalid .rag file",
+                QtCore.Qt.DecorationRole: icon,
+                QtCore.Qt.ForegroundRole: QtGui.QColor("#F66"),
+            })
 
-        self._models["TargetModel"].reset(root_item)
+            root_item.addChild(invalid_item)
+
+            for reason in self._loader.invalid_reasons():
+                log.warning("Failure reason: %s", reason)
+
+        else:
+            _add_chains()
+            _add_rigids()
+            _add_constraints()
+            _add_rigid_multipliers()
+            _add_constraint_multipliers()
+            _add_scenes()
 
         model = self._models["TargetModel"]
-        view = self._widgets["TargetView"]
-        index = model.index(0, 0)
-        header = view.header()
-        header.resizeSection(0, px(200))
-        header.setSectionResizeMode(0, header.ResizeToContents)
-        header.setSectionResizeMode(1, header.Stretch)
+        model.reset(root_item)
 
+        view = self._widgets["TargetView"]
+        header = view.header()
+        header.setSectionResizeMode(0, header.ResizeToContents)
+        # header.setSectionResizeMode(1, header.Stretch)
+
+        index = model.index(0, 0)
         if index.isValid():
             selection = view.selectionModel()
             selection.select(index, selection.ClearAndSelect | selection.Rows)
+            self.on_target_changed(index, None)
+
+        if not self._loader.is_valid():
+            selection.clearSelection()
+
+    def on_target_expanded(self, index):
+        view = self._widgets["TargetView"]
+        header = view.header()
+        header.setSectionResizeMode(0, header.ResizeToContents)
+        # header.setSectionResizeMode(1, header.Stretch)
 
     def on_target_changed(self, item, previous):
         if not item:
@@ -2762,7 +2742,7 @@ class ImportOptions(Options):
         row = item.row()
         item = self._models["TargetModel"].index(row, 0, item.parent())
 
-        entity = item.data(EntityRole)
+        entity = item.data(EntityRole) or 0
         transform = item.data(TransformRole)
 
         try:
@@ -2770,7 +2750,9 @@ class ImportOptions(Options):
         except KeyError:
             # Entity doesn't exist, probably opened a new scene,
             # drawing stale a stale match.
-            return self.reset()
+            self._models["SourceModel"].clear()
+            self._widgets["ImportDetails"].clear()
+            return
 
         # Move members directly under the component
         components = {
@@ -2797,7 +2779,7 @@ class ImportOptions(Options):
             # Badly formatted dump
             source = Name["value"]
             source_full = source
-            log.warning("Badly formatted dump, missing `shortestPath`")
+            log.debug("Badly formatted dump, missing `shortestPath`")
 
         self._widgets["ImportDetails"].reset(
             name=Name["value"],

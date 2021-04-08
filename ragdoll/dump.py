@@ -191,6 +191,69 @@ def _name(Name, level=-1):
     return Name["path"].rsplit("|", 1)[level]
 
 
+def DefaultDump():
+    return {
+        "schema": Loader.SupportedSchema,
+        "entities": {},
+        "info": {}
+    }
+
+
+def DefaultState():
+    return {
+
+        # Map entity -> active Maya transform node
+        "transforms": {},
+
+        # Series of Scenes
+        # {
+        #    "entity": 1,
+        #
+        #    "options": {}
+        # }
+        "scenes": [],
+
+        # Series of Rigids
+        # {
+        #    "entity": 10,
+        #
+        #    "options": {}
+        # }
+        "rigids": [],
+
+        # Series of chains
+        # {
+        #    "rigids": [10, 11, 12, 13],
+        #    "constraints": [14, 15, 16]
+        #    "constraintMultipliers": [17],
+        #
+        #    "options": {},
+        # }
+        "chains": [],
+
+        # Individual constraint
+        # {
+        #    "entity": 18,
+        #    "options": {}
+        # }
+        "constraints": [],
+
+        # Individual constraint multiplier
+        # {
+        #    "entity": 19,
+        #    "options": {}
+        # }
+        "constraintMultipliers": [],
+
+        # Individual rigid multiplier
+        # {
+        #    "entity": 20,
+        #    "options": {}
+        # }
+        "rigidMultipliers": [],
+    }
+
+
 class Loader(object):
     """Reconstruct physics from a Ragdoll dump
 
@@ -230,100 +293,65 @@ class Loader(object):
     SupportedSchema = "ragdoll-1.0"
 
     def __init__(self, roots=None, replace=None, namespace=None):
-        self._dump = {"entities": {}}
+        self._dump = DefaultDump()
         self._roots = roots or []
         self._replace = replace or []
         self._namespace = namespace or None
 
         # Do we need to re-analyse before use?
-        self._up_to_date = False
+        self._is_up_to_date = False
+
+        # Is the data valid, e.g. no null-entities?
+        self._invalid_reasons = []
 
         # Transient data, updated on changes to fname and filtering
-        self._state = {
-
-            # Map entity -> active Maya transform node
-            "transforms": {},
-
-            # Series of Scenes
-            # {
-            #    "entity": 1,
-            #
-            #    "options": {}
-            # }
-            "scenes": [],
-
-            # Series of Rigids
-            # {
-            #    "entity": 10,
-            #
-            #    "options": {}
-            # }
-            "rigids": [],
-
-            # Series of chains
-            # {
-            #    "rigids": [10, 11, 12, 13],
-            #    "constraints": [14, 15, 16]
-            #    "constraintMultipliers": [17],
-            #
-            #    "options": {},
-            # }
-            "chains": [],
-
-            # Individual constraint
-            # {
-            #    "entity": 18,
-            #    "options": {}
-            # }
-            "constraints": [],
-
-            # Individual constraint multiplier
-            # {
-            #    "entity": 19,
-            #    "options": {}
-            # }
-            "constraintMultipliers": [],
-
-            # Individual rigid multiplier
-            # {
-            #    "entity": 20,
-            #    "options": {}
-            # }
-            "rigidMultipliers": [],
-        }
+        self._state = DefaultState()
 
     def read(self, fname):
-        self._dump = {"entities": {}}
+        self._invalid_reasons[:] = []
+
+        dump = DefaultDump()
 
         if isinstance(fname, dict):
+            # Developer-mode, bypass everything and use as-is
             dump = fname
 
         else:
-            with open(fname) as f:
-                dump = json.load(f)
+            try:
+                with open(fname) as f:
+                    dump = json.load(f)
+
+            except Exception as e:
+                error = (
+                    "An exception was thrown when attempting to read %s\n%s"
+                    % (fname, str(e))
+                )
+
+                self._invalid_reasons += [error]
+
+            else:
+                dump["entities"] = {
+
+                    # Original JSON stores keys as strings, but the original
+                    # keys are integers; i.e. entity IDs
+                    Entity(entity): value
+                    for entity, value in dump["entities"].items()
+                }
 
         assert "schema" in dump and dump["schema"] == self.SupportedSchema, (
             "Dump not compatible with this version of Ragdoll"
         )
 
-        dump["entities"] = {
-
-            # Original JSON stores keys as strings, but the original
-            # keys are integers; i.e. entity IDs
-            Entity(entity): value
-            for entity, value in dump["entities"].items()
-        }
-
         self._dump = dump
-        self._up_to_date = False
+        self._is_up_to_date = False
 
     def set_roots(self, roots):
         self._roots[:] = roots
-        self._up_to_date = False
+        self._is_up_to_date = False
 
     def set_replace(self, replace):
         self._replace[:] = replace
-        self._up_to_date = False
+        self._is_up_to_date = False
 
     def set_namespace(self, namespace=None):
         # Support passing namespace with or without suffix ":"
@@ -331,12 +359,18 @@ class Loader(object):
             namespace = namespace.rstrip(":") + ":"
 
         self._namespace = namespace
-        self._up_to_date = False
+        self._is_up_to_date = False
+
+    def is_valid(self):
+        return len(self._invalid_reasons) == 0
+
+    def invalid_reasons(self):
+        return self._invalid_reasons[:]
 
     def analyse(self):
         """Fill internal state from dump with something we can use"""
 
-        transforms = self._find_transforms()
+        transforms, occupied = self._find_transforms()
         chains = self._find_chains()
         rigids = self._find_rigids()
 
@@ -352,7 +386,8 @@ class Loader(object):
 
         if not scenes:
             # No scenes would get made, probably filtered away
-            return self._state.clear()
+            self._state = DefaultState()
+            return
 
         # What got created on-top of rigids and chains? These are our leftovers
         visited = set()
@@ -368,6 +403,7 @@ class Loader(object):
 
         self._state.update({
             "transforms": transforms,
+            "occupied": occupied,
             "scenes": scenes,
             "rigids": rigids,
             "chains": chains,
@@ -375,19 +411,57 @@ class Loader(object):
             "constraintMultipliers": leftovers["constraintMultipliers"],
         })
 
-        self._up_to_date = True
+        self.validate()
 
+        self._is_up_to_date = True
         return self._state
+
+    def validate(self):
+        reasons = []
+
+        for entity in self.view("NameComponent", "SceneComponent"):
+            Scene = self.component(entity, "SceneComponent")
+
+            if Scene["entity"] == 0:
+                Name = self.component(entity, "NameComponent")
+                reasons += [
+                    "%s|%s didn't belong to any scene" % (
+                        Name["path"], Name["value"])
+                ]
+
+        # Sanity checks
+        for chain in self._state["chains"]:
+            all_same_scene = True
+
+            # Just warn. It'll still work, in fact it will
+            # be *repaired* by creating each link using the
+            # scene from the first link. It just might not
+            # be what the user expects.
+            if not self._validate_same_scene(chain["rigids"]):
+                all_same_scene = False
+
+            if not self._validate_same_scene(chain["constraints"]):
+                all_same_scene = False
+
+            if not all_same_scene:
+                entity = chain["rigids"][0]
+                Name = self.component(entity, "NameComponent")
+                reasons += [
+                    "Not all members of chain '%s|%s' were part "
+                    "of the same scene" % (Name["path"], Name["value"])
+                ]
+
+        self._invalid_reasons[:] = reasons
 
     def ls(self):
         """Return current analysis"""
-        if not self._up_to_date:
+        if not self._is_up_to_date:
             self.analyse()
 
         return self._state.copy()
 
     def report(self):
-        if not self._up_to_date:
+        if not self._is_up_to_date:
             self.analyse()
 
         def _name(entity):
@@ -465,11 +539,11 @@ class Loader(object):
 
         """
 
-        if not self._up_to_date:
+        if not self._is_up_to_date:
             self.analyse()
 
         if merge:
-            transforms = self._find_transforms()
+            transforms, occupied = self._find_transforms()
         else:
             transforms = self._make_transforms()
 
@@ -481,7 +555,7 @@ class Loader(object):
         constraints = self._load_constraints(
             scenes, rigids, constraint_multipliers)
 
-        self._up_to_date = False
+        self._is_up_to_date = False
 
         return {
             "transforms": transforms,
@@ -515,12 +589,15 @@ class Loader(object):
         """
 
         # In case the user forgot or didn't know
-        if not self._up_to_date:
+        if not self._is_up_to_date:
             self.analyse()
 
         if dry_run:
             self.report()
             return
+
+        if not self.is_valid():
+            return log.error("Dump not valid")
 
         scenes = self._state["scenes"]
         rigids = self._state["rigids"]
@@ -558,7 +635,7 @@ class Loader(object):
             )
         )
 
-        self._up_to_date = False
+        self._is_up_to_date = False
 
         return {
             "scenes": rdscenes,
@@ -681,6 +758,7 @@ class Loader(object):
     def _find_transforms(self):
         """Find and associate each entity with a Maya transform"""
         transforms = {}
+        occupied = {}
 
         for entity in self.view():
             Name = self.component(entity, "NameComponent")
@@ -694,15 +772,24 @@ class Loader(object):
 
             if self._namespace:
                 # Find all namespaces for the original node
+                # E.g. |myNamespace:root_grp|myNamespace:controls_grp
                 namespaces = path.split("|")
-                namespaces = [node.rsplit(":", 1)[0] for node in namespaces]
+                namespaces = [
+                    node.rsplit(":", 1)[0]
+                    for node in namespaces
+                    if ":" in node
+                ]
                 namespaces = filter(None, namespaces)  # Remove `None`
                 namespaces = tuple(set(namespaces))  # Remove duplicates
 
+                # Let them know
                 if len(namespaces) > 1:
-                    log.warning("%s had multiple namespaces" % path)
+                    log.warning(
+                        "%s had multiple namespaces, using first: %s"
+                        % (path, ", ".join(namespaces))
+                    )
 
-                elif len(namespaces) > 0:
+                if len(namespaces) > 0:
                     namespace = namespaces[0]
                     namespace = namespace.rstrip(":") + ":"
                     path = path.replace(namespace, self._namespace)
@@ -724,11 +811,12 @@ class Loader(object):
             # NOTE: We might want to support import of constraints
             # onto existing rigid bodies.. but let's cross that bridge
             if transform.shape(type="rdRigid"):
-                continue
+                occupied[entity] = transform
 
-            transforms[entity] = transform
+            else:
+                transforms[entity] = transform
 
-        return transforms
+        return transforms, occupied
 
     def _find_scenes(self, rigids):
         """Find and associate each entity with a Maya transform"""
@@ -1040,26 +1128,6 @@ class Loader(object):
                 "drawShaded": RootRigidUi["shaded"],
                 "autoMultiplier": chain["constraintMultipliers"] != [],
             })
-
-        # Sanity checks
-        all_same_scene = True
-        for chain in chains:
-
-            # Just warn. It'll still work, in fact it will
-            # be *repaired* by creating each link using the
-            # scene from the first link. It just might not
-            # be what the user expects.
-            if not self._validate_same_scene(chain["rigids"]):
-                all_same_scene = False
-
-            if not self._validate_same_scene(chain["constraints"]):
-                all_same_scene = False
-
-        if not all_same_scene:
-            log.warning(
-                "Some entities that should have been "
-                "part of the same scene were not."
-            )
 
         return chains
 

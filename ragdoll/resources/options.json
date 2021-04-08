@@ -379,7 +379,7 @@
         "type": "String2",
         "default": ["", ""],
         "placeholder": ["Search", "Replace"],
-        "help": "Replace namespace from file with selected namespace."
+        "help": "Replace part of a full node path, such as a namespace, with another. E.g. replace 'myNamespace:' with 'myOtherNamespace:' to apply contents of one namespace to another."
     },
 
     "importMergePhysics": {

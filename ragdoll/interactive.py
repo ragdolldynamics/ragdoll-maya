@@ -2416,7 +2416,7 @@ def import_physics_options(*args):
     win = None
 
     def import_physics():
-        win.import_file()
+        win.do_import()
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
     win.resize(win.width(), ui.px(750))

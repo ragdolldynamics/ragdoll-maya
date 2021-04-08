@@ -1926,212 +1926,24 @@ OptionsRole = QtCore.Qt.UserRole + 2
 OccupiedRole = QtCore.Qt.UserRole + 3
 
 
-class ImportDetails(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(ImportDetails, self).__init__(parent)
-        self.setAttribute(QtCore.Qt.WA_StyledBackground)
-
-        panels = {
-            "Header": QtWidgets.QWidget(),
-            "Body": QtWidgets.QWidget(),
-        }
-
-        widgets = {
-            "Icon": QtWidgets.QLabel(),
-            "Title": QtWidgets.QLabel("rScene"),
-            "Description": QtWidgets.QLabel(),
-
-            "TargetIcon": QtWidgets.QPushButton(),
-            "SourceIcon": QtWidgets.QPushButton(),
-
-            "TargetLabel": QtWidgets.QLineEdit(),
-            "SourceLabel": QtWidgets.QLineEdit(),
-        }
-
-        font = widgets["Title"].font()
-        font.setWeight(font.Bold)
-        widgets["Title"].setFont(font)
-
-        left_icon = QtGui.QPixmap(_resource("icons", "left.png"))
-        right_icon = QtGui.QPixmap(_resource("icons", "right.png"))
-
-        widgets["TargetIcon"].setIcon(left_icon)
-        widgets["SourceIcon"].setIcon(right_icon)
-        widgets["TargetIcon"].setToolTip("Target Path")
-        widgets["SourceIcon"].setToolTip("Source Path")
-        widgets["TargetIcon"].clicked.connect(self.on_target_clicked)
-        widgets["SourceIcon"].clicked.connect(self.on_source_clicked)
-
-        for w in ("TargetIcon", "SourceIcon"):
-            widgets[w].setFixedSize(px(20), px(20))
-            widgets[w].setIconSize(QtCore.QSize(px(20), px(20)))
-
-        widgets["TargetLabel"].setReadOnly(True)
-        widgets["SourceLabel"].setReadOnly(True)
-        widgets["TargetLabel"].setToolTip("Target Path")
-        widgets["SourceLabel"].setToolTip("Source Path")
-        layout = QtWidgets.QGridLayout(panels["Header"])
-        layout.addWidget(widgets["Icon"], 0, 0, 2, 1)
-        layout.addWidget(widgets["Title"], 0, 1)
-        layout.addWidget(widgets["Description"], 1, 1)
-        layout.setColumnStretch(1, 1)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout = QtWidgets.QGridLayout(panels["Body"])
-        layout.addWidget(widgets["SourceIcon"], 0, 0)
-        layout.addWidget(widgets["SourceLabel"], 0, 1)
-        layout.addWidget(widgets["TargetIcon"], 1, 0)
-        layout.addWidget(widgets["TargetLabel"], 1, 1)
-        layout.setColumnStretch(1, 1)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout = QtWidgets.QVBoxLayout(self)
-        # layout.addWidget(panels["Header"])
-        layout.addWidget(panels["Body"])
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        # self.setStyleSheet(_scaled_stylesheet("""
-        #     ImportDetails {
-        #         border: 2px solid #333;
-        #         margin-bottom: 2px;
-        #         background: #555;
-        #     }
-        # """))
-
-        self._panels = panels
-        self._widgets = widgets
-        self._state = {}
-
-    def on_target_clicked(self):
-        index = 1 - self._state["targetLabelIndex"]
-        label = self._state["targetLabels"][index]
-        self._widgets["TargetLabel"].setText(label)
-        self._state["targetLabelIndex"] = index
-
-    def on_source_clicked(self):
-        index = 1 - self._state["sourceLabelIndex"]
-        label = self._state["sourceLabels"][index]
-        self._widgets["SourceLabel"].setText(label)
-        self._state["sourceLabelIndex"] = index
-
-    def clear(self):
-        self.reset(
-            name="",
-            icon="",
-            description="",
-            target_label=("", ""),
-            source_label=("", "")
-        )
-
-    def reset(self,
-              name,
-              icon,
-              description,
-              target_label,
-              source_label):
-
-        icon = QtGui.QPixmap(icon)
-
-        self._state.update({
-            "targetLabels": target_label,
-            "sourceLabels": source_label,
-            "targetLabelIndex": 0,
-            "sourceLabelIndex": 0,
-        })
-
-        self._widgets["Title"].setText(name)
-        self._widgets["Icon"].setPixmap(icon)
-        self._widgets["Description"].setText(description)
-        self._widgets["TargetLabel"].setText(target_label[0])
-        self._widgets["SourceLabel"].setText(source_label[0])
-
-
-class TreeWidget(QtWidgets.QTreeWidget):
-    def __init__(self, parent=None):
-        super(TreeWidget, self).__init__(parent)
-
-        self._current_index = 0
-        self._expanded_items = []
-
-    def store(self):
-        # See restore()
-        return
-
-        # Preserve currently selected index
-        current_item = self.currentItem()
-        if current_item:
-            while current_item.parent():
-                current_item = current_item.parent()
-
-            self._current_index = self.indexOfTopLevelItem(current_item)
-
-        # Remember which items were expanded
-        self._expanded_items[:] = []
-        for item in range(self.topLevelItemCount()):
-            item = self.topLevelItem(item)
-            self._expanded_items.append(item.isExpanded())
-
-    def restore(self):
-        # This next part easily crashes Maya, for some reason :(
-        # Something is not right with topLevelItem, it seems
-        # to sometime return a nullptr to Python
-        return
-
-        item = self.topLevelItem(self._current_index)
-        self.setCurrentItem(item)
-
-        for index in range(self.topLevelItemCount()):
-            try:
-                expanded = self._expanded_items[index]
-            except IndexError:
-                # It's possible there are less items now
-                continue
-
-            item = self.topLevelItem(index)
-            item.setExpanded(expanded)
-
-
 Load = "Load"
 Reinterpret = "Reinterpret"
 
 
-class ImportOptions(Options):
-    instance = None
-
-    def __init__(self, *args, **kwargs):
-        super(ImportOptions, self).__init__(*args, **kwargs)
-
-        self.setWindowTitle("Import Options")
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setAttribute(QtCore.Qt.WA_StyledBackground)
-
-        # Map know options to this widget
-        parser = self._widgets["Parser"]
-        import_path = parser.find("importPath")
-        import_paths = parser.find("importPaths")
-        search_replace = parser.find("importSearchAndReplace")
-        use_selection = parser.find("importUseSelection")
+class DumpWidget(QtWidgets.QWidget):
+    def __init__(self, loader, parent=None):
+        super(DumpWidget, self).__init__(parent)
 
         panels = {
-            "ImportBody": QtWidgets.QWidget(),
-
-            "ImportLeft": QtWidgets.QWidget(),
-            "ImportRight": QtWidgets.QWidget(),
+            "Body": QtWidgets.QWidget(),
         }
 
         widgets = {
-            "PathField": import_path,
-            "UseSelection": use_selection.widget(),
-
-            "ImportDetails": ImportDetails(),
-
             "TargetView": QtWidgets.QTreeView(),
-            "SourceView": QtWidgets.QTreeView(),
         }
 
         models = {
             "TargetModel": qargparse.GenericTreeModel(),
-            "SourceModel": qjsonmodel.QJsonModel(editable=False),
         }
 
         for name, wid in panels.items():
@@ -2142,251 +1954,48 @@ class ImportOptions(Options):
 
         # Setup
 
-        widgets["SourceView"].setModel(models["SourceModel"])
-        widgets["SourceView"].header().resizeSection(0, px(200))
-        widgets["SourceView"].setHeaderHidden(True)
-
-        widgets["TargetView"].expanded.connect(self.on_target_expanded)
         widgets["TargetView"].setModel(models["TargetModel"])
         widgets["TargetView"].setSelectionBehavior(
             QtWidgets.QTreeView.SelectRows)
-        widgets["SourceView"].header().resizeSection(0, px(200))
-        widgets["TargetView"].setHeaderHidden(True)
 
         # Layout
 
-        layout = QtWidgets.QVBoxLayout(panels["ImportLeft"])
+        layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(widgets["TargetView"])
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout = QtWidgets.QVBoxLayout(panels["ImportRight"])
-        layout.addWidget(widgets["ImportDetails"])
-        layout.addWidget(widgets["SourceView"], 1)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout = QtWidgets.QHBoxLayout(panels["ImportBody"])
-        layout.addWidget(panels["ImportLeft"], 2)
-        layout.addWidget(panels["ImportRight"], 3)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout = self._panels["Central"].layout()
-        layout.insertWidget(1, panels["ImportBody"], 1)
-
-        use_selection.changed.connect(self.on_selection_changed)
-        import_path.changed.connect(self.on_path_changed)
-        import_path.browsed.connect(self.on_browsed)
-        import_paths.changed.connect(self.on_filename_changed)
-        search_replace.changed.connect(self.on_search_and_replace)
-
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
-        self._widgets.update(widgets)
-        self._panels.update(panels)
 
+        self._widgets = widgets
+        self._panels = panels
         self._models = models
-        self._loader = dump.Loader()
-        self._selection_callback = None
-        self._previous_dirname = None
+        self._loader = loader
 
-        ImportOptions.instance = self
+        self.setStyleSheet(_scaled_stylesheet("""
+            QTreeView {
+                outline: none;
+            }
 
-        # For uninstall
-        __.widgets[self.windowTitle()] = self
+            QTreeView::item {
+                border: 0px;
+                padding-left: 0px;
+                padding-right: 10px;
+            }
 
-        # Kick things off, a few ms after opening
-        QtCore.QTimer.singleShot(500, self.on_path_changed)
+            QTreeView::item:selected {
+                background: #5285a6;
+            }
+        """))
 
-    @classmethod
-    def import_last_file(cls):
-        instance = cls.instance
+    def on_target_changed(self, current, previous):
+        pass
 
-        if instance is None:
-            print("Instantiating new instance")
-            instance = ImportOptions()
-
-        cmds.evalDeferred(instance.import_file)
-
-    def import_file(self):
-        if options.read("importMethod") == Load:
-            method = self._loader.load
-        else:
-            method = self._loader.reinterpret
-
-        def do_it():
-            method()
-            self.reset()
-
-        # Allow UI to finish drawing the click of a button
-        QtCore.QTimer.singleShot(5, do_it)
-
-    def showEvent(self, event):
-        # Keep an eye on the current selection
-        self._selection_callback = om.MModelMessage.addCallback(
-            om.MModelMessage.kActiveListModified,
-            self.on_selection_changed
-        )
-
-        super(ImportOptions, self).showEvent(event)
-
-    def closeEvent(self, event):
-        if self._selection_callback is not None:
-            om.MMessage.removeCallback(self._selection_callback)
-
-        self._selection_callback = None
-        super(ImportOptions, self).closeEvent(event)
-
-    def on_search_and_replace(self):
-        # It'll get fetched during reset
-        self.reset()
-
-    def on_selection_changed(self, _=None):
-        parser = self._widgets["Parser"]
-        use_selection = parser.find("importUseSelection")
-
-        if use_selection.read():
-            roots = cmds.ls(selection=True, type="transform", long=True)
-
-            self._loader.set_namespace(None)
-            self._loader.set_roots(roots)
-
-            auto_namespace = parser.find("importAutoNamespace")
-            if auto_namespace.read():
-                namespaces = set()
-
-                for root in roots:
-                    namespaces = root.split("|")
-                    namespaces = [node.rsplit(":", 1)[0]
-                                  for node in namespaces]
-                    namespaces = filter(None, namespaces)  # Remove `None`
-                    namespaces = tuple(set(namespaces))  # Remove duplicates
-
-                if len(namespaces) > 1:
-                    log.warning("Selection had multiple namespaces: %s"
-                                % str(namespaces))
-
-                elif len(namespaces) > 0:
-                    target_namespace = tuple(namespaces)[0]
-                    self._loader.set_namespace(target_namespace)
-
-        else:
-            self._loader.set_namespace(None)
-            self._loader.set_roots([])
-
-        self.reset()
-
-    def on_browsed(self):
-        path, suffix = QtWidgets.QFileDialog.getOpenFileName(
-            MayaWindow(),
-            "Open Ragdoll Scene",
-            options.read("lastVisitedPath"),
-            "Ragdoll scene files (*.rag)"
-        )
-
-        if not path:
-            return log.warning("Cancelled")
-
-        path = os.path.normpath(path)
-        dirname, fname = os.path.split(path)
-
-        # Update directory listing, even if it's unchanged
-        # (in case the contents has actually changed)
-        self._previous_dirname = None
-
-        import_path = self.parser.find("importPath")
-        import_path.write(path)
-
-    def on_path_changed(self):
-        import_paths = self.parser.find("importPaths")
-        import_path = self.parser.find("importPath")
-
-        # Could be empty
-        if not import_path.read():
-            return
-
-        dirname, selected_fname = os.path.split(import_path.read())
-
-        # No need to refresh the directory listing if it's the same directory
-        if self._previous_dirname != dirname:
-            fnames = []
-            try:
-                for fname in os.listdir(dirname):
-                    if fname.endswith(".rag"):
-                        fnames += [fname]
-            except Exception:
-                # Whatever is going on, it's not important
-                pass
-
-            icon = _resource("icons", "logo2.png")
-            icon = QtGui.QIcon(icon)
-
-            items = []
-
-            for fname in fnames:
-                description = ""
-
-                try:
-                    path = os.path.join(dirname, fname)
-                    with open(path) as f:
-                        data = json.load(f)
-                    description = data.get("info", {}).get("description")
-
-                except Exception:
-                    pass
-
-                item = {
-                    QtCore.Qt.DecorationRole: icon,
-                    QtCore.Qt.DisplayRole: (fname, description),
-                }
-
-                items += [item]
-
-            import_paths.reset(items,
-                               header=("Filename", "Description"),
-                               current=selected_fname)
-
-        self._previous_dirname = dirname
-        self.read(import_path.read())
-
-    def on_filename_changed(self):
-        current_paths = self.parser.find("importPaths")
-        filename = current_paths.read()
-
-        # Swap out the filename from the currently loaded path
-        current_path = self.parser.find("importPath")
-        import_path = current_path.read()
-
-        dirname, _ = os.path.split(import_path)
-        path = os.path.join(dirname, filename)
-
-        # Make it official
-        current_path.write(path)
-
-    def load(self, data):
-        assert isinstance(data, dict), "data must be a dictionary"
-
-        current_path = self.parser.find("importPath")
-        current_path.write("<raw>", notify=False)
-
-        self._loader.read(data)
-        self.on_selection_changed()
-
-    def read(self, fname):
-        assert isinstance(fname, i__.string_types), "fname must be string"
-
-        current_path = self.parser.find("importPath")
-        current_path.write(fname, notify=False)
-
-        self._loader.read(fname)
-        self.on_selection_changed()
-
-    @i__.with_timing
     def reset(self):
-        search_replace = self.parser.find("importSearchAndReplace")
-        search, replace = search_replace.read()
-        self._loader.set_replace([(search, replace)])
-
         state = self._loader.ls()
-        root_item = qargparse.GenericTreeModelItem()
+        root_item = qargparse.GenericTreeModelItem({
+            QtCore.Qt.DisplayRole: ("Source", "Target")
+        })
 
         def update_data(data, other):
             for key, value in other.items():
@@ -2407,54 +2016,68 @@ class ImportOptions(Options):
                     data[key] = value
 
         def _transform(entity):
+            Name = self._loader.component(entity, "NameComponent")
+
+            alignment = (
+                QtCore.Qt.AlignLeft,
+                QtCore.Qt.AlignLeft
+            )
+
             try:
                 transform = state["transforms"][entity]
-                return {
-                    TransformRole: transform,
-                    QtCore.Qt.ToolTipRole: transform.path()
-                }
 
             except KeyError:
                 # Dim any transform that isn't getting imported
                 color = self.palette().color(self.foregroundRole())
                 color.setAlpha(100)
 
-                alignment = (
-                    QtCore.Qt.AlignLeft,
-                    QtCore.Qt.AlignLeft
-                )
-
                 try:
                     # Is there a transform, except it's oppupied?
-                    transform = state["occupied"][entity]
-                    icon = _resource("icons", "check.png")
-                    icon = QtGui.QIcon(icon)
-                    tooltip = "Node already has a rigid"
-
-                    return {
-                        TransformRole: transform,
-                        OccupiedRole: True,
-                        # QtCore.Qt.DecorationRole: icon,
-                        QtCore.Qt.DisplayRole: " *",
-                        QtCore.Qt.ForegroundRole: (color, color),
-                        QtCore.Qt.TextAlignmentRole: alignment,
-                        QtCore.Qt.ToolTipRole: (tooltip, tooltip),
-                    }
+                    occupied = state["occupied"][entity]
 
                 except KeyError:
-                    # There simply isn't a transform for this entity
+                    # No, there isn't a transform for this entity
                     icon = _resource("icons", "questionmark.png")
                     icon = QtGui.QIcon(icon)
                     tooltip = "No transform could be found for this rigid"
 
                     return {
                         OccupiedRole: False,
-                        # QtCore.Qt.DecorationRole: icon,
-                        QtCore.Qt.DisplayRole: " ?",
+                        QtCore.Qt.DecorationRole: icon,
                         QtCore.Qt.ForegroundRole: (color, color),
                         QtCore.Qt.TextAlignmentRole: alignment,
-                        QtCore.Qt.ToolTipRole: (tooltip, tooltip),
+                        QtCore.Qt.ToolTipRole: (Name["path"], tooltip),
                     }
+
+                else:
+                    icon = _resource("icons", "check.png")
+                    icon = QtGui.QIcon(icon)
+                    path = occupied.shortestPath()
+
+                    return {
+                        TransformRole: occupied,
+                        OccupiedRole: True,
+                        QtCore.Qt.DisplayRole: path,
+                        QtCore.Qt.DecorationRole: icon,
+                        QtCore.Qt.ForegroundRole: (color, color),
+                        QtCore.Qt.TextAlignmentRole: alignment,
+                        QtCore.Qt.ToolTipRole: (
+                            Name["shortestPath"],
+                            "%s already has a rigid" % path
+                        ),
+                    }
+            else:
+                icon = _resource("icons", "right.png")
+                icon = QtGui.QIcon(icon)
+
+                return {
+                    TransformRole: transform,
+                    QtCore.Qt.DecorationRole: icon,
+                    QtCore.Qt.DisplayRole: transform.shortestPath(),
+                    QtCore.Qt.TextAlignmentRole: alignment,
+                    QtCore.Qt.ToolTipRole: (
+                        Name["path"], transform.path())
+                }
 
         def _rigid_icon(entity):
             Desc = self._loader.component(
@@ -2478,7 +2101,7 @@ class ImportOptions(Options):
             icon = QtGui.QIcon(icon)
 
             return {
-                QtCore.Qt.DecorationRole: (icon,)
+                QtCore.Qt.DecorationRole: icon
             }
 
         def _add_scenes():
@@ -2543,7 +2166,6 @@ class ImportOptions(Options):
                     data = {
                         QtCore.Qt.DisplayRole: Name["value"],
                         EntityRole: dump.Entity(entity),
-                        QtCore.Qt.DecorationRole: icon,
                     }
 
                     update_data(data, _rigid_icon(entity))
@@ -2724,7 +2346,6 @@ class ImportOptions(Options):
         view = self._widgets["TargetView"]
         header = view.header()
         header.setSectionResizeMode(0, header.ResizeToContents)
-        # header.setSectionResizeMode(1, header.Stretch)
 
         index = model.index(0, 0)
         if index.isValid():
@@ -2735,66 +2356,250 @@ class ImportOptions(Options):
         if not self._loader.is_valid():
             selection.clearSelection()
 
-    def on_target_expanded(self, index):
-        view = self._widgets["TargetView"]
-        header = view.header()
-        header.setSectionResizeMode(0, header.ResizeToContents)
-        # header.setSectionResizeMode(1, header.Stretch)
 
-    def on_target_changed(self, item, previous):
-        if not item:
-            # Nothing selected
-            return
+class ImportOptions(Options):
+    instance = None
 
-        row = item.row()
-        item = self._models["TargetModel"].index(row, 0, item.parent())
+    def __init__(self, *args, **kwargs):
+        super(ImportOptions, self).__init__(*args, **kwargs)
+        self.setWindowTitle("Import Options")
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
 
-        entity = item.data(EntityRole) or 0
-        transform = item.data(TransformRole)
+        loader = dump.Loader()
 
-        try:
-            components = self._loader.components(entity)
-        except KeyError:
-            # Entity doesn't exist, probably opened a new scene,
-            # drawing stale a stale match.
-            self._models["SourceModel"].clear()
-            self._widgets["ImportDetails"].clear()
-            return
-
-        # Move members directly under the component
-        components = {
-            k: v["members"]
-            for k, v in components.items()
+        widgets = {
+            "DumpWidget": DumpWidget(loader),
         }
 
-        self._models["SourceModel"].load(components)
+        # Integrate with other options
+        layout = self.parser.layout()
+        row = self.parser._row
+        alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
 
-        if transform:
-            target = transform.shortestPath()
-            target_full = transform.path()
+        layout.addWidget(QtWidgets.QLabel("Preview"), row, 0, *alignment)
+        layout.addWidget(widgets["DumpWidget"], row, 1)
+        layout.setRowStretch(9999, 0)
+        layout.setRowStretch(row, 1)  # Expand to fill width
+
+        self.parser._row += 1  # For the next subclass
+
+        # Map known options to this widget
+        parser = self._widgets["Parser"]
+        import_path = parser.find("importPath")
+        import_paths = parser.find("importPaths")
+        search_replace = parser.find("importSearchAndReplace")
+        use_selection = parser.find("importUseSelection")
+        auto_namespace = self.parser.find("importAutoNamespace")
+
+        import_path.changed.connect(self.on_path_changed)
+        import_path.browsed.connect(self.on_browsed)
+        import_paths.changed.connect(self.on_filename_changed)
+        use_selection.changed.connect(self.on_selection_changed)
+        auto_namespace.changed.connect(self.on_selection_changed)
+        search_replace.changed.connect(self.on_search_and_replace)
+
+        self._loader = loader
+        self._selection_callback = None
+        self._previous_dirname = None
+
+        # Keep superclass informed
+        self._widgets.update(widgets)
+
+        # For uninstall
+        ImportOptions.instance = self
+        __.widgets[self.windowTitle()] = self
+
+        # Kick things off, a few ms after opening
+        QtCore.QTimer.singleShot(200, self.on_path_changed)
+
+    def do_import(self):
+        if options.read("importMethod") == Load:
+            method = self._loader.load
         else:
-            target = ""
-            target_full = ""
+            method = self._loader.reinterpret
 
-        Name = self._loader.component(entity, "NameComponent")
+        def do_it():
+            method()
+            self.reset()
 
-        try:
-            source = Name["shortestPath"]
-            source_full = Name["path"]
+        # Allow UI to finish drawing the click of a button
+        QtCore.QTimer.singleShot(5, do_it)
 
-        except KeyError:
-            # Badly formatted dump
-            source = Name["value"]
-            source_full = source
-            log.debug("Badly formatted dump, missing `shortestPath`")
+    @i__.with_timing
+    def reset(self):
+        search_replace = self.parser.find("importSearchAndReplace")
+        search, replace = search_replace.read()
+        self._loader.set_replace([(search, replace)])
+        self._widgets["DumpWidget"].reset()
 
-        self._widgets["ImportDetails"].reset(
-            name=Name["value"],
-            icon=_resource("icons", "rigid.png"),
-            description="A salty rigid body, straight from the oven",
-            target_label=(target, target_full),
-            source_label=(source, source_full),
+    def load(self, data):
+        assert isinstance(data, dict), "data must be a dictionary"
+
+        current_path = self.parser.find("importPath")
+        current_path.write("<raw>", notify=False)
+
+        self._loader.read(data)
+        self.on_selection_changed()
+
+    def read(self, fname):
+        assert isinstance(fname, i__.string_types), "fname must be string"
+
+        current_path = self.parser.find("importPath")
+        current_path.write(fname, notify=False)
+
+        self._loader.read(fname)
+        self.on_selection_changed()
+
+    def on_selection_changed(self, _=None):
+        use_selection = self.parser.find("importUseSelection")
+        auto_namespace = self.parser.find("importAutoNamespace")
+
+        if use_selection.read():
+            auto_namespace.widget().setEnabled(True)
+
+            roots = cmds.ls(selection=True, type="transform", long=True)
+
+            self._loader.set_namespace(None)
+            self._loader.set_roots(roots)
+
+            auto_namespace = self.parser.find("importAutoNamespace")
+            if auto_namespace.read():
+                namespaces = set()
+
+                for root in roots:
+                    namespaces = root.split("|")
+                    namespaces = [node.rsplit(":", 1)[0]
+                                  for node in namespaces]
+                    namespaces = filter(None, namespaces)  # Remove `None`
+                    namespaces = tuple(set(namespaces))  # Remove duplicates
+
+                if len(namespaces) > 1:
+                    log.warning("Selection had multiple namespaces: %s"
+                                % str(namespaces))
+
+                elif len(namespaces) > 0:
+                    target_namespace = tuple(namespaces)[0]
+                    self._loader.set_namespace(target_namespace)
+
+        else:
+            auto_namespace.widget().setEnabled(False)
+            self._loader.set_namespace(None)
+            self._loader.set_roots([])
+
+        self.reset()
+
+    def on_search_and_replace(self):
+        # It'll get fetched during reset
+        self.reset()
+
+    def on_filename_changed(self):
+        current_paths = self.parser.find("importPaths")
+        filename = current_paths.read()
+
+        # Swap out the filename from the currently loaded path
+        current_path = self.parser.find("importPath")
+        import_path = current_path.read()
+
+        dirname, _ = os.path.split(import_path)
+        path = os.path.join(dirname, filename)
+
+        # Make it official
+        current_path.write(path)
+
+    def on_path_changed(self):
+        import_paths = self.parser.find("importPaths")
+        import_path = self.parser.find("importPath")
+
+        # Could be empty
+        if not import_path.read():
+            return
+
+        dirname, selected_fname = os.path.split(import_path.read())
+
+        # No need to refresh the directory listing if it's the same directory
+        if self._previous_dirname != dirname:
+            fnames = []
+            try:
+                for fname in os.listdir(dirname):
+                    if fname.endswith(".rag"):
+                        fnames += [fname]
+            except Exception:
+                # Whatever is going on, it's not important
+                pass
+
+            icon = _resource("icons", "logo2.png")
+            icon = QtGui.QIcon(icon)
+
+            items = []
+
+            for fname in fnames:
+                description = ""
+
+                try:
+                    path = os.path.join(dirname, fname)
+                    with open(path) as f:
+                        data = json.load(f)
+                    description = data.get("info", {}).get("description")
+
+                except Exception:
+                    pass
+
+                item = {
+                    QtCore.Qt.DecorationRole: icon,
+                    QtCore.Qt.DisplayRole: (fname, description),
+                }
+
+                items += [item]
+
+            import_paths.reset(items,
+                               header=("Filename", "Description"),
+                               current=selected_fname)
+
+        self._previous_dirname = dirname
+
+        def read():
+            self.read(import_path.read())
+
+        # Give UI a chance to keep up
+        QtCore.QTimer.singleShot(200, read)
+
+    def on_browsed(self):
+        path, suffix = QtWidgets.QFileDialog.getOpenFileName(
+            MayaWindow(),
+            "Open Ragdoll Scene",
+            options.read("lastVisitedPath"),
+            "Ragdoll scene files (*.rag)"
         )
+
+        if not path:
+            return log.warning("Cancelled")
+
+        path = os.path.normpath(path)
+        dirname, fname = os.path.split(path)
+
+        # Update directory listing, even if it's unchanged
+        # (in case the contents has actually changed)
+        self._previous_dirname = None
+
+        import_path = self.parser.find("importPath")
+        import_path.write(path)
+
+    def showEvent(self, event):
+        # Keep an eye on the current selection
+        self._selection_callback = om.MModelMessage.addCallback(
+            om.MModelMessage.kActiveListModified,
+            self.on_selection_changed
+        )
+
+        super(ImportOptions, self).showEvent(event)
+
+    def closeEvent(self, event):
+        if self._selection_callback is not None:
+            om.MMessage.removeCallback(self._selection_callback)
+
+        self._selection_callback = None
+        super(ImportOptions, self).closeEvent(event)
 
 
 def view_to_pixmap(size=None):
@@ -2807,11 +2612,13 @@ def view_to_pixmap(size=None):
     # Translate from Maya -> Qt jargon
     image.verticalFlip()
 
+    # Abracadabra!
     osize = size or QtCore.QSize(512, 256)
     isize = image.getSize()
     buf = ctypes.c_ubyte * isize[0] * isize[1]
     buf = buf.from_address(i__.long(image.pixels()))
 
+    # Vimsalabim!
     qimage = QtGui.QImage(
         buf, isize[0], isize[1], QtGui.QImage.Format_RGB32
     ).rgbSwapped()

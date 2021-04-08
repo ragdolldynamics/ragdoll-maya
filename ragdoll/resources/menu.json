@@ -415,5 +415,28 @@
     "ragdoll": {
         "icon": "logo.png",
         "summary": "View your version, and eventually look for updates and tutorials. Not yet though."
+    },
+
+
+    "#": "---------",
+    "#": " Logging ",
+    "#": "---------",
+
+
+    "loggingDebug": {
+        "label": "More",
+        "summary": "Print all messages you can think of."
+    },
+    "loggingInfo": {
+        "label": "Default",
+        "summary": "Print only messages that may be interesting, but probably aren't."
+    },
+    "loggingWarning": {
+        "label": "Less",
+        "summary": "Don't print anything unless it's something I need to pay attention to."
+    },
+    "loggingOff": {
+        "label": "Off",
+        "summary": "Stay quiet."
     }
 }

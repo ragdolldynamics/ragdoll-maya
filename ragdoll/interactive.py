@@ -568,6 +568,12 @@ def install_menu():
         item("savePreferences", save_preferences)
         item("resetPreferences", reset_preferences)
 
+        with submenu("Logging Level", icon="logging.png"):
+            item("loggingOff", logging_off)
+            item("loggingInfo", logging_info)
+            item("loggingWarning", logging_warning)
+            item("loggingDebug", logging_debug)
+
     with submenu("Select", icon="select.png"):
         item("selectRigids", select_rigids, select_rigids_options)
         item("selectConstraints",
@@ -579,6 +585,25 @@ def install_menu():
     divider()
 
     item("ragdoll", welcome_user, label="Ragdoll %s" % __.version_str)
+
+
+def logging_debug():
+    log.setLevel(logging.DEBUG)
+    log.debug("Debug level set")
+
+
+def logging_info():
+    log.setLevel(logging.INFO)
+    log.info("Info level set")
+
+
+def logging_warning():
+    log.setLevel(logging.WARNING)
+    log.info("Warning level set")
+
+
+def logging_off():
+    log.setLevel(logging.CRITICAL)
 
 
 def uninstall_menu():

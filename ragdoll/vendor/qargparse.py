@@ -1247,6 +1247,12 @@ class List(QArgument):
 
         widget = _with_entered_exited(QtWidgets.QListWidget, self)()
 
+        # Containerise to allow for internal changes by the user
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.addWidget(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         def reset(items, current=0):
             for item in items:
                 qitem = QtWidgets.QListWidgetItem()
@@ -1276,7 +1282,7 @@ class List(QArgument):
         self._write = write
         self._reset = reset
 
-        return widget
+        return container
 
     def reset(self, items=None, current=0):
         self["items"][:] = items or []
@@ -1307,7 +1313,11 @@ class Table(QArgument):
                 root_item.addChild(child_item)
 
                 if current is not None:
-                    other = item.get(QtCore.Qt.DisplayRole, ("",))[0]
+                    other = item.get(QtCore.Qt.DisplayRole, "")
+
+                    if isinstance(other, (tuple, list)):
+                        other = other[0]
+
                     if current == other:
                         current_row = row
 
@@ -1326,6 +1336,8 @@ class Table(QArgument):
                     view.scrollTo(index)
 
             view.header().resizeSection(0, px(200))
+
+            self.changed.emit()
 
         reset(self["items"], ("key", "value"))
 
@@ -1357,15 +1369,22 @@ class Table(QArgument):
         selection.currentChanged.connect(self.onItemChanged)
         view.doubleClicked.connect(self.onItemDoubleClicked)
 
+        # Containerise to allow for internal changes by the user
+        container = QtWidgets.QWidget()
+        container.setObjectName("Container")
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.addWidget(view, 1)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         self._read = read
         self._write = write
         self._reset = reset
-        self._widget = view
         self._model = model
 
-        return view
+        return container
 
     def reset(self, items=None, header=None, current=None):
+        print("Resetting with %s as current selection" % current)
         self["items"][:] = items or []
         self._reset(items, header, current)
 

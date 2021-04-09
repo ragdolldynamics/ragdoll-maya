@@ -459,7 +459,13 @@ class QArgumentParser(QtWidgets.QWidget):
 
         if arg["edited"]:
             arg["_widget"].setStyleSheet("""\
-                QLabel, QCheckBox { font-weight: bold }
+                QLabel,
+                QCheckBox,
+                QComboBox,
+                QDoubleSpinBox,
+                QSpinBox {
+                    font-weight: bold
+                }
             """)
         else:
             arg["_widget"].setStyleSheet(None)
@@ -1550,6 +1556,10 @@ def camelToTitle(text):
 
 
 camel_to_title = camelToTitle
+
+
+# Utility classes to avoid having to deal with QTreeWidget
+# which is buggy as heck.
 
 
 class GenericTreeView(QtWidgets.QTreeView):

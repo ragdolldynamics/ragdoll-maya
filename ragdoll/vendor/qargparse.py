@@ -1335,13 +1335,11 @@ class Table(QArgument):
                     )
                     view.scrollTo(index)
 
-            view.header().resizeSection(0, px(200))
-
             self.changed.emit()
 
         reset(self["items"], ("key", "value"))
 
-        def read():
+        def read(role=QtCore.Qt.DisplayRole):
             index = view.selectionModel().selectedIndexes()
 
             if not len(index):
@@ -1357,7 +1355,7 @@ class Table(QArgument):
             if not index.isValid():
                 return ""
 
-            return index.data(QtCore.Qt.DisplayRole)
+            return index.data(role)
 
         def write(column, value):
             return
@@ -1382,6 +1380,9 @@ class Table(QArgument):
         self._model = model
 
         return container
+
+    def read(self, role=QtCore.Qt.DisplayRole):
+        return self._read(role)
 
     def reset(self, items=None, header=None, current=None):
         print("Resetting with %s as current selection" % current)

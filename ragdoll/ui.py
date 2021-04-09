@@ -471,10 +471,6 @@ class Player(QtWidgets.QWidget):
         self._panels["overlay"].show()
 
 
-class Thumbnail(QtWidgets.QPushButton):
-    def __init__(self, pixmap, parent=None):
-        super(Thumbnail, self).__init__(parent)
-
 
 class DirectJumpSlider(QtWidgets.QSlider):
     """Slider with support for clicking anywhere to scrubbing
@@ -2182,7 +2178,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name["shortestPath"]]
+                                                Name.get("shortestPath", "")]
                 data[EntityRole] = dump.Entity(entity)
 
                 _rigid_icon(data, entity)
@@ -2223,8 +2219,9 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
 
                     data = _default_data()
-                    data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                    Name["shortestPath"]]
+                    data[QtCore.Qt.DisplayRole] += [
+                        Name["value"], Name.get("shortestPath", "")
+                    ]
                     data[EntityRole] = dump.Entity(entity)
 
                     _rigid_icon(data, entity)
@@ -2239,8 +2236,9 @@ class DumpWidget(QtWidgets.QWidget):
                     Name = self._loader.component(entity, "NameComponent")
 
                     data = _default_data()
-                    data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                    Name["shortestPath"]]
+                    data[QtCore.Qt.DisplayRole] += [
+                        Name["value"], Name.get("shortestPath", "")
+                    ]
                     data[QtCore.Qt.DecorationRole] += [icon]
 
                     data[EntityRole] = dump.Entity(entity)
@@ -2273,7 +2271,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name["shortestPath"]]
+                                                Name.get("shortestPath", "")]
                 data[QtCore.Qt.DecorationRole] += []
                 data[EntityRole] = dump.Entity(entity)
 
@@ -2306,7 +2304,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name["shortestPath"]]
+                                                Name.get("shortestPath", "")]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2338,7 +2336,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name["shortestPath"]]
+                                                Name.get("shortestPath", "")]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2370,7 +2368,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name["shortestPath"]]
+                                                Name.get("shortestPath", "")]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2423,6 +2421,7 @@ class ImportOptions(Options):
 
         widgets = {
             "DumpWidget": DumpWidget(loader),
+            "Thumbnail": QtWidgets.QLabel(),
         }
 
         # Integrate with other options
@@ -2452,11 +2451,29 @@ class ImportOptions(Options):
         auto_namespace.changed.connect(self.on_selection_changed)
         search_replace.changed.connect(self.on_search_and_replace)
 
+        default_thumbnail = _resource("icons", "no_thumbnail.png")
+        default_thumbnail = QtGui.QPixmap(default_thumbnail)
+
+        qimport_paths = import_paths.widget()
+        layout = qimport_paths.layout()
+        layout.addWidget(widgets["Thumbnail"], 1, QtCore.Qt.AlignCenter)
+        widgets["Thumbnail"].setAlignment(QtCore.Qt.AlignCenter)
+        widgets["Thumbnail"].setFixedWidth(px(200))
+        widgets["Thumbnail"].setFixedHeight(256)
+        widgets["Thumbnail"].setPixmap(default_thumbnail)
+        widgets["Thumbnail"].setStyleSheet("""
+            QLabel {
+                border: 1px solid #555;
+                background: #222;
+            }
+        """)
+
         widgets["DumpWidget"].hinted.connect(self.on_hinted)
 
         self._loader = loader
         self._selection_callback = None
         self._previous_dirname = None
+        self._default_thumbnail = default_thumbnail
 
         # Keep superclass informed
         self._widgets.update(widgets)
@@ -2560,20 +2577,6 @@ class ImportOptions(Options):
         # It'll get fetched during reset
         self.reset()
 
-    def on_filename_changed(self):
-        current_paths = self.parser.find("importPaths")
-        filename = current_paths.read()
-
-        # Swap out the filename from the currently loaded path
-        current_path = self.parser.find("importPath")
-        import_path = current_path.read()
-
-        dirname, _ = os.path.split(import_path)
-        path = os.path.join(dirname, filename)
-
-        # Make it official
-        current_path.write(path)
-
     def on_path_changed(self):
         SUFFIX = ".rag"
 
@@ -2584,17 +2587,20 @@ class ImportOptions(Options):
         if not import_path.read():
             return
 
-        dirname, selected_fname = os.path.split(import_path.read())
+        import_path_str = import_path.read()
+        dirname, selected_fname = os.path.split(import_path_str)
 
         # No need to refresh the directory listing if it's the same directory
         if self._previous_dirname != dirname:
+            self._previous_dirname = dirname
+
             fnames = []
             try:
                 for fname in os.listdir(dirname):
                     if fname.endswith(SUFFIX):
                         fnames += [fname]
             except Exception:
-                # Whatever is going on, it's not important
+                # Whatever is going on, the user can't do anything about it
                 pass
 
             # TODO: Expose choice of icon to the user during export
@@ -2604,35 +2610,67 @@ class ImportOptions(Options):
             items = []
             fnames = i__.sort_filenames(fnames)
             for fname in fnames:
-                description = ""
-
-                try:
-                    path = os.path.join(dirname, fname)
-                    with open(path) as f:
-                        data = json.load(f)
-                    description = data.get("info", {}).get("description")
-
-                except Exception:
-                    pass
-
                 item = {
                     QtCore.Qt.DecorationRole: icon,
-                    QtCore.Qt.DisplayRole: (fname, description),
+                    QtCore.Qt.DisplayRole: fname,
                 }
 
                 items += [item]
 
+            # A folder path was given, no filename
+            if not selected_fname:
+
+                # The folder may be empty
+                if fnames:
+                    selected_fname = fnames[0]
+
             import_paths.reset(items,
-                               header=("Filename", "Description"),
+                               header=("Filename",),
                                current=selected_fname)
 
-        self._previous_dirname = dirname
-
         def read():
-            self.read(import_path.read())
+            self.read(import_path_str)
 
         # Give UI a chance to keep up
         QtCore.QTimer.singleShot(200, read)
+
+    def on_filename_changed(self):
+        current_paths = self.parser.find("importPaths")
+        filename = current_paths.read()
+
+        # Swap out the filename from the currently loaded path
+        current_path = self.parser.find("importPath")
+        original_path = current_path.read()
+
+        dirname, _ = os.path.split(original_path)
+        path = os.path.join(dirname, filename)
+
+        # Clear any current thumbnail
+        qthumbnail = self._default_thumbnail
+
+        # Fetch metadata, like description and thumbnail
+        try:
+            with open(path) as f:
+                data = json.load(f)
+
+        except Exception:
+            pass
+
+        else:
+            ui = data.get("ui", {})
+            thumbnail = ui.get("thumbnail")
+
+            if thumbnail:
+                # From JSON's unicode
+                thumbnail = thumbnail.encode("ascii")
+
+                # To QPixmap
+                qthumbnail = base64_to_pixmap(thumbnail)
+
+        self._widgets["Thumbnail"].setPixmap(qthumbnail)
+
+        # Make it official
+        current_path.write(path, notify=False)
 
     def on_browsed(self):
         path, suffix = QtWidgets.QFileDialog.getOpenFileName(

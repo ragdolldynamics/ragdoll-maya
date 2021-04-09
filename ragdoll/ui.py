@@ -1924,13 +1924,28 @@ EntityRole = QtCore.Qt.UserRole + 0
 TransformRole = QtCore.Qt.UserRole + 1
 OptionsRole = QtCore.Qt.UserRole + 2
 OccupiedRole = QtCore.Qt.UserRole + 3
+HintRole = QtCore.Qt.UserRole + 4
 
 
 Load = "Load"
 Reinterpret = "Reinterpret"
 
 
+class DumpView(QtWidgets.QTreeView):
+    mouseMoved = QtCore.Signal(QtCore.QPoint)  # Pos
+
+    def __init__(self, parent=None):
+        super(DumpView, self).__init__(parent)
+        self.setMouseTracking(True)
+
+    def mouseMoveEvent(self, event):
+        self.mouseMoved.emit(event.pos())
+        return super(DumpView, self).mouseMoveEvent(event)
+
+
 class DumpWidget(QtWidgets.QWidget):
+    hinted = QtCore.Signal(str)  # Hint
+
     def __init__(self, loader, parent=None):
         super(DumpWidget, self).__init__(parent)
 
@@ -1939,7 +1954,7 @@ class DumpWidget(QtWidgets.QWidget):
         }
 
         widgets = {
-            "TargetView": QtWidgets.QTreeView(),
+            "TargetView": DumpView(),
         }
 
         models = {
@@ -1954,6 +1969,8 @@ class DumpWidget(QtWidgets.QWidget):
 
         # Setup
 
+        widgets["TargetView"].mouseMoved.connect(self.on_mouse_moved)
+
         widgets["TargetView"].setModel(models["TargetModel"])
         widgets["TargetView"].setSelectionBehavior(
             QtWidgets.QTreeView.SelectRows)
@@ -1967,6 +1984,12 @@ class DumpWidget(QtWidgets.QWidget):
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
 
+        timer = QtCore.QTimer(parent=self)
+        timer.setInterval(50.0)  # ms
+        timer.setSingleShot(True)
+        timer.timeout.connect(self._reset)
+
+        self._reset_timer = timer
         self._widgets = widgets
         self._panels = panels
         self._models = models
@@ -1988,48 +2011,59 @@ class DumpWidget(QtWidgets.QWidget):
             }
         """))
 
+    def leaveEvent(self, event):
+        self.hinted.emit("")  # Clear
+        return super(DumpWidget, self).leaveEvent(event)
+
+    def on_mouse_moved(self, pos):
+        index = self._widgets["TargetView"].indexAt(pos)
+        tooltip = index.data(HintRole)
+        self.hinted.emit(tooltip or "")
+
     def on_target_changed(self, current, previous):
         pass
 
     def reset(self):
-        state = self._loader.ls()
-        root_item = qargparse.GenericTreeModelItem({
-            QtCore.Qt.DisplayRole: ("Source", "Target")
-        })
+        # Reset after a given time period.
+        # This allows reset to get called frequently, without
+        # actually incuring the cost of resetting the model each
+        # time. It keeps the user interactivity swift and clean.
+        self._reset_timer.start()
 
-        def update_data(data, other):
-            for key, value in other.items():
-                if key in data:
-                    if isinstance(data[key], (tuple, list)):
-                        data[key] = list(data[key])
-                    else:
-                        data[key] = [data[key]]
+    def _reset(self):
+        def _shape_icon(transform):
+            shape = transform.shape(type=(
+                "mesh", "nurbsCurve", "nurbsSurface")
+            )
+            shape = shape.type() if shape else None
 
-                    if isinstance(other, (tuple, list)):
-                        data[key].extend(value)
-                    else:
-                        data[key].append(value)
+            icon = {
+                "mesh": "maya_mesh.png",
+                "nurbsCurve": "maya_curve.png",
+                "nurbsSurface": "maya_surface.png",
+            }.get(shape, "maya_transform.png")
 
-                    data[key] = tuple(data[key])
+            icon = _resource("icons", icon)
+            return QtGui.QIcon(icon)
 
-                else:
-                    data[key] = value
-
-        def _transform(entity):
+        def _transform(data, entity):
             Name = self._loader.component(entity, "NameComponent")
 
             alignment = (
                 QtCore.Qt.AlignLeft,
-                QtCore.Qt.AlignLeft
+                QtCore.Qt.AlignLeft,
+                QtCore.Qt.AlignLeft,
             )
 
             try:
                 transform = state["transforms"][entity]
 
             except KeyError:
+
                 # Dim any transform that isn't getting imported
                 color = self.palette().color(self.foregroundRole())
                 color.setAlpha(100)
+                grayed_out = (color, color, color)
 
                 try:
                     # Is there a transform, except it's oppupied?
@@ -2041,45 +2075,49 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
                     tooltip = "No transform could be found for this rigid"
 
-                    return {
-                        OccupiedRole: False,
-                        QtCore.Qt.DecorationRole: icon,
-                        QtCore.Qt.ForegroundRole: (color, color),
-                        QtCore.Qt.TextAlignmentRole: alignment,
-                        QtCore.Qt.ToolTipRole: (Name["path"], tooltip),
-                    }
+                    data[QtCore.Qt.DecorationRole] += [None, icon]
+                    data[QtCore.Qt.TextAlignmentRole] = alignment
+                    data[QtCore.Qt.ForegroundRole] = grayed_out
+
+                    data[OccupiedRole] = False
+                    data[HintRole] += (
+                        Name["path"],
+                        tooltip
+                    )
 
                 else:
                     icon = _resource("icons", "check.png")
                     icon = QtGui.QIcon(icon)
+                    shape_icon = _shape_icon(occupied)
                     path = occupied.shortestPath()
 
-                    return {
-                        TransformRole: occupied,
-                        OccupiedRole: True,
-                        QtCore.Qt.DisplayRole: path,
-                        QtCore.Qt.DecorationRole: icon,
-                        QtCore.Qt.ForegroundRole: (color, color),
-                        QtCore.Qt.TextAlignmentRole: alignment,
-                        QtCore.Qt.ToolTipRole: (
-                            Name["shortestPath"],
-                            "%s already has a rigid" % path
-                        ),
-                    }
+                    data[QtCore.Qt.DisplayRole] += [path]
+                    data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
+                    data[QtCore.Qt.ForegroundRole] = (color, color)
+                    data[QtCore.Qt.TextAlignmentRole] = alignment
+
+                    data[TransformRole] = occupied
+                    data[OccupiedRole] = True
+                    data[HintRole] += (
+                        occupied.path(),
+                        "%s already has a rigid" % path
+                    )
             else:
                 icon = _resource("icons", "right.png")
                 icon = QtGui.QIcon(icon)
+                shape_icon = _shape_icon(transform)
 
-                return {
-                    TransformRole: transform,
-                    QtCore.Qt.DecorationRole: icon,
-                    QtCore.Qt.DisplayRole: transform.shortestPath(),
-                    QtCore.Qt.TextAlignmentRole: alignment,
-                    QtCore.Qt.ToolTipRole: (
-                        Name["path"], transform.path())
-                }
+                data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
+                data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
+                data[QtCore.Qt.TextAlignmentRole] = alignment
 
-        def _rigid_icon(entity):
+                data[TransformRole] = transform
+                data[HintRole] += (
+                    Name["path"],
+                    transform.path()
+                )
+
+        def _rigid_icon(data, entity):
             Desc = self._loader.component(
                 entity, "GeometryDescriptionComponent"
             )
@@ -2100,11 +2138,21 @@ class DumpWidget(QtWidgets.QWidget):
             icon = _resource("icons", icon)
             icon = QtGui.QIcon(icon)
 
+            data[QtCore.Qt.DecorationRole] += [icon]
+
+        def _default_data():
             return {
-                QtCore.Qt.DecorationRole: icon
+                QtCore.Qt.DisplayRole: [],
+                QtCore.Qt.DecorationRole: [],
+                QtCore.Qt.TextAlignmentRole: [],
+
+                HintRole: [],
+                TransformRole: None,
+                EntityRole: None,
+                OptionsRole: None,
             }
 
-        def _add_scenes():
+        def _add_scenes(root_item):
             for scene in state["scenes"]:
                 entity = scene["entity"]
 
@@ -2113,30 +2161,29 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "scene.png")
                 icon = QtGui.QIcon(icon)
 
-                transform_data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: scene["options"],
-                }
+                transform_data = _default_data()
+                transform_data[QtCore.Qt.DisplayRole] += ["Scene", label]
+                transform_data[QtCore.Qt.DecorationRole] += [icon]
+                transform_data[HintRole] += ["Scene Command"]
+                transform_data[EntityRole] = dump.Entity(entity)
+                transform_data[OptionsRole] = scene["options"]
 
-                update_data(transform_data, _transform(entity))
+                _transform(transform_data, entity)
 
-                entity_data = {
-                    QtCore.Qt.DisplayRole: name["value"],
-                    EntityRole: dump.Entity(entity),
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[EntityRole] = dump.Entity(entity)
 
-                update_data(entity_data, _rigid_icon(entity))
-                update_data(entity_data, _transform(entity))
+                _rigid_icon(data, entity)
+                _transform(data, entity)
 
                 transform_item = qargparse.GenericTreeModelItem(transform_data)
-                entity_item = qargparse.GenericTreeModelItem(entity_data)
+                entity_item = qargparse.GenericTreeModelItem(data)
 
                 root_item.addChild(transform_item)
                 transform_item.addChild(entity_item)
 
-        def _add_chains():
+        def _add_chains(root_item):
             for chain in state["chains"]:
                 entity = chain["rigids"][0]
 
@@ -2145,16 +2192,17 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "chain.png")
                 icon = QtGui.QIcon(icon)
 
-                data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: chain["options"],
-                }
+                transform_data = _default_data()
+                transform_data[QtCore.Qt.DisplayRole] += ["Chain", label]
+                transform_data[QtCore.Qt.DecorationRole] += [icon]
+                transform_data[HintRole] += ["Chain Command"]
 
-                update_data(data, _transform(entity))
+                transform_data[EntityRole] = dump.Entity(entity)
+                transform_data[OptionsRole] = chain["options"]
 
-                chain_item = qargparse.GenericTreeModelItem(data)
+                _transform(transform_data, entity)
+
+                chain_item = qargparse.GenericTreeModelItem(transform_data)
                 root_item.addChild(chain_item)
 
                 for entity in chain["rigids"]:
@@ -2163,13 +2211,12 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = _resource("icons", "rigid.png")
                     icon = QtGui.QIcon(icon)
 
-                    data = {
-                        QtCore.Qt.DisplayRole: Name["value"],
-                        EntityRole: dump.Entity(entity),
-                    }
+                    data = _default_data()
+                    data[QtCore.Qt.DisplayRole] += [Name["value"]]
+                    data[EntityRole] = dump.Entity(entity)
 
-                    update_data(data, _rigid_icon(entity))
-                    update_data(data, _transform(entity))
+                    _rigid_icon(data, entity)
+                    _transform(data, entity)
 
                     chain_item.addChild(qargparse.GenericTreeModelItem(data))
 
@@ -2180,17 +2227,17 @@ class DumpWidget(QtWidgets.QWidget):
                     Name = self._loader.component(entity, "NameComponent")
                     label = Name["value"]
 
-                    data = {
-                        QtCore.Qt.DisplayRole: label,
-                        EntityRole: dump.Entity(entity),
-                        QtCore.Qt.DecorationRole: icon,
-                    }
+                    data = _default_data()
+                    data[QtCore.Qt.DisplayRole] += [label]
+                    data[QtCore.Qt.DecorationRole] += [icon]
 
-                    update_data(data, _transform(entity))
+                    data[EntityRole] = dump.Entity(entity)
+
+                    _transform(data, entity)
 
                     chain_item.addChild(qargparse.GenericTreeModelItem(data))
 
-        def _add_rigids():
+        def _add_rigids(root_item):
             for rigid in state["rigids"]:
                 entity = rigid["entity"]
 
@@ -2199,30 +2246,31 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "rigid.png")
                 icon = QtGui.QIcon(icon)
 
-                data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: rigid["options"],
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += ["Rigid", label]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[HintRole] += ["Rigid Command"]
 
-                update_data(data, _transform(entity))
+                data[EntityRole] = dump.Entity(entity)
+                data[OptionsRole] = rigid["options"]
+
+                _transform(data, entity)
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
-                data = {
-                    QtCore.Qt.DisplayRole: name["value"],
-                    EntityRole: dump.Entity(entity),
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DecorationRole] += []
+                data[EntityRole] = dump.Entity(entity)
 
-                update_data(data, _rigid_icon(entity))
-                update_data(data, _transform(entity))
+                _rigid_icon(data, entity)
+                _transform(data, entity)
 
                 child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
-        def _add_constraints():
+        def _add_constraints(root_item):
             for constraint in state["constraints"]:
                 entity = constraint["entity"]
 
@@ -2231,30 +2279,29 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "constraint.png")
                 icon = QtGui.QIcon(icon)
 
-                data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: constraint["options"],
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += ["Constraint", label]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[HintRole] += ["Constraint Command"]
+                data[EntityRole] = dump.Entity(entity)
+                data[OptionsRole] = constraint["options"]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
-                data = {
-                    QtCore.Qt.DisplayRole: name["value"],
-                    EntityRole: dump.Entity(entity),
-                    QtCore.Qt.DecorationRole: icon,
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[EntityRole] = dump.Entity(entity)
+                data[QtCore.Qt.DecorationRole] += [icon]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
-        def _add_rigid_multipliers():
+        def _add_rigid_multipliers(root_item):
             for mult in state["rigidMultipliers"]:
                 entity = mult["entity"]
 
@@ -2263,30 +2310,29 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "rigid_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
-                data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: mult["options"],
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += ["Rigid Multiplier", label]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[HintRole] += ["Rigid Multiplier Command"]
+                data[EntityRole] = dump.Entity(entity)
+                data[OptionsRole] = mult["options"]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
-                data = {
-                    QtCore.Qt.DisplayRole: name["value"],
-                    EntityRole: dump.Entity(entity),
-                    QtCore.Qt.DecorationRole: icon,
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[EntityRole] = dump.Entity(entity)
+                data[QtCore.Qt.DecorationRole] += [icon]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
-        def _add_constraint_multipliers():
+        def _add_constraint_multipliers(root_item):
             for mult in state["constraintMultipliers"]:
                 entity = mult["entity"]
 
@@ -2295,28 +2341,32 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "constraint_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
-                data = {
-                    QtCore.Qt.DisplayRole: label,
-                    QtCore.Qt.DecorationRole: icon,
-                    EntityRole: dump.Entity(entity),
-                    OptionsRole: mult["options"],
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += ["Constraint Multiplier", label]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[HintRole] += ["Constraint Multiplier Command"]
+                data[EntityRole] = dump.Entity(entity)
+                data[OptionsRole] = mult["options"]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
-                data = {
-                    QtCore.Qt.DisplayRole: name["value"],
-                    EntityRole: dump.Entity(entity),
-                    QtCore.Qt.DecorationRole: icon,
-                }
+                data = _default_data()
+                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[EntityRole] = dump.Entity(entity)
+                data[QtCore.Qt.DecorationRole] += [icon]
 
-                update_data(data, _transform(entity))
+                _transform(data, entity)
 
                 child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
+
+        state = self._loader.ls()
+        root_item = qargparse.GenericTreeModelItem({
+            QtCore.Qt.DisplayRole: ("Command", "Source Node", "Target Node")
+        })
 
         if not self._loader.is_valid():
             icon = _resource("icons", "error.png")
@@ -2333,28 +2383,15 @@ class DumpWidget(QtWidgets.QWidget):
                 log.warning("Failure reason: %s", reason)
 
         else:
-            _add_chains()
-            _add_rigids()
-            _add_constraints()
-            _add_rigid_multipliers()
-            _add_constraint_multipliers()
-            _add_scenes()
+            _add_chains(root_item)
+            _add_rigids(root_item)
+            _add_constraints(root_item)
+            _add_rigid_multipliers(root_item)
+            _add_constraint_multipliers(root_item)
+            _add_scenes(root_item)
 
         model = self._models["TargetModel"]
         model.reset(root_item)
-
-        view = self._widgets["TargetView"]
-        header = view.header()
-        header.setSectionResizeMode(0, header.ResizeToContents)
-
-        index = model.index(0, 0)
-        if index.isValid():
-            selection = view.selectionModel()
-            selection.select(index, selection.ClearAndSelect | selection.Rows)
-            self.on_target_changed(index, None)
-
-        if not self._loader.is_valid():
-            selection.clearSelection()
 
 
 class ImportOptions(Options):
@@ -2379,7 +2416,7 @@ class ImportOptions(Options):
 
         layout.addWidget(QtWidgets.QLabel("Preview"), row, 0, *alignment)
         layout.addWidget(widgets["DumpWidget"], row, 1)
-        layout.setRowStretch(9999, 0)
+        layout.setRowStretch(9999, 0)  # Unexpand last row
         layout.setRowStretch(row, 1)  # Expand to fill width
 
         self.parser._row += 1  # For the next subclass
@@ -2399,6 +2436,8 @@ class ImportOptions(Options):
         auto_namespace.changed.connect(self.on_selection_changed)
         search_replace.changed.connect(self.on_search_and_replace)
 
+        widgets["DumpWidget"].hinted.connect(self.on_hinted)
+
         self._loader = loader
         self._selection_callback = None
         self._previous_dirname = None
@@ -2412,6 +2451,18 @@ class ImportOptions(Options):
 
         # Kick things off, a few ms after opening
         QtCore.QTimer.singleShot(200, self.on_path_changed)
+
+    def on_hinted(self, hint):
+        if hint:
+            text = hint
+        else:
+            text = self._widgets["Hint"].property("defaultText")
+
+        # Trim very long instances
+        if len(text) > 150:
+            text = "..." + text[-147:]
+
+        self._widgets["Hint"].setText(text)
 
     def do_import(self):
         if options.read("importMethod") == Load:

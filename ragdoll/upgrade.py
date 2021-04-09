@@ -16,7 +16,7 @@ compatibility path for all time.
 
 import logging
 from maya import cmds
-from . import commands
+from . import commands, internal
 from .vendor import cmdx
 
 log = logging.getLogger("ragdoll")
@@ -79,7 +79,7 @@ def _scene_20201015_20210313(node):
     """Support for Z-up got added"""
     log.info("Upgrading %s to 2021.03.13" % node)
 
-    up = commands.global_up_axis()
+    up = cmdx.up_axis()
 
     if up.y:
         node["gravityY"].niceName = "Gravity"
@@ -101,7 +101,7 @@ def _rigid_00000000_20201015(node):
 def _rigid_20201015_20201016(node):
     """Introduced .color"""
     log.info("Upgrading %s to 2020.10.16" % node)
-    node["color"] = commands._random_color()
+    node["color"] = internal.random_color()
 
 
 def _scene_20201016_20210228(scene):

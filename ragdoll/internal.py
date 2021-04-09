@@ -289,6 +289,47 @@ def with_undo_chunk(func):
     return _undo_chunk
 
 
+def sort_filenames(fnames, suffix=".rag"):
+    """Sort by numbered suffix
+
+    From:
+      -o filename10
+      -o filename8
+      -o filename9
+
+    To:
+      -o filename8
+      -o filename9
+      -o filename10
+
+    """
+
+    # Separate name from numbered suffix,
+    # e.g. filename10 -> filename, 10
+    fnames = [
+        re.split(r"(\d+)$", item.rsplit(suffix)[0])
+        for item in fnames
+    ]
+
+    # Sort by suffix first, alphabetical second
+    def sort(item):
+        item = filter(None, item)  # Remove empty matches
+        item = tuple(item)  # Make indexable
+
+        if len(item) == 2:
+            return item[0], int(item[-1])
+        else:
+            return item[0]
+
+    fnames = sorted(fnames, key=sort)
+
+    # Re-assemble
+    # (filename, 10) -> f
+    return [
+        "".join(item) + suffix for item in fnames
+    ]
+
+
 def unique_name(name):
     """Internal utility function"""
     if cmdx.exists(name):

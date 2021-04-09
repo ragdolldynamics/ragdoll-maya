@@ -2031,21 +2031,6 @@ class DumpWidget(QtWidgets.QWidget):
         self._reset_timer.start()
 
     def _reset(self):
-        def _shape_icon(transform):
-            shape = transform.shape(type=(
-                "mesh", "nurbsCurve", "nurbsSurface")
-            )
-            shape = shape.type() if shape else None
-
-            icon = {
-                "mesh": "maya_mesh.png",
-                "nurbsCurve": "maya_curve.png",
-                "nurbsSurface": "maya_surface.png",
-            }.get(shape, "maya_transform.png")
-
-            icon = _resource("icons", icon)
-            return QtGui.QIcon(icon)
-
         def _transform(data, entity):
             Name = self._loader.component(entity, "NameComponent")
 
@@ -2054,6 +2039,33 @@ class DumpWidget(QtWidgets.QWidget):
                 QtCore.Qt.AlignLeft,
                 QtCore.Qt.AlignLeft,
             )
+
+            shape_icon = None
+            rigid_entity = entity
+
+            # Borrow a shape icon from whatever rigid this constraint applies
+            if self._loader.has(entity, "JointComponent"):
+                Joint = self._loader.component(entity, "JointComponent")
+
+                # Protect against possible (but improbable) invalid reference
+                if Joint["child"]:
+                    rigid_entity = Joint["child"]
+
+            if self._loader.has(rigid_entity, "RigidUIComponent"):
+                rigid_ui = self._loader.component(rigid_entity,
+                                                  "RigidUIComponent")
+
+                # TODO: Replace .get with []
+                shape_icon = rigid_ui.get("shapeIcon")
+                shape_icon = {
+                    "joint": "maya_joint.png",
+                    "mesh": "maya_mesh.png",
+                    "nurbsCurve": "maya_curve.png",
+                    "nurbsSurface": "maya_surface.png",
+                }.get(shape_icon, "maya_transform.png")
+
+                shape_icon = _resource("icons", shape_icon)
+                shape_icon = QtGui.QIcon(shape_icon)
 
             try:
                 transform = state["transforms"][entity]
@@ -2075,7 +2087,7 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
                     tooltip = "No transform could be found for this rigid"
 
-                    data[QtCore.Qt.DecorationRole] += [None, icon]
+                    data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
                     data[QtCore.Qt.TextAlignmentRole] = alignment
                     data[QtCore.Qt.ForegroundRole] = grayed_out
 
@@ -2088,7 +2100,6 @@ class DumpWidget(QtWidgets.QWidget):
                 else:
                     icon = _resource("icons", "check.png")
                     icon = QtGui.QIcon(icon)
-                    shape_icon = _shape_icon(occupied)
                     path = occupied.shortestPath()
 
                     data[QtCore.Qt.DisplayRole] += [path]
@@ -2105,7 +2116,6 @@ class DumpWidget(QtWidgets.QWidget):
             else:
                 icon = _resource("icons", "right.png")
                 icon = QtGui.QIcon(icon)
-                shape_icon = _shape_icon(transform)
 
                 data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
                 data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
@@ -2156,8 +2166,8 @@ class DumpWidget(QtWidgets.QWidget):
             for scene in state["scenes"]:
                 entity = scene["entity"]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "scene.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2171,7 +2181,8 @@ class DumpWidget(QtWidgets.QWidget):
                 _transform(transform_data, entity)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                Name["shortestPath"]]
                 data[EntityRole] = dump.Entity(entity)
 
                 _rigid_icon(data, entity)
@@ -2187,8 +2198,8 @@ class DumpWidget(QtWidgets.QWidget):
             for chain in state["chains"]:
                 entity = chain["rigids"][0]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "chain.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2212,7 +2223,8 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
 
                     data = _default_data()
-                    data[QtCore.Qt.DisplayRole] += [Name["value"]]
+                    data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                    Name["shortestPath"]]
                     data[EntityRole] = dump.Entity(entity)
 
                     _rigid_icon(data, entity)
@@ -2225,10 +2237,10 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
 
                     Name = self._loader.component(entity, "NameComponent")
-                    label = Name["value"]
 
                     data = _default_data()
-                    data[QtCore.Qt.DisplayRole] += [label]
+                    data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                    Name["shortestPath"]]
                     data[QtCore.Qt.DecorationRole] += [icon]
 
                     data[EntityRole] = dump.Entity(entity)
@@ -2241,8 +2253,8 @@ class DumpWidget(QtWidgets.QWidget):
             for rigid in state["rigids"]:
                 entity = rigid["entity"]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "rigid.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2260,7 +2272,8 @@ class DumpWidget(QtWidgets.QWidget):
                 root_item.addChild(item)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                Name["shortestPath"]]
                 data[QtCore.Qt.DecorationRole] += []
                 data[EntityRole] = dump.Entity(entity)
 
@@ -2274,8 +2287,8 @@ class DumpWidget(QtWidgets.QWidget):
             for constraint in state["constraints"]:
                 entity = constraint["entity"]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "constraint.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2292,7 +2305,8 @@ class DumpWidget(QtWidgets.QWidget):
                 root_item.addChild(item)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                Name["shortestPath"]]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2305,8 +2319,8 @@ class DumpWidget(QtWidgets.QWidget):
             for mult in state["rigidMultipliers"]:
                 entity = mult["entity"]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "rigid_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2323,7 +2337,8 @@ class DumpWidget(QtWidgets.QWidget):
                 root_item.addChild(item)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                Name["shortestPath"]]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2336,8 +2351,8 @@ class DumpWidget(QtWidgets.QWidget):
             for mult in state["constraintMultipliers"]:
                 entity = mult["entity"]
 
-                name = self._loader.component(entity, "NameComponent")
-                label = name["path"].rsplit("|", 1)[-1]
+                Name = self._loader.component(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
                 icon = _resource("icons", "constraint_multiplier.png")
                 icon = QtGui.QIcon(icon)
 
@@ -2354,7 +2369,8 @@ class DumpWidget(QtWidgets.QWidget):
                 root_item.addChild(item)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [name["value"]]
+                data[QtCore.Qt.DisplayRole] += [Name["value"],
+                                                Name["shortestPath"]]
                 data[EntityRole] = dump.Entity(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
 
@@ -2559,6 +2575,8 @@ class ImportOptions(Options):
         current_path.write(path)
 
     def on_path_changed(self):
+        SUFFIX = ".rag"
+
         import_paths = self.parser.find("importPaths")
         import_path = self.parser.find("importPath")
 
@@ -2573,17 +2591,18 @@ class ImportOptions(Options):
             fnames = []
             try:
                 for fname in os.listdir(dirname):
-                    if fname.endswith(".rag"):
+                    if fname.endswith(SUFFIX):
                         fnames += [fname]
             except Exception:
                 # Whatever is going on, it's not important
                 pass
 
+            # TODO: Expose choice of icon to the user during export
             icon = _resource("icons", "logo2.png")
             icon = QtGui.QIcon(icon)
 
             items = []
-
+            fnames = i__.sort_filenames(fnames)
             for fname in fnames:
                 description = ""
 

@@ -1,5 +1,5 @@
 from maya import cmds
-from .. import interactive, commands, options
+from .. import interactive, commands, options, constants
 from ..vendor import cmdx
 from . import _new, _play
 
@@ -219,7 +219,7 @@ def test_convert_constraint():
     con = commands.point_constraint(a, b)
 
     cmds.select(str(con))
-    opts = {"constraintType": commands.PointConstraint}
+    opts = {"constraintType": constants.PointConstraint}
     assert_true(interactive.convert_constraint(**opts))
 
 

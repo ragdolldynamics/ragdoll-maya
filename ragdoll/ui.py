@@ -1717,7 +1717,7 @@ def center_window(window):
         window.move(pos)
 
     else:
-        log.warning(
+        log.debug(
             "Failed. Couldn't figure out the Maya window size"
         )
 
@@ -1921,6 +1921,7 @@ TransformRole = QtCore.Qt.UserRole + 1
 OptionsRole = QtCore.Qt.UserRole + 2
 OccupiedRole = QtCore.Qt.UserRole + 3
 HintRole = QtCore.Qt.UserRole + 4
+PathRole = QtCore.Qt.UserRole + 5
 
 
 Load = "Load"
@@ -2219,10 +2220,11 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
 
                     data = _default_data()
+                    data[EntityRole] = dump.Entity(entity)
+                    data[HintRole] += ["Rigid"]
                     data[QtCore.Qt.DisplayRole] += [
                         Name["value"], Name.get("shortestPath", "")
                     ]
-                    data[EntityRole] = dump.Entity(entity)
 
                     _rigid_icon(data, entity)
                     _transform(data, entity)
@@ -2236,10 +2238,11 @@ class DumpWidget(QtWidgets.QWidget):
                     Name = self._loader.component(entity, "NameComponent")
 
                     data = _default_data()
+                    data[HintRole] += ["Constraint"]
+                    data[QtCore.Qt.DecorationRole] += [icon]
                     data[QtCore.Qt.DisplayRole] += [
                         Name["value"], Name.get("shortestPath", "")
                     ]
-                    data[QtCore.Qt.DecorationRole] += [icon]
 
                     data[EntityRole] = dump.Entity(entity)
 
@@ -2394,9 +2397,13 @@ class DumpWidget(QtWidgets.QWidget):
             root_item.addChild(invalid_item)
 
             for reason in self._loader.invalid_reasons():
-                log.warning("Failure reason: %s", reason)
+                log.debug("Failure reason: %s" % reason)
+
+            self._widgets["TargetView"].setIndentation(0)
 
         else:
+            self._widgets["TargetView"].setIndentation(30)
+
             _add_chains(root_item)
             _add_rigids(root_item)
             _add_constraints(root_item)
@@ -2453,13 +2460,18 @@ class ImportOptions(Options):
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")
         default_thumbnail = QtGui.QPixmap(default_thumbnail)
+        default_thumbnail = default_thumbnail.scaled(
+            px(200), px(128),
+            QtCore.Qt.KeepAspectRatio,
+            QtCore.Qt.SmoothTransformation
+        )
 
         qimport_paths = import_paths.widget()
         layout = qimport_paths.layout()
         layout.addWidget(widgets["Thumbnail"], 1, QtCore.Qt.AlignCenter)
         widgets["Thumbnail"].setAlignment(QtCore.Qt.AlignCenter)
         widgets["Thumbnail"].setFixedWidth(px(200))
-        widgets["Thumbnail"].setFixedHeight(256)
+        widgets["Thumbnail"].setFixedHeight(px(128))
         widgets["Thumbnail"].setPixmap(default_thumbnail)
         widgets["Thumbnail"].setStyleSheet("""
             QLabel {
@@ -2559,8 +2571,8 @@ class ImportOptions(Options):
                     namespaces = tuple(set(namespaces))  # Remove duplicates
 
                 if len(namespaces) > 1:
-                    log.warning("Selection had multiple namespaces: %s"
-                                % str(namespaces))
+                    log.debug("Selection had multiple namespaces: %s"
+                              % str(namespaces))
 
                 elif len(namespaces) > 0:
                     target_namespace = tuple(namespaces)[0]
@@ -2611,6 +2623,8 @@ class ImportOptions(Options):
             fnames = i__.sort_filenames(fnames)
             for fname in fnames:
                 item = {
+                    PathRole: fname,
+
                     QtCore.Qt.DecorationRole: icon,
                     QtCore.Qt.DisplayRole: fname,
                 }
@@ -2624,6 +2638,14 @@ class ImportOptions(Options):
                 if fnames:
                     selected_fname = fnames[0]
 
+            if not items:
+                items += [{
+                    PathRole: None,
+
+                    QtCore.Qt.DisplayRole: "Empty folder",
+                    QtCore.Qt.DecorationRole: None,
+                }]
+
             import_paths.reset(items,
                                header=("Filename",),
                                current=selected_fname)
@@ -2636,14 +2658,18 @@ class ImportOptions(Options):
 
     def on_filename_changed(self):
         current_paths = self.parser.find("importPaths")
-        filename = current_paths.read()
+        filename = current_paths.read(PathRole)
 
-        # Swap out the filename from the currently loaded path
-        current_path = self.parser.find("importPath")
-        original_path = current_path.read()
+        if filename is not None:
+            # Swap out the filename from the currently loaded path
+            current_path = self.parser.find("importPath")
+            original_path = current_path.read()
 
-        dirname, _ = os.path.split(original_path)
-        path = os.path.join(dirname, filename)
+            dirname, _ = os.path.split(original_path)
+            path = os.path.join(dirname, filename)
+
+            # Make it official
+            current_path.write(path)
 
         # Clear any current thumbnail
         qthumbnail = self._default_thumbnail
@@ -2669,9 +2695,6 @@ class ImportOptions(Options):
 
         self._widgets["Thumbnail"].setPixmap(qthumbnail)
 
-        # Make it official
-        current_path.write(path, notify=False)
-
     def on_browsed(self):
         path, suffix = QtWidgets.QFileDialog.getOpenFileName(
             MayaWindow(),
@@ -2681,7 +2704,7 @@ class ImportOptions(Options):
         )
 
         if not path:
-            return log.warning("Cancelled")
+            return log.debug("Cancelled")
 
         path = os.path.normpath(path)
         dirname, fname = os.path.split(path)

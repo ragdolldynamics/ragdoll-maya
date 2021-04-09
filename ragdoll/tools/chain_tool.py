@@ -15,7 +15,7 @@ figure out the constraint frames.
 """
 
 from ..vendor import cmdx
-from .. import commands, internal as i__
+from .. import commands, constants as c, internal as i__
 
 
 class Chain(object):
@@ -34,7 +34,7 @@ class Chain(object):
         opts["autoKey"] = opts.get("autoKey", False)
         opts["drawShaded"] = opts.get("drawShaded", False)
         opts["blendMethod"] = opts.get("blendMethod",
-                                       commands.SteppedBlendMethod)
+                                       c.SteppedBlendMethod)
         opts["computeMass"] = opts.get("computeMass", False)
         opts["autoMultiplier"] = opts.get("autoMultiplier", True)
         opts["passiveRoot"] = opts.get("passiveRoot", True)
@@ -43,7 +43,7 @@ class Chain(object):
 
         defaults = defaults or {}
         defaults["shapeType"] = defaults.get(
-            "shapeType", commands.CapsuleShape
+            "shapeType", c.CapsuleShape
         )
 
         self._new_rigids = []
@@ -394,7 +394,7 @@ class Chain(object):
         mod.set_attr(rigid["shapeOffset"], geo.shape_offset)
 
         if geo.length == 0:
-            self._defaults["shapeType"] = commands.SphereShape
+            self._defaults["shapeType"] = c.SphereShape
 
         # `shapeLength` is used during constraint creation,
         # to figure out draw scale
@@ -657,7 +657,7 @@ class Chain(object):
     def _make_simulated_attr(self, rigid, transform):
         if "simulated" not in transform:
             with cmdx.DGModifier() as dgmod:
-                if self._opts["blendMethod"] == commands.SmoothBlendMethod:
+                if self._opts["blendMethod"] == c.SmoothBlendMethod:
                     dgmod.add_attr(transform, cmdx.Double(
                         "simulated",
                         min=0.0,

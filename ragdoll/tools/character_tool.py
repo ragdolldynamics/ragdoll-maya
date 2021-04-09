@@ -1,5 +1,5 @@
 from ..vendor import cmdx
-from .. import commands, internal as i__
+from .. import commands, constants as c, internal as i__
 from maya import cmds
 
 
@@ -135,17 +135,17 @@ class Character(object):
     def on_foot(self, joint, parent=None):
         print("on_foot       (%s)" % joint.shortestPath())
         rigid, constraint = self.make_socket(joint, parent)
-        rigid["shapeType"] = commands.BoxShape
+        rigid["shapeType"] = c.BoxShape
 
     def on_toe(self, joint, parent=None):
         print("on_toe        (%s)" % joint.shortestPath())
         rigid, constraint = self.make_socket(joint, parent)
-        rigid["shapeType"] = commands.BoxShape
+        rigid["shapeType"] = c.BoxShape
 
     def on_head(self, joint, parent=None):
         print("on_head       (%s)" % joint.shortestPath())
         rigid, constraint = self.make_socket(joint, parent)
-        rigid["shapeType"] = commands.BoxShape
+        rigid["shapeType"] = c.BoxShape
 
 
 @i__.with_undo_chunk
@@ -240,7 +240,7 @@ def create(root,
                 # Make boxes out of these
                 if label in (Hand, Foot, Toe, Head):
                     with cmdx.DagModifier() as mod:
-                        mod.set_attr(rigid["shapeType"], commands.BoxShape)
+                        mod.set_attr(rigid["shapeType"], c.BoxShape)
 
                 # Tag as parent for articulations
                 with cmdx.DagModifier() as mod:

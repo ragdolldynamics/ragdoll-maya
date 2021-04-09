@@ -13,7 +13,7 @@ import logging
 
 from maya import cmds
 from .vendor import cmdx
-from . import commands, tools, internal as i__
+from . import commands, tools, constants as c, internal as i__
 
 log = logging.getLogger("ragdoll")
 
@@ -1686,9 +1686,9 @@ class Loader(object):
                          Solver["positionIterations"])
         mod.try_set_attr(scene["velocityIterations"],
                          Solver["velocityIterations"])
-        mod.try_set_attr(scene["solverType"], commands.PGSSolverType
+        mod.try_set_attr(scene["solverType"], c.PGSSolverType
                          if Solver["type"] == "PGS"
-                         else commands.TGSSolverType)
+                         else c.TGSSolverType)
 
     def _apply_rigid(self, mod, entity, rigid):
         comps = self._dump["entities"][entity]["components"]
@@ -1730,16 +1730,16 @@ class Loader(object):
 
         # Establish shape
         if Desc["type"] in ("Cylinder", "Capsule"):
-            mod.try_set_attr(rigid["shapeType"], commands.CapsuleShape)
+            mod.try_set_attr(rigid["shapeType"], c.CapsuleShape)
 
         elif Desc["type"] == "Box":
-            mod.try_set_attr(rigid["shapeType"], commands.BoxShape)
+            mod.try_set_attr(rigid["shapeType"], c.BoxShape)
 
         elif Desc["type"] == "Sphere":
-            mod.try_set_attr(rigid["shapeType"], commands.SphereShape)
+            mod.try_set_attr(rigid["shapeType"], c.SphereShape)
 
         elif Desc["type"] == "ConvexHull":
-            mod.try_set_attr(rigid["shapeType"], commands.MeshShape)
+            mod.try_set_attr(rigid["shapeType"], c.MeshShape)
 
         else:
             log.debug(

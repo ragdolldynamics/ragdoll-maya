@@ -50,20 +50,13 @@ from . import (
     licence,
     dump,
     tools,
+    constants as c,
     internal as i__,
     __
 )
 
-# Environment variables
-RAGDOLL_DEVELOPER = bool(os.getenv("RAGDOLL_DEVELOPER"))
-RAGDOLL_PLUGIN = os.getenv("RAGDOLL_PLUGIN", "ragdoll")
-RAGDOLL_PLUGIN_NAME = os.path.basename(RAGDOLL_PLUGIN)
-RAGDOLL_NO_STARTUP_DIALOG = bool(os.getenv("RAGDOLL_NO_STARTUP_DIALOG"))
-RAGDOLL_AUTO_SERIAL = os.getenv("RAGDOLL_AUTO_SERIAL")
-
-CREATE_NEW_SOLVER = "Create new solver"
-
 log = logging.getLogger("ragdoll")
+
 Warning = ValueError
 DoNothing = None
 Cancelled = False
@@ -200,7 +193,7 @@ def install():
 
     install_logger()
     install_plugin()
-    licence.install(RAGDOLL_AUTO_SERIAL)
+    licence.install(c.RAGDOLL_AUTO_SERIAL)
     options.install()
 
     if not _is_standalone():
@@ -209,7 +202,7 @@ def install():
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
 
-        if not RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
+        if not c.RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
             cmds.evalDeferred(welcome_user)
             options.write("firstLaunch2", False)
 
@@ -340,14 +333,14 @@ def install_plugin():
     ])
 
     # Override with RAGDOLL_PLUGIN environment variable
-    if not cmds.pluginInfo(RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
+    if not cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
         # May already have been loaded prior to calling install
-        cmds.loadPlugin(RAGDOLL_PLUGIN, quiet=True)
+        cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)
 
-    __.version_str = cmds.pluginInfo(RAGDOLL_PLUGIN_NAME,
+    __.version_str = cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME,
                                      query=True, version=True)
 
     # Debug builds come with a `.debug` suffix, e.g. `2020.10.15.debug`
@@ -357,8 +350,8 @@ def install_plugin():
 def uninstall_plugin(force=True):
     cmds.file(new=True, force=force)
 
-    if cmds.pluginInfo(RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
-        cmds.unloadPlugin(RAGDOLL_PLUGIN_NAME)
+    if cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
+        cmds.unloadPlugin(c.RAGDOLL_PLUGIN_NAME)
 
     # Restore environment
     os.environ["MAYA_SCRIPT_PATH"] = (
@@ -549,7 +542,7 @@ def install_menu():
         item("duplicateSelected", duplicate_selected)
         item("transferAttributes", transfer_selected)
 
-        if RAGDOLL_DEVELOPER:
+        if c.RAGDOLL_DEVELOPER:
             item("convertToPolygons", convert_to_polygons)
             item("normaliseShapes", normalise_shapes)
 
@@ -660,69 +653,8 @@ scene into one that behaves identically to before.
 """
 
 
-def _upgrade():
-    # Sometimes, Maya doesn't see the global scope
-    # so we better re-import it here
-    from .vendor import cmdx
-
-    def __upgrade():
-        upgraded_count = 0
-
-        for scene in cmdx.ls(type="rdScene"):
-            scene_version = scene["version"].read()
-
-            if scene_version < __.version:
-                upgrade.scene(scene, scene_version, __.version)
-                upgraded_count += 1
-
-        for rigid in cmdx.ls(type="rdRigid"):
-            rigid_version = rigid["version"].read()
-
-            if rigid_version < __.version:
-                upgrade.rigid(rigid, rigid_version, __.version)
-                upgraded_count += 1
-
-        return upgraded_count
-
-    try:
-        upgraded_count = __upgrade()
-
-        if upgraded_count:
-            log.warning("%d Ragdoll nodes were upgraded" % upgraded_count)
-
-            # Synchronise viewport, sometimes it can go stale
-            time = cmds.currentTime(query=True)
-            cmds.evalDeferred(lambda: cmds.currentTime(time, update=True))
-
-        else:
-            log.warning("Ragdoll nodes already up to date!")
-
-    except Exception:
-        traceback.print_exc()
-        log.warning(
-            "I had trouble upgrading, it should still "
-            "work but you may want to consider restarting Maya"
-        )
-
-
-def _needs_upgrade():
-    needs_upgrade = 0
-    oldest_version = __.version
-
-    for scene in cmdx.ls(type=("rdRigid", "rdScene")):
-        node_version = scene["version"].read()
-
-        if upgrade.has_upgrade(scene, node_version):
-            needs_upgrade += 1
-
-        if node_version < oldest_version:
-            oldest_version = node_version
-
-    return oldest_version, needs_upgrade
-
-
 def _evaluate_need_to_upgrade():
-    oldest, needed = _needs_upgrade()
+    oldest, needed = upgrade.needs_upgrade(__.version)
 
     if not needed:
         return
@@ -737,15 +669,35 @@ Would you like to convert %d nodes to Ragdoll %s? Not converting \
 may break the behavior from your previous scene.
 """ % (saved_version, needed, current_version)
 
-    if ui.MessageBox("%d Ragdoll nodes can be upgraded" % needed, message):
-        _upgrade()
+    if not ui.MessageBox("%d Ragdoll nodes can be upgraded" % needed, message):
+        return
+
+    try:
+        count = upgrade.upgrade_all()
+    except Exception:
+        traceback.print_exc()
+        return log.warning(
+            "I had trouble upgrading, it should still "
+            "work but you may want to consider reopening "
+            "the file"
+        )
+
+    if count:
+        log.warning("%d Ragdoll nodes were upgraded" % count)
+
+        # Synchronise viewport, sometimes it can go stale
+        time = cmds.currentTime(query=True)
+        cmds.evalDeferred(lambda: cmds.currentTime(time, update=True))
+
+    else:
+        log.warning("Ragdoll nodes already up to date!")
 
 
 def _find_current_scene(autocreate=True):
     scene = options.read("solver")
 
     # No questions asked, just make a new one
-    if scene == CREATE_NEW_SOLVER:
+    if scene == c.CREATE_NEW_SOLVER:
         scene = create_scene()
 
     else:
@@ -1091,9 +1043,9 @@ def create_active_rigid(selection=None, **opts):
         transform = node.parent() if node.isA(cmdx.kShape) else node
 
         existing = {
-            "Abort": commands.Abort,
-            "Overwrite": commands.Overwrite,
-            "Blend": commands.Blend,
+            "Abort": c.Abort,
+            "Overwrite": c.Overwrite,
+            "Blend": c.Blend,
         }.get(_opt("existingAnimation", opts), "Overwrite")
 
         opts = {
@@ -1107,17 +1059,17 @@ def create_active_rigid(selection=None, **opts):
         initial_shape = _opt("initialShape", opts)
         if initial_shape != "Auto":
             shapes = {
-                "Box": commands.BoxShape,
-                "Sphere": commands.SphereShape,
-                "Capsule": commands.CapsuleShape,
-                "Mesh": commands.ConvexHullShape,
+                "Box": c.BoxShape,
+                "Sphere": c.SphereShape,
+                "Capsule": c.CapsuleShape,
+                "Mesh": c.ConvexHullShape,
             }
 
             opts["defaults"]["shapeType"] = shapes.get(
                 initial_shape,
 
                 # Fallback, this should never really happen
-                commands.BoxShape
+                c.BoxShape
             )
 
         # Preserve animation, if any, as soft constraints
@@ -1198,9 +1150,9 @@ def create_active_chain(selection=None, **opts):
         "autoLimits": _opt("chainAutoLimits", opts),
         "passiveRoot": _opt("chainPassiveRoot", opts),
         "blendMethod": (
-            commands.SmoothBlendMethod
+            c.SmoothBlendMethod
             if _opt("chainBlendMethod", opts) == "Smooth"
-            else commands.SteppedBlendMethod
+            else c.SteppedBlendMethod
         ),
     }
 
@@ -1209,16 +1161,16 @@ def create_active_chain(selection=None, **opts):
     }
 
     if _opt("chainShapeType", opts) == "Box":
-        defaults["shapeType"] = commands.BoxShape
+        defaults["shapeType"] = c.BoxShape
 
     elif _opt("chainShapeType", opts) == "Sphere":
-        defaults["shapeType"] = commands.SphereShape
+        defaults["shapeType"] = c.SphereShape
 
     elif _opt("chainShapeType", opts) == "Capsule":
-        defaults["shapeType"] = commands.CapsuleShape
+        defaults["shapeType"] = c.CapsuleShape
 
     elif _opt("chainShapeType", opts) == "Mesh":
-        defaults["shapeType"] = commands.MeshShape
+        defaults["shapeType"] = c.MeshShape
 
     scene = _find_current_scene()
 
@@ -1286,7 +1238,7 @@ def create_muscle(selection=None, **opts):
         # Muscles work best with the PGS solver, fow now
         log.info("Swapping TGS for PGS for better muscle simulation results")
         with cmdx.DagModifier() as mod:
-            mod.set_attr(scene["solverType"], commands.PGSSolverType)
+            mod.set_attr(scene["solverType"], c.PGSSolverType)
             mod.set_attr(scene["gravity"], 0)
 
     kwargs = {
@@ -1464,19 +1416,19 @@ def create_constraint(selection=None, **opts):
         "standalone": _opt("constraintStandalone", opts),
     }
 
-    if constraint_type in ("Point", commands.PointConstraint):
+    if constraint_type in ("Point", c.PointConstraint):
         con = commands.point_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Orient", commands.OrientConstraint):
+    elif constraint_type in ("Orient", c.OrientConstraint):
         con = commands.orient_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Hinge", commands.HingeConstraint):
+    elif constraint_type in ("Hinge", c.HingeConstraint):
         con = commands.hinge_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Socket", commands.SocketConstraint):
+    elif constraint_type in ("Socket", c.SocketConstraint):
         con = commands.socket_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Parent", commands.ParentConstraint):
+    elif constraint_type in ("Parent", c.ParentConstraint):
         con = commands.parent_constraint(parent, child, opts=opts)
 
     else:
@@ -1516,19 +1468,19 @@ def convert_constraint(selection=None, **opts):
             log.warning("No constraint found for %s", node)
             continue
 
-        if constraint_type in ("Point", commands.PointConstraint):
+        if constraint_type in ("Point", c.PointConstraint):
             converted += [commands.convert_to_point(con)]
 
-        elif constraint_type in ("Orient", commands.OrientConstraint):
+        elif constraint_type in ("Orient", c.OrientConstraint):
             converted += [commands.convert_to_orient(con)]
 
-        elif constraint_type in ("Parent", commands.ParentConstraint):
+        elif constraint_type in ("Parent", c.ParentConstraint):
             converted += [commands.convert_to_parent(con)]
 
-        elif constraint_type in ("Hinge", commands.HingeConstraint):
+        elif constraint_type in ("Hinge", c.HingeConstraint):
             converted += [commands.convert_to_hinge(con)]
 
-        elif constraint_type in ("Socket", commands.SocketConstraint):
+        elif constraint_type in ("Socket", c.SocketConstraint):
             converted += [commands.convert_to_socket(con)]
 
         else:
@@ -1821,22 +1773,22 @@ def _create_force(selection=None, force_type=None):
 
 @i__.with_undo_chunk
 def create_push_force(selection=None):
-    return _create_force(selection, commands.PushForce)
+    return _create_force(selection, c.PushForce)
 
 
 @i__.with_undo_chunk
 def create_pull_force(selection=None):
-    return _create_force(selection, commands.PullForce)
+    return _create_force(selection, c.PullForce)
 
 
 @i__.with_undo_chunk
 def create_uniform_force(selection=None):
-    return _create_force(selection, commands.UniformForce)
+    return _create_force(selection, c.UniformForce)
 
 
 @i__.with_undo_chunk
 def create_turbulence_force(selection=None):
-    return _create_force(selection, commands.TurbulenceForce)
+    return _create_force(selection, c.TurbulenceForce)
 
 
 @i__.with_undo_chunk

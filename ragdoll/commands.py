@@ -16,72 +16,15 @@ import functools
 
 from maya import cmds
 from maya.api import OpenMayaAnim as oma
-from . import internal as i__
 from .vendor import cmdx
+from . import (
+    internal as i__,
+    constants as c
+)
 
 log = logging.getLogger("ragdoll")
 
 DEVELOPER = bool(os.getenv("RAGDOLL_DEVELOPER", None))
-
-# Axes
-Auto = "Auto"
-X = "X"
-Y = "Y"
-Z = "Z"
-
-# Shape types
-BoxShape = 0
-SphereShape = 1
-CapsuleShape = 2
-CylinderShape = 2
-ConvexHullShape = 4
-MeshShape = 4  # Alias
-
-BoxIndex = 0
-SphereIndex = 1
-CapsuleIndex = 2
-CylinderIndex = 3
-MeshIndex = 4
-
-# Dynamic states
-Off = 0
-On = 1
-Kinematic = 1
-Passive = 1
-Driven = 2
-
-# Constraint types
-PointConstraint = 0
-OrientConstraint = 1
-ParentConstraint = 2
-HingeConstraint = 3
-SocketConstraint = 4
-
-OrientToNeighbour = 0
-OrientToJoint = 1
-
-PointForce = 0
-UniformForce = 1
-TurbulenceForce = 2
-PushForce = 3
-PullForce = 4
-WindForce = 5
-
-PGSSolverType = 0
-TGSSolverType = 1
-
-ControlColor = (0.443, 0.705, 0.952)
-
-Abort = 0
-Overwrite = 1
-Blend = 2
-
-QuaternionInterpolation = 1
-
-SteppedBlendMethod = 0
-SmoothBlendMethod = 1
-
-Epsilon = 0.001
 
 
 @i__.with_undo_chunk
@@ -466,7 +409,7 @@ def convert_to_point(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rPointConstraint"))
-        mod.set_attr(con["type"], PointConstraint)
+        mod.set_attr(con["type"], c.PointConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
         mod.set_attr(con["linearLimitX"], -1)
@@ -500,7 +443,7 @@ def convert_to_orient(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rOrientConstraint"))
-        mod.set_attr(con["type"], OrientConstraint)
+        mod.set_attr(con["type"], c.OrientConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
         mod.set_attr(con["linearLimitX"], 0)
@@ -544,7 +487,7 @@ def convert_to_hinge(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rHingeConstraint"))
-        mod.set_attr(con["type"], HingeConstraint)
+        mod.set_attr(con["type"], c.HingeConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
         mod.set_attr(con["linearLimitX"], -1)
@@ -580,7 +523,7 @@ def convert_to_socket(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rSocketConstraint"))
-        mod.set_attr(con["type"], SocketConstraint)
+        mod.set_attr(con["type"], c.SocketConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
         mod.set_attr(con["driveEnabled"], True)
@@ -620,7 +563,7 @@ def convert_to_parent(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rParentConstraint"))
-        mod.set_attr(con["type"], ParentConstraint)
+        mod.set_attr(con["type"], c.ParentConstraint)
         mod.set_attr(con["limitEnabled"], True)
         mod.set_attr(con["limitStrength"], 1)
         mod.set_attr(con["linearLimitX"], -1)
@@ -1190,10 +1133,10 @@ def edit_shape(rigid):
         mod.set_attr(shape["displayLocalAxis"], True)
 
         mod.add_attr(shape, cmdx.Enum(
-            "shapeType", fields=[(BoxIndex, "Box"),
-                                 (SphereIndex, "Sphere"),
-                                 (CapsuleIndex, "Capsule"),
-                                 (MeshIndex, "Mesh")]))
+            "shapeType", fields=[(c.BoxIndex, "Box"),
+                                 (c.SphereIndex, "Sphere"),
+                                 (c.CapsuleIndex, "Capsule"),
+                                 (c.MeshIndex, "Mesh")]))
 
         mod.do_it()
 
@@ -1208,7 +1151,7 @@ def edit_shape(rigid):
 
         mod.set_attr(shape["shapeType"], rigid["shapeType"])
 
-        if rigid["shapeType"] in (BoxShape, MeshShape):
+        if rigid["shapeType"] in (c.BoxShape, c.MeshShape):
             mod.set_attr(shape["scale"], rigid["shapeExtents"])
         else:
             mod.set_attr(shape["scaleX"], rigid["shapeLength"])
@@ -1232,11 +1175,11 @@ def create_force(type, scene):
         scene = cmdx.encode(scene)
 
     enum = {
-        PointForce: 0,
-        PushForce: 0,
-        PullForce: 0,
-        UniformForce: 1,
-        TurbulenceForce: 2,
+        c.PointForce: 0,
+        c.PushForce: 0,
+        c.PullForce: 0,
+        c.UniformForce: 1,
+        c.TurbulenceForce: 2,
     }
 
     with cmdx.DagModifier() as mod:
@@ -1245,40 +1188,40 @@ def create_force(type, scene):
         mod.connect(tm["worldMatrix"][0], force["inputMatrix"])
         mod.set_attr(force["type"], enum[type])
 
-        if type == PointForce:
+        if type == c.PointForce:
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["minDistance"], 0)
             mod.set_attr(force["maxDistance"], 20)
             mod.rename(tm, i__.unique_name("rPointForce"))
             mod.rename(force, i__.unique_name("rPointForceShape"))
 
-        elif type == PushForce:
+        elif type == c.PushForce:
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["minDistance"], 0)
             mod.set_attr(force["maxDistance"], 20)
             mod.rename(tm, i__.unique_name("rPushForce"))
             mod.rename(force, i__.unique_name("rPushForceShape"))
 
-        elif type == PullForce:
+        elif type == c.PullForce:
             mod.set_attr(force["magnitude"], -100)
             mod.set_attr(force["minDistance"], 1)
             mod.set_attr(force["maxDistance"], 20)
             mod.rename(tm, i__.unique_name("rPullForce"))
             mod.rename(force, i__.unique_name("rPullForceShape"))
 
-        elif type == UniformForce:
+        elif type == c.UniformForce:
             mod.set_attr(force["magnitude"], 100)
             mod.set_attr(force["direction"], (0, -1, 0))
             mod.rename(tm, i__.unique_name("rUniformForce"))
             mod.rename(force, i__.unique_name("rUniformForceShape"))
 
-        elif type == TurbulenceForce:
+        elif type == c.TurbulenceForce:
             mod.set_attr(force["magnitude"], 200)
             mod.set_attr(tm["scale"], (5, 5, 5))
             mod.rename(tm, i__.unique_name("rTurbulence"))
             mod.rename(force, i__.unique_name("rTurbulence"))
 
-        elif type == WindForce:
+        elif type == c.WindForce:
             pass
 
         mod.set_attr(tm["displayHandle"], True)
@@ -1840,9 +1783,7 @@ def multiply_rigids(rigids, parent=None, channels=None):
             parent = mod.createNode("transform", name=transform_name)
             shape_name = i__.shape_name(transform_name)
 
-        mult = mod.createNode("rdRigidMultiplier",
-                              name=shape_name,
-                              parent=parent)
+        mult = _rdrigidmultiplier(mod, shape_name, parent)
 
         for rigid in rigids:
             mod.connect(mult["ragdollId"], rigid["multiplierNode"])
@@ -1876,9 +1817,7 @@ def multiply_constraints(constraints, parent=None, channels=None):
             parent = mod.createNode("transform", name=transform_name)
             shape_name = i__.shape_name(transform_name)
 
-        mult = mod.createNode("rdConstraintMultiplier",
-                              name=shape_name,
-                              parent=parent)
+        mult = _rdconstraintmultiplier(mod, name=shape_name, parent=parent)
 
         for con in constraints:
             mod.connect(mult["ragdollId"], con["multiplierNode"])
@@ -1978,17 +1917,17 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         return
 
     if gen.type() == "polyCube":
-        mod.set_attr(rigid["shapeType"], BoxShape)
+        mod.set_attr(rigid["shapeType"], c.BoxShape)
         mod.set_attr(rigid["shapeExtentsX"], gen["width"])
         mod.set_attr(rigid["shapeExtentsY"], gen["height"])
         mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
 
     elif gen.type() == "polySphere":
-        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeType"], c.SphereShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "polyCylinder" and gen["roundCap"]:
-        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeType"], c.CylinderShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
         mod.set_attr(rigid["shapeLength"], gen["height"])
 
@@ -2004,7 +1943,7 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "makeNurbSphere":
-        mod.set_attr(rigid["shapeType"], SphereShape)
+        mod.set_attr(rigid["shapeType"], c.SphereShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "makeNurbCone":
@@ -2012,7 +1951,7 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
 
     elif gen.type() == "makeNurbCylinder":
-        mod.set_attr(rigid["shapeType"], CylinderShape)
+        mod.set_attr(rigid["shapeType"], c.CylinderShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
         mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
         mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
@@ -2048,15 +1987,15 @@ def _interpret_shape(mod, rigid, shape):
 
     if shape.type() == "mesh":
         mod.connect(shape["outMesh"], rigid["inputMesh"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
+        mod.set_attr(rigid["shapeType"], c.MeshShape)
 
     elif shape.type() == "nurbsCurve":
         mod.connect(shape["local"], rigid["inputCurve"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
+        mod.set_attr(rigid["shapeType"], c.MeshShape)
 
     elif shape.type() == "nurbsSurface":
         mod.connect(shape["local"], rigid["inputSurface"])
-        mod.set_attr(rigid["shapeType"], MeshShape)
+        mod.set_attr(rigid["shapeType"], c.MeshShape)
 
     # In case the shape is connected to a common
     # generator, like polyCube or polyCylinder
@@ -2071,7 +2010,7 @@ def _interpret_transform(mod, rigid, transform):
     """
 
     if transform.isA(cmdx.kJoint):
-        mod.set_attr(rigid["shapeType"], CapsuleShape)
+        mod.set_attr(rigid["shapeType"], c.CapsuleShape)
 
         # Orient inner shape to wherever the joint is pointing
         # as opposed to whatever its jointOrient is facing
@@ -2204,7 +2143,7 @@ def _rdcontrol(mod, name, parent=None):
     """Create a new rdControl node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdControl", name=name, parent=parent)
-    mod.set_attr(node["color"], ControlColor)  # Default blue
+    mod.set_attr(node["color"], c.ControlColor)  # Default blue
     mod.set_attr(node["version"], i__.version())
     return node
 
@@ -2213,6 +2152,22 @@ def _rdconstraint(mod, name, parent=None):
     """Create a new rdConstraint node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdConstraint", name=name, parent=parent)
+    mod.set_attr(node["version"], i__.version())
+    return node
+
+
+def _rdconstraintmultiplier(mod, name, parent=None):
+    """Create a new rdConstraint node"""
+    name = i__.unique_name(name)
+    node = mod.create_node("rdConstraintMultiplier", name=name, parent=parent)
+    mod.set_attr(node["version"], i__.version())
+    return node
+
+
+def _rdrigidmultiplier(mod, name, parent=None):
+    """Create a new rdConstraint node"""
+    name = i__.unique_name(name)
+    node = mod.create_node("rdRigidMultiplier", name=name, parent=parent)
     mod.set_attr(node["version"], i__.version())
     return node
 
@@ -2296,7 +2251,7 @@ def _connect_passive(mod, rigid, transform):
     mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
 
-def _connect_active(mod, rigid, transform, existing=Overwrite):
+def _connect_active(mod, rigid, transform, existing=c.Overwrite):
     r"""Connect `rigid` to `transform` via `pairBlend`
 
      ______
@@ -2310,7 +2265,8 @@ def _connect_active(mod, rigid, transform, existing=Overwrite):
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
-        dgmod.set_attr(pair_blend["rotInterpolation"], QuaternionInterpolation)
+        dgmod.set_attr(pair_blend["rotInterpolation"],
+                       c.QuaternionInterpolation)
         dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes

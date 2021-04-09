@@ -1,5 +1,5 @@
 from maya import cmds
-from .. import commands
+from .. import commands, constants
 from ..vendor import cmdx
 from ..tools import chain_tool
 from . import _play, _new
@@ -133,7 +133,7 @@ if cmdx.__maya_version__ >= 2019:
 
             scene = commands.create_scene()
             rigid = commands.create_rigid(box, scene)
-            rigid["shapeType"] = commands.BoxShape
+            rigid["shapeType"] = constants.BoxShape
             rigid["shapeExtents"] = (1, 1, 1)
             return rigid
 

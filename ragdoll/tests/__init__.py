@@ -1,3 +1,4 @@
+import os
 from maya import cmds
 from ..vendor import cmdx
 
@@ -34,3 +35,9 @@ def _save():
 
 def _load():
     cmds.file(__.fname, open=True, force=True)
+
+
+def _scene(name):
+    scenesdir = os.path.dirname(__file__)
+    scenesdir = os.path.join(scenesdir, "scenes")
+    return os.path.join(scenesdir, name)

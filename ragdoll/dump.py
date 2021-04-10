@@ -1691,8 +1691,6 @@ class Loader(object):
     def _apply_scene(self, mod, entity, scene):
         Solver = self.component(entity, "SolverComponent")
 
-        print("useGround: %s" % Solver["useGround"])
-
         _smart_try_setattr(mod, scene["enabled"], Solver["enabled"])
         _smart_try_setattr(mod, scene["gravity"], Solver["gravity"])
         _smart_try_setattr(mod, scene["airDensity"], Solver["airDensity"])

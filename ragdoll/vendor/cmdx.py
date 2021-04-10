@@ -5287,7 +5287,12 @@ class _BaseModifier(object):
             "Then what is it? This case isn't handled and is a bug."
         )
 
-        return self.set_attr(connection, value)
+        if not connection.editable:
+            # This is as clever as we should get
+            pass
+
+        else:
+            return self.set_attr(connection, value)
 
     def trySetAttr(self, plug, value):
         try:

@@ -260,8 +260,14 @@ def _smart_try_setattr(mod, plug, value):
         mod.set_attr(plug, value)
 
     except cmdx.LockedError:
-        # In other cases, it might be connected to a user attributes
-        mod.smart_set_attr(plug, value)
+
+        try:
+            # In other cases, it might be connected to a user attributes
+            mod.smart_set_attr(plug, value)
+
+        except cmdx.LockedError:
+            # Connected plug may also be locked or uneditable
+            return False
 
     except Exception:
         # Worst case, there's nothing we can do

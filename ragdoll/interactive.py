@@ -2148,23 +2148,22 @@ def import_physics_from_file(selection=None, **opts):
         return cmds.warning("Cancelled")
 
     fname = os.path.normpath(fname)
+    loader = dump.Loader()
 
     try:
-        with open(fname) as f:
-            data = json.load(f)
-
+        loader.read(fname)
     except Exception:
         _print_exception()
         return log.error("Could not read from %s" % fname)
 
     method = _opt("importMethod", opts)
-    merge = _opt("importMergePhysics", opts)
 
     try:
         if method == "Load":
-            dump.load(data, merge=merge)
+            merge = _opt("importMergePhysics", opts)
+            loader.load(merge=merge)
         else:
-            dump.reinterpret(data)
+            loader.reinterpret()
 
     except Exception:
         _print_exception()

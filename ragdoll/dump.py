@@ -75,7 +75,7 @@ class Registry(object):
     def has(self, entity, component):
         """Return whether `entity` has `component`"""
         assert isinstance(entity, int), "entity must be int"
-        assert isinstance(component, i__.string_types), (
+        assert isinstance(component, cmdx.string_types), (
             "component must be string")
         return component in self._dump["entities"][entity]["components"]
 
@@ -329,18 +329,17 @@ class Loader(object):
 
                 self._invalid_reasons += [error]
 
-            else:
-                dump["entities"] = {
-
-                    # Original JSON stores keys as strings, but the original
-                    # keys are integers; i.e. entity IDs
-                    Entity(entity): value
-                    for entity, value in dump["entities"].items()
-                }
-
         assert "schema" in dump and dump["schema"] == self.SupportedSchema, (
             "Dump not compatible with this version of Ragdoll"
         )
+
+        dump["entities"] = {
+
+            # Original JSON stores keys as strings, but the original
+            # keys are integers; i.e. entity IDs
+            Entity(entity): value
+            for entity, value in dump["entities"].items()
+        }
 
         self._dump = dump
         self._is_up_to_date = False
@@ -371,6 +370,10 @@ class Loader(object):
 
     def analyse(self):
         """Fill internal state from dump with something we can use"""
+
+        # No need for needless work
+        if self._is_up_to_date:
+            return self._state
 
         transforms, occupied = self._find_transforms()
         chains = self._find_chains()
@@ -454,13 +457,6 @@ class Loader(object):
                 ]
 
         self._invalid_reasons[:] = reasons
-
-    def ls(self):
-        """Return current analysis"""
-        if not self._is_up_to_date:
-            self.analyse()
-
-        return self._state.copy()
 
     def report(self):
         if not self._is_up_to_date:
@@ -648,15 +644,20 @@ class Loader(object):
 
     def view(self, *components):
         """Iterate over every entity that has all of `components`"""
+        assert all(isinstance(c, cmdx.string_types) for c in components), (
+            "`components` arguments must be names of components, "
+            "e.g. 'NameComponent'"
+        )
+
         for entity in self._dump["entities"]:
             if all(self.has(entity, comp) for comp in components):
                 yield entity
 
     def has(self, entity, component):
         """Return whether `entity` has `component`"""
-        assert isinstance(entity, int), "entity must be int"
-        assert isinstance(component, i__.string_types), (
-            "component must be string")
+        assert isinstance(entity, int), "entity was not int: %r" % entity
+        assert isinstance(component, cmdx.string_types), (
+            "component was not string: %r" % component)
         return component in self._dump["entities"][entity]["components"]
 
     def component(self, entity, component):

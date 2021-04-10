@@ -1856,7 +1856,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
     def parse(self, dump, raw=False):
         if self._raw:
             dump["entities"] = {
-                int(entity): value
+                dump.Entity(entity): value
                 for entity, value in dump["entities"].items()
             }
         else:
@@ -2065,7 +2065,7 @@ class DumpWidget(QtWidgets.QWidget):
                 shape_icon = QtGui.QIcon(shape_icon)
 
             try:
-                transform = state["transforms"][entity]
+                transform = analysis["transforms"][entity]
 
             except KeyError:
 
@@ -2076,7 +2076,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 try:
                     # Is there a transform, except it's oppupied?
-                    occupied = state["occupied"][entity]
+                    occupied = analysis["occupied"][entity]
 
                 except KeyError:
                     # No, there isn't a transform for this entity
@@ -2160,7 +2160,7 @@ class DumpWidget(QtWidgets.QWidget):
             }
 
         def _add_scenes(root_item):
-            for scene in state["scenes"]:
+            for scene in analysis["scenes"]:
                 entity = scene["entity"]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2172,7 +2172,7 @@ class DumpWidget(QtWidgets.QWidget):
                 transform_data[QtCore.Qt.DisplayRole] += ["Scene", label]
                 transform_data[QtCore.Qt.DecorationRole] += [icon]
                 transform_data[HintRole] += ["Scene Command"]
-                transform_data[EntityRole] = dump.Entity(entity)
+                transform_data[EntityRole] = entity
                 transform_data[OptionsRole] = scene["options"]
 
                 _transform(transform_data, entity)
@@ -2180,7 +2180,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
                                                 Name.get("shortestPath", "")]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
 
                 _rigid_icon(data, entity)
                 _transform(data, entity)
@@ -2192,7 +2192,7 @@ class DumpWidget(QtWidgets.QWidget):
                 transform_item.addChild(entity_item)
 
         def _add_chains(root_item):
-            for chain in state["chains"]:
+            for chain in analysis["chains"]:
                 entity = chain["rigids"][0]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2205,7 +2205,7 @@ class DumpWidget(QtWidgets.QWidget):
                 transform_data[QtCore.Qt.DecorationRole] += [icon]
                 transform_data[HintRole] += ["Chain Command"]
 
-                transform_data[EntityRole] = dump.Entity(entity)
+                transform_data[EntityRole] = entity
                 transform_data[OptionsRole] = chain["options"]
 
                 _transform(transform_data, entity)
@@ -2220,7 +2220,7 @@ class DumpWidget(QtWidgets.QWidget):
                     icon = QtGui.QIcon(icon)
 
                     data = _default_data()
-                    data[EntityRole] = dump.Entity(entity)
+                    data[EntityRole] = entity
                     data[HintRole] += ["Rigid"]
                     data[QtCore.Qt.DisplayRole] += [
                         Name["value"], Name.get("shortestPath", "")
@@ -2244,14 +2244,14 @@ class DumpWidget(QtWidgets.QWidget):
                         Name["value"], Name.get("shortestPath", "")
                     ]
 
-                    data[EntityRole] = dump.Entity(entity)
+                    data[EntityRole] = entity
 
                     _transform(data, entity)
 
                     chain_item.addChild(qargparse.GenericTreeModelItem(data))
 
         def _add_rigids(root_item):
-            for rigid in state["rigids"]:
+            for rigid in analysis["rigids"]:
                 entity = rigid["entity"]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2264,7 +2264,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[HintRole] += ["Rigid Command"]
 
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[OptionsRole] = rigid["options"]
 
                 _transform(data, entity)
@@ -2276,7 +2276,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
                                                 Name.get("shortestPath", "")]
                 data[QtCore.Qt.DecorationRole] += []
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
 
                 _rigid_icon(data, entity)
                 _transform(data, entity)
@@ -2285,7 +2285,7 @@ class DumpWidget(QtWidgets.QWidget):
                 item.addChild(child)
 
         def _add_constraints(root_item):
-            for constraint in state["constraints"]:
+            for constraint in analysis["constraints"]:
                 entity = constraint["entity"]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2297,7 +2297,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DisplayRole] += ["Constraint", label]
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[HintRole] += ["Constraint Command"]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[OptionsRole] = constraint["options"]
 
                 _transform(data, entity)
@@ -2308,7 +2308,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
                                                 Name.get("shortestPath", "")]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[QtCore.Qt.DecorationRole] += [icon]
 
                 _transform(data, entity)
@@ -2317,7 +2317,7 @@ class DumpWidget(QtWidgets.QWidget):
                 item.addChild(child)
 
         def _add_rigid_multipliers(root_item):
-            for mult in state["rigidMultipliers"]:
+            for mult in analysis["rigidMultipliers"]:
                 entity = mult["entity"]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2329,7 +2329,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DisplayRole] += ["Rigid Multiplier", label]
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[HintRole] += ["Rigid Multiplier Command"]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[OptionsRole] = mult["options"]
 
                 _transform(data, entity)
@@ -2340,7 +2340,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
                                                 Name.get("shortestPath", "")]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[QtCore.Qt.DecorationRole] += [icon]
 
                 _transform(data, entity)
@@ -2349,7 +2349,7 @@ class DumpWidget(QtWidgets.QWidget):
                 item.addChild(child)
 
         def _add_constraint_multipliers(root_item):
-            for mult in state["constraintMultipliers"]:
+            for mult in analysis["constraintMultipliers"]:
                 entity = mult["entity"]
 
                 Name = self._loader.component(entity, "NameComponent")
@@ -2361,7 +2361,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DisplayRole] += ["Constraint Multiplier", label]
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[HintRole] += ["Constraint Multiplier Command"]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[OptionsRole] = mult["options"]
 
                 _transform(data, entity)
@@ -2372,7 +2372,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data = _default_data()
                 data[QtCore.Qt.DisplayRole] += [Name["value"],
                                                 Name.get("shortestPath", "")]
-                data[EntityRole] = dump.Entity(entity)
+                data[EntityRole] = entity
                 data[QtCore.Qt.DecorationRole] += [icon]
 
                 _transform(data, entity)
@@ -2380,7 +2380,7 @@ class DumpWidget(QtWidgets.QWidget):
                 child = qargparse.GenericTreeModelItem(data)
                 item.addChild(child)
 
-        state = self._loader.ls()
+        analysis = self._loader.analyse()
         root_item = qargparse.GenericTreeModelItem({
             QtCore.Qt.DisplayRole: ("Command", "Source Node", "Target Node")
         })

@@ -3113,20 +3113,51 @@ class Plug(object):
         """The nice name of this plug, visible in e.g. Channel Box
 
         Examples:
-            >>> node = createNode("transform")
+            >>> _new()
+            >>> node = createNode("transform", name="myTransform")
+
+            # Return pairs of nice names for compound attributes
+            >>> node["scale"].niceName == ("Scale X", "Scale Y", "Scale Z")
+            True
+
             >>> assert node["translateY"].niceName == "Translate Y"
             >>> node["translateY"].niceName = "New Name"
+            >>> assert node["translateY"].niceName == "New Name"
+
+            # The nice name is preserved on scene open
+            >>> _save()
+            >>> _load()
+            >>> node = encode("myTransform")
             >>> assert node["translateY"].niceName == "New Name"
 
         """
 
         # No way of retrieving this information via the API?
-        return cmds.attributeName(self.path(), nice=True)
+
+        if self.isArray or self.isCompound:
+            return tuple(
+                cmds.attributeName(plug.path(), nice=True)
+                for plug in self
+            )
+        else:
+            return cmds.attributeName(self.path(), nice=True)
 
     @niceName.setter
     def niceName(self, value):
-        fn = om.MFnAttribute(self._mplug.attribute())
-        fn.setNiceNameOverride(value)
+        elements = (
+            self
+            if self.isArray or self.isCompound
+            else [self]
+        )
+
+        for el in elements:
+            if el._mplug.isDynamic:
+                # Use setAttr as isKeyable doesn't
+                # persist on scene save for dynamic attributes.
+                cmds.addAttr(el.path(), edit=True, niceName=value)
+            else:
+                fn = om.MFnAttribute(el._mplug.attribute())
+                fn.setNiceNameOverride(value)
 
     @property
     def default(self):

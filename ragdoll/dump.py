@@ -254,6 +254,22 @@ def DefaultState():
     }
 
 
+def _smart_try_setattr(mod, plug, value):
+    try:
+        # In the simplest case, the plug is free
+        mod.set_attr(plug, value)
+
+    except cmdx.LockedError:
+        # In other cases, it might be connected to a user attributes
+        mod.smart_set_attr(plug, value)
+
+    except Exception:
+        # Worst case, there's nothing we can do
+        return False
+
+    return True
+
+
 class Loader(object):
     """Reconstruct physics from a Ragdoll dump
 
@@ -1669,27 +1685,30 @@ class Loader(object):
     def _apply_scene(self, mod, entity, scene):
         Solver = self.component(entity, "SolverComponent")
 
-        mod.try_set_attr(scene["enabled"], Solver["enabled"])
-        mod.try_set_attr(scene["gravity"], Solver["gravity"])
-        mod.try_set_attr(scene["airDensity"], Solver["airDensity"])
-        mod.try_set_attr(scene["substeps"], Solver["substeps"])
-        mod.try_set_attr(scene["useGround"], Solver["useGround"])
-        mod.try_set_attr(scene["groundFriction"], Solver["groundFriction"])
-        mod.try_set_attr(scene["groundRestitution"],
-                         Solver["groundRestitution"])
-        mod.try_set_attr(scene["bounceThresholdVelocity"],
-                         Solver["bounceThresholdVelocity"])
-        mod.try_set_attr(scene["threadCount"], Solver["numThreads"])
-        mod.try_set_attr(scene["enableCCD"], Solver["enableCCD"])
-        mod.try_set_attr(scene["timeMultiplier"], Solver["timeMultiplier"])
-        # mod.try_set_attr(scene["spaceMultiplier"], Solver["spaceMultiplier"])
-        mod.try_set_attr(scene["positionIterations"],
-                         Solver["positionIterations"])
-        mod.try_set_attr(scene["velocityIterations"],
-                         Solver["velocityIterations"])
-        mod.try_set_attr(scene["solverType"], c.PGSSolverType
-                         if Solver["type"] == "PGS"
-                         else c.TGSSolverType)
+        print("useGround: %s" % Solver["useGround"])
+
+        _smart_try_setattr(mod, scene["enabled"], Solver["enabled"])
+        _smart_try_setattr(mod, scene["gravity"], Solver["gravity"])
+        _smart_try_setattr(mod, scene["airDensity"], Solver["airDensity"])
+        _smart_try_setattr(mod, scene["substeps"], Solver["substeps"])
+        _smart_try_setattr(mod, scene["useGround"], Solver["useGround"])
+        _smart_try_setattr(mod, scene["groundFriction"],
+                           Solver["groundFriction"])
+        _smart_try_setattr(mod, scene["groundRestitution"],
+                           Solver["groundRestitution"])
+        _smart_try_setattr(mod, scene["bounceThresholdVelocity"],
+                           Solver["bounceThresholdVelocity"])
+        _smart_try_setattr(mod, scene["threadCount"], Solver["numThreads"])
+        _smart_try_setattr(mod, scene["enableCCD"], Solver["enableCCD"])
+        _smart_try_setattr(mod, scene["timeMultiplier"],
+                           Solver["timeMultiplier"])
+        _smart_try_setattr(mod, scene["positionIterations"],
+                           Solver["positionIterations"])
+        _smart_try_setattr(mod, scene["velocityIterations"],
+                           Solver["velocityIterations"])
+        _smart_try_setattr(mod, scene["solverType"], c.PGSSolverType
+                           if Solver["type"] == "PGS"
+                           else c.TGSSolverType)
 
     def _apply_rigid(self, mod, entity, rigid):
         comps = self._dump["entities"][entity]["components"]
@@ -1699,48 +1718,49 @@ class Loader(object):
         Rigid = Component(comps["RigidComponent"])
         RigidUi = Component(comps["RigidUIComponent"])
 
-        mod.try_set_attr(rigid["mass"], Rigid["mass"])
-        mod.try_set_attr(rigid["friction"], Rigid["friction"])
-        mod.try_set_attr(rigid["collide"], Rigid["collide"])
-        mod.try_set_attr(rigid["kinematic"], Rigid["kinematic"])
-        mod.try_set_attr(rigid["linearDamping"], Rigid["linearDamping"])
-        mod.try_set_attr(rigid["angularDamping"], Rigid["angularDamping"])
-        mod.try_set_attr(rigid["positionIterations"],
-                         Rigid["positionIterations"])
-        mod.try_set_attr(rigid["velocityIterations"],
-                         Rigid["velocityIterations"])
-        mod.try_set_attr(rigid["maxContactImpulse"],
-                         Rigid["maxContactImpulse"])
-        mod.try_set_attr(rigid["maxDepenetrationVelocity"],
-                         Rigid["maxDepenetrationVelocity"])
-        mod.try_set_attr(rigid["enableCCD"], Rigid["enableCCD"])
-        mod.try_set_attr(rigid["angularMass"], Rigid["angularMass"])
-        mod.try_set_attr(rigid["centerOfMass"], Rigid["centerOfMass"])
+        _smart_try_setattr(mod, rigid["mass"], Rigid["mass"])
+        _smart_try_setattr(mod, rigid["friction"], Rigid["friction"])
+        _smart_try_setattr(mod, rigid["collide"], Rigid["collide"])
+        _smart_try_setattr(mod, rigid["kinematic"], Rigid["kinematic"])
+        _smart_try_setattr(mod, rigid["linearDamping"], Rigid["linearDamping"])
+        _smart_try_setattr(mod, rigid["angularDamping"],
+                           Rigid["angularDamping"])
+        _smart_try_setattr(mod, rigid["positionIterations"],
+                           Rigid["positionIterations"])
+        _smart_try_setattr(mod, rigid["velocityIterations"],
+                           Rigid["velocityIterations"])
+        _smart_try_setattr(mod, rigid["maxContactImpulse"],
+                           Rigid["maxContactImpulse"])
+        _smart_try_setattr(mod, rigid["maxDepenetrationVelocity"],
+                           Rigid["maxDepenetrationVelocity"])
+        _smart_try_setattr(mod, rigid["enableCCD"], Rigid["enableCCD"])
+        _smart_try_setattr(mod, rigid["angularMass"], Rigid["angularMass"])
+        _smart_try_setattr(mod, rigid["centerOfMass"], Rigid["centerOfMass"])
 
-        mod.try_set_attr(rigid["shapeExtents"], Desc["extents"])
-        mod.try_set_attr(rigid["shapeLength"], Desc["length"])
-        mod.try_set_attr(rigid["shapeRadius"], Desc["radius"])
-        mod.try_set_attr(rigid["shapeOffset"], Desc["offset"])
+        _smart_try_setattr(mod, rigid["shapeExtents"], Desc["extents"])
+        _smart_try_setattr(mod, rigid["shapeLength"], Desc["length"])
+        _smart_try_setattr(mod, rigid["shapeRadius"], Desc["radius"])
+        _smart_try_setattr(mod, rigid["shapeOffset"], Desc["offset"])
 
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
-        mod.try_set_attr(rigid["shapeRotation"], rotation)
+        _smart_try_setattr(mod, rigid["shapeRotation"], rotation)
 
-        mod.try_set_attr(rigid["color"], Color["value"])
-        mod.try_set_attr(rigid["drawShaded"], RigidUi["shaded"])
+        _smart_try_setattr(mod, rigid["color"], Color["value"])
+        _smart_try_setattr(mod, rigid["drawShaded"], RigidUi["shaded"])
 
         # Establish shape
         if Desc["type"] in ("Cylinder", "Capsule"):
-            mod.try_set_attr(rigid["shapeType"], c.CapsuleShape)
+            _smart_try_setattr(mod, rigid["shapeType"], c.CapsuleShape)
 
         elif Desc["type"] == "Box":
-            mod.try_set_attr(rigid["shapeType"], c.BoxShape)
+            _smart_try_setattr(mod, rigid["shapeType"], c.BoxShape)
 
         elif Desc["type"] == "Sphere":
-            mod.try_set_attr(rigid["shapeType"], c.SphereShape)
+            _smart_try_setattr(mod, rigid["shapeType"], c.SphereShape)
 
         elif Desc["type"] == "ConvexHull":
-            mod.try_set_attr(rigid["shapeType"], c.MeshShape)
+            _smart_try_setattr(mod, rigid["shapeType"], c.MeshShape)
 
         else:
             log.debug(
@@ -1783,39 +1803,39 @@ class Loader(object):
                 child_frame[3 * 4 + 1] /= child_scale.y
                 child_frame[3 * 4 + 2] /= child_scale.z
 
-        mod.try_set_attr(con["parentFrame"], parent_frame)
-        mod.try_set_attr(con["childFrame"], child_frame)
-        mod.try_set_attr(con["disableCollision"],
-                         Joint["disableCollision"])
+        _smart_try_setattr(mod, con["parentFrame"], parent_frame)
+        _smart_try_setattr(mod, con["childFrame"], child_frame)
+        _smart_try_setattr(mod, con["disableCollision"],
+                           Joint["disableCollision"])
 
-        mod.try_set_attr(con["limitEnabled"], Limit["enabled"])
-        mod.try_set_attr(con["linearLimitX"], Limit["x"])
-        mod.try_set_attr(con["linearLimitY"], Limit["y"])
-        mod.try_set_attr(con["linearLimitZ"], Limit["z"])
-        mod.try_set_attr(con["angularLimitX"], Limit["twist"])
-        mod.try_set_attr(con["angularLimitY"], Limit["swing1"])
-        mod.try_set_attr(con["angularLimitZ"], Limit["swing2"])
-        mod.try_set_attr(con["limitStrength"], LimitUi["strength"])
-        mod.try_set_attr(con["linearLimitStiffness"],
-                         LimitUi["linearStiffness"])
-        mod.try_set_attr(con["linearLimitDamping"],
-                         LimitUi["linearDamping"])
-        mod.try_set_attr(con["angularLimitStiffness"],
-                         LimitUi["angularStiffness"])
-        mod.try_set_attr(con["angularLimitDamping"],
-                         LimitUi["angularDamping"])
+        _smart_try_setattr(mod, con["limitEnabled"], Limit["enabled"])
+        _smart_try_setattr(mod, con["linearLimitX"], Limit["x"])
+        _smart_try_setattr(mod, con["linearLimitY"], Limit["y"])
+        _smart_try_setattr(mod, con["linearLimitZ"], Limit["z"])
+        _smart_try_setattr(mod, con["angularLimitX"], Limit["twist"])
+        _smart_try_setattr(mod, con["angularLimitY"], Limit["swing1"])
+        _smart_try_setattr(mod, con["angularLimitZ"], Limit["swing2"])
+        _smart_try_setattr(mod, con["limitStrength"], LimitUi["strength"])
+        _smart_try_setattr(mod, con["linearLimitStiffness"],
+                           LimitUi["linearStiffness"])
+        _smart_try_setattr(mod, con["linearLimitDamping"],
+                           LimitUi["linearDamping"])
+        _smart_try_setattr(mod, con["angularLimitStiffness"],
+                           LimitUi["angularStiffness"])
+        _smart_try_setattr(mod, con["angularLimitDamping"],
+                           LimitUi["angularDamping"])
 
-        mod.try_set_attr(con["driveEnabled"], Drive["enabled"])
-        mod.try_set_attr(con["driveStrength"], DriveUi["strength"])
-        mod.try_set_attr(con["linearDriveStiffness"],
-                         DriveUi["linearStiffness"])
-        mod.try_set_attr(con["linearDriveDamping"],
-                         DriveUi["linearDamping"])
-        mod.try_set_attr(con["angularDriveStiffness"],
-                         DriveUi["angularStiffness"])
-        mod.try_set_attr(con["angularDriveDamping"],
-                         DriveUi["angularDamping"])
-        mod.try_set_attr(con["driveMatrix"], Drive["target"])
+        _smart_try_setattr(mod, con["driveEnabled"], Drive["enabled"])
+        _smart_try_setattr(mod, con["driveStrength"], DriveUi["strength"])
+        _smart_try_setattr(mod, con["linearDriveStiffness"],
+                           DriveUi["linearStiffness"])
+        _smart_try_setattr(mod, con["linearDriveDamping"],
+                           DriveUi["linearDamping"])
+        _smart_try_setattr(mod, con["angularDriveStiffness"],
+                           DriveUi["angularStiffness"])
+        _smart_try_setattr(mod, con["angularDriveDamping"],
+                           DriveUi["angularDamping"])
+        _smart_try_setattr(mod, con["driveMatrix"], Drive["target"])
 
     def _apply_rigid_multiplier(self, mod, entity, mult):
         data = self._dump["entities"][entity]
@@ -1823,9 +1843,9 @@ class Loader(object):
 
         Mult = Component(comps["RigidMultiplierUIComponent"])
 
-        mod.try_set_attr(mult["airDensity"], Mult["airDensity"])
-        mod.try_set_attr(mult["linearDamping"], Mult["linearDamping"])
-        mod.try_set_attr(mult["angularDamping"], Mult["angularDamping"])
+        _smart_try_setattr(mod, mult["airDensity"], Mult["airDensity"])
+        _smart_try_setattr(mod, mult["linearDamping"], Mult["linearDamping"])
+        _smart_try_setattr(mod, mult["angularDamping"], Mult["angularDamping"])
 
     def _apply_constraint_multiplier(self, mod, entity, mult):
         data = self._dump["entities"][entity]
@@ -1833,26 +1853,26 @@ class Loader(object):
 
         Mult = Component(comps["ConstraintMultiplierUIComponent"])
 
-        mod.try_set_attr(mult["limitStrength"],
-                         Mult["limitStrength"])
-        mod.try_set_attr(mult["linearLimitStiffness"],
-                         Mult["linearLimitStiffness"])
-        mod.try_set_attr(mult["linearLimitDamping"],
-                         Mult["linearLimitDamping"])
-        mod.try_set_attr(mult["angularLimitStiffness"],
-                         Mult["angularLimitStiffness"])
-        mod.try_set_attr(mult["angularLimitDamping"],
-                         Mult["angularLimitDamping"])
-        mod.try_set_attr(mult["driveStrength"],
-                         Mult["driveStrength"])
-        mod.try_set_attr(mult["linearDriveStiffness"],
-                         Mult["linearDriveStiffness"])
-        mod.try_set_attr(mult["linearDriveDamping"],
-                         Mult["linearDriveDamping"])
-        mod.try_set_attr(mult["angularDriveStiffness"],
-                         Mult["angularDriveStiffness"])
-        mod.try_set_attr(mult["angularDriveDamping"],
-                         Mult["angularDriveDamping"])
+        _smart_try_setattr(mod, mult["limitStrength"],
+                           Mult["limitStrength"])
+        _smart_try_setattr(mod, mult["linearLimitStiffness"],
+                           Mult["linearLimitStiffness"])
+        _smart_try_setattr(mod, mult["linearLimitDamping"],
+                           Mult["linearLimitDamping"])
+        _smart_try_setattr(mod, mult["angularLimitStiffness"],
+                           Mult["angularLimitStiffness"])
+        _smart_try_setattr(mod, mult["angularLimitDamping"],
+                           Mult["angularLimitDamping"])
+        _smart_try_setattr(mod, mult["driveStrength"],
+                           Mult["driveStrength"])
+        _smart_try_setattr(mod, mult["linearDriveStiffness"],
+                           Mult["linearDriveStiffness"])
+        _smart_try_setattr(mod, mult["linearDriveDamping"],
+                           Mult["linearDriveDamping"])
+        _smart_try_setattr(mod, mult["angularDriveStiffness"],
+                           Mult["angularDriveStiffness"])
+        _smart_try_setattr(mod, mult["angularDriveDamping"],
+                           Mult["angularDriveDamping"])
 
     def _has_transforms(self, rigids, transforms):
         for rigid in rigids:

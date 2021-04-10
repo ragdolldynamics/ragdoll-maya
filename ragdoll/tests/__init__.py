@@ -41,3 +41,7 @@ def _scene(name):
     scenesdir = os.path.dirname(__file__)
     scenesdir = os.path.join(scenesdir, "scenes")
     return os.path.join(scenesdir, name)
+
+
+def _open(fname):
+    cmds.file(fname, open=True, force=True, ignoreVersion=True)

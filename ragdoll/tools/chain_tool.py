@@ -209,22 +209,10 @@ class Chain(object):
                             dst = "in%s%s1" % (channel.title(), axis)
                             anim[src] = dst
 
-        def remove_pivots():
-            # For now, we can't allow custom pivots
-            with cmdx.DagModifier() as mod:
-                for transform, _ in self._pairs:
-                    commands._remove_pivots(mod, transform)
-
         check_already_chain()
         check_hierarchy()
         remember_existing_inputs()
         pre_cache()
-
-        # Temporarily, until we've implemented support
-        # The important bit is clearing these *after* we've
-        # pre-cached the transforms, as we want their original
-        # transform not the one following removal
-        remove_pivots()
 
         return True
 
@@ -747,6 +735,7 @@ class Chain(object):
         if passive:
             commands._connect_passive(mod, rigid, transform)
         else:
+            commands._remove_pivots(mod, transform)
             commands._connect_active(mod, rigid, transform)
 
         if self._opts["computeMass"]:

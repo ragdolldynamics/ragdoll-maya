@@ -2443,11 +2443,8 @@ def _reset_constraint(mod, con, opts=None):
             return
         mod.reset_attr(attr)
 
-    reset_attr(con["disableCollision"])
     reset_attr(con["limitEnabled"])
     reset_attr(con["limitStrength"])
-    reset_attr(con["driveEnabled"])
-    reset_attr(con["driveStrength"])
     reset_attr(con["linearLimitX"])
     reset_attr(con["linearLimitY"])
     reset_attr(con["linearLimitZ"])

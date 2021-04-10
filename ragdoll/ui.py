@@ -2522,6 +2522,8 @@ class ImportOptions(Options):
         # Allow UI to finish drawing the click of a button
         QtCore.QTimer.singleShot(5, do_it)
 
+        return True
+
     @i__.with_timing
     def reset(self):
         search_replace = self.parser.find("importSearchAndReplace")

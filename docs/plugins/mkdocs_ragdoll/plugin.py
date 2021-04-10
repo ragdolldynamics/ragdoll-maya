@@ -102,6 +102,7 @@ def menu_all(markdown):
 
     with open(_resource("menu.json")) as f:
         menu = json.load(f)
+        menu.pop("#", None)  # Exclude comments
 
     def icon(item):
         return (
@@ -182,9 +183,11 @@ def menu(markdown):
 
     with open(_resource("menu.json")) as f:
         Menu = json.load(f)
+        Menu.pop("#", None)  # Exclude comments
 
     with open(_resource("options.json")) as f:
         Options = json.load(f)
+        Options.pop("#", None)  # Exclude comments
         Options["noOptions"] = {
             "name": "noOptions",
             "type": "Boolean"

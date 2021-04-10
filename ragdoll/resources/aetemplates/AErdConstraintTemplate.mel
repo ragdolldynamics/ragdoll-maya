@@ -30,8 +30,8 @@ global proc AErdConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "driveMatrix";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Advanced" -collapse true;
-            editorTemplate -addControl "disableCollision";
+        editorTemplate -beginLayout "Advanced" -collapse false;
+                editorTemplate -label "Allow Overlap" -addControl "disableCollision";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

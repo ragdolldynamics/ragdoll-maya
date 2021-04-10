@@ -654,9 +654,9 @@ scene into one that behaves identically to before.
 
 
 def _evaluate_need_to_upgrade():
-    oldest, needed = upgrade.needs_upgrade(__.version)
+    oldest, count = upgrade.needs_upgrade(__.version)
 
-    if not needed:
+    if not count:
         return
 
     saved_version = oldest
@@ -667,9 +667,9 @@ This file was created with an older version of Ragdoll %s
 
 Would you like to convert %d nodes to Ragdoll %s? Not converting \
 may break the behavior from your previous scene.
-""" % (saved_version, needed, current_version)
+""" % (saved_version, count, current_version)
 
-    if not ui.MessageBox("%d Ragdoll nodes can be upgraded" % needed, message):
+    if not ui.MessageBox("%d Ragdoll nodes can be upgraded" % count, message):
         return
 
     try:

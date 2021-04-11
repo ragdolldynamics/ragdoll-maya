@@ -251,7 +251,6 @@ def convert_rigid(rigid, opts=None):
 
             _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform)
-            _anim_constraint(rigid)
 
     return rigid
 

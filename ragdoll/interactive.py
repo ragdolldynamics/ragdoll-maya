@@ -1090,7 +1090,7 @@ def create_active_rigid(selection=None, **opts):
 
         created += [rigid]
 
-        if _opt("existingAnimation", opts) == "Blend":
+        if not passive and _opt("existingAnimation", opts) == "Blend":
             con = commands._anim_constraint(rigid, active=is_connected)
             created += [con]
 

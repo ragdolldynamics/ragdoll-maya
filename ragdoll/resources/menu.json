@@ -114,7 +114,7 @@
     "point": {
         "label": "Point",
         "icon": "point_constraint.png",
-        "summary": "Constraint the position of two rigid bodies."
+        "summary": "Constrain the position of two rigid bodies."
     },
     "orient": {
         "label": "Orient",
@@ -137,8 +137,8 @@
     "socket": {
         "label": "Socket",
         "icon": "socket_constraint2.png",
-        "summary": "Constraint the position and limit the orientation between two rigid bodies.",
-        "description": "Constraint the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
+        "summary": "Constrain the position and limit the orientation between two rigid bodies.",
+        "description": "Constrain the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
     "kinematic": {
         "label": "Passive",

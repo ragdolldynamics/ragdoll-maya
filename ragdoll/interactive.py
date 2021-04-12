@@ -683,14 +683,14 @@ may break the behavior from your previous scene.
         )
 
     if count:
-        log.warning("%d Ragdoll nodes were upgraded" % count)
+        log.info("%d Ragdoll nodes were upgraded" % count)
 
         # Synchronise viewport, sometimes it can go stale
         time = cmds.currentTime(query=True)
         cmds.evalDeferred(lambda: cmds.currentTime(time, update=True))
 
     else:
-        log.warning("Ragdoll nodes already up to date!")
+        log.debug("Ragdoll nodes already up to date!")
 
 
 def _find_current_scene(autocreate=True):

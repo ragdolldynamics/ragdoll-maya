@@ -1826,13 +1826,19 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         raw = QtWidgets.QCheckBox("Show Raw")
         raw.stateChanged.connect(self.on_raw_changed)
 
+        debug = QtWidgets.QCheckBox("Show Debug")
+        debug.stateChanged.connect(self.on_debug_changed)
+
         refresh = QtWidgets.QPushButton("Refresh")
         refresh.clicked.connect(self.reload)
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(view)
-        layout.addWidget(raw)
-        layout.addWidget(refresh)
+        layout = QtWidgets.QGridLayout(self)
+        layout.addWidget(view, 0, 0, 1, 3)
+        layout.addWidget(QtWidgets.QWidget(), 1, 0)
+        layout.addWidget(raw, 1, 1)
+        layout.addWidget(debug, 1, 2)
+        layout.addWidget(refresh, 2, 0, 1, 3)
+        layout.setColumnStretch(0, 1)
 
         timer = QtCore.QTimer(parent=self)  # Delete on close
         timer.setInterval(1000.0)  # ms
@@ -1843,6 +1849,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         self._timer = timer
         self._dump = None
         self._raw = False
+        self._debug = False
 
         Explorer.instance = self
 
@@ -1851,7 +1858,11 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
     def on_raw_changed(self, state):
         self._raw = bool(state)
-        self.load(self._dump)
+        self.reload()
+
+    def on_debug_changed(self, state):
+        self._debug = bool(state)
+        self.reload()
 
     def parse(self, dump, raw=False):
         if self._raw:
@@ -1904,7 +1915,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         dump = self._dump
 
         if callable(dump):
-            dump = dump()
+            dump = dump(debug=self._debug)
 
         if isinstance(dump, i__.string_types):
             dump = json.loads(dump)

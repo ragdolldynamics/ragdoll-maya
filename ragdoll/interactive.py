@@ -2020,8 +2020,8 @@ def select_scenes(selection=None):
 
 
 def show_explorer(selection=None):
-    def get_fresh_dump():
-        return json.loads(cmds.ragdollDump())
+    def get_fresh_dump(*args, **kwargs):
+        return json.loads(cmds.ragdollDump(*args, **kwargs))
 
     if ui.Explorer.instance and ui.isValid(ui.Explorer.instance):
         return ui.Explorer.instance.show()

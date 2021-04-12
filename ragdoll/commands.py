@@ -2130,6 +2130,8 @@ def _rdrigid(mod, name, parent):
                 node["inputParentInverseMatrix"])
 
     mod.connect(parent["rotateOrder"], node["rotateOrder"])
+    mod.connect(parent["rotatePivot"], node["rotatePivot"])
+    mod.connect(parent["rotatePivotTranslate"], node["rotatePivotTranslate"])
 
     # Assign some random color, within some nice range
     mod.set_attr(node["color"], i__.random_color())

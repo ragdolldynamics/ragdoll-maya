@@ -5011,7 +5011,13 @@ class _BaseModifier(object):
             elements = plug if plug.isArray or plug.isCompound else [plug]
 
             for el in elements:
-                cmds.addAttr(el.path(), edit=True, niceName=value)
+                if el._mplug.isDynamic:
+                    # Use setAttr as isKeyable doesn't
+                    # persist on scene save for dynamic attributes.
+                    cmds.addAttr(el.path(), edit=True, niceName=value)
+                else:
+                    fn = om.MFnAttribute(el._mplug.attribute())
+                    fn.setNiceNameOverride(value)
 
     def doIt(self):
         try:

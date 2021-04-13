@@ -6,6 +6,7 @@ import json
 import ctypes
 import logging
 import datetime
+import webbrowser
 
 from maya import cmds
 from maya.api import OpenMaya as om, OpenMayaUI as omui
@@ -1337,7 +1338,7 @@ class SplashScreen(QtWidgets.QDialog):
     ||__________________________________________||
     | ___________  ______________  _____________ |
     ||           ||              ||             ||
-    ||  Activate ||   Offline    ||   Trial     ||
+    ||  Activate ||   Offline    ||    Trial    ||
     ||___________||______________||_____________||
     |____________________________________________|
 
@@ -1350,8 +1351,6 @@ class SplashScreen(QtWidgets.QDialog):
         self.setWindowTitle("Activate Ragdoll Dynamics")
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowFlags(QtCore.Qt.Tool)
-        # self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        # self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.setFixedSize(px(500), px(410))  # 0.5x the size of splash.png
 
         panels = {
@@ -1372,6 +1371,7 @@ class SplashScreen(QtWidgets.QDialog):
             "activate": QtWidgets.QPushButton("Activate"),
             "deactivate": QtWidgets.QPushButton("Deactivate"),
             "activateOffline": QtWidgets.QPushButton("Activate Offline"),
+            "deactivateOffline": QtWidgets.QPushButton("Deactivate Offline"),
             "continue": QtWidgets.QPushButton("Continue"),
         }
 
@@ -1410,7 +1410,6 @@ class SplashScreen(QtWidgets.QDialog):
 
         layout = QtWidgets.QHBoxLayout(panels["status"])
         layout.addWidget(widgets["statusActivated"])
-        # layout.addWidget(widgets["statusVerified"])
         layout.addWidget(widgets["statusMessage"])
         layout.addWidget(QtWidgets.QWidget(), 1)
         layout.addWidget(widgets["expiryDate"])
@@ -1425,6 +1424,7 @@ class SplashScreen(QtWidgets.QDialog):
         layout.addWidget(widgets["activate"])
         layout.addWidget(widgets["deactivate"])
         layout.addWidget(widgets["activateOffline"])
+        layout.addWidget(widgets["deactivateOffline"])
         layout.addWidget(widgets["continue"])
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -1445,8 +1445,14 @@ class SplashScreen(QtWidgets.QDialog):
         widgets["activate"].clicked.connect(self.on_activate_clicked)
         widgets["deactivate"].clicked.connect(self.on_deactivate_clicked)
         widgets["continue"].clicked.connect(self.on_continue_clicked)
-        widgets["activateOffline"].setEnabled(False)
+
         widgets["deactivate"].hide()
+        widgets["deactivateOffline"].hide()
+
+        widgets["activateOffline"].clicked.connect(
+            self.on_activate_offline)
+        widgets["deactivateOffline"].clicked.connect(
+            self.on_deactivate_offline)
 
         # Free-floating
         panels["body"].show()
@@ -1508,6 +1514,18 @@ class SplashScreen(QtWidgets.QDialog):
             self.on_deactivated()
 
         self._data = data
+
+    def on_activate_offline(self):
+        base = "https://learn.ragdolldynamics.com"
+        url = "%s/licencing/#offline-activation" % base
+        log.info("Opening URL %s.." % url)
+        webbrowser.open(url)
+
+    def on_deactivate_offline(self):
+        base = "https://learn.ragdolldynamics.com"
+        url = "%s/licencing/#offline-deactivation" % base
+        log.info("Opening URL %s.." % url)
+        webbrowser.open(url)
 
     def on_serial_changed(self):
         key = self._widgets["serial"].text()
@@ -1621,7 +1639,10 @@ class SplashScreen(QtWidgets.QDialog):
 
         self._widgets["activate"].show()
         self._widgets["activate"].setEnabled(False)
+        self._widgets["activateOffline"].show()
+        self._widgets["activateOffline"].setEnabled(False)
         self._widgets["deactivate"].hide()
+        self._widgets["deactivateOffline"].hide()
         self._widgets["serial"].setText("")
         self._widgets["serial"].setPlaceholderText(
             "Enter your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
@@ -1646,7 +1667,9 @@ class SplashScreen(QtWidgets.QDialog):
         log.info("Ragdoll is activated")
 
         self._widgets["activate"].hide()
+        self._widgets["activateOffline"].hide()
         self._widgets["deactivate"].show()
+        self._widgets["deactivateOffline"].show()
 
         status = _resource("ui", "mode_green.png")
         status = QtGui.QPixmap(status)
@@ -1669,7 +1692,9 @@ class SplashScreen(QtWidgets.QDialog):
         log.info("Ragdoll is deactivated")
 
         self._widgets["activate"].show()
+        self._widgets["activateOffline"].show()
         self._widgets["deactivate"].hide()
+        self._widgets["deactivateOffline"].hide()
         self._widgets["serial"].setPlaceholderText(
             "Enter your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         )
@@ -2731,10 +2756,10 @@ class ImportOptions(Options):
 
     def showEvent(self, event):
         # Keep an eye on the current selection
-        self._selection_callback = om.MModelMessage.addCallback(
+        __.callbacks += [om.MModelMessage.addCallback(
             om.MModelMessage.kActiveListModified,
             self.on_selection_changed
-        )
+        )]
 
         super(ImportOptions, self).showEvent(event)
 
@@ -2744,6 +2769,10 @@ class ImportOptions(Options):
 
         self._selection_callback = None
         super(ImportOptions, self).closeEvent(event)
+
+    def __del__(self):
+        if self._selection_callback is not None:
+            om.MMessage.removeCallback(self._selection_callback)
 
 
 def view_to_pixmap(size=None):

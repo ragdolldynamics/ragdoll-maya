@@ -138,6 +138,58 @@ def deactivate():
     return status
 
 
+def activation_request_to_file(key, fname):
+    status = cmds.ragdollLicence(activationRequestToFile=(key, fname))
+
+    if status == STATUS_OK:
+        log.info(
+            "Successfully generated %s\n"
+            "Send this file to licencing@ragdolldynamics.com"
+            % fname
+        )
+
+    else:
+        log.error(
+            "There was a problem! Send us this error code "
+            "(%s) and tell us what you did." % status
+        )
+
+    return status
+
+
+def activate_from_file(fname):
+    status = cmds.ragdollLicence(activateFromFile=fname)
+
+    if status == STATUS_OK:
+        log.info("Successfully activated Ragdoll!")
+
+    else:
+        log.error(
+            "There was a problem! Send us this error code "
+            "(%s) and tell us what you did." % status
+        )
+
+    return status
+
+
+def deactivation_request_to_file(fname):
+    status = cmds.ragdollLicence(deactivationRequestToFile=fname)
+
+    if status == STATUS_OK:
+        log.info(
+            "Successfully deactivated Ragdoll and generated %s\n"
+            "Send this to licencing@ragdolldynamics.com" % fname
+        )
+
+    else:
+        log.error(
+            "There was a problem! Send us this error code "
+            "(%s) and tell us what you did." % status
+        )
+
+    return status
+
+
 def reverify():
     return cmds.ragdollLicence(reverify=True)
 

@@ -1,12 +1,12 @@
 <img class="boxshadow no-max-height" src=https://user-images.githubusercontent.com/47274066/103476508-7d7e2780-4dae-11eb-86c9-c099a08f1314.png>
 
-Ragdoll requires a licence per seat in order to run.
+Each instance of Ragdoll requires an individual licence.
 
 Activation requires a `Product Key` which you get by either [purchasing a licence](https://ragdolldynamics.com/pricing) or by being really awesome.
 
 <br>
 
-### FAQ
+## FAQ
 
 Let's dive into specifics.
 
@@ -97,18 +97,9 @@ Later on, these will be as trivial as node-locked licences. All we need is you.
 
 #### Can I activate offline?
 
-Not yet.
+Yes.
 
-As soon as someone needs it, I'll add it. Get in touch with licencing@ragdolldynamics.com
-
-Offline will be a 4-step process.
-
-1. Running e.g. `activation_request_to_file()` from you local machine
-2. Emailing generated file 
-3. Receiving a licence file back 
-4. Running e.g. `activate_from_file(fname)` on the same local machine.
-
-Floating offline is also be possible, again get in touch.
+See [Offline Activation](#offline-activation) below.
 
 <br>
 
@@ -133,7 +124,7 @@ Sure can, see below.
 
 <br>
 
-### Licence API
+## Licence API
 
 As a user, you'll generally use the UI. But the UI is ultimately making calls to Python (which is making calls to C++) and you can bypass the UI using these same calls.
 
@@ -152,8 +143,15 @@ licence.current_key()
 # Activate using your product ket
 licence.activate(key)
 
+# Activation for those without access to Internet
+licence.activation_request_to_file(key, fname)
+licence.activate_from_file(fname)
+
 # Deactivate whatever key is currently activated
 licence.deactivate()
+
+# Deactivate offline, to e.g. move a licence from one machine to another
+licence.deactivation_request_to_file(fname)
 
 # Dictionary of useful information
 data = licence.data()
@@ -179,3 +177,67 @@ data = licence.data()
     "trialDays": 23
 }
 ```
+
+<br>
+
+## Offline Activation
+
+Haven't got no internet?
+
+No problem, here's what you need to do.
+
+1. Generate an "activation request", a file
+2. Send us this file, via [email](licencing@ragdolldynamics.com)
+3. Receive a "activation response", another file
+4. Activate using this file
+
+It requires pasting some *Python* commands into the **Maya Script Editor**.
+
+**Generate Request**
+
+```py
+from ragdoll import licence
+key = "YOUR-VERY-LONG-KEY-HERE"
+fname = r"c:\ragdoll_activation_request.xml"
+licence.activation_request_to_file(key, fname)
+```
+
+**Email Us**
+
+Send this file to licencing@ragdolldynamics.com. We'll abrakadabra this file before you can say [Taumatawhakatangi­hangakoauauotamatea­turipukakapikimaunga­horonukupokaiwhen­uakitanatahu](https://en.wikipedia.org/wiki/Taumatawhakatangi%C2%ADhangakoauauotamatea%C2%ADturipukakapikimaunga%C2%ADhoronukupokaiwhen%C2%ADuakitanatahu).
+
+**Activate**
+
+Once you've got a response, activate your licence like this.
+
+```py
+from ragdoll import licence
+fname = r"c:\ragdoll_activation_response.xml"
+licence.activate_from_file(fname)
+```
+
+<br>
+
+## Offline Deactivation
+
+Licences are node-locked (floating licences coming soon), which means that if you need to move a licence from one machine to another you can do so by *deactivating* an activated licence, and then activating it elsewhere.
+
+The process is similar to activation.
+
+**Generate Request**
+
+```py
+from ragdoll import licence
+fname = r"c:\ragdoll_deactivation_request.xml"
+licence.deactivation_request_to_file(fname)
+```
+
+**Email Us**
+
+Send this file to licencing@ragdolldynamics.com. Once we have confirmed receipt of this file, you will be able to re-activate Ragdoll on another machine.
+
+<br>
+
+## Offline Licence Roadmap
+
+Apologies for the tedious nature of offline licence management at the moment! Not long from now, you will be able to manage your licences *online* without sending any emails.

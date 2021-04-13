@@ -962,6 +962,7 @@ class String2(String):
         layout = QtWidgets.QHBoxLayout(container)
         layout.addWidget(a)
         layout.addWidget(b)
+        layout.setSpacing(px(2))
         layout.setContentsMargins(0, 0, 0, 0)
 
         a.editingFinished.connect(self.onEditingFinished)
@@ -1385,7 +1386,6 @@ class Table(QArgument):
         return self._read(role)
 
     def reset(self, items=None, header=None, current=None):
-        print("Resetting with %s as current selection" % current)
         self["items"][:] = items or []
         self._reset(items, header, current)
 

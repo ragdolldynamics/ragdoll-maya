@@ -2450,6 +2450,11 @@ class DumpWidget(QtWidgets.QWidget):
         model = self._models["TargetModel"]
         model.reset(root_item)
 
+        # Make sure everything is nice and tight
+        self._widgets["TargetView"].resizeColumnToContents(0)
+        self._widgets["TargetView"].resizeColumnToContents(1)
+        self._widgets["TargetView"].resizeColumnToContents(2)
+
 
 class ImportOptions(Options):
     instance = None
@@ -2503,7 +2508,9 @@ class ImportOptions(Options):
         )
 
         qimport_paths = import_paths.widget()
+        qimport_paths.setFixedHeight(px(128))
         layout = qimport_paths.layout()
+        layout.setSpacing(px(2))
         layout.addWidget(widgets["Thumbnail"], 1, QtCore.Qt.AlignCenter)
         widgets["Thumbnail"].setAlignment(QtCore.Qt.AlignCenter)
         widgets["Thumbnail"].setFixedWidth(px(200))
@@ -2586,6 +2593,25 @@ class ImportOptions(Options):
         self.on_selection_changed()
 
     def on_selection_changed(self, _=None):
+        try:
+            self._on_selection_changed()
+
+        # In the off chance that this fails, prevent further failure
+        # by removing the callback altogether.
+        except Exception:
+            # Make note for debugging
+            log.debug(
+                "Ragdoll Import Options had trouble "
+                "with a selection callback, and won't "
+                "be using it anymore."
+            )
+
+            # This is not allowed to fail
+            if self._selection_callback is not None:
+                om.MMessage.removeCallback(self._selection_callback)
+            self._selection_callback = None
+
+    def _on_selection_changed(self, _=None):
         use_selection = self.parser.find("importUseSelection")
         auto_namespace = self.parser.find("importAutoNamespace")
 
@@ -2731,6 +2757,13 @@ class ImportOptions(Options):
                 # To QPixmap
                 qthumbnail = base64_to_pixmap(thumbnail)
 
+                # Fit it to our widget
+                qthumbnail = qthumbnail.scaled(
+                    px(200), px(128),
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+
         self._widgets["Thumbnail"].setPixmap(qthumbnail)
 
     def on_browsed(self):
@@ -2754,25 +2787,33 @@ class ImportOptions(Options):
         import_path = self.parser.find("importPath")
         import_path.write(path)
 
-    def showEvent(self, event):
-        # Keep an eye on the current selection
-        __.callbacks += [om.MModelMessage.addCallback(
+    def install_selection_callback(self):
+        self._selection_callback = om.MModelMessage.addCallback(
             om.MModelMessage.kActiveListModified,
             self.on_selection_changed
-        )]
+        )
 
+    def uninstall_selection_callback(self):
+        if self._selection_callback is not None:
+            om.MMessage.removeCallback(self._selection_callback)
+        self._selection_callback = None
+
+    def showEvent(self, event):
+        # Keep an eye on the current selection
+        self.install_selection_callback()
         super(ImportOptions, self).showEvent(event)
 
     def closeEvent(self, event):
-        if self._selection_callback is not None:
-            om.MMessage.removeCallback(self._selection_callback)
-
-        self._selection_callback = None
-        super(ImportOptions, self).closeEvent(event)
+        self.uninstall_selection_callback()
 
     def __del__(self):
-        if self._selection_callback is not None:
-            om.MMessage.removeCallback(self._selection_callback)
+        """This should never really need to be called
+
+        But you can never be too careful with callbacks.
+
+        """
+
+        self.uninstall_selection_callback()
 
 
 def view_to_pixmap(size=None):

@@ -414,7 +414,7 @@ class Loader(object):
         if not scenes:
             # No scenes would get made, probably filtered away
             self._state = DefaultState()
-            return
+            return self._state
 
         # What got created on-top of rigids and chains? These are our leftovers
         visited = set()

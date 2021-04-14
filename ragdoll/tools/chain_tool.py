@@ -186,14 +186,23 @@ class Chain(object):
             """Pre-cache attributes to avoid needless evaluation"""
             for transform, _ in self._pairs:
                 world_matrix = transform["worldMatrix"][0].asMatrix()
+                parent_matrix = transform["parentMatrix"][0].asMatrix()
                 matrix = transform["matrix"].asMatrix()
                 translate = transform["translate"].as_vector()
                 rotate = transform["rotate"].as_euler()
 
+                if "jointOrient" in transform:
+                    joint_orient = transform["jointOrient"].as_quaternion()
+                else:
+                    # Only joints have these
+                    joint_orient = cmdx.Quaternion()
+
                 self._cache[(transform, "worldMatrix")] = world_matrix
+                self._cache[(transform, "parentMatrix")] = parent_matrix
                 self._cache[(transform, "matrix")] = matrix
                 self._cache[(transform, "translate")] = translate
                 self._cache[(transform, "rotate")] = rotate
+                self._cache[(transform, "jointOrient")] = joint_orient
 
         def remember_existing_inputs():
             # Remember existing animation
@@ -458,12 +467,15 @@ class Chain(object):
         dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes
-        tm = cmdx.Tm(self._cache[(transform, "matrix")])
+        # tm = cmdx.Tm(self._cache[(transform, "matrix")])
 
         # Read from matrix, as opposed to the rotate/translate channels
         # to account for jointOrient, pivots and all manner of things
-        translate = tm.translation()
-        rotate = tm.rotation()
+        # translate = tm.translation()
+        # rotate = tm.rotation()
+
+        translate = self._cache[(transform, "translate")]
+        rotate = self._cache[(transform, "rotate")]
 
         dgmod.set_attr(pair_blend["inTranslate1"], translate)
         dgmod.set_attr(pair_blend["inRotate1"], rotate)
@@ -547,19 +559,33 @@ class Chain(object):
         if not constraint:
             return
 
+        def bake_joint_orient(mat, orient):
+            """Bake jointOrient values
+
+            Such that keyframes can be made without
+            taking those into account. E.g. a joint with 0 rotate
+            but 45 degrees of jointOrient should only require a key
+            with 0 degrees.
+
+            """
+
+            assert isinstance(mat, cmdx.om.MMatrix)
+            assert isinstance(orient, cmdx.om.MQuaternion)
+
+            mat_tm = cmdx.om.MTransformationMatrix(mat)
+            new_quat = mat_tm.rotation(asQuaternion=True) * orient
+            mat_tm.setRotation(new_quat)
+
+            return mat_tm.asMatrix()
+
+        transform = rigid.parent()
+
+        joint_orient = self._cache[(transform, "jointOrient")]
+
         # pairBlend directly feeds into the drive matrix
         compose = mod.create_node("composeMatrix", name="composePairBlend")
         mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
-
-        make_absolute = mod.create_node("multMatrix", name="makeAbsolute")
-        mod.connect(compose["outputMatrix"], make_absolute["matrixIn"][0])
-
-        # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-        mod.set_attr(make_absolute["matrixIn"][1],
-                     rigid.parent()["parentMatrix"][0].asMatrix())
-
-        mod.connect(make_absolute["matrixSum"], rigid["inputMatrix"])
 
         # A drive is relative the parent frame, but the pairblend is relative
         # the parent Maya transform. In case these are not the same, we'll
@@ -580,16 +606,17 @@ class Chain(object):
         parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
         parent_rigid_matrix = parent_rigid_matrix.inverse()
 
+        total_matrix = parent_transform_matrix * parent_rigid_matrix
+        total_matrix = bake_joint_orient(total_matrix, joint_orient)
+
         mod.connect(compose["outputMatrix"], relative["matrixIn"][0])
-        relative["matrixIn"][1] = parent_transform_matrix
-        relative["matrixIn"][2] = parent_rigid_matrix
+        mod.set_attr(relative["matrixIn"][1], total_matrix)
 
         mod.connect(relative["matrixSum"], constraint["driveMatrix"])
 
         # Keep channel box clean
         mod.set_attr(compose["isHistoricallyInteresting"], False)
         mod.set_attr(relative["isHistoricallyInteresting"], False)
-        mod.set_attr(make_absolute["isHistoricallyInteresting"], False)
 
     def _auto_multiplier(self, dgmod):
         r"""Multiply provided `constraints`

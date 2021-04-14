@@ -2133,6 +2133,9 @@ def _rdrigid(mod, name, parent):
     mod.connect(parent["rotatePivot"], node["rotatePivot"])
     mod.connect(parent["rotatePivotTranslate"], node["rotatePivotTranslate"])
 
+    if "jointOrient" in parent:
+        mod.connect(parent["jointOrient"], node["jointOrient"])
+
     # Assign some random color, within some nice range
     mod.set_attr(node["color"], i__.random_color())
     mod.set_attr(node["version"], i__.version())
@@ -2317,31 +2320,32 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
         compose = dgmod.create_node("composeMatrix", name="composePairBlend")
 
         # Account for node being potentially parented somewhere
-        mult = dgmod.create_node("multMatrix", name="makeAbsolute")
+        absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
+        relative = dgmod.create_node("multMatrix", name="makeRelative")
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
-    mod.connect(compose["outputMatrix"], mult["matrixIn"][0])
+    mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
 
     # Reproduce a parent hierarchy, but don't connect it to avoid cycle
-    mod.set_attr(mult["matrixIn"][1], transform["parentMatrix"][0].asMatrix())
+    mod.set_attr(absolute["matrixIn"][1],
+                 transform["parentMatrix"][0].asMatrix())
 
     # Support hard manipulation
     # For e.g. transitioning between active and passive
-    mod.connect(mult["matrixSum"], rigid["inputMatrix"])
+    mod.connect(absolute["matrixSum"], rigid["inputMatrix"])
 
     # Keep channel box clean
     mod.set_attr(compose["isHistoricallyInteresting"], False)
-    mod.set_attr(mult["isHistoricallyInteresting"], False)
+    mod.set_attr(absolute["isHistoricallyInteresting"], False)
+    mod.set_attr(relative["isHistoricallyInteresting"], False)
 
     return pair_blend
 
 
 def _remove_pivots(mod, transform):
     # Remove unsupported additional transforms
-    for channel in ("rotatePivot",
-                    "rotatePivotTranslate",
-                    "scalePivot",
+    for channel in ("scalePivot",
                     "scalePivotTranslate",
                     "rotateAxis"):
 
@@ -2361,28 +2365,6 @@ def _remove_pivots(mod, transform):
                         "%s.%s%s was locked, results might look funny"
                         % (transform, channel, axis)
                     )
-
-    if "jointOrient" in transform and any(transform["jointOrient"].read()):
-        # Grab full transform, ahead of resetting the jointOrient
-        # in case we reset it without connecting to `rotate`
-        tm = transform.transform()
-
-        if transform["jointOrient"].editable:
-            mod.set_attr(transform["jointOrient"], (0.0, 0.0, 0.0))
-            log.warning(
-                "%s had a non-zero jointOrient, it was zeroed out"
-                % transform
-            )
-        else:
-            log.warning(
-                "Tried resetting %s.jointOrient but could not. "
-                "If you experience weird rotations, try resetting it to 0"
-                % transform
-            )
-
-        # "Freeze" transformations if possible
-        if transform["rotate"].editable:
-            mod.set_attr(transform["rotate"], tm.rotation())
 
 
 def _anim_constraint(rigid, active=False):

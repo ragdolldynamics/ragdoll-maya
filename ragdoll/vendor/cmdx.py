@@ -2876,6 +2876,7 @@ class Plug(object):
     def asQuaternion(self, time=None):
         value = self.read(time=time)
         value = Euler(value).asQuaternion()
+        return value
 
     def asVector(self, time=None):
         assert self.isArray or self.isCompound, "'%s' not an array" % self
@@ -3945,6 +3946,14 @@ class Quaternion(om.MQuaternion):
     def isNormalised(self, tol=0.0001):
         return abs(self.length() - 1.0) < tol
 
+    def asMatrix(self):
+        return Matrix4(super(Quaternion, self).asMatrix())
+
+    if ENABLE_PEP8:
+        as_matrix = asMatrix
+        is_normalised = isNormalised
+        length_squared = lengthSquared
+
 
 # Alias
 Quat = Quaternion
@@ -3977,10 +3986,10 @@ def twistSwingToQuaternion(ts):
 
 class EulerRotation(om.MEulerRotation):
     def asQuaternion(self):
-        return super(EulerRotation, self).asQuaternion()
+        return Quaternion(super(EulerRotation, self).asQuaternion())
 
     def asMatrix(self):
-        return MatrixType(super(EulerRotation, self).asMatrix())
+        return Matrix4(super(EulerRotation, self).asMatrix())
 
     order = {
         'xyz': kXYZ,

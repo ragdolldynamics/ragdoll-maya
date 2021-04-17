@@ -2097,7 +2097,7 @@ def export_physics(selection=None, **opts):
     from PySide2 import QtWidgets
     fname, suffix = QtWidgets.QFileDialog.getSaveFileName(
         ui.MayaWindow(),
-        "Save Ragdoll Scene",
+        "Export Ragdoll Scene",
         os.path.dirname(options.read("exportPath")),
         "Ragdoll scene files (*.rag)"
     )
@@ -2139,7 +2139,7 @@ def import_physics_from_file(selection=None, **opts):
     from PySide2 import QtWidgets
     fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
         ui.MayaWindow(),
-        "Save Ragdoll Scene",
+        "Import Ragdoll Scene",
         os.path.dirname(options.read("importPath")),
         "Ragdoll scene files (*.rag)"
     )

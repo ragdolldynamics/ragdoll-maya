@@ -1112,6 +1112,11 @@ def edit_constraint_frames(con):
         mod.connect(parent_frame["matrix"], con["parentFrame"])
         mod.connect(child_frame["matrix"], con["childFrame"])
 
+        # Have these deleted alongside the constraint
+        index = con["exclusiveNodes"].next_available_index()
+        mod.connect(parent_frame["message"], con["exclusiveNodes"][index])
+        mod.connect(child_frame["message"], con["exclusiveNodes"][index + 1])
+
     return parent_frame, child_frame
 
 
@@ -1162,6 +1167,10 @@ def edit_shape(rigid):
         mod.connect(shape["scaleX"], rigid["shapeLength"])
         mod.connect(shape["scaleY"], rigid["shapeRadius"])
         mod.connect(shape["shapeType"], rigid["shapeType"])
+
+        # Have this deleted alongside the constraint
+        index = rigid["exclusiveNodes"].next_available_index()
+        mod.connect(shape["message"], rigid["exclusiveNodes"][index])
 
     return shape
 

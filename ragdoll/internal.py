@@ -113,49 +113,18 @@ class UserAttributes(object):
 
         name = long_name or attr
         plug = self._source[attr]
+        clone = plug.clone(name, niceName=nice_name)
+        clone["keyable"] = True
 
-        kwargs = {
-            "default": plug.default,
-            "keyable": True,
-        }
-
-        if nice_name is not None:
-            kwargs["label"] = nice_name
-
-        # Figure out the attribute type based on original plug
-        def make_plug(plug, kwargs):
-            attr = plug.attribute()
-            Plug = None
-
-            if attr.apiType() == cmdx.om.MFn.kNumericAttribute:
-                innerType = cmdx.om.MFnNumericAttribute(attr).numericType()
-
-                if innerType == cmdx.om.MFnNumericData.kBoolean:
-                    Plug = cmdx.Boolean
-
-                elif innerType in (cmdx.om.MFnNumericData.kShort,
-                                   cmdx.om.MFnNumericData.kInt,
-                                   cmdx.om.MFnNumericData.kLong,
-                                   cmdx.om.MFnNumericData.kByte):
-                    Plug = cmdx.Int
-
-                elif innerType in (cmdx.om.MFnNumericData.kFloat,
-                                   cmdx.om.MFnNumericData.kDouble,
-                                   cmdx.om.MFnNumericData.kAddr):
-                    Plug = cmdx.Double
-
-            if Plug is None:
-                # Worst case, just assume double
-                kwargs["default"] = float(kwargs["default"])
-                Plug = cmdx.Double
-
-            return Plug(name, **kwargs)
-
-        mattr = make_plug(plug, kwargs)
+        value = plug.read()
 
         with cmdx.DagModifier() as mod:
-            mod.add_attr(self._target, mattr)
+            mod.add_attr(self._target, clone)
             mod.do_it()
+
+            # Maintain current value
+            mod.set_attr(self._target[name], value)
+
             mod.connect(self._target[name], self._source[attr])
 
         return self._target[name]

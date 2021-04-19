@@ -2285,8 +2285,6 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
 
     with cmdx.DGModifier() as dgmod:
         pair_blend = dgmod.create_node("pairBlend", name="blendSimulation")
-        dgmod.set_attr(pair_blend["rotInterpolation"],
-                       c.QuaternionInterpolation)
         dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes

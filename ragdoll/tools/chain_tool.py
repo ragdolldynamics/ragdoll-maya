@@ -463,7 +463,6 @@ class Chain(object):
         assert isinstance(dgmod, cmdx.DGModifier)
 
         pair_blend = dgmod.create_node("pairBlend")
-        dgmod.set_attr(pair_blend["rotInterpolation"], 1)  # Quaternion
         dgmod.set_attr(pair_blend["isHistoricallyInteresting"], False)
 
         # Establish initial values, before keyframes
@@ -650,7 +649,7 @@ class Chain(object):
 
         if mult:
             for constraint in self._new_constraints:
-                dgmod.connect(mult["message"], constraint["multiplierNode"])
+                dgmod.connect(mult["ragdollId"], constraint["multiplierNode"])
 
         else:
             # There isn't any, let's make one

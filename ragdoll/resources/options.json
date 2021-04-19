@@ -89,7 +89,7 @@
         "name": "convertRigidType",
         "label": "Rigid Type",
         "type": "Enum",
-        "default": "Auto",
+        "default": "Opposite",
         "items": ["Opposite", "Active", "Passive"],
         "help": "Convert a rigid from active to kinematic or vice versa. 'Opposite' turns passive into active and vice versa automatically."
     },
@@ -156,6 +156,13 @@
         "default": "Point",
         "items": ["Point", "Orient", "Hinge", "Parent", "Socket"],
         "help": "The type of constraint to convert to."
+    },
+    "constraintUseRotatePivot": {
+        "name": "constraintUseRotatePivot",
+        "label": "Use Rotate Pivot",
+        "type": "Boolean",
+        "default": true,
+        "help": "Use rotate pivot of child as offset for the constraint frames."
     },
     "maintainOffset": {
         "name": "maintainOffset",
@@ -506,6 +513,12 @@
         "default": true,
         "help": "Check whether the selected transform has a non-zero rotatePivot; they are unsupported and will be zeroed out."
     },
+    "validateScalePivot": {
+        "name": "validateScalePivot",
+        "type": "Boolean",
+        "default": false,
+        "help": "Check whether the selected transform has a non-zero scalePivot; they are unsupported and will be zeroed out."
+    },
     "validatePlaybackSpeed": {
         "name": "validatePlaybackSpeed",
         "type": "Boolean",
@@ -515,7 +528,7 @@
     "validateRotateAxis": {
         "name": "validateRotateAxis",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Let the user know of a Ragdoll limitation, that a custom rotate axis are unsupported."
     },
     "validateRotateOrder": {

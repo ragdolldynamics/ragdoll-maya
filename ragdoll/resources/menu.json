@@ -107,7 +107,7 @@
             "constraintType",
             "maintainOffset",
             "autoOrient",
-            "constraintStandalone",
+            "constraintUseRotatePivot",
             "constraintGuideStrength"
         ]
     },
@@ -370,9 +370,8 @@
             "validateEvaluationMode",
             "validateCachingMode",
             "validateLegacyOpenGL",
-            "validateRotatePivot",
+            "validateScalePivot",
             "validateRotateAxis",
-            "validateScale",
             "validatePlaybackSpeed"
         ]
     },

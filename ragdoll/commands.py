@@ -240,6 +240,12 @@ def convert_rigid(rigid, opts=None):
             # May be connected
             mod.force_set_attr(rigid["kinematic"], True)
 
+            # This rigid can no longer be affected by constraints
+            constraints = rigid["ragdollId"].connections(type="rdConstraint",
+                                                         source=False)
+            for con in constraints:
+                mod.delete(con)
+
         #
         # Convert passive --> active
         #
@@ -2139,6 +2145,7 @@ def _rdrigid(mod, name, parent):
                 node["inputParentInverseMatrix"])
 
     mod.connect(parent["rotateOrder"], node["rotateOrder"])
+    mod.connect(parent["rotateAxis"], node["rotateAxis"])
     mod.connect(parent["rotatePivot"], node["rotatePivot"])
     mod.connect(parent["rotatePivotTranslate"], node["rotatePivotTranslate"])
 
@@ -2355,22 +2362,21 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
 def _remove_pivots(mod, transform):
     # Remove unsupported additional transforms
     for channel in ("scalePivot",
-                    "scalePivotTranslate",
-                    "rotateAxis"):
+                    "scalePivotTranslate"):
 
         for axis in "XYZ":
             attr = transform[channel + axis]
 
             if attr.read() != 0:
                 if attr.editable:
-                    log.warning(
+                    log.debug(
                         "Zeroing out non-zero channel %s.%s%s"
                         % (transform, channel, axis)
                     )
                     mod.set_attr(attr, 0.0)
 
                 else:
-                    log.warning(
+                    log.debug(
                         "%s.%s%s was locked, results might look funny"
                         % (transform, channel, axis)
                     )
@@ -2428,6 +2434,7 @@ def _reset_constraint(mod, con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
+        "useRotatePivot": True,
     }, **opts)
 
     def reset_attr(attr):
@@ -2452,6 +2459,18 @@ def _reset_constraint(mod, con, opts=None):
     if opts["maintainOffset"] and parent_rigid and child_rigid:
         child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
         parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+        child_frame = cmdx.Matrix4()
+
+        if opts["useRotatePivot"]:
+            # Use rotate pivot as an offset to the native parent/child frames
+            rotate_pivot = child_rigid["rotatePivot"].as_vector()
+            offset_tm = cmdx.Tm(child_matrix)
+            offset_tm.translate_by(rotate_pivot)
+            offset_matrix = offset_tm.as_matrix()
+
+            child_frame = offset_matrix * child_matrix.inverse()
+            child_matrix = offset_matrix
+
         parent_frame = child_matrix * parent_matrix.inverse()
 
         # Drive to where you currently are
@@ -2459,7 +2478,7 @@ def _reset_constraint(mod, con, opts=None):
             mod.set_attr(con["driveMatrix"], parent_frame)
 
         mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], cmdx.Mat4())
+        mod.set_attr(con["childFrame"], child_frame)
 
 
 def _apply_scale(mat):

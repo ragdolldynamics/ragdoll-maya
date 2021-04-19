@@ -945,14 +945,11 @@ def is_valid_transform(transform):
                 ]
             )
 
-    if options.read("validateRotatePivot"):
+    if options.read("validateScalePivot"):
         nonzero = []
         tolerance = 0.01
-        for attr in ("rotatePivot",
-                     "rotatePivotTranslate",
-                     "scalePivot",
-                     "scalePivotTranslate",
-                     "rotateAxis"):
+        for attr in ("scalePivot",
+                     "scalePivotTranslate"):
             for axis in "XYZ":
                 plug = transform[attr + axis]
                 if abs(plug.read()) > tolerance:
@@ -963,10 +960,10 @@ def is_valid_transform(transform):
                 log.warning("%s was not zero" % plug.path())
 
             return ui.warn(
-                option="validateRotatePivot",
-                title="Custom Rotate Pivot Not Supported",
+                option="validateScalePivot",
+                title="Custom Scale Pivot Not Supported",
                 message=(
-                    "Non-zero rotate pivots were found. These are currently "
+                    "Non-zero scale pivot was found. These are currently "
                     "unsupported and need to be zeroed out, "
                     "see Script Editor for details."
                 ),
@@ -975,7 +972,7 @@ def is_valid_transform(transform):
 
                     # Happens automatically by commands.py
                     # Take it or leave it, doesn't work otherwise
-                    ("Zero out rotatePivot", lambda: True),
+                    ("Zero out scalePivot", lambda: True),
 
                     ("Cancel", lambda: False)
                 ]
@@ -1095,11 +1092,13 @@ def create_active_rigid(selection=None, **opts):
             created += [con]
 
     if created:
-        if select:
-            all_rigids = [r.parent() for r in created]
-            cmds.select(map(str, all_rigids), replace=True)
+        new_rigids = [n for n in created if n.type() == "rdRigid"]
 
-        log.info("Created %d rigid bodies", len(created))
+        if select:
+            all_rigids = [r.parent() for r in new_rigids]
+            cmds.select(list(map(str, all_rigids)), replace=True)
+
+        log.info("Created %d rigid bodies", len(new_rigids))
         return kSuccess
 
     else:
@@ -1117,6 +1116,7 @@ def create_passive_rigid(selection=None, **opts):
         cmds.select(transform.path())
 
     opts["createRigidType"] = "Passive"
+    opts["convertRigidType"] = "Passive"
     return create_active_rigid(selection, **opts)
 
 
@@ -1258,7 +1258,6 @@ def _validate_transforms(nodes, tolerance=0.01):
     """Check for unsupported features in nodes of `root`"""
     negative_scaled = []
     positive_scaled = []
-    axes = []
     rotate_orders = []
     issues = []
 
@@ -1273,10 +1272,6 @@ def _validate_transforms(nodes, tolerance=0.01):
         if any(value > 1 + tolerance for value in tm.scale()):
             positive_scaled += [node]
 
-        axis = node["rotateAxis"].read()
-        if (any(abs(value) > tolerance for value in axis)):
-            axes += [node]
-
         if node["rotateOrder"].read() > 0:
             rotate_orders += [node]
 
@@ -1285,14 +1280,6 @@ def _validate_transforms(nodes, tolerance=0.01):
             "%d node(s) has negative scale\n%s" % (
                 len(negative_scaled),
                 "\n".join(" - %s" % node for node in negative_scaled),
-            )
-        ]
-
-    if axes and options.read("validateRotateAxis"):
-        issues += [
-            "%d node(s) had a custom rotate axis\n%s" % (
-                len(axes),
-                "\n".join(" - %s" % node for node in axes),
             )
         ]
 
@@ -1413,6 +1400,7 @@ def create_constraint(selection=None, **opts):
 
     opts = {
         "maintainOffset": _opt("maintainOffset", opts),
+        "useRotatePivot": _opt("constraintUseRotatePivot", opts),
         "standalone": _opt("constraintStandalone", opts),
     }
 
@@ -1503,7 +1491,7 @@ def convert_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 def convert_rigid(selection=None, **opts):
     converted = []
-    passive = _opt("convertRigidType", opts) == "Passive"
+    typ = _opt("convertRigidType", opts)
 
     for node in selection or cmdx.selection():
         rigid = node
@@ -1514,15 +1502,11 @@ def convert_rigid(selection=None, **opts):
         if not rigid or rigid.type() != "rdRigid":
             log.warning("Couldn't convert %s" % node)
 
-        if passive is None:
-            # Unless specified, invert the current rigid type
-            typ = options.read("convertRigidType")
+        if typ == "Opposite":
+            # Toggle between kinematic and dynamic
+            typ = "Active" if rigid["kinematic"] else "Passive"
 
-            if typ == "Auto":
-                # Toggle between kinematic and dynamic
-                typ = "Dynamic" if rigid["kinematic"] else "Kinematic"
-
-            passive = typ == "Kinematic"
+        passive = typ == "Passive"
 
         commands.convert_rigid(rigid, opts={"passive": passive})
         converted.append(rigid)

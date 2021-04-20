@@ -284,6 +284,11 @@ class Chain(object):
 
         self._make_simulated_attr(tree_root_rigid, tree_root_transform)
 
+        # Link scene to simulated state
+        with cmdx.DagModifier() as mod:
+            mod.connect(tree_root_transform["simulated"],
+                        self._scene["enabled"])
+
         # Links
         root_transform, root_shape = self._root
         root_rigid = root_transform.shape(type="rdRigid")
@@ -485,7 +490,9 @@ class Chain(object):
         dgmod.connect(rigid["outputRotateX"], pair_blend["inRotateX2"])
         dgmod.connect(rigid["outputRotateY"], pair_blend["inRotateY2"])
         dgmod.connect(rigid["outputRotateZ"], pair_blend["inRotateZ2"])
-        dgmod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
+
+        # Let the animator see the raw animation values, no physics
+        dgmod.connect(self._tree_root[0]["simulated"], pair_blend["weight"])
 
         if self._opts["autoKey"]:
             # Generate default animation curves, it's expected since you can no
@@ -533,9 +540,6 @@ class Chain(object):
             transform = rigid.parent()
             blend = self._add_pairblend(dgmod, rigid, transform)
             self._auto_influence(dgmod, rigid, blend)
-
-            dgmod.connect(self._tree_root[0]["notSimulated"],
-                          rigid["kinematic"])
 
     def _auto_influence(self, mod, rigid, pair_blend):
         """Treat incoming animation as guide constraint

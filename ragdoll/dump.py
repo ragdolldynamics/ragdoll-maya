@@ -1007,10 +1007,13 @@ class Loader(object):
                 walk(graph, neighbour)
 
         # Separate chains from individual rigids
-        rigids = []
         for chain in chains[:]:
-            if len(chain) == 1:
-                rigids += chain
+            if len(chain) > 1:
+                continue
+
+            # Take care of hydras, i.e. a root with multiple heads
+            Rigid = self.component(chain[0], "RigidComponent")
+            if not Rigid["parentRigid"]:
                 chains.remove(chain)
 
         # Consider each chain its own object, with unique constraints

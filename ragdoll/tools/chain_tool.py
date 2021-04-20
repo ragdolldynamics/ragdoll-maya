@@ -765,7 +765,6 @@ class Chain(object):
         if passive:
             commands._connect_passive(mod, rigid, transform)
         else:
-            commands._remove_pivots(mod, transform)
             commands._connect_active(mod, rigid, transform)
 
         if self._opts["computeMass"]:

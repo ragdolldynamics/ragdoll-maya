@@ -187,7 +187,6 @@ def create_rigid(node, scene, opts=None, _cache=None):
         if opts.get("passive"):
             _connect_passive(mod, rigid, transform)
         else:
-            _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform,
                             existing=opts.get("existing"))
 
@@ -255,7 +254,6 @@ def convert_rigid(rigid, opts=None):
             # The user will expect a newly-turned active rigid to collide
             mod.smart_set_attr(rigid["collide"], True)
 
-            _remove_pivots(mod, transform)
             _connect_active(mod, rigid, transform)
 
     return rigid
@@ -2148,6 +2146,8 @@ def _rdrigid(mod, name, parent):
     mod.connect(parent["rotateAxis"], node["rotateAxis"])
     mod.connect(parent["rotatePivot"], node["rotatePivot"])
     mod.connect(parent["rotatePivotTranslate"], node["rotatePivotTranslate"])
+    mod.connect(parent["scalePivot"], node["scalePivot"])
+    mod.connect(parent["scalePivotTranslate"], node["scalePivotTranslate"])
 
     if "jointOrient" in parent:
         mod.connect(parent["jointOrient"], node["jointOrient"])
@@ -2355,29 +2355,6 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
     return pair_blend
 
 
-def _remove_pivots(mod, transform):
-    # Remove unsupported additional transforms
-    for channel in ("scalePivot",
-                    "scalePivotTranslate"):
-
-        for axis in "XYZ":
-            attr = transform[channel + axis]
-
-            if attr.read() != 0:
-                if attr.editable:
-                    log.debug(
-                        "Zeroing out non-zero channel %s.%s%s"
-                        % (transform, channel, axis)
-                    )
-                    mod.set_attr(attr, 0.0)
-
-                else:
-                    log.debug(
-                        "%s.%s%s was locked, results might look funny"
-                        % (transform, channel, axis)
-                    )
-
-
 def _anim_constraint(rigid, active=False):
     """Apply inputMatrix to a new constraint"""
     scene = rigid["nextState"].connection(type="rdScene")
@@ -2407,7 +2384,9 @@ def _anim_constraint(rigid, active=False):
         _add_constraint(mod, con, scene)
 
     uas = i__.UserAttributes(con, transform)
-    uas.add("driveStrength")
+    uas.add("driveStrength",
+            long_name="animStrength",
+            nice_name="Anim Strength")
     uas.do_it()
 
     return con

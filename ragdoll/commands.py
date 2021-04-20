@@ -2327,8 +2327,6 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
 
     _connect_transform(mod, pair_blend, transform)
 
-    mod.connect(rigid["drivenBySimulation"], pair_blend["weight"])
-
     # Pair blend directly feeds into the drive matrix
     with cmdx.DGModifier() as dgmod:
         compose = dgmod.create_node("composeMatrix", name="composePairBlend")
@@ -2448,6 +2446,9 @@ def _reset_constraint(mod, con, opts=None):
     reset_attr(con["angularLimitX"])
     reset_attr(con["angularLimitY"])
     reset_attr(con["angularLimitZ"])
+
+    # This is normally what you'd expect
+    mod.set_attr(con["disableCollision"], True)
 
     # Initialise parent frame
     parent_rigid = con["parentRigid"].connection(type="rdRigid")

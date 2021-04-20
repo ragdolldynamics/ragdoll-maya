@@ -902,6 +902,7 @@ class Loader(object):
 
         # Figure out options
         for rigid in rigids:
+            Rigid = self.component(rigid["entity"], "RigidComponent")
             rigid["options"].update({
                 "passive": Rigid["kinematic"],
             })

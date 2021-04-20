@@ -11,6 +11,8 @@ dedump(dump)
 import json
 import logging
 
+from collections import OrderedDict as odict
+
 from maya import cmds
 from .vendor import cmdx
 from . import commands, tools, constants as c, internal as i__
@@ -355,13 +357,16 @@ class Loader(object):
             "Dump not compatible with this version of Ragdoll"
         )
 
-        dump["entities"] = {
+        dump["entities"] = odict(
 
             # Original JSON stores keys as strings, but the original
             # keys are integers; i.e. entity IDs
-            Entity(entity): value
-            for entity, value in dump["entities"].items()
-        }
+            (Entity(entity), value)
+
+            for entity, value in sorted(
+                dump["entities"].items(), key=lambda i: i[0]
+            )
+        )
 
         self._dump = dump
         self._is_up_to_date = False

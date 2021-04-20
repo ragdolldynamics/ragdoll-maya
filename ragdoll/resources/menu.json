@@ -141,16 +141,16 @@
         "description": "Constrain the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
     "kinematic": {
-        "label": "Passive",
-        "icon": "kinematic.png",
-        "summary": "Animate a passive rigid body with an external transform.",
-        "description": "Create a new Maya transform and use the world matrix as input for 'kinematic' a.k.a. 'passive' animation. This is the same as creating or converting to a Passive Rigid, except it allows for the `rdRigid.kinematic` attribute to be *animated*. This can be used to transition from animation into simulation and vice versa."
+        "label": "Hard Pin",
+        "icon": "hardpin.png",
+        "summary": "Pin a rigid body in worldspace.",
+        "description": "Pin the selected rigid body at its current worldspace position. The pin may be animated and disabled/enabled at run-time."
     },
     "guide": {
-        "label": "Guide",
-        "icon": "control.png",
-        "summary": "Animate an active rigid body with an external transform.",
-        "description": "Create a new Maya transform and use the world matrix as input to 'drive' a.k.a. 'guide' a rigid dynamically. This is the same as what a Dynamic Control and a blended Active Rigid uses, except as a separate transform. There can be multiple guides to a single rigid, where each can fight for control over the final position, or where you the animator can blend between them."
+        "label": "Soft Pin",
+        "icon": "softpin2.png",
+        "summary": "Pin a rigid body in worldspace, with a spring-like softness.",
+        "description": "Guide the selected rigid body towards its current worldspace position. The guide may be animated and disabled/enabled at run-time."
     },
     "motor": {
         "label": "Motor",

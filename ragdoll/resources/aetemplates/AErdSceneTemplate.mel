@@ -28,10 +28,10 @@ global proc AErdSceneTemplate(string $nodeName) {
             editorTemplate -addControl "collisionDetectionType";
             editorTemplate -addControl "enableStabilisation";
             editorTemplate -addControl "enableEnhancedFriction";
+            editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
             editorTemplate -addControl "bounceThresholdVelocity";
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
-            editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
             editorTemplate -addControl "threadCount";
         editorTemplate -endLayout;
 

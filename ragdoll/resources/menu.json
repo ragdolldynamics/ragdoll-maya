@@ -140,6 +140,12 @@
         "summary": "Constrain the position and limit the orientation between two rigid bodies.",
         "description": "Constrain the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
+    "animationConstraint": {
+        "label": "Animation Constraint",
+        "icon": "animation.png",
+        "summary": "Convert translate/rotate channels into a target guide.",
+        "description": "Turn the animatable translate and rotate channels into a suitable guide target pose."
+    },
     "kinematic": {
         "label": "Hard Pin",
         "icon": "hardpin.png",

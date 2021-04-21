@@ -302,6 +302,97 @@ def create_constraint(parent, child):
 
 
 @i__.with_undo_chunk
+def animation_constraint(rigid, opts=None):
+    """A special-purpose constraint for converting animation into a guide
+
+    Animation is converted into a matrix which is then used by a newly
+    created guide constraint.
+
+    Arguments:
+        rigid (cmdx.Node): Rigid which to constrain to animation
+
+    Options:
+        name (str): Name given to the constraint
+        parent (cmdx.Node): Parent rigid, animation is assumed relative
+            to this rigid. Default is the scene, i.e. worldspace
+
+    """
+
+    assert opts is None or isinstance(opts, dict), "opts must be of type dict"
+
+    opts = dict({
+        "name": "rAnimConstraint",
+        "strength": 1.0,
+        # "kinematicParent": False,
+        "parent": None,
+    }, **(opts or {}))
+
+    scene = rigid["nextState"].connection(type="rdScene")
+    assert scene is not None, "%s was not connected to a scene" % rigid
+
+    transform = rigid.parent()
+    parent_transform = transform.parent()
+
+    parent = opts["parent"] or scene
+
+    assert "ragdollId" in parent, (
+        "%s was not a suitable scene or rigid" % parent
+    )
+
+    # Without a pairBlend, the constraint is but the dream of a mad man
+    pair_blend = rigid["outputTranslateX"].connection(type="pairBlend",
+                                                      source=False)
+
+    assert pair_blend, "%s must be passing through a pairBlend" % rigid
+
+    # Pair blend directly feeds into the drive matrix
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        compose = dgmod.create_node("composeMatrix", name="animToMatrix")
+
+        # Account for node being potentially parented somewhere
+        absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
+
+    with cmdx.DagModifier() as mod:
+        name = opts["name"]
+        name = i__.unique_name(name)
+        con = _rdconstraint(mod, name, parent=transform)
+
+        mod.set_attr(con["limitEnabled"], False)
+        mod.set_attr(con["driveEnabled"], True)
+        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
+        mod.set_attr(con["driveStrength"], opts["strength"])
+
+        mod.connect(parent["ragdollId"], con["parentRigid"])
+        mod.connect(rigid["ragdollId"], con["childRigid"])
+
+        mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
+        mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
+        mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
+
+        if parent_transform and i__.is_dynamic(parent_transform, scene):
+            # Because the parent transform is dynamic, we can't connect
+            # directly to it as that would mean a cycle
+            mod.set_attr(absolute["matrixIn"][1],
+                         transform["parentMatrix"][0].asMatrix())
+
+        else:
+            mod.connect(transform["parentMatrix"][0], absolute["matrixIn"][1])
+
+        mod.connect(absolute["matrixSum"], con["driveMatrix"])
+
+        # Add to scene
+        _add_constraint(mod, con, scene)
+
+    uas = i__.UserAttributes(con, transform)
+    uas.add("driveStrength",
+            long_name="animStrength",
+            nice_name="Anim Strength")
+    uas.do_it()
+
+    return con
+
+
+@i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode,))
@@ -2333,7 +2424,6 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
 
         # Account for node being potentially parented somewhere
         absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
-        relative = dgmod.create_node("multMatrix", name="makeRelative")
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
@@ -2350,46 +2440,8 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
     # Keep channel box clean
     mod.set_attr(compose["isHistoricallyInteresting"], False)
     mod.set_attr(absolute["isHistoricallyInteresting"], False)
-    mod.set_attr(relative["isHistoricallyInteresting"], False)
 
     return pair_blend
-
-
-def _anim_constraint(rigid, active=False):
-    """Apply inputMatrix to a new constraint"""
-    scene = rigid["nextState"].connection(type="rdScene")
-    assert scene is not None, "%s was not connected to a scene" % rigid
-
-    transform = rigid.parent()
-
-    with cmdx.DagModifier() as mod:
-        con = _rdconstraint(mod, "rAnimConstraint", parent=transform)
-
-        mod.set_attr(con["limitEnabled"], False)
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
-
-        # Follow animation, if any
-        mod.set_attr(con["driveStrength"], 1.0 if active else 0.0)
-
-        mod.connect(scene["ragdollId"], con["parentRigid"])
-        mod.connect(rigid["ragdollId"], con["childRigid"])
-
-        mod.do_it()
-
-        # Support soft manipulation
-        mod.connect(rigid["inputMatrix"], con["driveMatrix"])
-
-        # Add to scene
-        _add_constraint(mod, con, scene)
-
-    uas = i__.UserAttributes(con, transform)
-    uas.add("driveStrength",
-            long_name="animStrength",
-            nice_name="Anim Strength")
-    uas.do_it()
-
-    return con
 
 
 def _reset_constraint(mod, con, opts=None):

@@ -103,6 +103,12 @@ def parentConstraint(parent, child, opts=None):
     return _output(_commands.parent_constraint(parent, child, opts=opts))
 
 
+@_functools.wraps(_commands.animation_constraint)
+def animationConstraint(rigid, opts=None):
+    rigid = _converted(rigid)
+    return _output(_commands.animation_constraint(rigid, opts=opts))
+
+
 @_functools.wraps(_commands.convert_rigid)
 def convertRigid(rigid, opts=None):
     rigid = _converted(rigid)

@@ -487,6 +487,11 @@ def install_menu():
 
         divider()
 
+        item("animationConstraint", create_animation_constraint,
+             create_animation_constraint_options)
+
+        divider()
+
         item("editConstraintFrames",
              edit_constraint_frames,
              label="Edit Pivots")
@@ -1088,7 +1093,10 @@ def create_active_rigid(selection=None, **opts):
         created += [rigid]
 
         if not passive and _opt("existingAnimation", opts) == "Blend":
-            con = commands._anim_constraint(rigid, active=is_connected)
+            subopts = {
+                "strength": 1.0 if is_connected else 0.0,
+            }
+            con = commands.animation_constraint(rigid, opts=subopts)
             created += [con]
 
     if created:
@@ -1561,6 +1569,28 @@ def create_hinge_constraint(selection=None, **opts):
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": "Socket"})
     return create_constraint(selection, **opts)
+
+
+@i__.with_undo_chunk
+def create_animation_constraint(selection=None, **opts):
+    selection = selection or cmdx.selection()
+
+    created = []
+    for node in selection:
+        rigid = _find_rigid(node)
+
+        if not rigid:
+            continue
+
+        opts = {
+            "strength": _opt("constraintGuideStrength", opts),
+        }
+
+        con = commands.animation_constraint(rigid, opts=opts)
+        created += [con]
+
+    log.info("Successfully created %s" % ", ".join(str(c) for c in created))
+    return kSuccess
 
 
 @i__.with_undo_chunk
@@ -2310,6 +2340,10 @@ def edit_shape_options(*args):
 
 def multiply_constraints_options(*args):
     return _Window("multiplyConstraints", create_turbulence_force)
+
+
+def create_animation_constraint_options(selection=None, **opts):
+    return _Window("animationConstraint", create_animation_constraint)
 
 
 def create_character_options(*args):

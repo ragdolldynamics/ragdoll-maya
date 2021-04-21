@@ -154,7 +154,7 @@
     },
     "guide": {
         "label": "Soft Pin",
-        "icon": "softpin2.png",
+        "icon": "control.png",
         "summary": "Pin a rigid body in worldspace, with a spring-like softness.",
         "description": "Guide the selected rigid body towards its current worldspace position. The guide may be animated and disabled/enabled at run-time."
     },

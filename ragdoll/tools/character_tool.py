@@ -257,8 +257,13 @@ def create(root,
     result = root
 
     if copy:
-        result = cmds.duplicate(result.path(), returnRootsOnly=True)[0]
+        result = cmds.duplicate(result.path(),
+                                renameChildren=True,
+                                returnRootsOnly=True)[0]
         result = cmdx.encode(result)
+
+        with cmdx.DagModifier() as mod:
+            mod.parent(result, None)
 
     _recurse(result)
 
@@ -269,17 +274,17 @@ def create(root,
             # Facilitate kinematic attribute
             mod.connect(root["matrix"], rigid["inputMatrix"])
 
-        # Absolute control on hip
-        ref, _, con = commands.create_absolute_control(rigid, reference=root)
-
-        with cmdx.DagModifier() as mod:
-            mod.smart_set_attr(con["driveStrength"], 0)  # Default to off
-
         # Forward the kinematic attribute to the root guide
         root_proxies = i__.UserAttributes(rigid, root)
         root_proxies.add_divider("Ragdoll")
         root_proxies.add("kinematic")
         root_proxies.do_it()
+
+        # Absolute control on hip
+        ref, _, con = commands.create_absolute_control(rigid, reference=root)
+
+        with cmdx.DagModifier() as mod:
+            mod.smart_set_attr(con["driveStrength"], 0)  # Default to off
 
         with cmdx.DagModifier() as mod:
             for reference, joint in zip(root.descendents(type="joint"),
@@ -290,16 +295,16 @@ def create(root,
                 if rigid is None:
                     continue
 
-                commands.create_active_control(reference, rigid)
-
-                mod.smart_set_attr(rigid["kinematic"], False)
-                mod.do_it()
-
                 # Forward kinematics from children too
                 reference_proxies = i__.UserAttributes(rigid, reference)
                 reference_proxies.add_divider("Ragdoll")
                 reference_proxies.add("kinematic")
                 reference_proxies.do_it()
+
+                commands.create_active_control(reference, rigid)
+
+                mod.smart_set_attr(rigid["kinematic"], False)
+                mod.do_it()
 
                 mod.connect(reference["worldMatrix"][0], rigid["inputMatrix"])
 

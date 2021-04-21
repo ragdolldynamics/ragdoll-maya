@@ -365,3 +365,10 @@ def add_to_set(node, name, mod=None):
 
     collection.add(node)
     return collection
+
+
+def is_dynamic(transform, scene):
+    """Does `transform` in any way affect `scene`?"""
+    scene["clean"] = True
+    transform["translateX"].read()
+    return not scene["clean"].read()

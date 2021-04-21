@@ -57,21 +57,15 @@ class UserAttributes(object):
             if isinstance(attr, cmdx._AbstractAttribute):
                 name = attr["name"]
 
-                if self._target.has_attr(name):
-                    continue
-
-                with cmdx.DagModifier() as mod:
-                    mod.add_attr(self._target, attr)
+                if not self._target.has_attr(name):
+                    with cmdx.DagModifier() as mod:
+                        mod.add_attr(self._target, attr)
 
                 plug = self._target[name]
 
             else:
                 attr, long_name, nice_name = attr
                 name = long_name or attr
-
-                if self._target.has_attr(name):
-                    continue
-
                 plug = self.semi_proxy(attr, long_name, nice_name)
 
             added += [plug]
@@ -119,8 +113,9 @@ class UserAttributes(object):
         value = plug.read()
 
         with cmdx.DagModifier() as mod:
-            mod.add_attr(self._target, clone)
-            mod.do_it()
+            if name not in self._target:
+                mod.add_attr(self._target, clone)
+                mod.do_it()
 
             # Maintain current value
             mod.set_attr(self._target[name], value)

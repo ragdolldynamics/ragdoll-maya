@@ -602,11 +602,11 @@ class Chain(object):
 
         relative = mod.create_node("multMatrix", name="makeRelative")
 
-        # From this matrix..
+        # From this space..
         parent_transform_matrix = rigid["inputParentInverseMatrix"].asMatrix()
         parent_transform_matrix = parent_transform_matrix.inverse()
 
-        # To this matrix..
+        # To this space..
         parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
         parent_rigid_matrix = parent_rigid_matrix.inverse()
 

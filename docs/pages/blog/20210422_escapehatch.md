@@ -1,0 +1,1 @@
+Always give users a way to circumvent protections and to workaround issues without waiting for a new update (which could be days or weeks).

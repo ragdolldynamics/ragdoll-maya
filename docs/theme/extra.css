@@ -19,6 +19,10 @@ blockquote p {
   margin-bottom: 0px !important;
 }
 
+a[title="Edit this page"] {
+    display: none;
+}
+
 .md-grid {
     max-width: 57rem;
 }
@@ -111,11 +115,6 @@ blockquote p {
 /* Remove that annoying horizontal line at the bottom */
 .md-typeset hr {
     border-bottom: none;
-}
-
-/* No git repo yet */
-.md-header-nav__source {
-    display: none;
 }
 
 pre {

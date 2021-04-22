@@ -1041,6 +1041,34 @@ def create_active_rigid(selection=None, **opts):
     if not scene:
         return
 
+    def will_cycle(root):
+        rigid = root.shape(type="rdRigid")
+
+        # Passive or active, this is fine
+        if rigid:
+            return False
+
+        # This is not fine
+        return i__.is_dynamic(root, scene)
+
+    if _opt("cycleProtection", opts):
+        for node in selection:
+            transform = node.parent() if node.isA(cmdx.kShape) else node
+
+            if not will_cycle(transform):
+                continue
+
+            log.warning("%s cannot be made passive" % transform)
+            ui.MessageBox("Cycle Warning", (
+                "**Passive Child, Active Parent**\n\n"
+                "Cannot make *passive* rigid the "
+                "child of an *active* hierarchy. "
+                "This would have caused a cycle.\n\n"
+                "Ensure no parent is already being simulated."
+            ), buttons=ui.OkButton, icon=ui.InformationIcon)
+
+            return kFailure
+
     if _opt("autoReturnToStart", opts):
         start_time = scene["startTime"].asTime()
         cmdx.currentTime(start_time)
@@ -1189,6 +1217,27 @@ def create_active_chain(selection=None, **opts):
     # Cancelled by user
     if not scene:
         return
+
+    def cycle_protection():
+        root = links[0]
+        rigid = root.shape(type="rdRigid")
+
+        # Passive or active, this is fine
+        if rigid:
+            return True
+
+        # This is not fine
+        return not i__.is_dynamic(root, scene)
+
+    if _opt("cycleProtection", opts) and not cycle_protection():
+        if opts["passiveRoot"]:
+            log.warning("%s cannot be made passive" % links[0])
+            ui.MessageBox("Passive Child, Active Parent", (
+                "Cannot make *passive* rigid the "
+                "child of an *active* hierarchy."
+            ), buttons=ui.OkButton, icon=ui.InformationIcon)
+
+            return kFailure
 
     tools.create_chain(links, scene, opts=opts, defaults=defaults)
 
@@ -1502,10 +1551,12 @@ def convert_constraint(selection=None, **opts):
 
 @i__.with_undo_chunk
 def convert_rigid(selection=None, **opts):
+    selection = selection or cmdx.selection()
+    rigids = []
     converted = []
     typ = _opt("convertRigidType", opts)
 
-    for node in selection or cmdx.selection():
+    for node in selection:
         rigid = node
 
         if node.isA(cmdx.kTransform):
@@ -1513,6 +1564,9 @@ def convert_rigid(selection=None, **opts):
 
         if not rigid or rigid.type() != "rdRigid":
             log.warning("Couldn't convert %s" % node)
+            continue
+
+        rigids += [rigid]
 
         if typ == "Opposite":
             # Toggle between kinematic and dynamic
@@ -1520,11 +1574,35 @@ def convert_rigid(selection=None, **opts):
 
         passive = typ == "Passive"
 
+        if _opt("cycleProtection", opts) and passive:
+            scene = rigid["nextState"].connection(type="rdScene")
+
+            if scene is None:
+                # This rigid isn't even part of a scene
+                pass
+
+            transform = rigid.parent()
+            print("Checking %s" % transform)
+
+            if i__.is_dynamic(transform, scene):
+                log.warning("%s cannot be made passive" % transform)
+                ui.MessageBox("Cycle Warning", (
+                    "**Passive Child, Active Parent**\n\n"
+                    "Cannot make *passive* rigid the "
+                    "child of an *active* hierarchy. "
+                    "This would have caused a cycle.\n\n"
+                    "Ensure the parent of the selected node is "
+                    "not already being affected by the simulation."
+                ), buttons=ui.OkButton, icon=ui.InformationIcon)
+
+                return kFailure
+
+    for rigid in rigids:
         commands.convert_rigid(rigid, opts={"passive": passive})
         converted.append(rigid)
 
     if not converted:
-        return log.warning("Noting converted")
+        return log.debug("Nothing converted")
 
     log.info("%d rigids converted", len(converted))
     return kSuccess
@@ -1930,7 +2008,8 @@ Dynamic Control has been updated and renamed Active Chain
     ui.MessageBox(
         "Command Renamed",
         message,
-        buttons=ui.OkButton
+        buttons=ui.OkButton,
+        icon=ui.InformationIcon
     )
 
     return kSuccess

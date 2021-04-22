@@ -16,6 +16,10 @@ string_types = cmdx.string_types
 long = cmdx.long
 
 
+class CycleError(RuntimeError):
+    pass
+
+
 class UserAttributes(object):
     """User attributes appear on the original controllers
      __________________
@@ -365,5 +369,8 @@ def add_to_set(node, name, mod=None):
 def is_dynamic(transform, scene):
     """Does `transform` in any way affect `scene`?"""
     scene["clean"] = True
-    transform["translateX"].read()
+
+    # Pull, but do not bother actually serialising it
+    transform["worldMatrix"]._mplug.asMObject()
+
     return not scene["clean"].read()

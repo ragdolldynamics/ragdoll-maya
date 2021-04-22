@@ -41,6 +41,7 @@ global proc AErdSceneTemplate(string $nodeName) {
             editorTemplate -label "Drives" -addControl "drawDrives";
             editorTemplate -label "Velocities" -addControl "drawVelocities";
             editorTemplate -label "Trajectories" -addControl "drawTrajectories";
+            editorTemplate -label "Center of Masses" -addControl "drawComs";
             // editorTemplate -label "Ghosts" -addControl "drawGhosts";
             editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";
             editorTemplate -label "Limit Scale" -addControl "drawLimitScale";

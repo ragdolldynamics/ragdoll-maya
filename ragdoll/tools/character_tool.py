@@ -194,6 +194,7 @@ def create(root,
     # Protect against duplicate rigid-making
     self = create
     self.done = []
+    self.new_constraints = []
 
     # Recursively make rigids and add constraints to `root`
     def _recurse(child, parent=None):
@@ -237,6 +238,8 @@ def create(root,
 
                 constraint["disableCollision"] = True
 
+                self.new_constraints += [constraint]
+
                 # Make boxes out of these
                 if label in (Hand, Foot, Toe, Head):
                     with cmdx.DagModifier() as mod:
@@ -266,6 +269,17 @@ def create(root,
             mod.parent(result, None)
 
     _recurse(result)
+
+    # Add multiplier
+    mult = commands.multiply_constraints(self.new_constraints, parent=result)
+    mult.rename(i__.unique_name("rGuideMultiplier"))
+
+    # Forward some convenience attributes
+    multiplier_attrs = i__.UserAttributes(mult, root)
+    multiplier_attrs.add("driveStrength",
+                         long_name="strengthMultiplier",
+                         nice_name="Strength Multiplier")
+    multiplier_attrs.do_it()
 
     if control:
         rigid = result.shape(type="rdRigid")

@@ -284,11 +284,6 @@ class Chain(object):
 
         self._make_simulated_attr(tree_root_rigid, tree_root_transform)
 
-        # Link scene to simulated state
-        with cmdx.DagModifier() as mod:
-            mod.connect(tree_root_transform["simulated"],
-                        self._scene["enabled"])
-
         # Links
         root_transform, root_shape = self._root
         root_rigid = root_transform.shape(type="rdRigid")
@@ -313,6 +308,12 @@ class Chain(object):
         if self._opts["addUserAttributes"]:
             for userattr in self._new_userattrs:
                 userattr.do_it()
+
+        # Link rigid enabled to `simulated` attribute
+        with cmdx.DagModifier() as mod:
+            for rigid in self._new_rigids:
+                mod.connect(tree_root_transform["simulated"],
+                            rigid["enabled"])
 
     def _do_one(self, mod, transform, shape, previous_rigid):
         assert transform and transform.isA(cmdx.kTransform), transform

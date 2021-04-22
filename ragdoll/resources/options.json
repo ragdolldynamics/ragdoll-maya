@@ -127,6 +127,12 @@
         "default": true,
         "help": "Orient constraint automatically by aiming towards the immediate child. Otherwise use the local orientation of the node."
     },
+    "autoReturnToStart": {
+        "name": "autoReturnToStart",
+        "type": "Boolean",
+        "default": true,
+        "help": "Automatically return to the start frame whenever creating new rigid bodies."
+    },
     "existingAnimation": {
         "name": "existingAnimation",
         "type": "Enum",

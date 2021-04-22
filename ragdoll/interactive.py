@@ -1041,6 +1041,10 @@ def create_active_rigid(selection=None, **opts):
     if not scene:
         return
 
+    if _opt("autoReturnToStart", opts):
+        start_time = scene["startTime"].asTime()
+        cmdx.currentTime(start_time)
+
     for index, node in enumerate(selection):
         transform = node.parent() if node.isA(cmdx.kShape) else node
 

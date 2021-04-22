@@ -371,6 +371,7 @@
             "scale",
             "cacheMedia",
             "autoInitialState",
+            "autoReturnToStart",
             "ogsReset",
             "globalsValidations",
             "validateEvaluationMode",

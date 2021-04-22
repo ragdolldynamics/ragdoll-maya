@@ -3018,6 +3018,19 @@ class Plug(object):
         assert self.isArray or self.isCompound, "'%s' not an array" % self
         return Vector(self.read(time=time))
 
+    def asTime(self, time=None):
+        attr = self._mplug.attribute()
+        type = attr.apiType()
+
+        if type != om.MFn.kTimeAttribute:
+            raise TypeError("%s is not a time attribute" % self.path())
+
+        kwargs = {}
+        if time is not None:
+            kwargs["context"] = DGContext(time=time)
+
+        return self._mplug.asMTime(**kwargs)
+
     @property
     def connected(self):
         """Return whether or not this attribute has an input connection
@@ -3792,6 +3805,7 @@ class Plug(object):
         as_euler = asEuler
         as_quaternion = asQuaternion
         as_vector = asVector
+        as_time = asTime
         channel_box = channelBox
         lock_and_hide = lockAndHide
         array_indices = arrayIndices
@@ -4400,6 +4414,7 @@ def _plug_to_python(plug, unit=None, context=None):
 
     """
 
+    assert isinstance(plug, om.MPlug), "'%r' was not an MPlug" % plug
     assert not plug.isNull, "'%s' was null" % plug
 
     kwargs = dict()
@@ -6156,9 +6171,12 @@ def connect(a, b):
         mod.connect(a, b)
 
 
-def currentTime():
-    """Return current time in MTime format"""
-    return oma.MAnimControl.currentTime()
+def currentTime(time=None):
+    """Set or return current time in MTime format"""
+    if time is None:
+        return oma.MAnimControl.currentTime()
+    else:
+        return oma.MAnimControl.setCurrentTime(time)
 
 
 class DGContext(om.MDGContext):

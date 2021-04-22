@@ -488,12 +488,18 @@
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
     },
-
     "globalsValidations": {
         "name": "globalsValidations",
         "label": "Validations",
         "type": "Separator",
         "default": "Various pre-flight checks to ensure Ragdoll is performing optimally."
+    },
+    "cycleProtection": {
+        "name": "cycleProtection",
+        "label": "Cycle Protection",
+        "type": "Boolean",
+        "default": true,
+        "help": "Protect against accidental cycles."
     },
     "validateEvaluationMode": {
         "name": "validateEvaluationMode",

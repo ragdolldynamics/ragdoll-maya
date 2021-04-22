@@ -867,8 +867,11 @@ def create_absolute_control(rigid, reference=None):
     )
 
     with cmdx.DagModifier() as mod:
+        name = "rSoftPin"
+        shape_name = name
+
         if reference is None:
-            name = i__.unique_name("rAbsoluteControl")
+            name = i__.unique_name(name)
             reference = mod.create_node("transform", name=name)
             mod.set_attr(reference["translate"], tmat.translation())
             mod.set_attr(reference["rotate"], tmat.rotation())
@@ -877,11 +880,14 @@ def create_absolute_control(rigid, reference=None):
             mod.connect(rigid["outputWorldScale"], reference["scale"])
             mod.set_keyable(reference["scale"], False)
 
-        ctrl = _rdcontrol(mod, "rAbsoluteControl1", reference)
+            shape_name = i__.shape_name(name)
+
+        ctrl = _rdcontrol(mod, shape_name, reference)
         mod.connect(rigid["ragdollId"], ctrl["rigid"])
 
+        shape_name = i__.shape_name(name + "Constraint")
         con = mod.create_node("rdConstraint",
-                              name="rAbsoluteConstraint1",
+                              name=shape_name,
                               parent=reference)
 
         mod.connect(rigid["ragdollId"], con["childRigid"])
@@ -991,9 +997,11 @@ def create_kinematic_control(rigid, reference=None):
         rigid = cmdx.encode(rigid)
 
     with cmdx.DagModifier() as mod:
+        name = "rHardPin"
+        shape_name = name
 
         if reference is None:
-            name = i__.unique_name("rPassive1")
+            name = i__.unique_name(name)
             reference = mod.create_node("transform", name=name)
 
             tmat = rigid.transform(cmdx.sWorld)
@@ -1005,9 +1013,11 @@ def create_kinematic_control(rigid, reference=None):
             mod.set_locked(reference["scale"], True)
             mod.set_keyable(reference["scale"], False)
 
-        ctrl = mod.create_node("rdControl",
-                               name=i__.unique_name("rPassiveShape1"),
-                               parent=reference)
+            shape_name = i__.shape_name(name)
+
+        mod.do_it()
+
+        ctrl = mod.create_node("rdControl", name=shape_name, parent=reference)
 
         if rigid["kinematic"].connected:
             mod.disconnect(rigid["kinematic"], destination=False)

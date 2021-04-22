@@ -1297,9 +1297,13 @@ YesButton = QtWidgets.QMessageBox.Yes
 NoButton = QtWidgets.QMessageBox.No
 CancelButton = QtWidgets.QMessageBox.Cancel
 OkButton = QtWidgets.QMessageBox.Ok
+InformationIcon = QtWidgets.QMessageBox.Information
+QuestionIcon = QtWidgets.QMessageBox.Question
+WarningIcon = QtWidgets.QMessageBox.Warning
+CriticalIcon = QtWidgets.QMessageBox.Critical
 
 
-def MessageBox(title, text, buttons=None):
+def MessageBox(title, text, buttons=None, icon=QuestionIcon):
     parent = MayaWindow()
     message = QtWidgets.QMessageBox(parent)
 
@@ -1309,9 +1313,10 @@ def MessageBox(title, text, buttons=None):
     )
 
     message.setStandardButtons(buttons)
+    message.setIcon(icon)
 
     message.setWindowTitle(title)
-    message.setText(text)
+    message.setText(markdown.markdown(text))
 
     return message.exec_() == QtWidgets.QMessageBox.Yes
 

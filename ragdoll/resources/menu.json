@@ -372,6 +372,7 @@
             "cacheMedia",
             "autoInitialState",
             "autoReturnToStart",
+            "cycleProtection",
             "ogsReset",
             "globalsValidations",
             "validateEvaluationMode",

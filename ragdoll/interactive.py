@@ -77,8 +77,7 @@ _recorded_actions = []
 
 
 def _print_exception():
-    if bool(os.getenv("RAGDOLL_DEVELOPER")):
-        traceback.print_exc()
+    log.debug(traceback.format_exc())
 
 
 def _resource(*fname):
@@ -90,6 +89,14 @@ def _resource(*fname):
 def _is_standalone():
     """Is Maya running without a GUI?"""
     return not hasattr(cmds, "about") or cmds.about(batch=True)
+
+
+MessageBox = ui.MessageBox
+
+
+if _is_standalone():
+    def MessageBox(*args, **kwargs):
+        return True
 
 
 def _after_scene_open(*args):
@@ -674,7 +681,7 @@ Would you like to convert %d nodes to Ragdoll %s? Not converting \
 may break the behavior from your previous scene.
 """ % (saved_version, count, current_version)
 
-    if not ui.MessageBox("%d Ragdoll nodes can be upgraded" % count, message):
+    if not MessageBox("%d Ragdoll nodes can be upgraded" % count, message):
         return
 
     try:
@@ -1041,17 +1048,17 @@ def create_active_rigid(selection=None, **opts):
     if not scene:
         return
 
-    def will_cycle(root):
-        rigid = root.shape(type="rdRigid")
+    if passive and _opt("cycleProtection", opts):
+        def will_cycle(root):
+            rigid = root.shape(type="rdRigid")
 
-        # Passive or active, this is fine
-        if rigid:
-            return False
+            # Passive or active, this is fine
+            if rigid:
+                return False
 
-        # This is not fine
-        return i__.is_dynamic(root, scene)
+            # This is not fine
+            return i__.is_dynamic(root, scene)
 
-    if _opt("cycleProtection", opts):
         for node in selection:
             transform = node.parent() if node.isA(cmdx.kShape) else node
 
@@ -1059,7 +1066,7 @@ def create_active_rigid(selection=None, **opts):
                 continue
 
             log.warning("%s cannot be made passive" % transform)
-            ui.MessageBox("Cycle Warning", (
+            MessageBox("Cycle Warning", (
                 "**Passive Child, Active Parent**\n\n"
                 "Cannot make *passive* rigid the "
                 "child of an *active* hierarchy. "
@@ -1232,7 +1239,7 @@ def create_active_chain(selection=None, **opts):
     if _opt("cycleProtection", opts) and not cycle_protection():
         if opts["passiveRoot"]:
             log.warning("%s cannot be made passive" % links[0])
-            ui.MessageBox("Passive Child, Active Parent", (
+            MessageBox("Passive Child, Active Parent", (
                 "Cannot make *passive* rigid the "
                 "child of an *active* hierarchy."
             ), buttons=ui.OkButton, icon=ui.InformationIcon)
@@ -1294,6 +1301,10 @@ def create_muscle(selection=None, **opts):
     # Cancelled by user
     if not scene:
         return
+
+    if _opt("autoReturnToStart", opts):
+        start_time = scene["startTime"].asTime()
+        cmdx.currentTime(start_time)
 
     if new_scene:
         # Muscles work best with the PGS solver, fow now
@@ -1388,6 +1399,10 @@ def create_character(selection=None, **opts):
 
     if not _validate_transforms(hierarchy):
         return
+
+    if _opt("autoReturnToStart", opts):
+        start_time = scene["startTime"].asTime()
+        cmdx.currentTime(start_time)
 
     kwargs = {
         "copy": _opt("characterCopy", opts),
@@ -1552,10 +1567,10 @@ def convert_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 def convert_rigid(selection=None, **opts):
     selection = selection or cmdx.selection()
-    rigids = []
     converted = []
     typ = _opt("convertRigidType", opts)
 
+    rigids = []
     for node in selection:
         rigid = node
 
@@ -1566,13 +1581,11 @@ def convert_rigid(selection=None, **opts):
             log.warning("Couldn't convert %s" % node)
             continue
 
-        rigids += [rigid]
-
+        # Toggle between kinematic and dynamic
         if typ == "Opposite":
-            # Toggle between kinematic and dynamic
-            typ = "Active" if rigid["kinematic"] else "Passive"
-
-        passive = typ == "Passive"
+            passive = not rigid["kinematic"].read()
+        else:
+            passive = typ == "Passive"
 
         if _opt("cycleProtection", opts) and passive:
             scene = rigid["nextState"].connection(type="rdScene")
@@ -1582,11 +1595,11 @@ def convert_rigid(selection=None, **opts):
                 pass
 
             transform = rigid.parent()
-            print("Checking %s" % transform)
+            parent = transform.parent()
 
-            if i__.is_dynamic(transform, scene):
+            if parent and i__.is_dynamic(parent, scene):
                 log.warning("%s cannot be made passive" % transform)
-                ui.MessageBox("Cycle Warning", (
+                MessageBox("Cycle Warning", (
                     "**Passive Child, Active Parent**\n\n"
                     "Cannot make *passive* rigid the "
                     "child of an *active* hierarchy. "
@@ -1597,7 +1610,9 @@ def convert_rigid(selection=None, **opts):
 
                 return kFailure
 
-    for rigid in rigids:
+        rigids += [(rigid, passive)]
+
+    for rigid, passive in rigids:
         commands.convert_rigid(rigid, opts={"passive": passive})
         converted.append(rigid)
 
@@ -2005,7 +2020,7 @@ def create_dynamic_control(selection=None, **opts):
 Dynamic Control has been updated and renamed Active Chain
 """
 
-    ui.MessageBox(
+    MessageBox(
         "Command Renamed",
         message,
         buttons=ui.OkButton,

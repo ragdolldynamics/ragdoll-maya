@@ -74,14 +74,6 @@ def test_character():
         assert_almost_equals(result["tz"].read(), -8.44, 2)
 
 
-def test_dynamic_control():
-    pass
-
-
-def test_convert_to_polygons():
-    pass
-
-
 def manual():
     import time
     t0 = time.time()

@@ -2,7 +2,7 @@ from maya import cmds
 from .. import commands, constants
 from ..vendor import cmdx
 from ..tools import chain_tool
-from . import _play, _new
+from . import _play, _new, _step
 
 from nose.tools import (
     assert_equals,
@@ -118,6 +118,190 @@ def test_chain_tree_tiger():
 def test_save_load_tiger():
     # Animation/initial pose should not be affected by saving/loading
     pass
+
+
+def test_scene_clean():
+    """rdScene.clean accurately tells us whether it has been evaluated"""
+
+    _new()
+
+    parent = cmdx.create_node("transform", name="parent")
+    child = cmdx.create_node("transform", name="child", parent=parent)
+
+    scene = commands.create_scene()
+    commands.create_rigid(child, scene)
+
+    # Trigger evaluation
+    child["translateX"].read()
+    assert not scene["clean"].read()
+
+    def part_of_scene(transform, scene):
+        """We'll know whether `transform` is involved via scene.clean"""
+        scene["clean"] = True
+        transform["translateX"].read()
+        return not scene["clean"].read()
+
+    assert part_of_scene(child, scene), (
+        "%s should have been part of scene" % child
+    )
+
+    assert not part_of_scene(parent, scene), (
+        "%s should NOT have been part of scene" % parent
+    )
+
+
+def test_scene_clean_passive():
+    """rdScene.clean understands active versus passive rigids"""
+
+    _new()
+
+    parent = cmdx.create_node("transform", name="parent")
+    child = cmdx.create_node("transform", name="child", parent=parent)
+
+    scene = commands.create_scene()
+
+    commands.create_rigid(parent, scene, opts={"passive": True})
+    commands.create_rigid(child, scene, opts={"passive": False})
+
+    # Trigger evaluation
+    child["translateX"].read()
+    assert not scene["clean"].read()
+
+    def part_of_scene(transform, scene):
+        """We'll know whether `transform` is involved via scene.clean"""
+        scene["clean"] = True
+        transform["translateX"].read()
+        return not scene["clean"].read()
+
+    assert part_of_scene(child, scene), (
+        "%s should have been part of scene" % child
+    )
+
+    assert not part_of_scene(parent, scene), (
+        "%s should NOT have been part of scene" % parent
+    )
+
+
+def test_rotate_pivot():
+    assert True
+
+
+def test_rotate_order():
+    assert True
+
+
+def test_rotate_axis():
+    assert True
+
+
+def test_joint_orient():
+    assert True
+
+
+def test_animation_constraint_1():
+    """Animation constraint to passive parent"""
+
+    _new(1, 120)
+
+    a = cmdx.createNode("transform")
+    b = cmdx.createNode("transform", parent=a)
+
+    a["ty"] = 5.0
+    b["tx"] = 5.0
+
+    scene = commands.create_scene()
+    scene["gravity"] = 0
+
+    commands.create_rigid(a, scene, opts={"passive": True})
+    rb = commands.create_rigid(b, scene)
+
+    commands.animation_constraint(rb)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    _step(b, 3)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    a["ty"] = 10.0
+
+    _step(b, 100)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 10.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 10.0, 2)
+
+
+def test_animation_constraint_2():
+    """Animation constraint to dynamic parent"""
+
+    _new(1, 120)
+
+    a = cmdx.createNode("transform")
+    b = cmdx.createNode("transform", parent=a)
+
+    a["ty"] = 5.0
+    b["tx"] = 5.0
+
+    scene = commands.create_scene()
+    scene["gravity"] = 0
+
+    ra = commands.create_rigid(a, scene)
+    rb = commands.create_rigid(b, scene)
+
+    commands.animation_constraint(ra)
+    commands.animation_constraint(rb)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    _step(b, 3)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    pb = a["tx"].connection(type="pairBlend")
+    pb["inTranslateY1"] = {1: 10.0}  # Keyframe it
+
+    _step(b, 100)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 10.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 10.0, 2)
+
+
+def test_animation_constraint_3():
+    """Animation constraint to kinematic parent"""
+
+    _new(1, 120)
+
+    a = cmdx.createNode("transform")
+    b = cmdx.createNode("transform", parent=a)
+
+    a["ty"] = 5.0
+    b["tx"] = 5.0
+
+    scene = commands.create_scene()
+    scene["gravity"] = 0
+
+    rb = commands.create_rigid(b, scene)
+
+    commands.animation_constraint(rb)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    _step(b, 3)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 5.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 5.0, 2)
+
+    a["ty"] = 10.0
+
+    _step(b, 100)
+
+    assert_almost_equals(a.translation(cmdx.sWorld).y, 10.0, 2)
+    assert_almost_equals(b.translation(cmdx.sWorld).y, 10.0, 2)
 
 
 if cmdx.__maya_version__ >= 2019:

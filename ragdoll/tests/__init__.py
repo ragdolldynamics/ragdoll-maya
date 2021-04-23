@@ -28,6 +28,20 @@ def _play(node, start=1, end=5):
         cmds.currentTime(frame, update=True)
 
 
+def _step(node, steps=1):
+    if node.type() == "rdRigid":
+        attr = "outputTranslateY"
+    elif node.isA(cmdx.kTransform):
+        attr = "translateY"
+    else:
+        raise TypeError("How do I evaluate %s?" % node)
+
+    for step in range(steps):
+        ct = cmds.currentTime(query=True)
+        node[attr].read()  # Trigger evaluation
+        cmds.currentTime(ct + 1, update=True)
+
+
 def _save():
     __.fname = cmds.file("test.ma", rename=True)
     cmds.file(save=True, force=True)

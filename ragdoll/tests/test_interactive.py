@@ -186,21 +186,36 @@ def test_create_constraint():
     assert_equals(len(cmds.ls(type="rdConstraint")), 5)
 
 
-def test_convert_rigid():
+def test_convert_active_rigid():
     _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
-    sphere1, _ = map(cmdx.encode, cmds.polySphere())
 
     cube1["translate"] = (1, 2, 0)
 
     # Use commands, in case the interactive function is failing
     scene = commands.create_scene()
-    commands.create_rigid(cube1, scene)
+    rigid = commands.create_rigid(cube1, scene)
 
     cmds.select(str(cube1))
-    opts = {"passive": True}
+    opts = {"convertRigidType": "Passive"}
     assert_true(interactive.convert_rigid(**opts))
+    assert_equals(rigid["kinematic"].read(), True)
+
+    cmds.select(str(cube1))
+    opts = {"convertRigidType": "Active"}
+    assert_true(interactive.convert_rigid(**opts))
+    assert_equals(rigid["kinematic"].read(), False)
+
+    cmds.select(str(cube1))
+    opts = {"convertRigidType": "Opposite"}
+    assert_true(interactive.convert_rigid(**opts))
+    assert_equals(rigid["kinematic"].read(), True)
+
+    cmds.select(str(cube1))
+    opts = {"convertRigidType": "Opposite"}
+    assert_true(interactive.convert_rigid(**opts))
+    assert_equals(rigid["kinematic"].read(), False)
 
 
 def test_convert_constraint():
@@ -444,10 +459,12 @@ def test_select_shapes():
 
 def test_select_transforms():
     """Commands properly find optional shapes under selected transforms"""
+    assert True
 
 
 def test_select_transforms_and_shapes():
     """Commands properly separate between transforms and shapes"""
+    assert True
 
 
 def manual():

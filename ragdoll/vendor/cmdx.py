@@ -5130,20 +5130,22 @@ class _BaseModifier(object):
         try:
             self.redoIt()
 
-            # These all involve calling on cmds,
-            # which manages undo on its own.
-            self._doLockAttrs()
-            self._doKeyableAttrs()
-            self._doNiceNames()
-
-        finally:
             if self._opts["undoable"]:
-
                 # Make our commit within the current undo chunk,
-                # to combine the commands from the above special
-                # attribute edits which happen via maya.cmds
+                # but *before* we call any maya.cmds as it may
+                # otherwise confuse the chunk
                 commit(self._modifier.undoIt, self._modifier.doIt)
 
+            # These all involve calling on cmds,
+            # which manages undo on its own.
+            self._doKeyableAttrs()
+            self._doNiceNames()
+            self._doLockAttrs()
+
+        finally:
+
+            # Ensure we close the undo chunk no matter what
+            if self._opts["undoable"]:
                 cmds.undoInfo(chunkName="%x" % id(self), closeChunk=True)
 
     def __init__(self,

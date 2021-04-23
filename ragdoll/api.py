@@ -18,7 +18,7 @@ import functools as _functools
 
 
 # Constants
-from .commands import (
+from .constants import (
     BoxShape,
     SphereShape,
     CapsuleShape,

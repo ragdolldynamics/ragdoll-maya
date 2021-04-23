@@ -5696,7 +5696,7 @@ class _BaseModifier(object):
                 # NOTE: This is bad, the user should be in control of when
                 # the modifier is actually being called. Especially if we
                 # want to avoid calling it altogether in case of an exception
-                self.doIt()
+                self._modifier.doIt()
 
         self._modifier.connect(src, dst)
 

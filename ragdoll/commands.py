@@ -334,6 +334,12 @@ def animation_constraint(rigid, opts=None):
     parent_transform = transform.parent()
 
     parent = opts["parent"] or scene
+    worldspace = True
+
+    # Special case of the immediate parent already being a dynamic rigid body
+    if parent_transform and parent_transform.shape(type="rdRigid"):
+        parent = parent_transform.shape(type="rdRigid")
+        worldspace = False
 
     assert "ragdollId" in parent, (
         "%s was not a suitable scene or rigid" % parent
@@ -349,8 +355,9 @@ def animation_constraint(rigid, opts=None):
     with cmdx.DGModifier(interesting=False) as dgmod:
         compose = dgmod.create_node("composeMatrix", name="animToMatrix")
 
-        # Account for node being potentially parented somewhere
-        absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
+        if worldspace:
+            # Account for node being potentially parented somewhere
+            absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
 
     with cmdx.DagModifier() as mod:
         name = opts["name"]
@@ -367,18 +374,24 @@ def animation_constraint(rigid, opts=None):
 
         mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
-        mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
 
-        if parent_transform and i__.is_dynamic(parent_transform, scene):
-            # Because the parent transform is dynamic, we can't connect
-            # directly to it as that would mean a cycle
-            mod.set_attr(absolute["matrixIn"][1],
-                         transform["parentMatrix"][0].asMatrix())
+        if worldspace:
+            mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
+
+            if parent_transform and i__.is_dynamic(parent_transform, scene):
+                # Because the parent transform is dynamic, we can't connect
+                # directly to it as that would mean a cycle
+                mod.set_attr(absolute["matrixIn"][1],
+                             transform["parentMatrix"][0].asMatrix())
+
+            else:
+                mod.connect(transform["parentMatrix"][0],
+                            absolute["matrixIn"][1])
+
+            mod.connect(absolute["matrixSum"], con["driveMatrix"])
 
         else:
-            mod.connect(transform["parentMatrix"][0], absolute["matrixIn"][1])
-
-        mod.connect(absolute["matrixSum"], con["driveMatrix"])
+            mod.connect(compose["outputMatrix"], con["driveMatrix"])
 
         # Add to scene
         _add_constraint(mod, con, scene)
@@ -1010,12 +1023,10 @@ def create_kinematic_control(rigid, reference=None):
             mod.set_attr(reference["rotate"], tmat.rotation())
             mod.set_attr(reference["scale"], tmat.scale())
 
-            mod.set_locked(reference["scale"], True)
+            mod.set_locked(reference["scale"])
             mod.set_keyable(reference["scale"], False)
 
             shape_name = i__.shape_name(name)
-
-        mod.do_it()
 
         ctrl = mod.create_node("rdControl", name=shape_name, parent=reference)
 

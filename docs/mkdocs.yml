@@ -56,6 +56,7 @@ theme:
   name: material
   logo: ragdoll_full.png
   logo: ragdoll_silhouette_black_512.png
+  favicon: favicon-256x256.png
   custom_dir: theme
   palette:
     primary: "white"

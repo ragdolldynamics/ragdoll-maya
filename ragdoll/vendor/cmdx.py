@@ -5221,7 +5221,6 @@ class _BaseModifier(object):
             plug = Plug(Node(plug.node()), plug)
 
         assert isinstance(plug, Plug), "%s was not a plug" % plug
-        assert plug._mplug.isDynamic, "%s was not a dynamic attribute" % plug
         self._niceNames.append((plug, value))
 
     @record_history

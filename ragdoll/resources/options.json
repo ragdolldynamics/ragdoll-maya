@@ -524,6 +524,7 @@
     },
     "validateLegacyOpenGL": {
         "name": "validateLegacyOpenGL",
+        "label": "Validate Legacy OpenGL",
         "type": "Boolean",
         "default": true,
         "help": "Check whether Viewport 2.0 is set to render using Legacy OpenGL. That isn't supported."

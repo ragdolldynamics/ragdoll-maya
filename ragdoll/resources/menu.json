@@ -391,7 +391,6 @@
             "validateCachingMode",
             "validateLegacyOpenGL",
             "validateScalePivot",
-            "validateRotateAxis",
             "validatePlaybackSpeed"
         ]
     },

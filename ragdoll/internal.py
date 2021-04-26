@@ -371,6 +371,6 @@ def is_dynamic(transform, scene):
     scene["clean"] = True
 
     # Pull, but do not bother actually serialising it
-    transform["worldMatrix"]._mplug.asMObject()
+    transform["worldMatrix"].pull()
 
     return not scene["clean"].read()

@@ -187,7 +187,7 @@ Haven't got no internet?
 No problem, here's what you need to do.
 
 1. Generate an "activation request", a file
-2. Send us this file, via [email](licencing@ragdolldynamics.com)
+2. Send us this file, via [email](mailto:licencing@ragdolldynamics.com)
 3. Receive a "activation response", another file
 4. Activate using this file
 

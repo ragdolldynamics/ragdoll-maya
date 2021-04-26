@@ -156,6 +156,10 @@ def rigid(node, from_version, to_version):
         _rigid_20210228_20210308(node)
         upgraded = True
 
+    if from_version < 20210423:
+        _rigid_20210423_20210427(node)
+        upgraded = True
+
     return upgraded
 
 
@@ -274,6 +278,15 @@ def _rigid_20210228_20210308(rigid):
 
     with cmdx.DagModifier() as mod:
         mod.connect(scene["startTime"], rigid["startTime"])
+
+
+def _rigid_20210423_20210427(rigid):
+    """Introduced .startTime"""
+    log.info("Upgrading %s to 2021.04.27" % rigid)
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(rigid["creationMatrix"],
+                     rigid["cachedRestMatrix"].as_matrix())
 
 
 def _constraint_multiplier_20210308_20210411(mult):

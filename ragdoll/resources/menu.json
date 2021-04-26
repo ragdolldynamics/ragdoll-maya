@@ -344,7 +344,19 @@
         "label": "Set Initial State",
         "icon": "initial_state.png",
         "summary": "Re-establish the starting position and orientation of selected rigids.",
-        "description": "You can edit the position and orientation of an active rigid, but the changes won't take effect until you set the initial state. This records the position of the rigid bodies, wherever they are, at any time, as the starting position and orientation the next time you hit play."
+        "description": "You can edit the position and orientation of an active rigid, but the changes won't take effect until you set the initial state. This records the position of the rigid bodies, wherever they are, at any time, as the starting position and orientation the next time you hit play.",
+        "options": [
+            "initialStateUseSelection"
+        ]
+    },
+    "clearInitialState": {
+        "label": "Clear Initial State",
+        "icon": "initial_state2.png",
+        "summary": "Set initial state to creation state.",
+        "description": "Whenever you create a new rigid, the current translate/rotate values are stored in the `.creationMatrix` attribute. This command writes this original matrix back into the `.restMatrix` attribute.",
+        "options": [
+            "initialStateUseSelection"
+        ]
     },
     "deleteAllPhysics": {
         "label": "Delete Physics",

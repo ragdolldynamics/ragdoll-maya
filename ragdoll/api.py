@@ -145,6 +145,18 @@ def convertToParent(constraint, opts=None):
     return _output(_commands.convert_to_parent(constraint, opts=opts))
 
 
+@_functools.wraps(_commands.set_initial_state)
+def setInitialState(rigids):
+    rigids = _converted(rigids)
+    return _output(_commands.set_initial_state(rigids))
+
+
+@_functools.wraps(_commands.set_initial_state)
+def clearInitialState(rigids):
+    rigids = _converted(rigids)
+    return _output(_commands.clear_initial_state(rigids))
+
+
 @_functools.wraps(_commands.transfer_attributes)
 def transferAttributes(a, b, opts=None):
     a = _converted(a)

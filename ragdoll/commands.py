@@ -976,8 +976,6 @@ def create_active_control(reference, rigid):
 
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["driveStrength"], 1.0)
-        mod.set_attr(con["angularDriveStiffness"], 10000.0)
-        mod.set_attr(con["angularDriveDamping"], 1000.0)
 
     forwarded = (
         "driveStrength",
@@ -1056,15 +1054,23 @@ create_passive_control = create_kinematic_control
 
 
 @i__.with_undo_chunk
+def clear_initial_state(rigids):
+    assert isinstance(rigids, (tuple, list)), "%s was not a list" % rigids
+    assert all(r.type() == "rdRigid" for r in rigids), (
+        "%s wasn't all rdRigid nodes" % str(rigids)
+    )
+
+    with cmdx.DagModifier() as mod:
+        for rigid in rigids:
+            mod.set_attr(rigid["cachedRestMatrix"],
+                         rigid["creationMatrix"].asMatrix())
+
+
+@i__.with_undo_chunk
 def set_initial_state(rigids):
     """Use current world transformation as initial state for `rigids"""
 
     assert isinstance(rigids, (tuple, list)), "%s was not a list" % rigids
-
-    for index, rigid in enumerate(rigids):
-        if isinstance(rigid, i__.string_types):
-            rigids[index] = cmdx.encode(rigid)
-
     assert all(r.type() == "rdRigid" for r in rigids), (
         "%s wasn't all rdRigid nodes" % str(rigids)
     )
@@ -2273,6 +2279,8 @@ def _rdrigid(mod, name, parent):
     # Link relevant attributes
     # Keep up to date with initial world matrix
     mod.connect(parent["worldMatrix"][0], node["restMatrix"])
+
+    mod.set_attr(node["creationMatrix"], parent["worldMatrix"][0].as_matrix())
 
     # Compensate for any parents when outputting from the solver
     mod.connect(parent["parentInverseMatrix"][0],

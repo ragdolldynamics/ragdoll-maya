@@ -558,7 +558,10 @@ def install_menu():
             item("convertToPolygons", convert_to_polygons)
             item("normaliseShapes", normalise_shapes)
 
-        item("setInitialState", set_initial_state)
+        item("setInitialState", set_initial_state,
+             set_initial_state_options)
+        item("clearInitialState", clear_initial_state,
+             clear_initial_state_options)
 
     with submenu("System", icon="system.png"):
         item("deleteAllPhysics", delete_physics, delete_physics_options)
@@ -674,15 +677,16 @@ def _evaluate_need_to_upgrade():
     saved_version = oldest
     current_version = __.version
 
-    message = """\
-This file was created with an older version of Ragdoll %s
+    if not _opt("autoUpgrade"):
+        message = """\
+    This file was created with an older version of Ragdoll %s
 
-Would you like to convert %d nodes to Ragdoll %s? Not converting \
-may break the behavior from your previous scene.
-""" % (saved_version, count, current_version)
+    Would you like to convert %d nodes to Ragdoll %s? Not converting \
+    may break the behavior from your previous scene.
+    """ % (saved_version, count, current_version)
 
-    if not MessageBox("%d Ragdoll nodes can be upgraded" % count, message):
-        return
+        if not MessageBox("%d Ragdoll nodes can be upgraded" % count, message):
+            return
 
     try:
         count = upgrade.upgrade_all()
@@ -1692,13 +1696,13 @@ def create_animation_constraint(selection=None, **opts):
 
 @i__.with_undo_chunk
 def set_initial_state(selection=None, **opts):
-    rigids = []
     selection = selection or cmdx.selection()
+    use_selection = _opt("initialStateUseSelection", opts)
 
-    # Initialise everything
-    if not selection:
+    if not use_selection:
         selection = cmdx.ls(type="rdRigid")
 
+    rigids = []
     for rigid in selection:
         if rigid.isA(cmdx.kTransform):
             rigid = rigid.shape(type="rdRigid")
@@ -1706,10 +1710,40 @@ def set_initial_state(selection=None, **opts):
         if rigid and rigid.type() == "rdRigid":
             rigids += [rigid]
 
+    if not rigids:
+        return log.warning("No rigids found to set initial state for")
+
     commands.set_initial_state(rigids)
 
     log.info(
         "Successfully set initial state for %d rigid bodies.", len(rigids)
+    )
+    return kSuccess
+
+
+@i__.with_undo_chunk
+def clear_initial_state(selection=None, **opts):
+    selection = selection or cmdx.selection()
+    use_selection = _opt("initialStateUseSelection", opts)
+
+    if not use_selection:
+        selection = cmdx.ls(type="rdRigid")
+
+    rigids = []
+    for rigid in selection:
+        if rigid.isA(cmdx.kTransform):
+            rigid = rigid.shape(type="rdRigid")
+
+        if rigid and rigid.type() == "rdRigid":
+            rigids += [rigid]
+
+    if not rigids:
+        return log.warning("No rigids found to clear initial state for")
+
+    commands.clear_initial_state(rigids)
+
+    log.info(
+        "Successfully cleared initial state for %d rigid bodies.", len(rigids)
     )
     return kSuccess
 
@@ -2433,7 +2467,7 @@ def multiply_rigids_options(*args):
 
 
 def edit_shape_options(*args):
-    return _Window("editShape", edit_shape_options)
+    return _Window("editShape", edit_shape)
 
 
 def multiply_constraints_options(*args):
@@ -2461,6 +2495,14 @@ def create_muscle_options(*args):
 
 def create_dynamic_control_options(*args):
     return create_chain_options()
+
+
+def set_initial_state_options(*args):
+    return _Window("setInitialState", set_initial_state)
+
+
+def clear_initial_state_options(*args):
+    return _Window("clearInitialState", clear_initial_state)
 
 
 def _st_options(key, typ):

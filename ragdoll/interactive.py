@@ -110,6 +110,9 @@ def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
     cmdx.uninstall()
 
+    # Temporarily work around incompatibility with pre-populated controllers
+    cmds.optionVar(iv=("prepopulateController", 0))
+
 
 def _before_scene_new(*args):
     cmdx.uninstall()

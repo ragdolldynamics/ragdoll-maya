@@ -590,6 +590,7 @@ class Chain(object):
         compose = mod.create_node("composeMatrix", name="composePairBlend")
         mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
+        mod.connect(transform["rotateOrder"], compose["inputRotateOrder"])
 
         # A drive is relative the parent frame, but the pairblend is relative
         # the parent Maya transform. In case these are not the same, we'll

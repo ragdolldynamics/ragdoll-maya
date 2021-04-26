@@ -374,6 +374,7 @@ def animation_constraint(rigid, opts=None):
 
         mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
         mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
+        mod.connect(transform["rotateOrder"], compose["inputRotateOrder"])
 
         if worldspace:
             mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
@@ -1232,6 +1233,29 @@ def edit_constraint_frames(con):
         index = con["exclusiveNodes"].next_available_index()
         mod.connect(parent_frame["message"], con["exclusiveNodes"][index])
         mod.connect(child_frame["message"], con["exclusiveNodes"][index + 1])
+
+    proxies = i__.UserAttributes(con, child_frame)
+    proxies.add_divider("Limit")
+    proxies.add("limitEnabled")
+    proxies.add("limitStrength")
+    proxies.add("linearLimitX")
+    proxies.add("linearLimitY")
+    proxies.add("linearLimitZ")
+    proxies.add("angularLimitX")
+    proxies.add("angularLimitY")
+    proxies.add("angularLimitZ")
+    proxies.add("linearLimitStiffness")
+    proxies.add("linearLimitDamping")
+    proxies.add("angularLimitStiffness")
+    proxies.add("angularLimitDamping")
+    proxies.add_divider("Drive")
+    proxies.add("driveEnabled")
+    proxies.add("driveStrength")
+    proxies.add("linearDriveStiffness")
+    proxies.add("linearDriveDamping")
+    proxies.add("angularDriveStiffness")
+    proxies.add("angularDriveDamping")
+    proxies.do_it()
 
     return parent_frame, child_frame
 
@@ -2448,6 +2472,7 @@ def _connect_active(mod, rigid, transform, existing=c.Overwrite):
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
+    mod.connect(transform["rotateOrder"], compose["inputRotateOrder"])
     mod.connect(compose["outputMatrix"], absolute["matrixIn"][0])
 
     # Reproduce a parent hierarchy, but don't connect it to avoid cycle

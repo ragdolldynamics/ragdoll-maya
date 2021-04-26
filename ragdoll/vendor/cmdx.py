@@ -2864,6 +2864,10 @@ class Plug(object):
         # No connections means the first index is available
         return 0
 
+    def pull(self):
+        """Pull on a plug, without seriasing any value. For performance"""
+        self._mplug.asMObject()
+
     def append(self, value, autofill=False):
         """Add `value` to end of self, which is an array
 
@@ -3326,6 +3330,12 @@ class Plug(object):
         elif typ == om.MFn.kUnitAttribute:
             fn = om.MFnUnitAttribute(attr)
 
+        elif typ in (om.MFn.kDoubleLinearAttribute,
+                     om.MFn.kFloatLinearAttribute,
+                     om.MFn.kDoubleAngleAttribute,
+                     om.MFn.kFloatAngleAttribute):
+            return om.MFnUnitAttribute(attr)
+
         elif typ == om.MFn.kTypedAttribute:
             fn = om.MFnTypedAttribute(attr)
 
@@ -3338,7 +3348,9 @@ class Plug(object):
 
         else:
             raise TypeError(
-                "Couldn't figure out function set for %s" % self
+                "Couldn't figure out function set for '%s.%s'" % (
+                    self.path(), attr.apiTypeStr
+                )
             )
 
         return fn

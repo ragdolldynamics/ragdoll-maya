@@ -386,9 +386,9 @@
         "options": [
             "scale",
             "cacheMedia",
+            "frameskipHandling",
             "autoInitialState",
             "autoReturnToStart",
-            "unhingeProtection",
             "cycleProtection",
             "ogsReset",
             "globalsValidations",

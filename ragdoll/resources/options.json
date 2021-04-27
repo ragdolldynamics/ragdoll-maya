@@ -457,7 +457,7 @@
         "name": "frameskipHandling",
         "label": "Frameskip Handling",
         "type": "Enum",
-        "default": 1,
+        "default": 0,
         "items": ["Ignore", "Pause"],
         "help": "What should Ragdoll do when one or more frames are skipped? Should Ragdoll pause simulation until you revisit the last-known frame? Or just pretend everything is OK, and produce garbage values?"
     },

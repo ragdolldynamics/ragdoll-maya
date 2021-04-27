@@ -276,7 +276,13 @@
     },
     "bakeSimulation": {
         "label": "Bake Simulation",
-        "enable": false
+        "icon": "bake.png",
+        "summary": "Convert a live simulation into editable keyframes.",
+        "description": "This uses Maya's Bake Simulation tool to convert a simulation into keyframes you can use for further editing.",
+        "options": [
+            "keepPhysics",
+            "isolateSelected"
+        ]
     },
     "exportPhysics": {
         "label": "Export Physics",
@@ -384,6 +390,7 @@
             "cacheMedia",
             "autoInitialState",
             "autoReturnToStart",
+            "unhingeProtection",
             "cycleProtection",
             "ogsReset",
             "globalsValidations",

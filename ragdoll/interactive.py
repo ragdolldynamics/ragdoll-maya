@@ -110,9 +110,6 @@ def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
     cmdx.uninstall()
 
-    # Temporarily work around incompatibility with pre-populated controllers
-    cmds.optionVar(iv=("prepopulateController", 0))
-
 
 def _before_scene_new(*args):
     cmdx.uninstall()
@@ -211,6 +208,11 @@ def install():
 
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
+
+        # Temporarily work around incompatibility with pre-popupalated
+        # controllers. This is the option from the Maya Preferences
+        # called "Include controllers in evaluation graph"
+        cmds.optionVar(iv=("prepopulateController", 0))
 
         if not c.RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
             cmds.evalDeferred(welcome_user)
@@ -529,17 +531,18 @@ def install_menu():
     divider("Utilities")
 
     with submenu("Animation", icon="animation.png"):
-        item("createDynamicControl",
-             create_dynamic_control,
-             create_dynamic_control_options)
+        item("bakeSimulation")
 
         divider()
 
-        item("bakeSimulation")
         item("exportPhysics", export_physics, export_physics_options)
         item("importPhysics", import_physics_from_file, import_physics_options)
 
         divider()
+
+        item("createDynamicControl",
+             create_dynamic_control,
+             create_dynamic_control_options)
 
         item("multiplyRigids",
              multiply_rigids,

@@ -361,6 +361,7 @@
     "#": " Import/Export  ",
     "#": "----------------",
 
+
     "importPath": {
         "name": "importPath",
         "label": "Directory",
@@ -429,6 +430,24 @@
         "help": "Import onto selection, ignore everything else."
     },
 
+    "importIncludeAnimation": {
+        "name": "importIncludeAnimation",
+        "label": "Include Animation",
+        "type": "Boolean",
+        "default": false,
+        "enabled": false,
+        "help": "Include animation from imported file (if any)."
+    },
+
+    "importIncludeSimulation": {
+        "name": "importIncludeSimulation",
+        "label": "Include Simulation",
+        "type": "Boolean",
+        "default": false,
+        "enabled": false,
+        "help": "Include simulation from imported file (if any)."
+    },
+
     "exportPath": {
         "name": "exportPath",
         "label": "Filename",
@@ -463,22 +482,19 @@
         "help": "Include simulation in exported file."
     },
 
-    "importIncludeAnimation": {
-        "name": "importIncludeAnimation",
-        "label": "Include Animation",
-        "type": "Boolean",
-        "default": false,
-        "enabled": false,
-        "help": "Include animation from imported file (if any)."
-    },
-
-    "importIncludeSimulation": {
-        "name": "importIncludeSimulation",
+    "isolateSelected": {
+        "name": "isolateSelected",
         "label": "Include Simulation",
         "type": "Boolean",
         "default": false,
-        "enabled": false,
-        "help": "Include simulation from imported file (if any)."
+        "help": "Include simulation in exported file."
+    },
+
+    "keepPhysics": {
+        "name": "keepPhysics",
+        "type": "Boolean",
+        "default": false,
+        "help": "Do not delete the physics nodes once finished."
     },
 
 
@@ -495,6 +511,13 @@
         "type": "Boolean",
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
+    },
+    "unhingeProtection": {
+        "name": "unhingeProtection",
+        "label": "Unhinge Protection",
+        "type": "Boolean",
+        "default": false,
+        "help": "Should Ragdoll continue simulate when frames have been skipped? The results are typically nonsensical and not terribly useful. With unhinge-protection, simulation will stop and leave the last-simulated result in place until you revisit the frame before things went off the rails."
     },
     "autoUpgrade": {
         "name": "autoUpgrade",

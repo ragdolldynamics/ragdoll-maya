@@ -1,5 +1,5 @@
 from maya import cmds
-from .. import interactive, commands, options, constants
+from .. import interactive, commands, options, constants as c
 from ..vendor import cmdx
 from . import _new, _play
 
@@ -104,6 +104,52 @@ def test_create_rigid():
     assert_equals(len(cmds.ls(type="rdScene")), 1)
 
 
+def test_compute_mass():
+    _new()
+
+    cube, _ = cmds.polyCube()
+    cmds.select(cube)
+
+    opts = {"computeMass": True}
+    assert_true(interactive.create_active_rigid(**opts))
+    rigid = cmdx.ls(type="rdRigid")[0]
+    assert_almost_equals(rigid["mass"].read(), 0.01, 3)
+
+
+def test_create_rigid_initial_shape():
+    _new()
+    cube, _ = cmds.polyCube()
+    cmds.select(cube)
+
+    def assert_shape_type(shapetype):
+        rigid = cmdx.ls(type="rdRigid")[0]
+        assert_equals(rigid["shapeType"].read(), shapetype)
+
+        _new()
+        cube, _ = cmds.polyCube()
+        cmds.select(cube)
+
+    # Default shape type
+    assert_true(interactive.create_active_rigid())
+    assert_shape_type(c.BoxShape)  # Since it's a polyCube
+
+    opts = {"initialShape": c.InitialShapeBox}
+    assert_true(interactive.create_active_rigid(**opts))
+    assert_shape_type(c.BoxShape)
+
+    opts = {"initialShape": c.InitialShapeSphere}
+    assert_true(interactive.create_active_rigid(**opts))
+    assert_shape_type(c.SphereShape)
+
+    opts = {"initialShape": c.InitialShapeCapsule}
+    assert_true(interactive.create_active_rigid(**opts))
+    assert_shape_type(c.CapsuleShape)
+
+    opts = {"initialShape": c.InitialShapeMesh}
+    assert_true(interactive.create_active_rigid(**opts))
+    assert_shape_type(c.MeshShape)
+
+
 def test_undo1():
     _new()
 
@@ -198,22 +244,22 @@ def test_convert_active_rigid():
     rigid = commands.create_rigid(cube1, scene)
 
     cmds.select(str(cube1))
-    opts = {"convertRigidType": "Passive"}
+    opts = {"convertRigidType": c.ConvertPassive}
     assert_true(interactive.convert_rigid(**opts))
     assert_equals(rigid["kinematic"].read(), True)
 
     cmds.select(str(cube1))
-    opts = {"convertRigidType": "Active"}
+    opts = {"convertRigidType": c.ConvertActive}
     assert_true(interactive.convert_rigid(**opts))
     assert_equals(rigid["kinematic"].read(), False)
 
     cmds.select(str(cube1))
-    opts = {"convertRigidType": "Opposite"}
+    opts = {"convertRigidType": c.ConvertOpposite}
     assert_true(interactive.convert_rigid(**opts))
     assert_equals(rigid["kinematic"].read(), True)
 
     cmds.select(str(cube1))
-    opts = {"convertRigidType": "Opposite"}
+    opts = {"convertRigidType": c.ConvertOpposite}
     assert_true(interactive.convert_rigid(**opts))
     assert_equals(rigid["kinematic"].read(), False)
 
@@ -234,7 +280,7 @@ def test_convert_constraint():
     con = commands.point_constraint(a, b)
 
     cmds.select(str(con))
-    opts = {"constraintType": constants.PointConstraint}
+    opts = {"constraintType": c.PointConstraint}
     assert_true(interactive.convert_constraint(**opts))
 
 

@@ -64,7 +64,6 @@ Cancelled = False
 kSuccess = True
 kFailure = False
 
-
 # Internal
 __.previousvars = {
     "MAYA_SCRIPT_PATH": os.getenv("MAYA_SCRIPT_PATH", ""),
@@ -104,6 +103,9 @@ def _after_scene_open(*args):
 
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
+
+    # Update known solvers
+    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
 
 
 def _before_scene_open(*args):
@@ -217,6 +219,16 @@ def install():
         if not c.RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
             cmds.evalDeferred(welcome_user)
             options.write("firstLaunch2", False)
+
+        # Enums were made into integers
+        if options.read("firstLaunch3"):
+
+            first_launch2 = options.read("firstLaunch2")
+            options.reset()
+
+            # Keep this, to avoid pestering the user with the splash dialog
+            options.write("firstLaunch3", False)
+            options.write("firstLaunch2", first_launch2)
 
     __.installed = True
 
@@ -718,8 +730,12 @@ def _evaluate_need_to_upgrade():
 def _find_current_scene(autocreate=True):
     scene = options.read("solver")
 
-    # No questions asked, just make a new one
-    if scene == c.CREATE_NEW_SOLVER:
+    try:
+        # Enum -> String
+        scene = __.solvers[scene]
+
+    except IndexError:
+        # No questions asked, just make a new one
         scene = create_scene()
 
     else:
@@ -741,10 +757,10 @@ def _find_current_scene(autocreate=True):
                 else:
                     raise cmdx.ExistError("No Ragdoll scene was found")
 
-    # Cancelled by the user
     if scene is not None:
         # Use this from now on
-        options.write("solver", scene.shortest_path())
+        current = __.solvers.index(scene.shortestPath())
+        options.write("solver", current)
 
     return scene
 
@@ -931,7 +947,15 @@ def create_scene(selection=None):
     if not validate_legacy_opengl():
         return
 
-    return commands.create_scene()
+    # Update known solvers
+    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
+
+    scene = commands.create_scene()
+
+    # Use last-created scene per default
+    __.solvers.insert(0, scene.shortestPath())
+
+    return scene
 
 
 @requires_ui
@@ -1051,7 +1075,7 @@ def create_active_rigid(selection=None, **opts):
             return
 
     select = _opt("rigidSelect", opts)
-    passive = _opt("createRigidType", opts) == "Passive"
+    passive = _opt("createRigidType", opts) == c.CreatePassive
     scene = _find_current_scene()
 
     # Cancelled by user
@@ -1093,43 +1117,26 @@ def create_active_rigid(selection=None, **opts):
     for index, node in enumerate(selection):
         transform = node.parent() if node.isA(cmdx.kShape) else node
 
-        existing = {
-            "Abort": c.Abort,
-            "Overwrite": c.Overwrite,
-            "Blend": c.Blend,
-        }.get(_opt("existingAnimation", opts), "Overwrite")
-
-        opts = {
+        opts_ = {
             "computeMass": _opt("computeMass", opts),
             "passive": passive,
-            "existing": existing,
             "defaults": {}
         }
 
         # Translate UI options into attribute defaults
         initial_shape = _opt("initialShape", opts)
-        if initial_shape != "Auto":
-            shapes = {
-                "Box": c.BoxShape,
-                "Sphere": c.SphereShape,
-                "Capsule": c.CapsuleShape,
-                "Mesh": c.ConvexHullShape,
-            }
+        if initial_shape != c.InitialShapeAuto:
+            opts_["defaults"]["shapeType"] = {
+                # UI -> API
+                c.InitialShapeBox: c.BoxShape,
+                c.InitialShapeSphere: c.SphereShape,
+                c.InitialShapeCapsule: c.CapsuleShape,
+                c.InitialShapeMesh: c.MeshShape,
+            }[initial_shape]
 
-            opts["defaults"]["shapeType"] = shapes.get(
-                initial_shape,
-
-                # Fallback, this should never really happen
-                c.BoxShape
-            )
-
-        # Preserve animation, if any, as soft constraints
-        is_connected = any(
-            transform[attr].connected for attr in ("tx", "ty", "tz",
-                                                   "rx", "ry", "rz"))
         try:
             rigid = commands.create_rigid(node, scene,
-                                          opts=opts)
+                                          opts=opts_)
         except Exception as e:
             _print_exception()
             log.error(str(e))
@@ -1141,7 +1148,11 @@ def create_active_rigid(selection=None, **opts):
 
         created += [rigid]
 
-        if not passive and _opt("existingAnimation", opts) == "Blend":
+        if not passive and _opt("existingAnimation", opts) == c.ExistingBlend:
+            # Preserve animation, if any, as soft constraints
+            is_connected = any(
+                transform[attr].connected for attr in ("tx", "ty", "tz",
+                                                       "rx", "ry", "rz"))
             subopts = {
                 "strength": 1.0 if is_connected else 0.0,
             }
@@ -1172,8 +1183,8 @@ def create_passive_rigid(selection=None, **opts):
 
         cmds.select(transform.path())
 
-    opts["createRigidType"] = "Passive"
-    opts["convertRigidType"] = "Passive"
+    opts["createRigidType"] = c.CreatePassive
+    opts["convertRigidType"] = c.ConvertPassive
     return create_active_rigid(selection, **opts)
 
 
@@ -1206,28 +1217,15 @@ def create_active_chain(selection=None, **opts):
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
         "passiveRoot": _opt("chainPassiveRoot", opts),
-        "blendMethod": (
-            c.SmoothBlendMethod
-            if _opt("chainBlendMethod", opts) == "Smooth"
-            else c.SteppedBlendMethod
-        ),
     }
 
     defaults = {
         "drawShaded": False
     }
 
-    if _opt("chainShapeType", opts) == "Box":
-        defaults["shapeType"] = c.BoxShape
-
-    elif _opt("chainShapeType", opts) == "Sphere":
-        defaults["shapeType"] = c.SphereShape
-
-    elif _opt("chainShapeType", opts) == "Capsule":
-        defaults["shapeType"] = c.CapsuleShape
-
-    elif _opt("chainShapeType", opts) == "Mesh":
-        defaults["shapeType"] = c.MeshShape
+    shape_type = _opt("chainShapeType", opts)
+    if shape_type != c.Auto:
+        defaults["shapeType"] = shape_type
 
     scene = _find_current_scene()
 
@@ -1285,7 +1283,10 @@ def _axis_to_vector(axis="x"):
         "x": cmdx.Vector(1, 0, 0),
         "y": cmdx.Vector(0, 1, 0),
         "z": cmdx.Vector(0, 0, 1),
-    }[axis.lower()]
+        0: cmdx.Vector(1, 0, 0),
+        1: cmdx.Vector(0, 1, 0),
+        2: cmdx.Vector(0, 0, 1),
+    }[axis]
 
 
 @i__.with_undo_chunk
@@ -1420,6 +1421,8 @@ def create_character(selection=None, **opts):
         "normalise_shapes": _opt("characterNormalise", opts),
     }
 
+    print(options.read("characterCopy"))
+
     tools.create_character(root, scene, **kwargs)
 
     cmds.select(str(root))
@@ -1490,19 +1493,19 @@ def create_constraint(selection=None, **opts):
         "standalone": _opt("constraintStandalone", opts),
     }
 
-    if constraint_type in ("Point", c.PointConstraint):
+    if constraint_type == c.PointConstraint:
         con = commands.point_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Orient", c.OrientConstraint):
+    elif constraint_type == c.OrientConstraint:
         con = commands.orient_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Hinge", c.HingeConstraint):
+    elif constraint_type == c.HingeConstraint:
         con = commands.hinge_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Socket", c.SocketConstraint):
+    elif constraint_type == c.SocketConstraint:
         con = commands.socket_constraint(parent, child, opts=opts)
 
-    elif constraint_type in ("Parent", c.ParentConstraint):
+    elif constraint_type == c.ParentConstraint:
         con = commands.parent_constraint(parent, child, opts=opts)
 
     else:
@@ -1542,19 +1545,19 @@ def convert_constraint(selection=None, **opts):
             log.warning("No constraint found for %s", node)
             continue
 
-        if constraint_type in ("Point", c.PointConstraint):
+        if constraint_type == c.PointConstraint:
             converted += [commands.convert_to_point(con)]
 
-        elif constraint_type in ("Orient", c.OrientConstraint):
+        elif constraint_type == c.OrientConstraint:
             converted += [commands.convert_to_orient(con)]
 
-        elif constraint_type in ("Parent", c.ParentConstraint):
+        elif constraint_type == c.ParentConstraint:
             converted += [commands.convert_to_parent(con)]
 
-        elif constraint_type in ("Hinge", c.HingeConstraint):
+        elif constraint_type == c.HingeConstraint:
             converted += [commands.convert_to_hinge(con)]
 
-        elif constraint_type in ("Socket", c.SocketConstraint):
+        elif constraint_type == c.SocketConstraint:
             converted += [commands.convert_to_socket(con)]
 
         else:
@@ -1592,10 +1595,10 @@ def convert_rigid(selection=None, **opts):
             continue
 
         # Toggle between kinematic and dynamic
-        if typ == "Opposite":
+        if typ == c.ConvertOpposite:
             passive = not rigid["kinematic"].read()
         else:
-            passive = typ == "Passive"
+            passive = typ == c.ConvertPassive
 
         if _opt("cycleProtection", opts) and passive:
             scene = rigid["nextState"].connection(type="rdScene")
@@ -1650,31 +1653,31 @@ def convert_to_socket(node):
 
 @i__.with_undo_chunk
 def create_point_constraint(selection=None, **opts):
-    opts = dict(opts, **{"constraintType": "Point"})
+    opts = dict(opts, **{"constraintType": c.PointConstraint})
     return create_constraint(selection, **opts)
 
 
 @i__.with_undo_chunk
 def create_orient_constraint(selection=None, **opts):
-    opts = dict(opts, **{"constraintType": "Orient"})
+    opts = dict(opts, **{"constraintType": c.OrientConstraint})
     return create_constraint(selection, **opts)
 
 
 @i__.with_undo_chunk
 def create_parent_constraint(selection=None, **opts):
-    opts = dict(opts, **{"constraintType": "Parent"})
+    opts = dict(opts, **{"constraintType": c.ParentConstraint})
     return create_constraint(selection, **opts)
 
 
 @i__.with_undo_chunk
 def create_hinge_constraint(selection=None, **opts):
-    opts = dict(opts, **{"constraintType": "Hinge"})
+    opts = dict(opts, **{"constraintType": c.HingeConstraint})
     return create_constraint(selection, **opts)
 
 
 @i__.with_undo_chunk
 def create_socket_constraint(selection=None, **opts):
-    opts = dict(opts, **{"constraintType": "Socket"})
+    opts = dict(opts, **{"constraintType": c.SocketConstraint})
     return create_constraint(selection, **opts)
 
 
@@ -2332,9 +2335,12 @@ def _Arg(var, label=None, callback=None):
     # Special case
     if var["name"] == "solver":
         scenes = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
-        var["items"] = scenes + var["items"]
-        var["default"] = var["items"][0]
+        var["items"] = scenes + ["Create new solver"]
+        var["default"] = 0
         var["initial"] = None  # Always prefer the latest created scene
+
+        __.solvers = scenes
+
         options.write(var)  # Update this whenever the window is shown
 
     if label is not None:
@@ -2384,6 +2390,7 @@ def _Window(key, command=None, cls=None):
 
 def global_preferences(*args):
     def callback():
+        from maya import cmds
         ctime = cmds.currentTime(query=True)
         cmds.evalDeferred(lambda: cmds.currentTime(ctime, update=True))
 

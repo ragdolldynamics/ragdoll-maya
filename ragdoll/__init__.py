@@ -12,6 +12,7 @@ __.version = 0
 __.version_str = "0"
 __.previousvars = {}
 __.widgets = {}  # Currently active widgets (incl. windows and panels)
+__.solvers = []
 
 if __import__("os").name.lower() == "posix":
     # Linux has this special requirement, for whatever reason

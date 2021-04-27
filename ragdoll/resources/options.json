@@ -11,6 +11,12 @@
         "default": true,
         "help": "This was the first time Ragdoll was launched, since licencing was implemented."
     },
+    "firstLaunch3": {
+        "name": "firstLaunch3",
+        "type": "Boolean",
+        "default": true,
+        "help": "This was the first time Ragdoll was launched since 2021.04.23."
+    },
     "upgradeOnSceneOpen": {
         "name": "upgradeOnSceneOpen",
         "type": "Boolean",
@@ -30,20 +36,20 @@
         "name": "cacheMedia",
         "type": "Enum",
         "items": ["Off", "On", "All"],
-        "default": "Off",
-        "help": "Cache clips in the timeline, for immediate feedback when scroll.<br>- <b>Off</b> Fast, interactive but no scrubbing.<br>- <b>On</b> Slow scrubbing support.<br>- <b>All</b> Interactive scrubbing at the expense of RAM.<"
+        "default": 0,
+        "help": "Cache clips in the timeline, for immediate feedback when scroll.<br>- <b>Off</b> Fast, interactive but no scrubbing.<br>- <b>On</b> Slow scrubbing support.<br>- <b>All</b> Interactive scrubbing at the expense of RAM."
     },
     "initialShape": {
         "name": "initialShape",
         "type": "Enum",
-        "default": "Auto",
+        "default": 0,
         "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
         "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
     },
     "solver": {
         "name": "solver",
         "type": "Enum",
-        "default": "Create new solver",
+        "default": 0,
         "items": ["Create new solver"],
         "help": "Select which solver to use"
     },
@@ -63,7 +69,7 @@
         "name": "createRigidType",
         "label": "Rigid Type",
         "type": "Enum",
-        "default": "Active",
+        "default": 0,
         "items": ["Active", "Passive"],
         "help": "How to solve this rigid.<br>- <b>Active</b>  : Simulate this node<br>- <b>Passive</b> : Animate this node"
     },
@@ -89,7 +95,7 @@
         "name": "convertRigidType",
         "label": "Rigid Type",
         "type": "Enum",
-        "default": "Opposite",
+        "default": 0,
         "items": ["Opposite", "Active", "Passive"],
         "help": "Convert a rigid from active to kinematic or vice versa. 'Opposite' turns passive into active and vice versa automatically."
     },
@@ -107,20 +113,6 @@
         "default": true,
         "help": "Automatically select newly created constraint."
     },
-    "limitOrientation": {
-        "name": "limitOrientation",
-        "type": "Enum",
-        "default": "Neighbour",
-        "items": ["Neighbour", "Joint Orient"],
-        "help": "Whether to compute an orientation based on neighbouring node in the hierarchy, or to use the jointOrient attribute (if one exists)."
-    },
-    "autoConnect": {
-        "name": "autoConnect",
-        "type": "Enum",
-        "items": ["Nothing", "Joints Only", "All"],
-        "default": "Joints Only",
-        "help": "Automatically add a Socket Constraint between selected nodes"
-    },
     "autoOrient": {
         "name": "autoOrient",
         "type": "Boolean",
@@ -136,15 +128,15 @@
     "existingAnimation": {
         "name": "existingAnimation",
         "type": "Enum",
-        "items": ["Abort", "Overwrite", "Blend"],
-        "default": "Blend",
-        "help": "If the target node has animation, what should I do?<br>- <b>Abort</b>: Do nothing<br>- <b>Overwrite</b>: Replace your animation with simulation<br>- <b>Blend</b>: Follow original animation dynamically"
+        "items": ["Ignore", "Follow"],
+        "default": 1,
+        "help": "Should a constraint be made to try and follow the original animation?"
     },
     "constraintType": {
         "name": "constraintType",
         "type": "Enum",
-        "default": "Point",
-        "items": ["Point", "Orient", "Hinge", "Parent", "Socket"],
+        "default": 0,
+        "items": ["Point", "Orient", "Parent", "Hinge", "Socket"],
         "help": "The type of constraint created."
     },
     "constraintGuideStrength": {
@@ -159,8 +151,8 @@
     "convertConstraintType": {
         "name": "convertConstraintType",
         "type": "Enum",
-        "default": "Point",
-        "items": ["Point", "Orient", "Hinge", "Parent", "Socket"],
+        "default": 0,
+        "items": ["Point", "Orient", "Parent", "Hinge", "Socket"],
         "help": "The type of constraint to convert to."
     },
     "constraintUseRotatePivot": {
@@ -194,7 +186,7 @@
         "name": "characterStopBehaviour",
         "label": "Stop Behaviour",
         "type": "Enum",
-        "default": "Inclusive",
+        "default": 0,
         "items": ["Inclusive", "Exclusive"],
         "help": "Whether to include the joint with a 'Stop' label in the generated character or not."
     },
@@ -202,7 +194,7 @@
         "name": "characterSkipBehaviour",
         "label": "Skip Behaviour",
         "type": "Enum",
-        "default": "Inclusive",
+        "default": 0,
         "items": ["Inclusive", "Exclusive"],
         "help": "Whether to include the joint with a 'Skip' label in the generated character or not."
     },
@@ -223,7 +215,7 @@
         "name": "muscleAimAxis",
         "label": "Aim Axis",
         "type": "Enum",
-        "default": "X",
+        "default": 0,
         "items": ["X", "Y", "Z"],
         "help": "Which axis to treat as aim for the resulting muscle."
     },
@@ -231,7 +223,7 @@
         "name": "muscleUpAxis",
         "label": "Up Axis",
         "type": "Enum",
-        "default": "Y",
+        "default": 1,
         "items": ["X", "Y", "Z"],
         "help": "Which axis to treat as the up-axis for the resulting muscle."
     },
@@ -263,49 +255,6 @@
     },
 
 
-    "#": "-----------------",
-    "#": " Dynamic Control ",
-    "#": "-----------------",
-
-
-    "dynamicControlShapeType": {
-        "name": "dynamicControlShapeType",
-        "label": "Shape Type",
-        "type": "Enum",
-        "items": ["Mesh", "Capsule"],
-        "default": "Capsule",
-        "help": "The initial shape to represent the selected control.<br>- <b>Mesh</b>: Suitable for NURBS controls that *wrap* around the model<br>- <b>Capsule</b>: Suitable for flat controls, e.g. a circle or square."
-    },
-    "dynamicControlAutoBlend": {
-        "name": "dynamicControlAutoBlend",
-        "label": "Auto Blend",
-        "type": "Boolean",
-        "default": true,
-        "help": "Add a `blendSimulation` attribute to blend between animation and simulation."
-    },
-    "dynamicControlAutoInfluence": {
-        "name": "dynamicControlAutoInfluence",
-        "label": "Auto Influence",
-        "type": "Boolean",
-        "default": true,
-        "help": "Use blended animation as input to the simulation."
-    },
-    "dynamicControlAutoMultiplier": {
-        "name": "dynamicControlAutoMultiplier",
-        "label": "Auto Multiplier",
-        "type": "Boolean",
-        "default": true,
-        "help": "Automatically add a constraint multiplier to the dynamic control root."
-    },
-    "dynamicControlAutoWorldspace": {
-        "name": "dynamicControlAutoWorldspace",
-        "label": "Auto Worldspace",
-        "type": "Boolean",
-        "default": false,
-        "help": "Include worldspace guide constraints with the generated dynamic controls."
-    },
-
-
     "#": "----------------",
     "#": " Chain ",
     "#": "----------------",
@@ -315,7 +264,7 @@
         "name": "chainShapeType",
         "label": "Initial Shape",
         "type": "Enum",
-        "default": "Auto",
+        "default": 0,
         "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
         "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
     },
@@ -346,14 +295,6 @@
         "type": "Boolean",
         "default": false,
         "help": "Generate suitable limits automatically from input."
-    },
-    "chainBlendMethod": {
-        "name": "chainBlendMethod",
-        "label": "Blend Method",
-        "type": "Enum",
-        "items": ["Stepped", "Smooth"],
-        "default": "Stepped",
-        "help": "Blend between animation and simulation using either a boolean or float attribute."
     },
 
 
@@ -415,10 +356,10 @@
 
     "importMethod": {
         "name": "importMethod",
+        "enabled": false,
         "type": "Enum",
         "items": ["Load", "Reinterpret"],
-        "default": "Reinterpret",
-        "enabled": false,
+        "default": 1,
         "help": "Load each individual Ragdoll node as they existed at the time of export, or *reinterpret* the exported file to try and figure out what commands were used to create it, and then execute those same commands to the currently opened scene."
     },
 
@@ -512,12 +453,13 @@
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
     },
-    "unhingeProtection": {
-        "name": "unhingeProtection",
-        "label": "Unhinge Protection",
-        "type": "Boolean",
-        "default": false,
-        "help": "Should Ragdoll continue simulate when frames have been skipped? The results are typically nonsensical and not terribly useful. With unhinge-protection, simulation will stop and leave the last-simulated result in place until you revisit the frame before things went off the rails."
+    "frameskipHandling": {
+        "name": "frameskipHandling",
+        "label": "Frameskip Handling",
+        "type": "Enum",
+        "default": 1,
+        "items": ["Ignore", "Pause"],
+        "help": "What should Ragdoll do when one or more frames are skipped? Should Ragdoll pause simulation until you revisit the last-known frame? Or just pretend everything is OK, and produce garbage values?"
     },
     "autoUpgrade": {
         "name": "autoUpgrade",

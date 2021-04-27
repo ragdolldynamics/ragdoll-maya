@@ -1485,7 +1485,8 @@ class Enum(QArgument):
                                  QtWidgets.QSizePolicy.Fixed)
             layout.addWidget(widget, 1, QtCore.Qt.AlignLeft)
 
-        self._read = lambda: widget.currentText()
+        self._read = widget.currentIndex
+        self.text = widget.itemText
 
         def _write(value):
             index = None
@@ -1539,9 +1540,9 @@ class Enum(QArgument):
     def isEdited(self):
         default = self["default"]
 
-        # Account for integer defaults
-        if isinstance(default, int):
-            default = self["items"][self["default"]]
+        # Account for string defaults
+        if isinstance(default, _basestring):
+            default = self["items"].index(self["default"])
 
         return self.read() != default
 

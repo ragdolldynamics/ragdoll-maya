@@ -15,7 +15,7 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from PySide2 import QtCore, QtWidgets, QtGui
 import shiboken2
 
-from . import options, licence, dump, internal as i__, __
+from . import options, licence, dump, constants as c, internal as i__, __
 from .vendor import qargparse, markdown, qjsonmodel
 
 try:
@@ -264,7 +264,7 @@ class Player(QtWidgets.QWidget):
         movie.setFileName(fname)
 
         # Cache all frames in advance, for blissful scrubbing
-        if options.read("cacheMedia") == "All":
+        if options.read("cacheMedia") == c.All:
             # Unfortunately, every frame takes ~1.5 mb of memory
             # and 1,000 frames is not uncommon!
             movie.setCacheMode(movie.CacheAll)
@@ -338,10 +338,10 @@ class Player(QtWidgets.QWidget):
 
         # If media is cached, then jumping to
         # any frame from any frame is possible.
-        if options.read("cacheMedia") == "All":
+        if options.read("cacheMedia") == c.All:
             movie.jumpToFrame(frame)
 
-        elif options.read("cacheMedia") == "On":
+        elif options.read("cacheMedia") == c.On:
 
             # Caching is much preferred, but if memory
             # is an issue then we haven't got much choice.
@@ -470,7 +470,6 @@ class Player(QtWidgets.QWidget):
         self._widgets["background"].show()
         self._panels["overlay"].raise_()
         self._panels["overlay"].show()
-
 
 
 class DirectJumpSlider(QtWidgets.QSlider):
@@ -928,6 +927,8 @@ class HelpPage(QtWidgets.QWidget):
 
 
 class Options(QtWidgets.QMainWindow):
+    instance = None
+
     def __init__(self,
                  key,
                  args,
@@ -1137,6 +1138,10 @@ class Options(QtWidgets.QMainWindow):
         self._effects = effects
         self._command = command
         self._media = media
+
+        # For uninstall
+        ImportOptions.instance = self
+        __.widgets[self.windowTitle()] = self
 
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setCentralWidget(panels["Central"])
@@ -2462,8 +2467,6 @@ class DumpWidget(QtWidgets.QWidget):
 
 
 class ImportOptions(Options):
-    instance = None
-
     def __init__(self, *args, **kwargs):
         super(ImportOptions, self).__init__(*args, **kwargs)
         self.setWindowTitle("Import Options")
@@ -2537,10 +2540,6 @@ class ImportOptions(Options):
 
         # Keep superclass informed
         self._widgets.update(widgets)
-
-        # For uninstall
-        ImportOptions.instance = self
-        __.widgets[self.windowTitle()] = self
 
         # Kick things off, a few ms after opening
         QtCore.QTimer.singleShot(200, self.on_path_changed)

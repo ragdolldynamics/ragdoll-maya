@@ -32,6 +32,24 @@ def write(arg, value=None):
     if value is None:
         value = arg["default"]
 
+    if arg["type"] == "Enum":
+        value = value or 0
+        assert isinstance(value, int), "%s was not an enum" % value
+
+    if arg["type"] == "Boolean":
+        value = bool(value)
+        assert isinstance(value, bool), (
+            "%s was not a bool" % value
+        )
+
+    if arg["type"] == "String":
+        value = value or ""
+        assert isinstance(value, i__.string_types), (
+            "%s was not a string" % value
+        )
+
+    print("resetting %s=%s" % (key, value))
+
     if isinstance(value, float):
         cmds.optionVar(floatValue=(key, value))
 
@@ -73,7 +91,7 @@ def write(arg, value=None):
             cmds.optionVar(stringValue=(key, value[0]))
 
             for v in value[1:]:
-                cmds.optionVar(stringValueAppend=(key, v))
+                cmds.optionVar(stringValueAppend=(key, v or ""))
 
     else:
         raise TypeError(

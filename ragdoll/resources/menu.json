@@ -37,8 +37,6 @@
             "solver",
             "createRigidType",
             "initialShape",
-            "existingAnimation",
-            "autoOrient",
             "computeMass",
             "rigidSelect"
         ]

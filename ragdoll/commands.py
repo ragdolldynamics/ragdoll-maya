@@ -9,7 +9,6 @@ NOTE: Every function in here MUST be undoable as-one.
 
 """
 
-import os
 import sys
 import logging
 import functools
@@ -23,8 +22,6 @@ from . import (
 )
 
 log = logging.getLogger("ragdoll")
-
-DEVELOPER = bool(os.getenv("RAGDOLL_DEVELOPER", None))
 
 
 @i__.with_undo_chunk
@@ -60,14 +57,15 @@ def create_scene(name=None, parent=None):
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
         mod.set_attr(scene["gravity"], up * -98.2)
+        mod.set_attr(scene["groundRestitution"], 0.1)
 
         if up.y:
             mod.set_keyable(scene["gravityY"])
-            # mod.set_nice_name(scene["gravityY"], "Gravity")
+            mod.set_nice_name(scene["gravityY"], "Gravity")
 
         else:
             mod.set_keyable(scene["gravityZ"])
-            # mod.set_nice_name(scene["gravityZ"], "Gravity")
+            mod.set_nice_name(scene["gravityZ"], "Gravity")
             mod.set_attr(parent["rotateX"], cmdx.radians(90))
 
         mod.connect(parent["message"], scene["exclusiveNodes"][0])
@@ -167,9 +165,9 @@ def create_rigid(node, scene, opts=None, _cache=None):
             # consideration that joints must be comparable to meshes.
             # Mass unit is kg, whereas lengths are in centimeters
             mod.set_attr(rigid["mass"], (
-                rigid["extentsX"].read() *
-                rigid["extentsY"].read() *
-                rigid["extentsZ"].read() *
+                rigid["shapeExtentsX"].read() *
+                rigid["shapeExtentsY"].read() *
+                rigid["shapeExtentsZ"].read() *
                 0.01
             ))
 
@@ -2415,7 +2413,7 @@ def _connect_passive(mod, rigid, transform):
     mod.connect(transform["worldMatrix"][0], rigid["inputMatrix"])
 
 
-def _connect_active(mod, rigid, transform, existing=c.Overwrite):
+def _connect_active(mod, rigid, transform, existing=None):
     r"""Connect `rigid` to `transform` via `pairBlend`
 
      ______

@@ -128,8 +128,8 @@
     "existingAnimation": {
         "name": "existingAnimation",
         "type": "Enum",
-        "items": ["Ignore", "Follow"],
         "default": 1,
+        "items": ["Ignore", "Follow"],
         "help": "Should a constraint be made to try and follow the original animation?"
     },
     "constraintType": {
@@ -457,7 +457,7 @@
         "name": "frameskipHandling",
         "label": "Frameskip Handling",
         "type": "Enum",
-        "default": 0,
+        "default": 1,
         "items": ["Ignore", "Pause"],
         "help": "What should Ragdoll do when one or more frames are skipped? Should Ragdoll pause simulation until you revisit the last-known frame? Or just pretend everything is OK, and produce garbage values?"
     },
@@ -527,7 +527,7 @@
     "validateRotateOrder": {
         "name": "validateRotateOrder",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Let the user know of a Ragdoll limitation, that a custom rotate order are currently unsupported."
     },
     "validateScale": {

@@ -468,6 +468,49 @@ def test_active_chain_with_delete_all():
     test_active_chain()
 
 
+def test_animated_rigid():
+    """Animated transforms get an animation constraint"""
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    cube1["translate"] = (1, 2, 0)
+
+    interactive.create_active_rigid()
+
+    # Not animated? No constraint
+    assert_equals(len(cmds.ls(type="rdConstraint")), 0)
+
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    cube1["translateY"] = {1: 0, 5: 10, 10: 0}  # Animation
+
+    interactive.create_active_rigid()
+
+    # Animated? Yes please
+    assert_equals(len(cmds.ls(type="rdConstraint")), 1)
+
+    # Only translation was keyed
+    con = cmdx.ls(type="rdConstraint")[0]
+    assert con["linearDriveStiffness"].read() > 0
+    assert con["angularDriveStiffness"].read() == 0
+
+    _new()
+
+    cube1, _ = map(cmdx.encode, cmds.polyCube())
+    cube1["rotateY"] = {1: 0, 5: 10, 10: 0}  # Animation
+
+    interactive.create_active_rigid()
+
+    # Animated? Yes please
+    assert_equals(len(cmds.ls(type="rdConstraint")), 1)
+
+    # Only rotation was keyed
+    con = cmdx.ls(type="rdConstraint")[0]
+    assert con["angularDriveStiffness"].read() > 0
+    assert con["linearDriveStiffness"].read() == 0
+
+
 def test_save():
     test_active_chain()
     # _save()

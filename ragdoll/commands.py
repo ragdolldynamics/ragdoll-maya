@@ -57,7 +57,9 @@ def create_scene(name=None, parent=None):
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
         mod.set_attr(scene["gravity"], up * -98.2)
-        mod.set_attr(scene["groundRestitution"], 0.1)
+
+        # The ground is really really bouncy since 2021.04.28
+        mod.set_attr(scene["groundRestitution"], 0)
 
         if up.y:
             mod.set_keyable(scene["gravityY"])
@@ -320,9 +322,8 @@ def animation_constraint(rigid, opts=None):
 
     opts = dict({
         "name": "rAnimConstraint",
-        "strength": 1.0,
-        # "kinematicParent": False,
         "parent": None,
+        "defaults": {"driveStrength": 1.0},
     }, **(opts or {}))
 
     scene = rigid["nextState"].connection(type="rdScene")
@@ -365,7 +366,9 @@ def animation_constraint(rigid, opts=None):
         mod.set_attr(con["limitEnabled"], False)
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
-        mod.set_attr(con["driveStrength"], opts["strength"])
+
+        for key, value in opts["defaults"].items():
+            mod.set_attr(con[key], value)
 
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(rigid["ragdollId"], con["childRigid"])

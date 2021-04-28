@@ -36,6 +36,7 @@
         "options": [
             "solver",
             "createRigidType",
+            "existingAnimation",
             "initialShape",
             "computeMass",
             "rigidSelect"

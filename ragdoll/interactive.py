@@ -962,35 +962,6 @@ def create_scene(selection=None):
 def is_valid_transform(transform):
     """Ragdoll currently does not support any custom pivot or axis"""
 
-    if options.read("validateRotateOrder"):
-        def select_offender():
-            cmds.select(transform.path())
-            return False
-
-        if transform["rotateOrder"].read() != 0:
-            order = transform["rotateOrder"].read()
-            order = ["XYZ", "YZX", "ZXY", "XZY", "YXZ", "ZYX"][order]
-            return ui.warn(
-                option="validateRotateOrder",
-                title="Custom Rotate Order Flaky",
-                message=(
-                    "A custom rotate order was found.\n\n"
-                    "- %s.rotateOrder=%s\n\n"
-                    "These might not look right." % (
-                        transform.name(),
-                        order
-                    )
-                ),
-                call_to_action="What would you like to do?",
-                actions=[
-                    ("Ignore", lambda: True),
-
-                    ("Select and Cancel", select_offender),
-
-                    ("Cancel", lambda: False)
-                ]
-            )
-
     if options.read("validateScalePivot"):
         nonzero = []
         tolerance = 0.01
@@ -1117,6 +1088,14 @@ def create_active_rigid(selection=None, **opts):
     for index, node in enumerate(selection):
         transform = node.parent() if node.isA(cmdx.kShape) else node
 
+        # Check *before* it becomes rigid
+        translate_animated = any(
+            transform[attr].connected for attr in ("tx", "ty", "tz")
+        )
+        rotate_animated = any(
+            transform[attr].connected for attr in ("rx", "ry", "rz")
+        )
+
         opts_ = {
             "computeMass": _opt("computeMass", opts),
             "passive": passive,
@@ -1148,14 +1127,19 @@ def create_active_rigid(selection=None, **opts):
 
         created += [rigid]
 
-        if not passive and _opt("existingAnimation", opts) == c.ExistingBlend:
-            # Preserve animation, if any, as soft constraints
-            is_connected = any(
-                transform[attr].connected for attr in ("tx", "ty", "tz",
-                                                       "rx", "ry", "rz"))
-            subopts = {
-                "strength": 1.0 if is_connected else 0.0,
-            }
+        # Preserve animation, if any, as soft constraints
+        follow = _opt("existingAnimation", opts) == c.ExistingFollow
+        if not passive and follow and (translate_animated or rotate_animated):
+            subopts = {"defaults": {"driveStrength": 1.0}}
+
+            if not translate_animated:
+                subopts["defaults"]["linearDriveStiffness"] = 0
+                subopts["defaults"]["linearDriveDamping"] = 0
+
+            if not rotate_animated:
+                subopts["defaults"]["angularDriveStiffness"] = 0
+                subopts["defaults"]["angularDriveDamping"] = 0
+
             con = commands.animation_constraint(rigid, opts=subopts)
             created += [con]
 
@@ -1341,7 +1325,6 @@ def _validate_transforms(nodes, tolerance=0.01):
     """Check for unsupported features in nodes of `root`"""
     negative_scaled = []
     positive_scaled = []
-    rotate_orders = []
     issues = []
 
     for node in nodes:
@@ -1354,9 +1337,6 @@ def _validate_transforms(nodes, tolerance=0.01):
 
         if any(value > 1 + tolerance for value in tm.scale()):
             positive_scaled += [node]
-
-        if node["rotateOrder"].read() > 0:
-            rotate_orders += [node]
 
     if negative_scaled and options.read("validateScale"):
         issues += [

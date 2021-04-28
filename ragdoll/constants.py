@@ -70,9 +70,8 @@ CreatePassive = 1
 ConvertOpposite = 0
 ConvertActive = 1
 ConvertPassive = 2
-ExistingAbort = 0
-ExistingOverwrite = 1
-ExistingBlend = 2
+ExistingIgnore = 0
+ExistingFollow = 1
 
 Abort = 0
 Overwrite = 1

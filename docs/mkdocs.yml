@@ -9,7 +9,7 @@ repo_name: mottosso/ragdoll
 repo_url: https://github.com/mottosso/ragdoll
 edit_uri: edit/main/docs/pages
 
-ragdoll_version: "2021.04.23"
+ragdoll_version: "2021.04.28"
 copyright: "Copyright &copy; 2021 mottosso"
 
 # Page tree
@@ -24,6 +24,7 @@ nav:
   - Node Reference: nodes.md
   - API Reference: api.md
   - Release History:
+    - 2021.04.28: releases/2021.04.28.md
     - 2021.04.23: releases/2021.04.23.md
     - 2021.04.11: releases/2021.04.11.md
     - 2021.03.25: releases/2021.03.25.md

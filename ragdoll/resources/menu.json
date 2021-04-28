@@ -276,6 +276,7 @@
     "bakeSimulation": {
         "label": "Bake Simulation",
         "icon": "bake.png",
+        "enable": false,
         "summary": "Convert a live simulation into editable keyframes.",
         "description": "This uses Maya's Bake Simulation tool to convert a simulation into keyframes you can use for further editing.",
         "options": [

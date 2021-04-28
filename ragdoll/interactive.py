@@ -576,6 +576,8 @@ def install_menu():
             item("convertToPolygons", convert_to_polygons)
             item("normaliseShapes", normalise_shapes)
 
+        divider()
+
         item("setInitialState", set_initial_state,
              set_initial_state_options)
         item("clearInitialState", clear_initial_state,

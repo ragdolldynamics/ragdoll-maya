@@ -735,8 +735,9 @@ class Number(QArgument):
         if isinstance(self, Float):
             slider = _with_entered_exited(FractionSlider, self)()
             widget = _with_entered_exited(QtWidgets.QDoubleSpinBox, self)()
-            widget.setMinimum(self._data.get("min", 0.0))
-            widget.setMaximum(self._data.get("max", 99.99))
+            default = self._data.get("default", 0.0)
+            widget.setMinimum(min(default, self._data.get("min", 0.0)))
+            widget.setMaximum(max(default, self._data.get("max", 99.99)))
 
             # Account for small values
             delta = widget.maximum() - widget.minimum()
@@ -747,8 +748,9 @@ class Number(QArgument):
         else:
             slider = _with_entered_exited(QtWidgets.QSlider, self)()
             widget = _with_entered_exited(QtWidgets.QSpinBox, self)()
-            widget.setMinimum(self._data.get("min", 0))
-            widget.setMaximum(self._data.get("max", 99))
+            default = self._data.get("default", 0)
+            widget.setMinimum(min(default, self._data.get("min", 0)))
+            widget.setMaximum(max(default, self._data.get("max", 99)))
 
         widget.setMinimumWidth(px(50))
 

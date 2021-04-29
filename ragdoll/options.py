@@ -48,8 +48,6 @@ def write(arg, value=None):
             "%s was not a string" % value
         )
 
-    print("resetting %s=%s" % (key, value))
-
     if isinstance(value, float):
         cmds.optionVar(floatValue=(key, value))
 

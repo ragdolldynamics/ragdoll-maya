@@ -115,6 +115,7 @@ class UserAttributes(object):
         clone["keyable"] = True
 
         value = plug.read()
+        clone["default"] = value
 
         with cmdx.DagModifier() as mod:
             if name not in self._target:
@@ -137,7 +138,7 @@ class UserAttributes(object):
         self._added.append(cmdx.Divider(label))
 
 
-def with_contract(args=None, kwargs=None, returns=None):
+def with_contract(args=None, kwargs=None, returns=None, opts=None):
     args = args or []
     kwargs = kwargs or {}
     returns = returns or []

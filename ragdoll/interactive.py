@@ -503,11 +503,16 @@ def install_menu():
     divider("Manipulate")
 
     with submenu("Constraints", icon="constraint.png"):
-        item("point", create_point_constraint, _constraint_options("Point"))
-        item("orient", create_orient_constraint, _constraint_options("Orient"))
-        item("parent", create_parent_constraint, _constraint_options("Parent"))
-        item("hinge", create_hinge_constraint, _constraint_options("Hinge"))
-        item("socket", create_socket_constraint, _constraint_options("Socket"))
+        item("point", create_point_constraint,
+             _constraint_options(c.PointConstraint))
+        item("orient", create_orient_constraint,
+             _constraint_options(c.OrientConstraint))
+        item("parent", create_parent_constraint,
+             _constraint_options(c.ParentConstraint))
+        item("hinge", create_hinge_constraint,
+             _constraint_options(c.HingeConstraint))
+        item("socket", create_socket_constraint,
+             _constraint_options(c.SocketConstraint))
 
         divider()
 
@@ -543,7 +548,7 @@ def install_menu():
     divider("Utilities")
 
     with submenu("Animation", icon="animation.png"):
-        item("bakeSimulation")
+        item("bakeSimulation", bake_simulation, bake_simulation_options)
 
         divider()
 
@@ -552,16 +557,13 @@ def install_menu():
 
         divider()
 
+        item("multiplySelected",
+             multiply_selected,
+             multiply_selected_options)
+
         item("createDynamicControl",
              create_dynamic_control,
              create_dynamic_control_options)
-
-        item("multiplyRigids",
-             multiply_rigids,
-             multiply_rigids_options)
-        item("multiplyConstraints",
-             multiply_constraints,
-             multiply_constraints_options)
 
     with submenu("Rigging", icon="rigging.png"):
         item("editShape", edit_shape, edit_shape_options)
@@ -1101,7 +1103,8 @@ def create_active_rigid(selection=None, **opts):
         opts_ = {
             "computeMass": _opt("computeMass", opts),
             "passive": passive,
-            "defaults": {}
+            "defaults": {},
+            "addUserAttributes": _opt("addUserAttributes", opts),
         }
 
         # Translate UI options into attribute defaults
@@ -1181,7 +1184,10 @@ def create_active_chain(selection=None, **opts):
 
     # This is no chain
     if len(links) < 2:
-        return create_rigid(selection, **opts)
+        return log.warning(
+            "Select one root, followed by one or more children "
+            "to form a chain of physics objects."
+        )
 
     if not links:
         return log.warning(
@@ -1805,6 +1811,62 @@ def create_kinematic_control(selection=None, **opts):
         return kSuccess
 
 
+@contextlib.contextmanager
+def refresh_suspended():
+    cmds.refresh(suspend=True)
+
+    try:
+        yield
+    finally:
+        cmds.refresh(suspend=False)
+
+
+@contextlib.contextmanager
+def isolate_select(nodes):
+    isolated_panel = cmds.paneLayout("viewPanes", query=True, pane1=True)
+
+    previous_selection = cmds.ls(selection=True)
+    cmds.select(nodes)
+    cmds.editor(isolated_panel,
+                edit=True,
+                lockMainConnection=True,
+                mainListConnection="activeList")
+    cmds.isolateSelect(isolated_panel, state=True)
+
+    try:
+        yield
+    finally:
+        cmds.isolateSelect(isolated_panel, state=False)
+        cmds.select(previous_selection)
+
+
+@i__.with_undo_chunk
+@_format_exception
+def bake_simulation(selection=None, **opts):
+    opts_ = {
+        "deletePhysics": _opt("bakeDeletePhysics", opts),
+        "bakeToLayer": _opt("bakeToLayer", opts),
+        "unrollRotation": _opt("bakeUnrollRotation", opts),
+    }
+
+    rigids = cmds.ls(type="rdRigid")
+    if not rigids:
+        return log.warning("No physics found!")
+
+    if _opt("bakePerformance", opts) == 1:
+        with isolate_select(rigids):
+            commands.bake_simulation(opts=opts_)
+
+    elif _opt("bakePerformance", opts) == 2:
+        with refresh_suspended():
+            commands.bake_simulation(opts=opts_)
+
+    else:
+        commands.bake_simulation(opts=opts_)
+
+    return kSuccess
+
+
 @i__.with_undo_chunk
 def transfer_selected(selection=None):
     try:
@@ -2042,7 +2104,7 @@ def delete_physics(selection=None, **opts):
 @requires_ui
 def create_dynamic_control(selection=None, **opts):
     message = """\
-Dynamic Control has been updated and renamed Active Chain
+Try using the new Active Chain command instead.
 """
 
     MessageBox(
@@ -2092,6 +2154,29 @@ def normalise_shapes(selection=None):
         root = root.parent()
 
     commands.normalise_shapes(root)
+
+    return True
+
+
+def multiply_selected(selection=None):
+    rigids = _filtered_selection("rdRigid")
+    constraints = _filtered_selection("rdConstraint")
+
+    if not rigids and not constraints:
+        return False
+
+    selected_channels = _selected_channels()
+    multipliers = []
+    if rigids:
+        multipliers += [commands.multiply_rigids(
+            rigids, channels=selected_channels
+        )]
+    if constraints:
+        multipliers += [commands.multiply_constraints(
+            constraints, channels=selected_channels
+        )]
+
+    cmds.select(list(map(str, multipliers)))
 
     return True
 
@@ -2423,6 +2508,11 @@ def convert_rigid_options(*args):
     return window
 
 
+def bake_simulation_options(*args):
+    window = _Window("bakeSimulation", bake_simulation)
+    return window
+
+
 def _constraint_options(typ):
     def _create_constraint_options(*args):
         # Preselect whatever the user picked
@@ -2459,6 +2549,10 @@ def create_turbulence_force_options(*args):
 
 def multiply_rigids_options(*args):
     return _Window("multiplyRigids", multiply_rigids)
+
+
+def multiply_selected_options(*args):
+    return _Window("multiplySelected", multiply_selected)
 
 
 def edit_shape_options(*args):

@@ -168,6 +168,12 @@
         "default": true,
         "help": "Keep rigids where they are, or snap them together. Offsets can be manipulated with the Edit Constraint Frames menu item."
     },
+    "addUserAttributes": {
+        "name": "addUserAttributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Expose common physics attributes on the original animation controls, like Mass of rigids and Guide Strength of constraints."
+    },
     "characterCopy": {
         "name": "characterCopy",
         "label": "Copy",
@@ -423,19 +429,75 @@
         "help": "Include simulation in exported file."
     },
 
-    "isolateSelected": {
-        "name": "isolateSelected",
-        "label": "Include Simulation",
-        "type": "Boolean",
-        "default": false,
-        "help": "Include simulation in exported file."
-    },
 
-    "keepPhysics": {
-        "name": "keepPhysics",
+
+    "#": "----------------",
+    "#": " Bake options ",
+    "#": "----------------",
+
+
+
+    "bakePerformance": {
+        "name": "bakePerformance",
+        "label": "Performance",
+        "type": "Enum",
+        "items": ["Draw Everything", "Isolate Physics", "Disable Viewport"],
+        "default": 1,
+        "help": "Improve performance by hiding anything unrelated to the simulation, or disabling the viewport(s) altogether whilst baking."
+    },
+    "bakeDeletePhysics": {
+        "name": "bakeDeletePhysics",
+        "label": "Delete Physics",
+        "enabled": false,
+        "type": "Boolean",
+        "default": true,
+        "help": "Delete all on completion, they no longer have any effect."
+    },
+    "bakeToLayer": {
+        "name": "bakeToLayer",
+        "enabled": false,
         "type": "Boolean",
         "default": false,
-        "help": "Do not delete the physics nodes once finished."
+        "help": "Bake to a new animation layer."
+    },
+    "bakeIncludeStatic": {
+        "name": "bakeIncludeStatic",
+        "label": "Include Static",
+        "type": "Boolean",
+        "default": false,
+        "help": "Bake passive rigids too, even though they aren't affected by physics."
+    },
+    "bakeUnrollRotation": {
+        "name": "bakeUnrollRotation",
+        "label": "Unroll Rotation",
+        "type": "Boolean",
+        "default": true,
+        "help": "Let rotations exceed 360 degrees (good for motion blur)."
+    },
+    "bakeRange": {
+        "name": "bakeRange",
+        "label": "Time Range",
+        "enabled": false,
+        "type": "Enum",
+        "items": ["Time Slider", "Start/End"],
+        "default": 0,
+        "help": "Bake this range."
+    },
+    "bakeStartTime": {
+        "name": "bakeStartTime",
+        "label": "Start Time",
+        "enabled": false,
+        "type": "Integer",
+        "default": 0,
+        "help": "Start baking from this time."
+    },
+    "bakeEndTime": {
+        "name": "bakeEndTime",
+        "enabled": false,
+        "label": "End Time",
+        "type": "Integer",
+        "default": 100,
+        "help": "Finish baking at this time."
     },
 
 

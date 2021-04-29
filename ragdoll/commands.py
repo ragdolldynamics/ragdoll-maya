@@ -78,7 +78,10 @@ def create_scene(name=None, parent=None):
 @i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs={"opts": (dict, None)},
-                   returns=(cmdx.DagNode,))
+                   returns=(cmdx.DagNode,),
+                   opts={"addUserAttributes": False,
+                         "computeMass": False,
+                         "defaults": None})
 def create_rigid(node, scene, opts=None, _cache=None):
     """Create a new rigid
 
@@ -89,10 +92,6 @@ def create_rigid(node, scene, opts=None, _cache=None):
     Arguments:
         node (DagNode): Maya transform or shape
         scene (DagNode): Ragdoll scene to which the new rigid is added
-        compute_mass (bool): Whether to automatically compute the mass
-            based on shape volume
-        existing (int): What to do about existing connections to translate
-            and rotate channels.
         defaults (dict, optional): Default attribute values for the
             newly created rigid
         _cache (AttributeCache, optional): Reach for attributes here first,
@@ -140,6 +139,7 @@ def create_rigid(node, scene, opts=None, _cache=None):
         # Copy current transformation
         mod.set_attr(rigid["cachedRestMatrix"], rest)
         mod.set_attr(rigid["inputMatrix"], rest)
+        mod.set_attr(rigid["kinematic"], opts.get("passive", False))
 
         # Add to scene
         _add_rigid(mod, rigid, scene)
@@ -173,14 +173,15 @@ def create_rigid(node, scene, opts=None, _cache=None):
                 0.01
             ))
 
-    uas = i__.UserAttributes(rigid, transform)
-    uas.add_divider("Ragdoll")
-    uas.add("kinematic")
-    uas.add("collide")
-    uas.add("mass")
-    uas.add("friction")
-    uas.add("restitution")
-    uas.do_it()
+    if opts.get("addUserAttributes"):
+        uas = i__.UserAttributes(rigid, transform)
+        uas.add_divider("Ragdoll")
+        uas.add("kinematic")
+        uas.add("collide")
+        uas.add("mass")
+        uas.add("friction")
+        uas.add("restitution")
+        uas.do_it()
 
     # Make the connections
     with cmdx.DagModifier() as mod:
@@ -2038,6 +2039,81 @@ def convert_to_polygons(actor, worldspace=True):
     lambert.add(mesh)
 
     return mesh
+
+
+@i__.with_undo_chunk
+def bake_simulation(rigids=None, opts=None):
+    """Bake transforms associated with `rigids` with `opts`
+
+    Arguments:
+        rigids (list, optional): List of rigids to bake, or bake everything
+        opts (dict, optional): Optional options
+
+    Returns:
+        transforms (list): Baked transforms, excluding
+            those associated with passive and static rigids
+
+    """
+
+    assert rigids is None or isinstance(rigids, (tuple, list)), (
+        "rigids must be list")
+    assert opts is None or isinstance(opts, dict), "opts must be dict"
+
+    opts = dict({
+        "startTime": cmdx.oma.MAnimControl.minTime(),
+        "endTime": cmdx.oma.MAnimControl.maxTime(),
+        "attributes": ("tx", "ty", "tz", "rx", "ry", "rz"),
+        "includeStatic": False,
+        "bakeToLayer": False,
+        "deletePhysics": True,
+        "unrollRotation": True,
+    }, **(opts or {}))
+
+    rigids = rigids or cmdx.ls(type="rdRigid")
+
+    transforms = []
+    for rigid in rigids:
+
+        if not opts["includeStatic"]:
+            # No need to bake something that is unaffected by physics
+            if rigid["kinematic"] and not rigid["kinematic"].animated:
+                continue
+
+        transforms += [rigid.parent()]
+
+    time = tuple(t.value for t in (opts["startTime"], opts["endTime"]))
+    cmds.bakeResults(
+        list(map(str, transforms)),
+        attribute=opts["attributes"],
+        simulation=True,
+        time=time,
+        sampleBy=1,
+        oversamplingRate=1,
+        disableImplicitControl=True,
+        preserveOutsideKeys=False,
+        sparseAnimCurveBake=False,
+        removeBakedAttributeFromLayer=False,
+        removeBakedAnimFromLayer=False,
+        bakeOnOverrideLayer=opts["bakeToLayer"],
+        minimizeRotation=False,
+    )
+
+    if opts["unrollRotation"]:
+        rotate_channels = ["%s.rx" % t for t in transforms]
+        rotate_channels += ["%s.ry" % t for t in transforms]
+        rotate_channels += ["%s.rz" % t for t in transforms]
+        cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
+        cmds.rotationInterpolation(rotate_channels, c="none")
+
+    # Haven't got much choice at the moment, as
+    # the cmds.bakeResults command *breaks* any
+    # connection from our rigid. Including when
+    # baking to a new layer. Will probably need
+    # to roll our own bake command.
+    if opts["deletePhysics"]:
+        delete_all_physics()
+
+    return transforms
 
 
 """

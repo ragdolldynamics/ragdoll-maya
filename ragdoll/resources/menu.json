@@ -38,6 +38,7 @@
             "createRigidType",
             "existingAnimation",
             "initialShape",
+            "addUserAttributes",
             "computeMass",
             "rigidSelect"
         ]
@@ -50,7 +51,6 @@
         "options": [
             "solver",
             "chainShapeType",
-            "chainBlendMethod",
             "chainPassiveRoot",
             "chainAutoMultiplier",
             "chainAutoLimits"
@@ -259,6 +259,13 @@
             }
         ]
     },
+    "multiplySelected": {
+        "label": "Multiply Selected",
+        "icon": "multiply.png",
+        "summary": "Multiply keyable attributes on multiple physics objects at once.",
+        "options": [],
+        "description": "Perform bulk-edits of many rigid or constraint attributes at once, from a single attribute source. For example, edit the `Translate Damping` of all rigid in an entire character, from a single top-level node."
+    },
     "multiplyRigids": {
         "label": "Multiply Selected Rigids",
         "icon": "rigid_multiplier.png",
@@ -276,12 +283,17 @@
     "bakeSimulation": {
         "label": "Bake Simulation",
         "icon": "bake.png",
-        "enable": false,
         "summary": "Convert a live simulation into editable keyframes.",
         "description": "This uses Maya's Bake Simulation tool to convert a simulation into keyframes you can use for further editing.",
         "options": [
-            "keepPhysics",
-            "isolateSelected"
+            "bakePerformance",
+            "bakeRange",
+            "bakeStartTime",
+            "bakeEndTime",
+            "bakeDeletePhysics",
+            "bakeUnrollRotation",
+            "bakeToLayer",
+            "bakeIncludeStatic"
         ]
     },
     "exportPhysics": {

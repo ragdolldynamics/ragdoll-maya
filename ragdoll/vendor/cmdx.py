@@ -3054,6 +3054,30 @@ class Plug(object):
 
         return self.connection(destination=False) is not None
 
+    def animated(self, recursive=True):
+        """Return whether this attribute is connected to an animCurve
+
+        Arguments:
+            recursive (bool, optional): Should I travel to connected
+                attributes in search of an animCurve, or only look to
+                the immediate connection?
+
+        """
+
+        other = self.connection(destination=False, plug=True)
+        while other is not None:
+
+            node = other.node()
+            if node.object().hasFn(om.MFn.kAnimCurve):
+                return True
+
+            if not recursive:
+                break
+
+            other = other.connection(destination=False, plug=True)
+
+        return False
+
     def lock(self):
         """Convenience function for plug.locked = True
 

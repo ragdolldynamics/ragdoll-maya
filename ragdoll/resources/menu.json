@@ -157,6 +157,11 @@
         "summary": "Pin a rigid body in worldspace, with a spring-like softness.",
         "description": "Guide the selected rigid body towards its current worldspace position. The guide may be animated and disabled/enabled at run-time."
     },
+    "exoskeleton": {
+        "label": "Exoskeleton",
+        "icon": "exoskeleton2.png",
+        "summary": "Generate a network of controls from the selected root chain."
+    },
     "motor": {
         "label": "Motor",
         "enable": false

@@ -262,6 +262,29 @@
 
 
     "#": "----------------",
+    "#": " Exoskeleton ",
+    "#": "----------------",
+
+
+    "exoskeletonAddPassive": {
+        "name": "exoskeletonAddPassive",
+        "label": "Add Passive Control",
+        "type": "Enum",
+        "default": 0,
+        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
+        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
+    },
+    "exoskeletonMakeExclusive": {
+        "name": "exoskeletonMakeExclusive",
+        "label": "Make Exclusive",
+        "type": "Boolean",
+        "default": true,
+        "help": "Should the exoskeleton take exclusive control over the chain(s), or share control with existing constraints?"
+    },
+
+
+
+    "#": "----------------",
     "#": " Chain ",
     "#": "----------------",
 

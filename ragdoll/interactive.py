@@ -132,18 +132,33 @@ def requires_ui(func):
     return requires_ui_wrapper
 
 
-def _format_exception(func):
+def with_exception_handling(func):
     """Turn exceptions into user-facing messages"""
 
     @functools.wraps(func)
     def format_exception_wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+
+        except i__.UserWarning as e:
+            _print_exception()
+            log.warning(str(e))
+
+            MessageBox(
+                e.title,
+                e.message,
+                buttons=ui.OkButton,
+                icon=ui.InformationIcon
+            )
+
+            return kFailure
+
         except Exception as e:
             # Turn this into a friendly warning
             _print_exception()
             log.warning(str(e))
             return kFailure
+
     return format_exception_wrapper
 
 
@@ -1178,19 +1193,21 @@ def create_passive_rigid(selection=None, **opts):
 
 
 @i__.with_undo_chunk
-@_format_exception
+@with_exception_handling
 def create_active_chain(selection=None, **opts):
     links = selection or cmdx.selection(type="transform")
 
     # This is no chain
     if len(links) < 2:
-        return log.warning(
+        raise i__.UserWarning(
+            "Selection Problem",
             "Select one root, followed by one or more children "
             "to form a chain of physics objects."
         )
 
     if not links:
-        return log.warning(
+        raise i__.UserWarning(
+            "Selection Problem",
             "Select two or more transforms "
             "in the order they should be connected. "
             "The first selection will be passive (i.e. animated)."
@@ -1216,8 +1233,8 @@ def create_active_chain(selection=None, **opts):
     }
 
     shape_type = _opt("chainShapeType", opts)
-    if shape_type != c.Auto:
-        defaults["shapeType"] = shape_type
+    if shape_type != c.InitialShapeAuto:
+        defaults["shapeType"] = shape_type + 1
 
     scene = _find_current_scene()
 
@@ -1772,9 +1789,12 @@ def create_driven_control(selection=None, **opts):
             return log.warning("%s was not a Ragdoll Rigid", selection[1])
 
         if actor.sibling(type="rdConstraint"):
-            ctrl = commands.create_active_control(reference, actor)
+            ctrl = commands.create_active_control(
+                actor, reference=reference)
         else:
-            _, ctrl, _ = commands.create_absolute_control(actor, reference)
+            _, ctrl, _ = commands.create_absolute_control(
+                actor, reference=reference
+            )
 
         controls += [reference.path()]
 
@@ -1841,7 +1861,7 @@ def isolate_select(nodes):
 
 
 @i__.with_undo_chunk
-@_format_exception
+@with_exception_handling
 def bake_simulation(selection=None, **opts):
     opts_ = {
         "deletePhysics": _opt("bakeDeletePhysics", opts),
@@ -2308,7 +2328,7 @@ def welcome_user(*args):
     return win
 
 
-@_format_exception
+@with_exception_handling
 def export_physics(selection=None, **opts):
     data = cmds.ragdollDump()
     data = json.loads(data)
@@ -2356,7 +2376,7 @@ def export_physics(selection=None, **opts):
     )
 
 
-@_format_exception
+@with_exception_handling
 def import_physics_from_file(selection=None, **opts):
     from PySide2 import QtWidgets
     fname, suffix = QtWidgets.QFileDialog.getOpenFileName(

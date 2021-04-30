@@ -10,7 +10,6 @@ RAGDOLL_AUTO_SERIAL = os.getenv("RAGDOLL_AUTO_SERIAL")
 CREATE_NEW_SOLVER = 0
 
 # Axes
-Auto = "Auto"
 X = "X"
 Y = "Y"
 Z = "Z"

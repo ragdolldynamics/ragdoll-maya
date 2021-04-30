@@ -24,10 +24,10 @@ from . import (
 log = logging.getLogger("ragdoll")
 
 
-@i__.with_undo_chunk
 @i__.with_contract(kwargs={"name": (cmdx.string_types, None),
                            "parent": (cmdx.DagNode, None)},
                    returns=(cmdx.DagNode,))
+@i__.with_undo_chunk
 def create_scene(name=None, parent=None):
     """Create a new Ragdoll scene
 
@@ -59,7 +59,8 @@ def create_scene(name=None, parent=None):
         mod.set_attr(scene["gravity"], up * -98.2)
 
         # The ground is really really bouncy since 2021.04.28
-        mod.set_attr(scene["groundRestitution"], 0)
+        mod.set_attr(scene["groundFriction"], 0.1)
+        mod.set_attr(scene["groundRestitution"], 0.01)
 
         if up.y:
             mod.set_keyable(scene["gravityY"])
@@ -262,9 +263,9 @@ def convert_rigid(rigid, opts=None):
 
 @i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
-                   kwargs=None,
+                   kwargs={"transform": (cmdx.DagNode, None)},
                    returns=(cmdx.DagNode,))
-def create_constraint(parent, child):
+def create_constraint(parent, child, transform=None):
     assert child.type() == "rdRigid", child.type()
     assert parent.type() in ("rdRigid", "rdScene"), (
         "%s must be a rigid or scene" % parent.type()
@@ -285,7 +286,7 @@ def create_constraint(parent, child):
     name = i__.unique_name("rConstraint")
 
     with cmdx.DagModifier() as mod:
-        transform = child.parent()
+        transform = transform or child.parent()
         con = _rdconstraint(mod, name, parent=transform)
 
         draw_scale = _scale_from_rigid(child)
@@ -362,11 +363,16 @@ def animation_constraint(rigid, opts=None):
     with cmdx.DagModifier() as mod:
         name = opts["name"]
         name = i__.unique_name(name)
+
+        # Compute *before* assigning constraint, to get the rigid
+        # bounding box as opposed to the box for both
+        scale = _scale_from_rigid(rigid)
+
         con = _rdconstraint(mod, name, parent=transform)
 
         mod.set_attr(con["limitEnabled"], False)
         mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
+        mod.set_attr(con["drawScale"], scale)
 
         for key, value in opts["defaults"].items():
             mod.set_attr(con[key], value)
@@ -902,9 +908,7 @@ def create_absolute_control(rigid, reference=None):
         mod.connect(rigid["ragdollId"], ctrl["rigid"])
 
         shape_name = i__.shape_name(name + "Constraint")
-        con = mod.create_node("rdConstraint",
-                              name=shape_name,
-                              parent=reference)
+        con = _rdconstraint(mod, shape_name, reference)
 
         mod.connect(rigid["ragdollId"], con["childRigid"])
 
@@ -941,43 +945,57 @@ def create_absolute_control(rigid, reference=None):
     return reference, ctrl, con
 
 
+def is_a(node, typ):
+    return node.type() == typ
+
+
 @i__.with_undo_chunk
-@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode, cmdx.DagNode),
                    kwargs=None,
-                   returns=(cmdx.DagNode,))
-def create_active_control(reference, rigid):
-    """Control a rigid body using a reference transform
+                   returns=(cmdx.DagNode, cmdx.DagNode))
+def create_relative_control(child_rigid, parent_rigid, reference):
+    """Control a child_rigid body using a reference transform
 
     Arguments:
         reference (transform): Follow this node
-        rigid (rdRigid): Rigid which should follow `reference`
+        child_rigid (rdRigid): Rigid which should follow `reference`
+
+    Returns:
+        New nodes (list): rdControl, rdConstraint
 
     """
 
-    if isinstance(reference, i__.string_types):
-        reference = cmdx.encode(reference)
-
-    if isinstance(rigid, i__.string_types):
-        rigid = cmdx.encode(rigid)
-
     assert reference.isA(cmdx.kTransform), "%s was not a transform" % reference
-    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
-
-    scene = rigid["nextState"].connection()
-    assert scene and scene.type() == "rdScene", (
-        "%s was not part of a scene" % rigid
-    )
-
-    con = rigid.sibling(type="rdConstraint")
-    assert con is not None, "Need an existing constraint"
+    assert is_a(child_rigid, "rdRigid"), "%s was not a rdRigid" % child_rigid
+    assert is_a(parent_rigid, "rdRigid"), "%s was not a rdRigid" % parent_rigid
+    scene = child_rigid["nextState"].connection()
+    assert scene and is_a(scene, "rdScene"), (
+        "%s was not part of a scene" % child_rigid)
+    scene = parent_rigid["nextState"].connection()
+    assert scene and is_a(scene, "rdScene"), (
+        "%s was not part of a scene" % parent_rigid)
 
     with cmdx.DagModifier() as mod:
-        ctrl = _rdcontrol(mod, "rActiveControl1", reference)
-        mod.connect(rigid["ragdollId"], ctrl["rigid"])
-        mod.connect(reference["matrix"], con["driveMatrix"])
+        name = "rRelativeConstraint"
+        shape_name = name
 
+        # Just mirror whatever the child_rigid is doing
+        mod.connect(child_rigid["outputScale"], reference["scale"])
+        mod.set_keyable(reference["scale"], False)
+
+        shape_name = i__.shape_name(name)
+        ctrl = _rdcontrol(mod, shape_name, reference)
+        mod.connect(child_rigid["ragdollId"], ctrl["rigid"])
+
+        shape_name = i__.shape_name(name + "Constraint")
+        con = create_constraint(parent_rigid, child_rigid, transform=reference)
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["driveStrength"], 1.0)
+        mod.set_attr(con["linearDriveStiffness"], 0)
+        mod.set_attr(con["linearDriveDamping"], 0)
+
+        # Drive this constraint relatively
+        mod.connect(reference["matrix"], con["driveMatrix"])
 
     forwarded = (
         "driveStrength",
@@ -996,7 +1014,7 @@ def create_active_control(reference, rigid):
 
     reference_proxies.do_it()
 
-    return ctrl
+    return ctrl, con
 
 
 @i__.with_undo_chunk
@@ -1053,6 +1071,65 @@ def create_kinematic_control(rigid, reference=None):
 
 # Alias
 create_passive_control = create_kinematic_control
+
+
+@i__.with_undo_chunk
+def create_exoskeleton_control(root):
+    root = cmdx.sl()[0]
+    if root.isA(cmdx.kTransform):
+        root = root.shape(type="rdRigid")
+    assert root and root.type() == "rdRigid"
+
+    with cmdx.DagModifier() as mod:
+        tm = root.transform(cmdx.sWorld)
+        translate = tm.translation()
+        rotate = tm.rotation()
+
+        root_reference = mod.create_node("transform", name=root.name() + "Exo")
+        mod.set_attr(root_reference["translate"], translate)
+        mod.set_attr(root_reference["rotate"], rotate)
+
+    ctrls = [create_absolute_control(root, reference=root_reference)]
+
+    rigid_to_reference = {root: root_reference}
+
+    def walk(root, parent_reference=None):
+        plugs = root["ragdollId"].connections(source=False,
+                                              plugs=True,
+                                              type="rdRigid")
+
+        # `root` could be the parent of multiple children
+        for plug in plugs:
+            if plug.name() != "parentRigid":
+                continue
+
+            child = plug.node()
+
+            try:
+                # We've already created a reference to this rigid
+                reference = rigid_to_reference[child]
+
+            except KeyError:
+                # Let's make a new reference
+                tm = child.parent().transform()
+                translate = tm.translation()
+                rotate = tm.rotation()
+
+                with cmdx.DagModifier() as mod:
+                    reference = mod.create_node("transform",
+                                                name=child.name() + "Exo",
+                                                parent=parent_reference)
+                    mod.set_attr(reference["translate"], translate)
+                    mod.set_attr(reference["rotate"], rotate)
+
+                rigid_to_reference[child] = reference
+
+            ctrl = create_relative_control(child, root, reference)
+            ctrls.append(ctrl)
+
+            walk(child, reference)
+
+    walk(root, root_reference)
 
 
 @i__.with_undo_chunk
@@ -1748,8 +1825,8 @@ def infer_geometry(root, parent=None, children=None):
     return geometry
 
 
-@i__.with_undo_chunk
 @i__.with_refresh_suspended
+@i__.with_undo_chunk
 def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
 
@@ -2380,7 +2457,7 @@ def _rdrigid(mod, name, parent):
     return node
 
 
-def _rdcontrol(mod, name, parent=None):
+def _rdcontrol(mod, name, parent):
     """Create a new rdControl node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdControl", name=name, parent=parent)
@@ -2389,7 +2466,7 @@ def _rdcontrol(mod, name, parent=None):
     return node
 
 
-def _rdconstraint(mod, name, parent=None):
+def _rdconstraint(mod, name, parent):
     """Create a new rdConstraint node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdConstraint", name=name, parent=parent)
@@ -2397,7 +2474,7 @@ def _rdconstraint(mod, name, parent=None):
     return node
 
 
-def _rdconstraintmultiplier(mod, name, parent=None):
+def _rdconstraintmultiplier(mod, name, parent):
     """Create a new rdConstraint node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdConstraintMultiplier", name=name, parent=parent)
@@ -2405,7 +2482,7 @@ def _rdconstraintmultiplier(mod, name, parent=None):
     return node
 
 
-def _rdrigidmultiplier(mod, name, parent=None):
+def _rdrigidmultiplier(mod, name, parent):
     """Create a new rdConstraint node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdRigidMultiplier", name=name, parent=parent)
@@ -2413,7 +2490,7 @@ def _rdrigidmultiplier(mod, name, parent=None):
     return node
 
 
-def _rdforce(mod, name, parent=None):
+def _rdforce(mod, name, parent):
     """Create a new rdForce node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdForce", name=name, parent=parent)
@@ -2660,6 +2737,6 @@ def _scale_from_rigid(rigid):
     scale = sum(rest_tm.scale()) / 3.0
 
     if rigid.parent().type() == "joint":
-        return rigid["shapeLength"].read() * 0.25 * scale
+        return rigid["shapeLength"].read() * 0.25 / scale
     else:
-        return sum(rigid["shapeExtents"].read()) / 3.0 * scale
+        return sum(rigid["shapeExtents"].read()) / 3.0 / scale

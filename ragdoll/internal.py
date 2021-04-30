@@ -20,6 +20,12 @@ class CycleError(RuntimeError):
     pass
 
 
+class UserWarning(UserWarning):
+    def __init__(self, title, message):
+        super(UserWarning, self).__init__(message)
+        self.title = title
+
+
 class UserAttributes(object):
     """User attributes appear on the original controllers
      __________________

@@ -6167,8 +6167,11 @@ class DagModifier(_BaseModifier):
 
         try:
             mobj = self._modifier.createNode(type, parent)
-        except TypeError:
-            raise TypeError("'%s' is not a valid node type" % type)
+        except TypeError as e:
+            if e.message == "parent is not a transform type":
+                raise TypeError("'%s' is not a transform type," % parent)
+            else:
+                raise TypeError("'%s' is not a valid node type," % type)
 
         template = self._opts["template"]
         if name or template:

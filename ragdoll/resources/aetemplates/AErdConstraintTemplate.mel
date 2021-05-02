@@ -31,7 +31,7 @@ global proc AErdConstraintTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse false;
-                editorTemplate -label "Allow Overlap" -addControl "disableCollision";
+            editorTemplate -label "Allow Overlap" -addControl "disableCollision";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

@@ -3,24 +3,12 @@
 global proc AErdRigidTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
-        editorTemplate -beginLayout "Output Attributes" -collapse true;
-            editorTemplate -beginLayout "Local Space" -collapse false;
-                editorTemplate -addControl "outputTranslate";
-                editorTemplate -addControl "outputRotate";
-                editorTemplate -addControl "outputScale";
-            editorTemplate -endLayout;
-
-            editorTemplate -beginLayout "World Space" -collapse true;
-                editorTemplate -addControl "outputWorldTranslate";
-                editorTemplate -addControl "outputWorldRotate";
-                editorTemplate -addControl "outputWorldScale";
-            editorTemplate -endLayout;
-        editorTemplate -endLayout;
-
         editorTemplate -beginLayout "General" -collapse false;
-            editorTemplate -addControl "enabled";
-            editorTemplate -addControl "kinematic";
-            editorTemplate -addControl "collide";
+            editorTemplate -beginNoOptimize;
+                editorTemplate -addControl "enabled";
+                editorTemplate -addControl "collide";
+                editorTemplate -addControl "kinematic";
+            editorTemplate -endNoOptimize;
             editorTemplate -addControl "mass";
             editorTemplate -addControl "friction";
             editorTemplate -addControl "restitution";
@@ -59,7 +47,20 @@ global proc AErdRigidTemplate(string $nodeName) {
         editorTemplate -beginLayout "Visualisation" -collapse true;
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawShaded";
-            editorTemplate -addControl "drawWorldspace";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Output Attributes" -collapse true;
+            editorTemplate -beginLayout "Local Space" -collapse false;
+                editorTemplate -addControl "outputTranslate";
+                editorTemplate -addControl "outputRotate";
+                editorTemplate -addControl "outputScale";
+            editorTemplate -endLayout;
+
+            editorTemplate -beginLayout "World Space" -collapse true;
+                editorTemplate -addControl "outputWorldTranslate";
+                editorTemplate -addControl "outputWorldRotate";
+                editorTemplate -addControl "outputWorldScale";
+            editorTemplate -endLayout;
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

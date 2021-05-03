@@ -659,15 +659,16 @@ class Chain(object):
 
         else:
             # There isn't any, let's make one
+            opts_ = {"name": i__.unique_name("rGlobalStrength")}
             mult = commands.multiply_constraints(self._new_constraints,
-                                                 parent=root)
-            mult.rename(i__.unique_name("rGuideMultiplier"))
+                                                 parent=root,
+                                                 opts=opts_)
 
             # Forward some convenience attributes
             multiplier_attrs = i__.UserAttributes(mult, root)
             multiplier_attrs.add("driveStrength",
-                                 long_name="strengthMultiplier",
-                                 nice_name="Strength Multiplier")
+                                 long_name="globalStrength",
+                                 nice_name="Global Strength")
 
             self._new_multipliers.append(mult)
             self._new_userattrs += [multiplier_attrs]

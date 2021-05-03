@@ -2557,17 +2557,27 @@ class ImportOptions(Options):
         self._widgets["Hint"].setText(text)
 
     def do_import(self):
-        if options.read("importMethod") == Load:
-            method = self._loader.load
-        else:
-            method = self._loader.reinterpret
+        try:
+            if options.read("importMethod") == Load:
+                self._loader.load()
+            else:
+                self._loader.reinterpret()
 
-        def do_it():
-            method()
+        except Exception:
+
+            # Keep the technical crowd on-top of what happened
+            import traceback
+            log.debug(traceback.format_exc())
+
+            # But don't bother the animator
+            log.warning("Failed")
+
+            return False
+
+        finally:
+            # Now that new physics has become part of the
+            # scene, reset relevant widgets.
             self.reset()
-
-        # Allow UI to finish drawing the click of a button
-        QtCore.QTimer.singleShot(5, do_it)
 
         return True
 

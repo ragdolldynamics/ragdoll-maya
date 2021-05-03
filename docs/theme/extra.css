@@ -238,12 +238,22 @@ Tables
     padding: 0.5rem 0.5rem;
 }
 
+.md-sidebar__scrollwrap {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+.md-sidebar__scrollwrap:hover {
+    scrollbar-color: hsl(0, 0%, 46.3%) transparent;
+}
+
 .md-typeset .md-typeset__scrollwrap::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, .26)
 }
 
 .md-typeset .md-typeset__scrollwrap::-webkit-scrollbar-thumb:hover {
-  background-color: #536dfe
+  /*background-color: #536dfe;*/
+  background-color: hsl(210, 1%, 40%);
 }
 
 .md-typeset table:not([class]) tr td {
@@ -735,7 +745,8 @@ div.tabs button.active p {
 
 @media only screen and (min-width: 76.25em) {
   .md-sidebar--primary .md-sidebar__inner {
-      border-right: 1px solid rgba(0, 0, 0, .07);
+      /*border-right: 1px solid rgba(0, 0, 0, .07);*/
+      /*margin-right: -1px;*/
   }
 
   .md-sidebar--secondary .md-sidebar__inner {

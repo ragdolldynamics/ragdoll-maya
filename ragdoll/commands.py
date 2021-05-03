@@ -80,9 +80,9 @@ def create_scene(name=None, parent=None):
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode,),
-                   opts={"addUserAttributes": False,
-                         "computeMass": False,
-                         "defaults": None})
+                   opts=["addUserAttributes",
+                         "computeMass",
+                         "rigidDefaults"])
 def create_rigid(node, scene, opts=None, _cache=None):
     """Create a new rigid
 

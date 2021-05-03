@@ -31,6 +31,11 @@ global proc AErdConstraintTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse false;
+            // These should show up like clickable message links,
+            // but currently show up as integer values. :(
+            editorTemplate -addControl "parentRigid";
+            editorTemplate -addControl "childRigid";
+
             editorTemplate -label "Allow Overlap" -addControl "disableCollision";
         editorTemplate -endLayout;
 

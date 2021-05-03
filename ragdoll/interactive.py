@@ -1023,6 +1023,11 @@ def _opt(key, override=None):
     return override.get(key, options.read(key))
 
 
+def _rewind(scene):
+    start_time = scene["startTime"].asTime()
+    cmdx.currentTime(start_time)
+
+
 @i__.with_undo_chunk
 def create_active_rigid(selection=None, **opts):
     """Create a new rigid from selection"""
@@ -1102,8 +1107,7 @@ def create_active_rigid(selection=None, **opts):
             return kFailure
 
     if _opt("autoReturnToStart", opts):
-        start_time = scene["startTime"].asTime()
-        cmdx.currentTime(start_time)
+        _rewind(scene)
 
     for index, node in enumerate(selection):
         transform = node.parent() if node.isA(cmdx.kShape) else node
@@ -1227,15 +1231,13 @@ def create_active_chain(selection=None, **opts):
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
         "passiveRoot": _opt("chainPassiveRoot", opts),
-    }
-
-    defaults = {
-        "drawShaded": False
+        "drawShaded": False,
+        "defaults": {}
     }
 
     shape_type = _opt("chainShapeType", opts)
     if shape_type != c.InitialShapeAuto:
-        defaults["shapeType"] = shape_type + 1
+        opts["defaults"]["shapeType"] = shape_type + 1
 
     scene = _find_current_scene()
 
@@ -1264,7 +1266,7 @@ def create_active_chain(selection=None, **opts):
 
             return kFailure
 
-    tools.create_chain(links, scene, opts=opts, defaults=defaults)
+    tools.create_chain(links, scene, opts=opts)
 
     root = links[0]
     cmds.select(str(root))
@@ -1324,8 +1326,7 @@ def create_muscle(selection=None, **opts):
         return
 
     if _opt("autoReturnToStart", opts):
-        start_time = scene["startTime"].asTime()
-        cmdx.currentTime(start_time)
+        _rewind(scene)
 
     if new_scene:
         # Muscles work best with the PGS solver, fow now
@@ -1418,8 +1419,7 @@ def create_character(selection=None, **opts):
         return
 
     if _opt("autoReturnToStart", opts):
-        start_time = scene["startTime"].asTime()
-        cmdx.currentTime(start_time)
+        _rewind(scene)
 
     kwargs = {
         "copy": _opt("characterCopy", opts),
@@ -2676,6 +2676,20 @@ def import_physics_options(*args):
     win = None
 
     def import_physics():
+        try:
+            scene = _find_current_scene(autocreate=False)
+        except cmdx.ExistError:
+            scene = None
+
+        # Protect the user from import on a bad frame
+        if scene is not None:
+            _rewind(scene)
+
+            # Protect the user from import after having changed
+            # the initial state but not actually recorded it.
+            rigids = cmdx.ls(type="rdRigid")
+            commands.set_initial_state(rigids)
+
         return win.do_import()
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)

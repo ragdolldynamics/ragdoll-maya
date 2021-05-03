@@ -78,9 +78,15 @@ def upgrade_all():
     return upgraded_count
 
 
-def needs_upgrade(current_version):
+def needs_upgrade():
+    version_str = cmds.pluginInfo(constants.RAGDOLL_PLUGIN_NAME,
+                                  query=True, version=True)
+
+    # Debug builds come with a `.debug` suffix, e.g. `2020.10.15.debug`
+    version = int("".join(version_str.split(".")[:3]))
+
     needs_upgrade = 0
-    oldest_version = current_version
+    oldest_version = version
 
     # Evaluate all node types defined by Ragdoll
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)

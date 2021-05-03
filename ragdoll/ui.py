@@ -2121,7 +2121,7 @@ class DumpWidget(QtWidgets.QWidget):
                 grayed_out = (color, color, color)
 
                 try:
-                    # Is there a transform, except it's oppupied?
+                    # Is there a transform, except it's occupied?
                     occupied = analysis["occupied"][entity]
 
                 except KeyError:
@@ -2574,8 +2574,10 @@ class ImportOptions(Options):
     @i__.with_timing
     def reset(self):
         search_replace = self.parser.find("importSearchAndReplace")
+        preserve = self.parser.find("importPreserveAttributes")
         search, replace = search_replace.read()
         self._loader.set_replace([(search, replace)])
+        self._loader.set_preserve_attributes(preserve.read())
         self._widgets["DumpWidget"].reset()
 
     def load(self, data):

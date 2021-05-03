@@ -316,17 +316,24 @@ class Loader(object):
 
     SupportedSchema = "ragdoll-1.0"
 
-    def __init__(self, roots=None, replace=None, namespace=None):
-        self._dump = DefaultDump()
-        self._roots = roots or []
-        self._replace = replace or []
-        self._namespace = namespace or None
+    def __init__(self, opts=None):
+        opts = opts or {}
+        opts = dict(opts, **{
+            "roots": [],
+            "replace": [],
+            "namespace": None,
+            "preserveAttributes": True,
+        })
+
+        self._opts = opts
 
         # Do we need to re-analyse before use?
         self._is_up_to_date = False
 
         # Is the data valid, e.g. no null-entities?
         self._invalid_reasons = []
+
+        self._dump = DefaultDump()
 
         # Transient data, updated on changes to fname and filtering
         self._state = DefaultState()
@@ -372,13 +379,13 @@ class Loader(object):
         self._is_up_to_date = False
 
     def set_roots(self, roots):
-        self._roots[:] = roots
+        self._opts["roots"][:] = roots
         self._is_up_to_date = False
 
     def set_replace(self, replace):
         assert isinstance(replace, (tuple, list))
         assert all(isinstance(i, tuple) for i in replace)
-        self._replace[:] = replace
+        self._opts["replace"][:] = replace
         self._is_up_to_date = False
 
     def set_namespace(self, namespace=None):
@@ -386,7 +393,11 @@ class Loader(object):
         if namespace is not None:
             namespace = namespace.rstrip(":") + ":"
 
-        self._namespace = namespace
+        self._opts["namespace"] = namespace
+        self._is_up_to_date = False
+
+    def set_preserve_attributes(self, preserve):
+        self._opts["preserveAttributes"] = preserve
         self._is_up_to_date = False
 
     def is_valid(self):
@@ -412,6 +423,18 @@ class Loader(object):
 
         for chain in chains:
             scenes += self._find_scenes(chain["rigids"])
+
+        # Allow roots of chains to already have a rigid
+        for chain in chains:
+            root = chain["rigids"][0]
+
+            try:
+                transform = occupied.pop(root)
+                transforms[root] = transform
+
+            except KeyError:
+                # It wasn't occupied, that's OK
+                pass
 
         # Remove duplicates
         scenes = list({s["entity"]: s for s in scenes}.values())
@@ -750,7 +773,7 @@ class Loader(object):
         # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
         path = Name["path"]
 
-        for search, replace in self._replace:
+        for search, replace in self._opts["replace"]:
             path = path.replace(search, replace)
 
         return path
@@ -797,10 +820,10 @@ class Loader(object):
             # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
             path = Name["path"]
 
-            for search, replace in self._replace:
+            for search, replace in self._opts["replace"]:
                 path = path.replace(search, replace)
 
-            if self._namespace:
+            if self._opts["namespace"]:
                 # Find all namespaces for the original node
                 # E.g. |myNamespace:root_grp|myNamespace:controls_grp
                 namespaces = path.split("|")
@@ -822,11 +845,12 @@ class Loader(object):
                 if len(namespaces) > 0:
                     namespace = namespaces[0]
                     namespace = namespace.rstrip(":") + ":"
-                    path = path.replace(namespace, self._namespace)
+                    path = path.replace(namespace, self._opts["namespace"])
 
             # Only filter non-scenes, as we'd like to reuse these
-            if self._roots and not self.has(entity, "SolverComponent"):
-                if not any(path.startswith(root) for root in self._roots):
+            roots = self._opts["roots"]
+            if roots and not self.has(entity, "SolverComponent"):
+                if not any(path.startswith(root) for root in roots):
                     continue
 
             try:
@@ -993,8 +1017,14 @@ class Loader(object):
             chain = chain or []
             chain.append(entity)
 
+            try:
+                rigid_ui = self.component(entity, "RigidUIComponent")
+                is_root = rigid_ui.get("root", False)
+            except KeyError:
+                is_root = False
+
             # End of chain, let's start anew
-            if not graph[entity]:
+            if not graph[entity] or is_root:
                 chains.append(list(chain))
                 chain[:] = []
 
@@ -1071,6 +1101,8 @@ class Loader(object):
             rigid_to_constraints = {}
 
             for rigid in chain["rigids"][1:]:
+                Rigid = self.component(rigid, "RigidComponent")
+
                 for entity in self.siblings(rigid):
 
                     if not self.has(entity, "JointComponent"):
@@ -1087,8 +1119,6 @@ class Loader(object):
                     if Joint["child"] != rigid:
                         continue
 
-                    Rigid = self.component(rigid, "RigidComponent")
-
                     # It's guaranteed to have the same parent as the
                     # rigid itself; it's what makes it a chain.
                     if Joint["parent"] != Rigid.get("parentRigid"):
@@ -1104,7 +1134,17 @@ class Loader(object):
             # hierarchy. That'll be the one created when the transform
             # is first turned into a chain, the rest being added afterwards.
             for rigid in chain["rigids"][1:]:
-                constraints = rigid_to_constraints[rigid]
+
+                try:
+                    constraints = rigid_to_constraints[rigid]
+
+                except KeyError:
+                    # If the user removes a constraint from a chain,
+                    # and constrains it somewhere else then this constraint
+                    # will look like a chain constraint, but the parent rigid
+                    # would be different. Thus, this is not a true chain
+                    continue
+
                 assert len(constraints) > 0
 
                 # This will be the common case
@@ -1189,8 +1229,9 @@ class Loader(object):
             name = _name(Name, -2)
             rdscene = commands.create_scene(name=name)
 
-            with cmdx.DagModifier() as mod:
-                self._apply_scene(mod, scene["entity"], rdscene)
+            if self._opts["preserveAttributes"]:
+                with cmdx.DagModifier() as mod:
+                    self._apply_scene(mod, scene["entity"], rdscene)
 
             rdscenes[scene["entity"]] = rdscene
 
@@ -1239,13 +1280,15 @@ class Loader(object):
             con = commands.create_constraint(parent_rigid, child_rigid)
 
             with cmdx.DagModifier() as mod:
-                self._apply_constraint(mod, entity, con)
+                if self._opts["preserveAttributes"]:
+                    self._apply_constraint(mod, entity, con)
 
-                # Restore it's name too
-                mod.rename(con, Name["value"])
+                    # Restore it's name too
+                    mod.rename(con, Name["value"])
 
                 if ConstraintUi["multiplierEntity"] in multipliers:
-                    multiplier = multipliers[ConstraintUi["multiplierEntity"]]
+                    mult_entity = ConstraintUi["multiplierEntity"]
+                    multiplier = multipliers[mult_entity]
                     mod.connect(multiplier["ragdollId"],
                                 con["multiplierNode"])
 
@@ -1282,13 +1325,15 @@ class Loader(object):
                                           opts=rigid["options"])
 
             with cmdx.DagModifier() as mod:
-                self._apply_rigid(mod, entity, rigid)
+                if self._opts["preserveAttributes"]:
+                    self._apply_rigid(mod, entity, rigid)
 
-                # Restore it's name too
-                mod.rename(rigid, Name["value"])
+                    # Restore it's name too
+                    mod.rename(rigid, Name["value"])
 
                 if RigidUi["multiplierEntity"] in multipliers:
-                    multiplier = multipliers[RigidUi["multiplierEntity"]]
+                    mult_entity = RigidUi["multiplierEntity"]
+                    multiplier = multipliers[mult_entity]
                     mod.connect(multiplier["ragdollId"],
                                 rigid["multiplierNode"])
 
@@ -1459,18 +1504,19 @@ class Loader(object):
         #       \|                       |_______________|
         #
         #
-        with cmdx.DagModifier() as mod:
-            # Apply customisation to each rigid
-            for entity, rigid in entity_to_rigid.items():
-                self._apply_rigid(mod, entity, rigid)
+        if self._opts["preserveAttributes"]:
+            with cmdx.DagModifier() as mod:
+                # Apply customisation to each rigid
+                for entity, rigid in entity_to_rigid.items():
+                    self._apply_rigid(mod, entity, rigid)
 
-            # Apply customisation to each constraint
-            for entity, con in entity_to_constraint.items():
-                self._apply_constraint(mod, entity, con)
+                # Apply customisation to each constraint
+                for entity, con in entity_to_constraint.items():
+                    self._apply_constraint(mod, entity, con)
 
-            # Apply customisation to each multiplier
-            for entity, mult in entity_to_multiplier.items():
-                self._apply_constraint_multiplier(mod, entity, mult)
+                # Apply customisation to each multiplier
+                for entity, mult in entity_to_multiplier.items():
+                    self._apply_constraint_multiplier(mod, entity, mult)
 
         result.update({
             "rigids": new_rigids,

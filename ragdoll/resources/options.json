@@ -383,6 +383,14 @@
         "help": "Other .rag files in the same directory."
     },
 
+    "importPreserveAttributes": {
+        "name": "importPreserveAttributes",
+        "label": "Preserve Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Preserve changes to attributes like 'Shape Extents' and 'Rotate Limit Y' from the exported file."
+    },
+
     "importAutoNamespace": {
         "name": "importAutoNamespace",
         "label": "Auto Namespace",

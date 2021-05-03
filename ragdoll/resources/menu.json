@@ -331,6 +331,7 @@
             "importPaths",
             "importMethod",
             "importMergePhysics",
+            "importPreserveAttributes",
             "importIncludeAnimation",
             "importIncludeSimulation",
             "importUseSelection",

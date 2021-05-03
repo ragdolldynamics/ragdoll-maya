@@ -1199,8 +1199,10 @@ class Loader(object):
 
             chain["options"].update({
                 "passiveRoot": RootRigid["kinematic"],
-                "drawShaded": RootRigidUi["shaded"],
                 "autoMultiplier": chain["constraintMultipliers"] != [],
+                "defaults": {
+                    "drawShaded": RootRigidUi["shaded"],
+                },
             })
 
         return chains

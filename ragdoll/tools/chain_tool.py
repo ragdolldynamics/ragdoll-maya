@@ -26,25 +26,25 @@ class Chain(object):
 
     """
 
-    def __init__(self, links, scene, opts=None, defaults=None):
+    def __init__(self, links, scene, opts=None):
         assert isinstance(links, (list, tuple)), "links was not a list"
         assert links, "links was empty"
 
         opts = opts or {}
-        opts["autoKey"] = opts.get("autoKey", False)
-        opts["drawShaded"] = opts.get("drawShaded", False)
-        opts["blendMethod"] = opts.get("blendMethod",
-                                       c.SteppedBlendMethod)
-        opts["computeMass"] = opts.get("computeMass", False)
-        opts["autoMultiplier"] = opts.get("autoMultiplier", True)
-        opts["passiveRoot"] = opts.get("passiveRoot", True)
-        opts["autoLimits"] = opts.get("autoLimits", False)
-        opts["addUserAttributes"] = opts.get("addUserAttributes", True)
+        opts = dict({
+            "autoKey": False,
+            "blendMethod": c.SteppedBlendMethod,
+            "computeMass": False,
+            "autoMultiplier": True,
+            "passiveRoot": True,
+            "autoLimits": False,
+            "addUserAttributes": True,
+        }, **opts)
 
-        defaults = defaults or {}
-        defaults["shapeType"] = defaults.get(
-            "shapeType", c.CapsuleShape
-        )
+        opts["defaults"] = dict({
+            "shapeType": c.CapsuleShape,
+            "drawShaded": False,
+        }, **opts.get("defaults", {}))
 
         self._new_rigids = []
         self._new_constraints = []
@@ -52,7 +52,6 @@ class Chain(object):
         self._new_multipliers = []
 
         self._scene = scene
-        self._defaults = defaults
         self._cache = {}
         self._opts = opts
         self._pre_flighted = False
@@ -315,6 +314,10 @@ class Chain(object):
                 mod.connect(tree_root_transform["simulated"],
                             rigid["enabled"])
 
+        # Store what the user intended for use as a root (for import)
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(root_rigid["isRoot"], True)
+
     def _do_one(self, mod, transform, shape, previous_rigid):
         assert transform and transform.isA(cmdx.kTransform), transform
         assert shape is None or shape.isA(cmdx.kShape), shape
@@ -397,7 +400,7 @@ class Chain(object):
         mod.set_attr(rigid["shapeOffset"], geo.shape_offset)
 
         if geo.length == 0:
-            self._defaults["shapeType"] = c.SphereShape
+            self._opts["defaults"]["shapeType"] = c.SphereShape
 
         # `shapeLength` is used during constraint creation,
         # to figure out draw scale
@@ -435,7 +438,7 @@ class Chain(object):
         # Record hierarchical relationship, for articulations
         mod.connect(previous_rigid["ragdollId"], rigid["parentRigid"])
 
-        for key, value in self._defaults.items():
+        for key, value in self._opts["defaults"].items():
             mod.set_attr(rigid[key], value)
 
         # Forward some convenience attributes
@@ -731,7 +734,7 @@ class Chain(object):
             # unsuitable shape for collisions anyway.
             mod.set_attr(root_rigid["collide"], False)
 
-        for key, value in self._defaults.items():
+        for key, value in self._opts["defaults"].items():
             mod.set_attr(root_rigid[key], value)
 
         geo = commands.infer_geometry(
@@ -786,5 +789,5 @@ class Chain(object):
 
 
 @i__.with_undo_chunk
-def create(links, scene, opts=None, defaults=None):
-    return Chain(links, scene, opts, defaults).do_it()
+def create(links, scene, opts=None):
+    return Chain(links, scene, opts).do_it()

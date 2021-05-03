@@ -262,24 +262,51 @@
 
 
     "#": "----------------",
-    "#": " Exoskeleton ",
+    "#": " Mimic ",
     "#": "----------------",
 
 
-    "exoskeletonAddPassive": {
-        "name": "exoskeletonAddPassive",
-        "label": "Add Passive Control",
-        "type": "Enum",
-        "default": 0,
-        "items": ["Auto", "Box", "Sphere", "Capsule", "Mesh"],
-        "help": "Which shape to start out with, 'Auto' means it will determine the shape based on the Maya geometry type. Mesh translates Maya geometry into an optimised collision shape (a.k.a. 'Convex Hull')"
-    },
-    "exoskeletonMakeExclusive": {
-        "name": "exoskeletonMakeExclusive",
+    "mimicExclusive": {
+        "name": "mimicExclusive",
         "label": "Make Exclusive",
         "type": "Boolean",
         "default": true,
-        "help": "Should the exoskeleton take exclusive control over the chain(s), or share control with existing constraints?"
+        "help": "Disable any other constraints influencing this chain, making this the exclusive influence."
+    },
+    "mimicAddMultiplier": {
+        "name": "mimicAddMultiplier",
+        "label": "Add Multiplier",
+        "type": "Boolean",
+        "default": true,
+        "help": "Add a multiplier to the root of the newly created mimic."
+    },
+    "mimicAddSoftPin": {
+        "name": "mimicAddSoftPin",
+        "label": "Add Soft Pin",
+        "type": "Boolean",
+        "default": true,
+        "help": "Add soft pin constraints between the mimic and chain."
+    },
+    "mimicAddHardPin": {
+        "name": "mimicAddHardPin",
+        "label": "Add Hard Pin",
+        "type": "Boolean",
+        "default": true,
+        "help": "Add hard pin influences between the mimic and chain."
+    },
+    "mimicAddUserAttributes": {
+        "name": "mimicAddUserAttributes",
+        "label": "Add User Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward attributes from shape nodes to the main transform of the mimic."
+    },
+    "mimicFreezeTransform": {
+        "name": "mimicFreezeTransform",
+        "label": "Freeze Transform",
+        "type": "Boolean",
+        "default": true,
+        "help": "Zero out translate and rotate values on the newly created mimic."
     },
 
 

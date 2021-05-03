@@ -545,6 +545,7 @@ def install_menu():
              create_kinematic_control_options)
         item("guide", create_driven_control,
              create_driven_control_options)
+        item("mimic", create_mimic, create_mimic_options)
         item("motor")
         item("actuator")
         item("trigger")
@@ -706,7 +707,7 @@ scene into one that behaves identically to before.
 
 
 def _evaluate_need_to_upgrade():
-    oldest, count = upgrade.needs_upgrade(__.version)
+    oldest, count = upgrade.needs_upgrade()
 
     if not count:
         return
@@ -736,7 +737,7 @@ def _evaluate_need_to_upgrade():
         )
 
     if count:
-        log.info("%d Ragdoll nodes were upgraded" % count)
+        log.debug("%d Ragdoll nodes were upgraded" % count)
 
         # Synchronise viewport, sometimes it can go stale
         time = cmds.currentTime(query=True)
@@ -1831,6 +1832,43 @@ def create_kinematic_control(selection=None, **opts):
         return kSuccess
 
 
+@i__.with_undo_chunk
+def create_mimic(selection=None, **opts):
+    node = selection or cmdx.selection(type=("rdRigid", "transform"))
+
+    # This is no chain
+    if not node or len(node) > 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select the root of one chain."
+        )
+
+    root = node[0]
+    if root.isA(cmdx.kTransform):
+        root = root.shape("rdRigid")
+
+    if not root or root.type() != "rdRigid":
+        raise i__.UserWarning(
+            "Selection Problem",
+            "%s was not a rigid." % node[0]
+        )
+
+    opts = {
+        "exclusive": _opt("mimicExclusive", opts),
+        "addMultiplier": _opt("mimicAddMultiplier", opts),
+        "addUserAttributes": _opt("mimicAddUserAttributes", opts),
+        "addHardPin": _opt("mimicAddHardPin", opts),
+        "addHardPin": _opt("mimicAddHardPin", opts),
+        "freezeTransform": _opt("mimicFreezeTransform", opts),
+    }
+
+    mimic = commands.create_mimic(root, opts=opts)
+
+    cmds.select(str(mimic))
+
+    return kSuccess
+
+
 @contextlib.contextmanager
 def refresh_suspended():
     cmds.refresh(suspend=True)
@@ -2565,6 +2603,10 @@ def create_uniform_force_options(*args):
 
 def create_turbulence_force_options(*args):
     return _Window("wind", create_turbulence_force)
+
+
+def create_mimic_options(*args):
+    return _Window("mimic", create_mimic)
 
 
 def multiply_rigids_options(*args):

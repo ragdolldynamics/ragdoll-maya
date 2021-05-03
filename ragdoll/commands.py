@@ -263,13 +263,17 @@ def convert_rigid(rigid, opts=None):
 
 @i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
-                   kwargs={"transform": (cmdx.DagNode, None)},
+                   kwargs={"transform": (cmdx.DagNode, None),
+                           "opts": (dict, None)},
                    returns=(cmdx.DagNode,))
-def create_constraint(parent, child, transform=None):
+def create_constraint(parent, child, transform=None, opts=None):
     assert child.type() == "rdRigid", child.type()
     assert parent.type() in ("rdRigid", "rdScene"), (
         "%s must be a rigid or scene" % parent.type()
     )
+
+    opts = opts or {}
+    opts = dict({"name": "rConstraint"}, **opts)
 
     if parent.type() == "rdScene":
         scene = parent
@@ -283,7 +287,7 @@ def create_constraint(parent, child, transform=None):
         "%s and %s was not part of the same scene" % (parent, child)
     )
 
-    name = i__.unique_name("rConstraint")
+    name = i__.unique_name(opts["name"])
 
     with cmdx.DagModifier() as mod:
         transform = transform or child.parent()
@@ -863,11 +867,12 @@ def reorient(con):
 
 @i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode,),
-                   kwargs={"reference": (cmdx.DagNode, None)},
+                   kwargs={"reference": (cmdx.DagNode, None),
+                           "opts": (dict, None)},
                    returns=(cmdx.DagNode,
                             cmdx.DagNode,
                             cmdx.DagNode))
-def create_absolute_control(rigid, reference=None):
+def create_absolute_control(rigid, reference=None, opts=None):
     """Control a rigid body in worldspace
 
     Given a worldmatrix, attempt to guide a rigid body to match,
@@ -888,9 +893,16 @@ def create_absolute_control(rigid, reference=None):
         "%s was not part of a scene" % rigid
     )
 
+    opts = dict({
+        "name": "rSoftPin",
+        "defaults": {},
+        "addUserAttributes": True,
+    }, **(opts or {}))
+
     with cmdx.DagModifier() as mod:
-        name = "rSoftPin"
+        name = opts["name"]
         shape_name = name
+        ctrl = None
 
         if reference is None:
             name = i__.unique_name(name)
@@ -899,15 +911,20 @@ def create_absolute_control(rigid, reference=None):
             mod.set_attr(reference["rotate"], tmat.rotation())
 
             # Just mirror whatever the rigid is doing
-            mod.connect(rigid["outputWorldScale"], reference["scale"])
+            mod.set_attr(reference["scale"],
+                         rigid["outputWorldScale"].as_vector())
             mod.set_keyable(reference["scale"], False)
 
             shape_name = i__.shape_name(name)
 
-        ctrl = _rdcontrol(mod, shape_name, reference)
-        mod.connect(rigid["ragdollId"], ctrl["rigid"])
+        ctrl = reference.shape(type="rdControl")
 
-        shape_name = i__.shape_name(name + "Constraint")
+        if not ctrl:
+            shape_name = i__.shape_name(reference.name(namespace=False))
+            ctrl = _rdcontrol(mod, shape_name, reference)
+            mod.connect(rigid["ragdollId"], ctrl["rigid"])
+
+        shape_name = i__.unique_name(name)
         con = _rdconstraint(mod, shape_name, reference)
 
         mod.connect(rigid["ragdollId"], con["childRigid"])
@@ -919,28 +936,32 @@ def create_absolute_control(rigid, reference=None):
         mod.set_attr(con["drawConnection"], False)
         mod.set_attr(con["drawScale"], _scale_from_rigid(rigid))
 
+        for key, value in opts["defaults"].items():
+            mod.set_attr(con[key], value)
+
         mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(reference["worldMatrix"][0], con["driveMatrix"])
 
         # Add to scene
         _add_constraint(mod, con, scene)
 
-    forwarded = (
-        "driveStrength",
-        "linearDriveStiffness",
-        "linearDriveDamping",
-        "angularDriveStiffness",
-        "angularDriveDamping"
-    )
+    if opts["addUserAttributes"]:
+        forwarded = (
+            "driveStrength",
+            "linearDriveStiffness",
+            "linearDriveDamping",
+            "angularDriveStiffness",
+            "angularDriveDamping"
+        )
 
-    reference_proxies = i__.UserAttributes(con, reference)
-    reference_proxies.add_divider("Ragdoll")
+        reference_proxies = i__.UserAttributes(con, reference)
+        reference_proxies.add_divider("Ragdoll")
 
-    for attr in forwarded:
-        # Expose on constraint node itself
-        reference_proxies.add(attr)
+        for attr in forwarded:
+            # Expose on constraint node itself
+            reference_proxies.add(attr)
 
-    reference_proxies.do_it()
+        reference_proxies.do_it()
 
     return reference, ctrl, con
 
@@ -950,10 +971,12 @@ def is_a(node, typ):
 
 
 @i__.with_undo_chunk
-@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode, cmdx.DagNode),
-                   kwargs=None,
+@i__.with_contract(args=(cmdx.DagNode,
+                         cmdx.DagNode,
+                         cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode, cmdx.DagNode))
-def create_relative_control(child_rigid, parent_rigid, reference):
+def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
     """Control a child_rigid body using a reference transform
 
     Arguments:
@@ -975,44 +998,75 @@ def create_relative_control(child_rigid, parent_rigid, reference):
     assert scene and is_a(scene, "rdScene"), (
         "%s was not part of a scene" % parent_rigid)
 
+    opts = dict({
+        "name": "rSoftPin",
+        "addUserAttributes": True,
+        "defaults": {},
+    }, **(opts or {}))
+
+    with cmdx.DGModifier() as mod:
+        mult = mod.create_node("multMatrix")
+
     with cmdx.DagModifier() as mod:
-        name = "rRelativeConstraint"
-        shape_name = name
+        shape_name = opts["name"]
 
         # Just mirror whatever the child_rigid is doing
-        mod.connect(child_rigid["outputScale"], reference["scale"])
+        mod.set_attr(reference["scale"],
+                     child_rigid["outputScale"].as_vector())
         mod.set_keyable(reference["scale"], False)
 
-        shape_name = i__.shape_name(name)
-        ctrl = _rdcontrol(mod, shape_name, reference)
-        mod.connect(child_rigid["ragdollId"], ctrl["rigid"])
+        ctrl = reference.shape(type="rdControl")
 
-        shape_name = i__.shape_name(name + "Constraint")
-        con = create_constraint(parent_rigid, child_rigid, transform=reference)
+        if not ctrl:
+            shape_name = i__.shape_name(reference.name(namespace=False))
+            ctrl = _rdcontrol(mod, shape_name, reference)
+            mod.connect(child_rigid["ragdollId"], ctrl["rigid"])
+
+        con = create_constraint(
+            parent_rigid, child_rigid, transform=reference, opts={
+                "name": opts["name"]
+            })
+
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["driveStrength"], 1.0)
         mod.set_attr(con["linearDriveStiffness"], 0)
         mod.set_attr(con["linearDriveDamping"], 0)
 
+        for key, value in opts["defaults"].items():
+            mod.set_attr(con[key], value)
+
         # Drive this constraint relatively
-        mod.connect(reference["matrix"], con["driveMatrix"])
+        local_matrix = cmdx.Tm()
+        local_matrix.setTranslation(reference["translate"].as_vector())
+        local_matrix.setRotation(reference["rotate"].as_euler())
 
-    forwarded = (
-        "driveStrength",
-        "linearDriveStiffness",
-        "linearDriveDamping",
-        "angularDriveStiffness",
-        "angularDriveDamping"
-    )
+        inverse = (
+            local_matrix.as_matrix() *
+            reference["worldMatrix"][0].as_matrix() *
+            reference.parent()["worldMatrix"][0].as_matrix().inverse()
+        )
 
-    reference_proxies = i__.UserAttributes(con, reference)
-    reference_proxies.add_divider("Ragdoll")
+        mod.connect(reference["matrix"], mult["matrixIn"][0])
+        mod.set_attr(mult["matrixIn"][1], inverse)
+        mod.connect(mult["matrixSum"], con["driveMatrix"])
 
-    for attr in forwarded:
-        # Expose on constraint node itself
-        reference_proxies.add(attr)
+    if opts["addUserAttributes"]:
+        forwarded = (
+            "driveStrength",
+            "linearDriveStiffness",
+            "linearDriveDamping",
+            "angularDriveStiffness",
+            "angularDriveDamping"
+        )
 
-    reference_proxies.do_it()
+        reference_proxies = i__.UserAttributes(con, reference)
+        reference_proxies.add_divider("Ragdoll")
+
+        for attr in forwarded:
+            # Expose on constraint node itself
+            reference_proxies.add(attr)
+
+        reference_proxies.do_it()
 
     return ctrl, con
 
@@ -1074,24 +1128,109 @@ create_passive_control = create_kinematic_control
 
 
 @i__.with_undo_chunk
-def create_exoskeleton_control(root):
-    root = cmdx.sl()[0]
+def create_mimic(root, opts=None):
+    """Mimic an external control hierarchy"""
+
     if root.isA(cmdx.kTransform):
         root = root.shape(type="rdRigid")
-    assert root and root.type() == "rdRigid"
+
+    assert root and root.type() == "rdRigid", "%s was not a rigid" % root
+
+    opts = dict({
+
+        # Disable all other constraints, take exclusive control
+        "exclusive": True,
+
+        # Add local and world multipliers
+        "addMultiplier": True,
+
+        # Add user attributes
+        "addUserAttributes": True,
+
+        "addSoftPin": True,
+        "addHardPin": True,
+
+        # Should current rotate/translate values be zeroed out?
+        # I.e. store offset in a parent group
+        "freezeTransform": True,
+
+    }, **(opts or {}))
+
+    def make_name(name):
+        first = name[0]
+        rest = name[1:]
+
+        # Account for existing one-letter prefix
+        # e.g. pCube -> rCube
+        # But watch out for the existing prefix also being `r`
+        if len(name) > 1 and name[1] == name[1].upper() and name[1] != "r":
+            first = name[1]
+            rest = name[2:]
+
+        name = "r" + first.upper() + rest
+        name = i__.unique_name(name)
+
+        return name
+
+    def freeze_transform(tm, transform):
+        if cmdx.__maya_version__ >= 2020:
+            with cmdx.DGModifier() as mod:
+                mod.set_attr(transform["offsetParentMatrix"],
+                             tm.as_matrix())
+
+        else:
+            with cmdx.DagModifier() as mod:
+                name = transform.name() + "Offset"
+                offset = mod.create_node("transform", name=name)
+                mod.set_attr(offset["translate"], tm.translation())
+                mod.set_attr(offset["rotate"], tm.rotation())
+                mod.set_attr(transform["translate"], 0)
+                mod.set_attr(transform["rotate"], 0)
+                mod.parent(transform, offset)
 
     with cmdx.DagModifier() as mod:
         tm = root.transform(cmdx.sWorld)
-        translate = tm.translation()
-        rotate = tm.rotation()
+        transform = root.parent()
+        name = make_name(transform.name())
+        root_reference = mod.create_node("transform", name=name)
+        mod.set_keyable(root_reference["scale"], False)
 
-        root_reference = mod.create_node("transform", name=root.name() + "Exo")
-        mod.set_attr(root_reference["translate"], translate)
-        mod.set_attr(root_reference["rotate"], rotate)
+        if opts["freezeTransform"]:
+            freeze_transform(tm, root_reference)
+        else:
+            mod.set_attr(root_reference["translate"], tm.translation())
+            mod.set_attr(root_reference["rotate"], tm.rotation())
 
-    ctrls = [create_absolute_control(root, reference=root_reference)]
+    root_reference, ctrl, con = create_absolute_control(
+        root,
+        reference=root_reference,
+
+        # Disable per default
+        opts={
+            "name": "rWorldConstraint",
+            "addUserAttributes": False,
+        }
+    )
+
+    ctrls = [ctrl]
+    local_cons = []
+    world_cons = [con]
 
     rigid_to_reference = {root: root_reference}
+
+    pose_attributes = (
+        ("driveStrength", "poseStrength"),
+        ("angularDriveStiffness", "poseStiffness"),
+        ("angularDriveDamping", "poseDamping"),
+    )
+
+    pin_attributes = (
+        ("driveStrength", "pinStrength"),
+        ("linearDriveStiffness", "pinTranslateStiffness"),
+        ("linearDriveDamping", "pinTranslateDamping"),
+        ("angularDriveStiffness", "pinRotateStiffness"),
+        ("angularDriveDamping", "pinRotateDamping"),
+    )
 
     def walk(root, parent_reference=None):
         plugs = root["ragdollId"].connections(source=False,
@@ -1105,31 +1244,146 @@ def create_exoskeleton_control(root):
 
             child = plug.node()
 
+            # Take exclusive control
+            if opts["exclusive"]:
+                with cmdx.DagModifier() as mod:
+
+                    # Find any constraint related to this rigid
+                    constraints = child["ragdollId"].connections(
+                        type="rdConstraint",
+                        plugs=True
+                    )
+
+                    for plug in constraints:
+                        if plug.name() != "childRigid":
+                            continue
+
+                        con = plug.node()
+
+                        try:
+                            mod.smart_set_attr(con["driveEnabled"], False)
+                        except cmdx.LockedError:
+                            log.debug(
+                                "Puppet could not take exclusive control "
+                                "over %s, it was locked" % plug.path()
+                            )
+
             try:
                 # We've already created a reference to this rigid
                 reference = rigid_to_reference[child]
 
             except KeyError:
                 # Let's make a new reference
-                tm = child.parent().transform()
-                translate = tm.translation()
-                rotate = tm.rotation()
+                transform = child.parent()
+
+                # We can't assume the original rigid bodies are
+                # parented or that there aren't transforms inbetween
+                # each rigid. So let's compute a new local matrix.
+                tm = cmdx.Tm(
+                    child["worldMatrix"][0].as_matrix() *
+                    root["worldInverseMatrix"][0].as_matrix()
+                )
 
                 with cmdx.DagModifier() as mod:
+                    name = make_name(transform.name())
                     reference = mod.create_node("transform",
-                                                name=child.name() + "Exo",
+                                                name=name,
                                                 parent=parent_reference)
-                    mod.set_attr(reference["translate"], translate)
-                    mod.set_attr(reference["rotate"], rotate)
+
+                    if opts["freezeTransform"]:
+                        freeze_transform(tm, reference)
+                    else:
+                        mod.set_attr(reference["translate"], tm.translation())
+                        mod.set_attr(reference["rotate"], tm.rotation())
 
                 rigid_to_reference[child] = reference
 
-            ctrl = create_relative_control(child, root, reference)
+            ctrl, con = create_relative_control(
+                child, root, reference, opts={
+                    "name": "rPoseConstraint",
+                    "addUserAttributes": False
+                })
+
+            if opts["addUserAttributes"]:
+                proxies = i__.UserAttributes(con, reference)
+                proxies.add_divider("Pose")
+
+                for attr, name in pose_attributes:
+                    proxies.add(attr, long_name=name, nice_name=False)
+
+                proxies.do_it()
+
             ctrls.append(ctrl)
+            local_cons.append(con)
+
+            if opts["addSoftPin"]:
+                _, ctrl, con = create_absolute_control(
+                    child, reference=reference,
+                    opts={
+                        "name": "rSoftPinConstraint",
+                        "addUserAttributes": False,
+                    }
+                )
+
+                if opts["addUserAttributes"]:
+                    proxies = i__.UserAttributes(con, reference)
+                    proxies.add_divider("Soft Pin")
+
+                    for attr, name in pin_attributes:
+                        proxies.add(attr, long_name=name, nice_name=False)
+
+                    proxies.do_it()
+
+            ctrls.append(ctrl)
+            world_cons.append(con)
 
             walk(child, reference)
 
     walk(root, root_reference)
+
+    if opts["addHardPin"]:
+        proxies = i__.UserAttributes(root, root_reference)
+        proxies.add_divider("Ragdoll")
+        proxies.add("kinematic",
+                    long_name="hardPin",
+                    nice_name="Hard Pin")
+        proxies.do_it()
+
+        with cmdx.DagModifier() as mod:
+            for rigid, reference in rigid_to_reference.items():
+                mod.connect(reference["worldMatrix"][0],
+                            rigid["inputMatrix"])
+
+                if rigid != root:
+                    mod.connect(root["kinematic"],
+                                rigid["kinematic"])
+
+    if opts["addMultiplier"]:
+        local_mult = multiply_constraints(
+            local_cons, parent=root_reference, opts={
+                "name": "rPoseMultiplier",
+            })
+
+        world_mult = multiply_constraints(
+            world_cons, parent=root_reference, opts={
+                "name": "rPinMultiplier",
+                "defaults": {"driveStrength": 0.0}
+            })
+
+        if opts["addUserAttributes"]:
+            proxies = i__.UserAttributes(local_mult, root_reference)
+            proxies.add("driveStrength",
+                        long_name="poseMultiplier",
+                        nice_name=False)
+            proxies.do_it()
+
+            proxies = i__.UserAttributes(world_mult, root_reference)
+            proxies.add("driveStrength",
+                        long_name="pinMultiplier",
+                        nice_name=False)
+            proxies.do_it()
+
+    return root_reference
 
 
 @i__.with_undo_chunk
@@ -1362,10 +1616,10 @@ def edit_shape(rigid):
         mod.set_attr(shape["displayLocalAxis"], True)
 
         mod.add_attr(shape, cmdx.Enum(
-            "shapeType", fields=[(c.BoxIndex, "Box"),
-                                 (c.SphereIndex, "Sphere"),
-                                 (c.CapsuleIndex, "Capsule"),
-                                 (c.MeshIndex, "Mesh")]))
+            "shapeType", fields=[(c.BoxShape, "Box"),
+                                 (c.SphereShape, "Sphere"),
+                                 (c.CapsuleShape, "Capsule"),
+                                 (c.MeshShape, "Mesh")]))
 
         mod.do_it()
 
@@ -2032,7 +2286,7 @@ def multiply_rigids(rigids, parent=None, channels=None):
             mult[channel].keyable = True
 
     else:
-        # Default multipliers
+        # Default channels
         mult["airDensity"].keyable = True
         mult["linearDamping"].keyable = True
         mult["angularDamping"].keyable = True
@@ -2041,9 +2295,14 @@ def multiply_rigids(rigids, parent=None, channels=None):
 
 
 @i__.with_undo_chunk
-def multiply_constraints(constraints, parent=None, channels=None):
+def multiply_constraints(constraints, parent=None, channels=None, opts=None):
+    opts = dict({
+        "name": "rConstraintMultiplier",
+        "defaults": {},
+    }, **(opts or {}))
+
     with cmdx.DagModifier() as mod:
-        transform_name = i__.unique_name("rConstraintMultiplier")
+        transform_name = i__.unique_name(opts["name"])
         shape_name = transform_name
 
         if parent is None:
@@ -2051,6 +2310,9 @@ def multiply_constraints(constraints, parent=None, channels=None):
             shape_name = i__.shape_name(transform_name)
 
         mult = _rdconstraintmultiplier(mod, name=shape_name, parent=parent)
+
+        for key, value in opts["defaults"].items():
+            mod.set_attr(mult[key], value)
 
         for con in constraints:
             mod.connect(mult["ragdollId"], con["multiplierNode"])
@@ -2066,7 +2328,7 @@ def multiply_constraints(constraints, parent=None, channels=None):
             mult[channel].keyable = True
 
     else:
-        # Default multipliers
+        # Default channels
         mult["driveStrength"].keyable = True
         mult["linearDriveStiffness"].keyable = True
         mult["linearDriveDamping"].keyable = True
@@ -2189,6 +2451,10 @@ def bake_simulation(rigids=None, opts=None):
     # to roll our own bake command.
     if opts["deletePhysics"]:
         delete_all_physics()
+
+    else:
+        # Can we re-connect our pairBlends post-bake?
+        pass
 
     return transforms
 
@@ -2463,6 +2729,10 @@ def _rdcontrol(mod, name, parent):
     node = mod.create_node("rdControl", name=name, parent=parent)
     mod.set_attr(node["color"], c.ControlColor)  # Default blue
     mod.set_attr(node["version"], i__.version())
+
+    # There's never anything to tweak on these, they are visual only
+    mod.set_attr(node["isHistoricallyInteresting"], False)
+
     return node
 
 

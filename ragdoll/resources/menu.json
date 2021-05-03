@@ -157,10 +157,19 @@
         "summary": "Pin a rigid body in worldspace, with a spring-like softness.",
         "description": "Guide the selected rigid body towards its current worldspace position. The guide may be animated and disabled/enabled at run-time."
     },
-    "exoskeleton": {
-        "label": "Exoskeleton",
-        "icon": "exoskeleton2.png",
-        "summary": "Generate a network of controls from the selected root chain."
+    "mimic": {
+        "label": "Mimic",
+        "icon": "mimic.png",
+        "summary": "Generate a target control hierarchy for the simulation to follow.",
+        "description": "This command walks a hierarchy of rigid bodies and generates an equivalent kinematic hierarchy which you can animate. The simulation can then follow this hierarchy in 3 ways - relatively, like normal chains, absolute or kinematically.",
+        "options": [
+            "mimicExclusive",
+            "mimicAddHardPin",
+            "mimicAddSoftPin",
+            "mimicAddMultiplier",
+            "mimicAddUserAttributes",
+            "mimicFreezeTransform"
+        ]
     },
     "motor": {
         "label": "Motor",

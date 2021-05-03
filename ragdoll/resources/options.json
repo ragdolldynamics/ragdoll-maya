@@ -308,6 +308,13 @@
         "default": true,
         "help": "Zero out translate and rotate values on the newly created mimic."
     },
+    "mimicCleanChannelBox": {
+        "name": "mimicCleanChannelBox",
+        "label": "Clean Channel Box",
+        "type": "Boolean",
+        "default": true,
+        "help": "Hide shape nodes from the channel box, leaving only the attributes on the transform node present."
+    },
 
 
 

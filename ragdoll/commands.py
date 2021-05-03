@@ -243,9 +243,11 @@ def convert_rigid(rigid, opts=None):
 
             # This rigid can no longer be affected by constraints
             constraints = rigid["ragdollId"].connections(type="rdConstraint",
-                                                         source=False)
-            for con in constraints:
-                mod.delete(con)
+                                                         source=False,
+                                                         plugs=True)
+            for plug in constraints:
+                if plug.name() == "childRigid":
+                    mod.delete(plug.node())
 
         #
         # Convert passive --> active
@@ -1004,7 +1006,7 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
         "defaults": {},
     }, **(opts or {}))
 
-    with cmdx.DGModifier() as mod:
+    with cmdx.DGModifier(interesting=False) as mod:
         mult = mod.create_node("multMatrix")
 
     with cmdx.DagModifier() as mod:
@@ -1127,6 +1129,33 @@ def create_kinematic_control(rigid, reference=None):
 create_passive_control = create_kinematic_control
 
 
+def _list_children(rigid):
+    """Find all rigids considered to be 'children' of `rigid`"""
+    plugs = rigid["ragdollId"].connections(source=False,
+                                           plugs=True,
+                                           type="rdRigid")
+
+    # `rigid` could be the parent of multiple children
+    for plug in plugs:
+        if plug.name() != "parentRigid":
+            continue
+
+        yield plug.node()
+
+
+def _list_influencers(rigid):
+    """Find all constraints related to `rigid`"""
+    for plug in rigid["ragdollId"].connections(type="rdConstraint",
+                                               plugs=True):
+
+        # Only consider rigids that are "children" of this
+        # constraint as ones being actually influenced by it
+        if plug.name() != "childRigid":
+            continue
+
+        yield plug.node()
+
+
 @i__.with_undo_chunk
 def create_mimic(root, opts=None):
     """Mimic an external control hierarchy"""
@@ -1149,6 +1178,8 @@ def create_mimic(root, opts=None):
 
         "addSoftPin": True,
         "addHardPin": True,
+
+        "cleanChannelBox": True,
 
         # Should current rotate/translate values be zeroed out?
         # I.e. store offset in a parent group
@@ -1173,13 +1204,12 @@ def create_mimic(root, opts=None):
         return name
 
     def freeze_transform(tm, transform):
-        if cmdx.__maya_version__ >= 2020:
-            with cmdx.DGModifier() as mod:
+        with cmdx.DagModifier() as mod:
+            if cmdx.__maya_version__ >= 2020:
                 mod.set_attr(transform["offsetParentMatrix"],
                              tm.as_matrix())
 
-        else:
-            with cmdx.DagModifier() as mod:
+            else:
                 name = transform.name() + "Offset"
                 offset = mod.create_node("transform", name=name)
                 mod.set_attr(offset["translate"], tm.translation())
@@ -1187,6 +1217,11 @@ def create_mimic(root, opts=None):
                 mod.set_attr(transform["translate"], 0)
                 mod.set_attr(transform["rotate"], 0)
                 mod.parent(transform, offset)
+
+    passive_root = root["kinematic"].read()
+
+    if passive_root:
+        convert_rigid(root, opts={"passive": False})
 
     with cmdx.DagModifier() as mod:
         tm = root.transform(cmdx.sWorld)
@@ -1215,57 +1250,68 @@ def create_mimic(root, opts=None):
     ctrls = [ctrl]
     local_cons = []
     world_cons = [con]
+    multipliers = []
 
+    # As we generate the mimic hierarchy, keep track
+    # of which reference is associated to each rigid,
+    # so as to facilitate one reference with multiple
+    # children, like two legs connecting to one hip.
     rigid_to_reference = {root: root_reference}
 
     pose_attributes = (
-        ("driveStrength", "poseStrength"),
-        ("angularDriveStiffness", "poseStiffness"),
-        ("angularDriveDamping", "poseDamping"),
+        ("driveStrength", "poseStrength", "Strength"),
+        ("angularDriveStiffness", "poseStiffness", "Stiffness"),
+        ("angularDriveDamping", "poseDamping", "Damping"),
     )
 
     pin_attributes = (
-        ("driveStrength", "pinStrength"),
-        ("linearDriveStiffness", "pinTranslateStiffness"),
-        ("linearDriveDamping", "pinTranslateDamping"),
-        ("angularDriveStiffness", "pinRotateStiffness"),
-        ("angularDriveDamping", "pinRotateDamping"),
+        ("driveStrength", "pinStrength", "Strength"),
+        ("linearDriveStiffness", "pinTranslateStiffness",
+         "Translate Stiffness"),
+        ("linearDriveDamping", "pinTranslateDamping", "Translate Damping"),
+        ("angularDriveStiffness", "pinRotateStiffness", "Rotate Stiffness"),
+        ("angularDriveDamping", "pinRotateDamping", "Rotate Damping"),
     )
 
+    if opts["addUserAttributes"]:
+        proxies = i__.UserAttributes(con, root_reference)
+        proxies.add_divider("Soft Pin")
+
+        for attr, name, nice in pin_attributes:
+            proxies.add(attr, long_name=name, nice_name=nice)
+
+        proxies.do_it()
+
+    # Recursively walk from root throughout the connected rigid hierarchy
+    #
+    #         o
+    #         |
+    #       o-o-o
+    #      /  |  \
+    #     o   o   o
+    #    /    |    \
+    #   o   o-o-o   o
+    #  /    |   |    \
+    #       |   |
+    #       |   |
+    #       o   o
+    #       |   |
+    #       |   |
+    #       |   |
+    #     --o   o--
+    #
     def walk(root, parent_reference=None):
-        plugs = root["ragdollId"].connections(source=False,
-                                              plugs=True,
-                                              type="rdRigid")
-
-        # `root` could be the parent of multiple children
-        for plug in plugs:
-            if plug.name() != "parentRigid":
-                continue
-
-            child = plug.node()
-
+        for child in _list_children(root):
             # Take exclusive control
             if opts["exclusive"]:
                 with cmdx.DagModifier() as mod:
-
-                    # Find any constraint related to this rigid
-                    constraints = child["ragdollId"].connections(
-                        type="rdConstraint",
-                        plugs=True
-                    )
-
-                    for plug in constraints:
-                        if plug.name() != "childRigid":
-                            continue
-
-                        con = plug.node()
-
+                    for con in _list_influencers(child):
                         try:
                             mod.smart_set_attr(con["driveEnabled"], False)
                         except cmdx.LockedError:
                             log.debug(
                                 "Puppet could not take exclusive control "
-                                "over %s, it was locked" % plug.path()
+                                "over %s, it was locked" % con
                             )
 
             try:
@@ -1308,8 +1354,8 @@ def create_mimic(root, opts=None):
                 proxies = i__.UserAttributes(con, reference)
                 proxies.add_divider("Pose")
 
-                for attr, name in pose_attributes:
-                    proxies.add(attr, long_name=name, nice_name=False)
+                for attr, name, nice in pose_attributes:
+                    proxies.add(attr, long_name=name, nice_name=nice)
 
                 proxies.do_it()
 
@@ -1329,8 +1375,8 @@ def create_mimic(root, opts=None):
                     proxies = i__.UserAttributes(con, reference)
                     proxies.add_divider("Soft Pin")
 
-                    for attr, name in pin_attributes:
-                        proxies.add(attr, long_name=name, nice_name=False)
+                    for attr, name, nice in pin_attributes:
+                        proxies.add(attr, long_name=name, nice_name=nice)
 
                     proxies.do_it()
 
@@ -1338,50 +1384,87 @@ def create_mimic(root, opts=None):
             world_cons.append(con)
 
             walk(child, reference)
-
     walk(root, root_reference)
 
     if opts["addHardPin"]:
+        attr = cmdx.Enum("hardPin", fields=["Inherit", "Off", "On"])
+
+        with cmdx.DGModifier(interesting=False) as mod:
+            mod.add_attr(root_reference, attr)
+            mod.do_it()
+
+            # Preserve this
+            if passive_root:
+                mod.set_attr(root_reference["hardPin"], 2)
+
         proxies = i__.UserAttributes(root, root_reference)
-        proxies.add_divider("Ragdoll")
+        proxies.add_divider("Globals")
         proxies.add("kinematic",
-                    long_name="hardPin",
-                    nice_name="Hard Pin")
+                    long_name="globalHardPin",
+                    nice_name="Global Hard Pin")
         proxies.do_it()
 
-        with cmdx.DagModifier() as mod:
+        with cmdx.DGModifier(interesting=False) as mod:
             for rigid, reference in rigid_to_reference.items():
                 mod.connect(reference["worldMatrix"][0],
                             rigid["inputMatrix"])
 
                 if rigid != root:
-                    mod.connect(root["kinematic"],
-                                rigid["kinematic"])
+                    mod.add_attr(reference, attr)
+                    mod.do_it()
+
+                choice = mod.create_node("choice", "hardPinChoice")
+                mod.connect(root_reference["globalHardPin"],
+                            choice["input"][0])
+                mod.set_attr(choice["input"][1], False)
+                mod.set_attr(choice["input"][2], True)
+
+                mod.connect(reference["hardPin"], choice["selector"])
+                mod.connect(choice["output"], rigid["kinematic"])
+
+                # Clean this up along with the rest
+                index = rigid["userAttributes"].next_available_index()
+                mod.connect(reference["hardPin"],
+                            rigid["userAttributes"][index])
 
     if opts["addMultiplier"]:
-        local_mult = multiply_constraints(
+        pose_mult = multiply_constraints(
             local_cons, parent=root_reference, opts={
                 "name": "rPoseMultiplier",
             })
 
-        world_mult = multiply_constraints(
-            world_cons, parent=root_reference, opts={
-                "name": "rPinMultiplier",
-                "defaults": {"driveStrength": 0.0}
-            })
+        multipliers.append(pose_mult)
+
+        if opts["addSoftPin"]:
+            soft_mult = multiply_constraints(
+                world_cons, parent=root_reference, opts={
+                    "name": "rSoftPinMultiplier",
+                    "defaults": {"driveStrength": 0.0}
+                })
+
+            multipliers.append(soft_mult)
 
         if opts["addUserAttributes"]:
-            proxies = i__.UserAttributes(local_mult, root_reference)
+            proxies = i__.UserAttributes(pose_mult, root_reference)
             proxies.add("driveStrength",
-                        long_name="poseMultiplier",
+                        long_name="globalPoseStrength",
                         nice_name=False)
             proxies.do_it()
 
-            proxies = i__.UserAttributes(world_mult, root_reference)
-            proxies.add("driveStrength",
-                        long_name="pinMultiplier",
-                        nice_name=False)
-            proxies.do_it()
+            if opts["addSoftPin"]:
+                proxies = i__.UserAttributes(soft_mult, root_reference)
+                proxies.add("driveStrength",
+                            long_name="globalPinStrength",
+                            nice_name=False)
+                proxies.do_it()
+
+    if opts["cleanChannelBox"]:
+        with cmdx.DagModifier() as mod:
+            for mult in multipliers:
+                mod.set_attr(mult["isHistoricallyInteresting"], False)
+
+            for con in world_cons + local_cons:
+                mod.set_attr(con["isHistoricallyInteresting"], False)
 
     return root_reference
 
@@ -2366,7 +2449,7 @@ def convert_to_polygons(actor, worldspace=True):
     cmds.polyColorPerVertex(mesh.path(), rgb=actor["color"].read())
 
     if worldspace:
-        with cmdx.DGModifier() as mod:
+        with cmdx.DGModifier(interesting=False) as mod:
             dm = mod.create_node("decomposeMatrix")
             mod.connect(actor.parent()["worldMatrix"][0], dm["inputMatrix"])
             mod.connect(dm["outputTranslate"], tm["translate"])

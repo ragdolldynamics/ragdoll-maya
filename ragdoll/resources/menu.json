@@ -168,6 +168,7 @@
             "mimicAddSoftPin",
             "mimicAddMultiplier",
             "mimicAddUserAttributes",
+            "mimicCleanChannelBox",
             "mimicFreezeTransform"
         ]
     },

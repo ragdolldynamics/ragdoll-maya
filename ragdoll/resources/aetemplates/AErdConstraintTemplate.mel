@@ -35,12 +35,14 @@ global proc AErdConstraintTemplate(string $nodeName) {
             // but currently show up as integer values. :(
             editorTemplate -addControl "parentRigid";
             editorTemplate -addControl "childRigid";
-
+  
             editorTemplate -label "Allow Overlap" -addControl "disableCollision";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
             editorTemplate -label "Scale" -addControl "drawScale";
+            editorTemplate -addControl "twistColor";
+            editorTemplate -addControl "swingColor";
             editorTemplate -addControl "drawConnection";
             editorTemplate -addControl "drawParentFrame";
             editorTemplate -addControl "drawChildFrame";

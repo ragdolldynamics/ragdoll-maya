@@ -1,0 +1,28 @@
+//AErdControlTemplate.mel
+
+global proc AErdControlTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "Visualisation" -collapse true;
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "drawShaded";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+    editorTemplate -suppress "localPosition";
+    editorTemplate -suppress "localScale";
+}
+
+
+global proc create_header_image(string $nodeName) {
+    image -w 400 -h 100 -image "header_tw_cloth_solver.png";
+}

@@ -15,7 +15,14 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from PySide2 import QtCore, QtWidgets, QtGui
 import shiboken2
 
-from . import options, licence, dump, constants as c, internal as i__, __
+from . import (
+    options,
+    licence,
+    dump as dump_,
+    constants as c,
+    internal as i__,
+    __
+)
 from .vendor import qargparse, markdown, qjsonmodel
 
 try:
@@ -1902,7 +1909,7 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
     def parse(self, dump, raw=False):
         if self._raw:
             dump["entities"] = {
-                dump.Entity(entity): value
+                int(entity): value
                 for entity, value in dump["entities"].items()
             }
         else:
@@ -1934,6 +1941,8 @@ class Explorer(MayaQWidgetDockableMixin, QtWidgets.QDialog):
                     k: v["members"]
                     for k, v in value["components"].items()
                 }
+
+                dump["entities"][name]["id"] = key
 
         return dump
 
@@ -2473,7 +2482,7 @@ class ImportOptions(Options):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
 
-        loader = dump.Loader()
+        loader = dump_.Loader()
 
         widgets = {
             "DumpWidget": DumpWidget(loader),

@@ -867,6 +867,17 @@ def reorient(con):
             mod.set_attr(con["childFrame"], child_frame)
 
 
+def _take_ownership(mod, rdnode, node):
+    """Make `rdnode` the owner of `node`"""
+    assert "exclusiveNodes" in rdnode, "%s not a Ragdoll node" % rdnode
+
+    # Ensure next_available_index is up-to-date
+    mod.do_it()
+
+    index = rdnode["exclusiveNodes"].next_available_index()
+    mod.connect(node["message"], rdnode["exclusiveNodes"][index])
+
+
 @i__.with_undo_chunk
 @i__.with_contract(args=(cmdx.DagNode,),
                    kwargs={"reference": (cmdx.DagNode, None),
@@ -925,6 +936,7 @@ def create_absolute_control(rigid, reference=None, opts=None):
             shape_name = i__.shape_name(reference.name(namespace=False))
             ctrl = _rdcontrol(mod, shape_name, reference)
             mod.connect(rigid["ragdollId"], ctrl["rigid"])
+            _take_ownership(mod, ctrl, reference)
 
         shape_name = i__.unique_name(name)
         con = _rdconstraint(mod, shape_name, reference)
@@ -1023,6 +1035,7 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
             shape_name = i__.shape_name(reference.name(namespace=False))
             ctrl = _rdcontrol(mod, shape_name, reference)
             mod.connect(child_rigid["ragdollId"], ctrl["rigid"])
+            _take_ownership(mod, ctrl, reference)
 
         con = create_constraint(
             parent_rigid, child_rigid, transform=reference, opts={
@@ -1440,6 +1453,7 @@ def create_mimic(root, opts=None):
 
                 mod.connect(reference["hardPin"], choice["selector"])
                 mod.connect(choice["output"], rigid["kinematic"])
+                _take_ownership(mod, rigid, choice)
 
     if opts["addMultiplier"]:
         pose_mult = multiply_constraints(
@@ -2266,14 +2280,20 @@ def delete_physics(nodes):
             user_attribute = element.connection(plug=True,
                                                 source=True,
                                                 destination=False)
-            if user_attribute is not None:
-                other = user_attribute.node()
-                if other not in user_attributes:
-                    user_attributes[other] = []
+            if user_attribute is None:
+                continue
 
-                user_attributes[other].append(
-                    (user_attribute.name(long=False), user_attribute)
-                )
+            other = user_attribute.node()
+
+            # These will be deleted anyway
+            if other in exclusives:
+                continue
+
+            if other not in user_attributes:
+                user_attributes[other] = {}
+
+            key = user_attribute.name(long=False)
+            user_attributes[other][key] = user_attribute
 
     # Reorder attributes by the order they appear in the parent node
     #  _____________
@@ -2292,9 +2312,17 @@ def delete_physics(nodes):
             attr = node._fn.attribute(index)
             fn = cmdx.om.MFnAttribute(attr)
 
-            for name, plug in plugs:
-                if fn.shortName == name:
-                    plug_to_index[plug] = index
+            try:
+                plug = plugs[fn.shortName]
+            except KeyError:
+                continue
+            else:
+                plug_to_index[plug] = index
+
+    # TODO: This only works reliably when all ragdoll_nodes
+    # are involved. When deleting only a subset of nodes, like
+    # mimic controls which do not carry their associated rigid
+    # for example, then rigid attributes will appear scrambled
 
     user_attributes = sorted(plug_to_index.items(), key=lambda i: i[1])
     user_attributes = [r[0] for r in user_attributes]
@@ -2312,7 +2340,7 @@ def delete_physics(nodes):
         # we'll need to delete them in reverse.
         for attr in reversed(user_attributes):
             mod.delete_attr(attr)
-            mod.do_it()
+        mod.do_it()
 
         for node in ragdoll_nodes + exclusives:
             try:
@@ -3026,11 +3054,14 @@ def _connect_active(mod, rigid, transform, existing=None):
     _connect_transform(mod, pair_blend, transform)
 
     # Pair blend directly feeds into the drive matrix
-    with cmdx.DGModifier() as dgmod:
+    with cmdx.DGModifier(interesting=False) as dgmod:
         compose = dgmod.create_node("composeMatrix", name="composePairBlend")
 
         # Account for node being potentially parented somewhere
         absolute = dgmod.create_node("multMatrix", name="makeAbsolute")
+
+        _take_ownership(mod, rigid, compose)
+        _take_ownership(mod, rigid, absolute)
 
     mod.connect(pair_blend["inTranslate1"], compose["inputTranslate"])
     mod.connect(pair_blend["inRotate1"], compose["inputRotate"])
@@ -3044,10 +3075,6 @@ def _connect_active(mod, rigid, transform, existing=None):
     # Support hard manipulation
     # For e.g. transitioning between active and passive
     mod.connect(absolute["matrixSum"], rigid["inputMatrix"])
-
-    # Keep channel box clean
-    mod.set_attr(compose["isHistoricallyInteresting"], False)
-    mod.set_attr(absolute["isHistoricallyInteresting"], False)
 
     return pair_blend
 

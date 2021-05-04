@@ -402,6 +402,9 @@ class Chain(object):
         if geo.length == 0:
             self._opts["defaults"]["shapeType"] = c.SphereShape
 
+        for key, value in self._opts["defaults"].items():
+            mod.set_attr(rigid[key], value)
+
         # `shapeLength` is used during constraint creation,
         # to figure out draw scale
         mod.do_it()
@@ -437,9 +440,6 @@ class Chain(object):
 
         # Record hierarchical relationship, for articulations
         mod.connect(previous_rigid["ragdollId"], rigid["parentRigid"])
-
-        for key, value in self._opts["defaults"].items():
-            mod.set_attr(rigid[key], value)
 
         # Forward some convenience attributes
         constraint_attrs = i__.UserAttributes(con, transform)

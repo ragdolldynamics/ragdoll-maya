@@ -934,8 +934,7 @@ def create_absolute_control(rigid, reference=None, opts=None):
 
         if not ctrl:
             shape_name = i__.shape_name(reference.name(namespace=False))
-            ctrl = _rdcontrol(mod, shape_name, reference)
-            mod.connect(rigid["ragdollId"], ctrl["rigid"])
+            ctrl = _rdcontrol(mod, shape_name, reference, rigid)
             _take_ownership(mod, ctrl, reference)
 
         shape_name = i__.unique_name(name)
@@ -1033,8 +1032,7 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
 
         if not ctrl:
             shape_name = i__.shape_name(reference.name(namespace=False))
-            ctrl = _rdcontrol(mod, shape_name, reference)
-            mod.connect(child_rigid["ragdollId"], ctrl["rigid"])
+            ctrl = _rdcontrol(mod, shape_name, reference, child_rigid)
             _take_ownership(mod, ctrl, reference)
 
         con = create_constraint(
@@ -1262,7 +1260,7 @@ def create_mimic(root, opts=None):
 
         # Disable per default
         opts={
-            "name": "rWorldConstraint",
+            "name": "rSoftPinConstraint",
             "addUserAttributes": False,
         }
     )
@@ -1458,7 +1456,7 @@ def create_mimic(root, opts=None):
     if opts["addMultiplier"]:
         pose_mult = multiply_constraints(
             local_cons, parent=root_reference, opts={
-                "name": "rPoseMultiplier",
+                "name": "rGlobalPose",
             })
 
         multipliers.append(pose_mult)
@@ -1466,7 +1464,7 @@ def create_mimic(root, opts=None):
         if opts["addSoftPin"]:
             soft_mult = multiply_constraints(
                 world_cons, parent=root_reference, opts={
-                    "name": "rSoftPinMultiplier",
+                    "name": "rGlobalSoftPin",
                     "defaults": {"driveStrength": 0.0}
                 })
 
@@ -2881,12 +2879,15 @@ def _rdrigid(mod, name, parent):
     return node
 
 
-def _rdcontrol(mod, name, parent):
+def _rdcontrol(mod, name, parent, rigid):
     """Create a new rdControl node"""
     name = i__.unique_name(name)
     node = mod.create_node("rdControl", name=name, parent=parent)
     mod.set_attr(node["color"], c.ControlColor)  # Default blue
     mod.set_attr(node["version"], i__.version())
+    mod.set_attr(node["hiddenInOutliner"], True)
+    mod.connect(rigid["ragdollId"], node["rigid"])
+    mod.connect(rigid["geometryChanging"], node["inputGeometry"])
 
     # There's never anything to tweak on these, they are visual only
     mod.set_attr(node["isHistoricallyInteresting"], False)

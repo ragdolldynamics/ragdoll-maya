@@ -1191,10 +1191,17 @@ def create_mimic(root, opts=None):
         first = name[0]
         rest = name[1:]
 
+        # Special case.
         # Account for existing one-letter prefix
         # e.g. pCube -> rCube
         # But watch out for the existing prefix also being `r`
-        if len(name) > 1 and name[1] == name[1].upper() and name[1] != "r":
+        # e.g. rCube -> rrCube
+        # But watch out for the first *two* characters being upper-case
+        # e.g. FKHand -> rFKHand
+        if all([len(name) > 1,
+                name[1] != "r",
+                name[1].isupper(),
+                not name[2].isupper()]):
             first = name[1]
             rest = name[2:]
 
@@ -1389,8 +1396,14 @@ def create_mimic(root, opts=None):
     if opts["addHardPin"]:
         attr = cmdx.Enum("hardPin", fields=["Inherit", "Off", "On"])
 
-        with cmdx.DGModifier(interesting=False) as mod:
+        # Ensure this attribute appears ahead of other attributes
+        with cmdx.DGModifier() as mod:
             mod.add_attr(root_reference, attr)
+            mod.do_it()
+
+            index = root["userAttributes"].next_available_index()
+            mod.connect(root_reference["hardPin"],
+                        root["userAttributes"][index])
             mod.do_it()
 
             # Preserve this
@@ -1413,6 +1426,12 @@ def create_mimic(root, opts=None):
                     mod.add_attr(reference, attr)
                     mod.do_it()
 
+                    # Clean this up along with the rest
+                    index = rigid["userAttributes"].next_available_index()
+                    mod.connect(reference["hardPin"],
+                                rigid["userAttributes"][index])
+                    mod.do_it()
+
                 choice = mod.create_node("choice", "hardPinChoice")
                 mod.connect(root_reference["globalHardPin"],
                             choice["input"][0])
@@ -1421,11 +1440,6 @@ def create_mimic(root, opts=None):
 
                 mod.connect(reference["hardPin"], choice["selector"])
                 mod.connect(choice["output"], rigid["kinematic"])
-
-                # Clean this up along with the rest
-                index = rigid["userAttributes"].next_available_index()
-                mod.connect(reference["hardPin"],
-                            rigid["userAttributes"][index])
 
     if opts["addMultiplier"]:
         pose_mult = multiply_constraints(
@@ -2163,6 +2177,7 @@ def infer_geometry(root, parent=None, children=None):
 
 
 @i__.with_refresh_suspended
+@i__.with_timing
 @i__.with_undo_chunk
 def delete_physics(nodes):
     """Delete Ragdoll from anything related to `nodes`
@@ -2242,8 +2257,7 @@ def delete_physics(nodes):
     # |______________________|     |___________________|
     #
     #
-    user_attributes = set()
-
+    user_attributes = dict()
     for node in ragdoll_nodes:
         if "userAttributes" not in node:
             continue
@@ -2253,7 +2267,37 @@ def delete_physics(nodes):
                                                 source=True,
                                                 destination=False)
             if user_attribute is not None:
-                user_attributes.add(user_attribute)
+                other = user_attribute.node()
+                if other not in user_attributes:
+                    user_attributes[other] = []
+
+                user_attributes[other].append(
+                    (user_attribute.name(long=False), user_attribute)
+                )
+
+    # Reorder attributes by the order they appear in the parent node
+    #  _____________
+    # |             |
+    # |    Friction o -> 126
+    # |        Mass o -> 127
+    # |     Color R o -> 128
+    # |     Color G o -> 129
+    # |     Color B o -> 130
+    # |             |
+    # |_____________|
+    #
+    plug_to_index = {}
+    for node, plugs in user_attributes.items():
+        for index in range(node._fn.attributeCount()):
+            attr = node._fn.attribute(index)
+            fn = cmdx.om.MFnAttribute(attr)
+
+            for name, plug in plugs:
+                if fn.shortName == name:
+                    plug_to_index[plug] = index
+
+    user_attributes = sorted(plug_to_index.items(), key=lambda i: i[1])
+    user_attributes = [r[0] for r in user_attributes]
 
     result["deletedRagdollNodeCount"] = len(ragdoll_nodes)
     result["deletedExclusiveNodeCount"] = len(exclusives)
@@ -2262,10 +2306,13 @@ def delete_physics(nodes):
     # Delete attributes first, as they may otherwise
     # disappear along with their node.
     with cmdx.DagModifier() as mod:
-        for attr in user_attributes:
-            mod.delete_attr(attr)
 
-        mod.do_it()
+        # Attributes are recreated in the reverse order
+        # during undo, so to preserve their original order
+        # we'll need to delete them in reverse.
+        for attr in reversed(user_attributes):
+            mod.delete_attr(attr)
+            mod.do_it()
 
         for node in ragdoll_nodes + exclusives:
             try:

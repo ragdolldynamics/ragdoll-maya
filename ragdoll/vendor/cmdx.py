@@ -1084,6 +1084,36 @@ class Node(object):
             sort_keys=sort_keys
         )
 
+    def index(self, plug):
+        """ Find index of `attr` in its owning node
+         _____________
+        |             |
+        |    Friction o -> 126
+        |        Mass o -> 127
+        |     Color R o -> 128
+        |     Color G o -> 129
+        |     Color B o -> 130
+        |             |
+        |_____________|
+
+        # TODO: This is really slow
+
+        """
+
+        assert isinstance(plug, Plug), "%r was not a cmdx.Plug" % plug
+
+        node = plug.node()
+
+        for i in range(node._fn.attributeCount()):
+            attr = node._fn.attribute(i)
+            fn = om.MFnAttribute(attr)
+
+            if fn.shortName == plug.name(long=False):
+                return i
+
+        # Can happen if asking for an index of a plug from another node
+        raise ValueError("Index of '%s' not found" % plug.name())
+
     def type(self):
         """Return type name
 

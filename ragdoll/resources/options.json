@@ -507,7 +507,7 @@
         "label": "Performance",
         "type": "Enum",
         "items": ["Draw Everything", "Isolate Physics", "Disable Viewport"],
-        "default": 1,
+        "default": 2,
         "help": "Improve performance by hiding anything unrelated to the simulation, or disabling the viewport(s) altogether whilst baking."
     },
     "bakeDeletePhysics": {

@@ -5,6 +5,7 @@ import time
 import random
 import logging
 import functools
+import contextlib
 
 from maya import cmds
 from .vendor import cmdx
@@ -236,6 +237,32 @@ def with_timing(func):
             log.debug("%s in %.2fms" % (func.__name__, duration * 1000))
 
     return wrapper
+
+
+class Timer(object):
+    def __init__(self, name, verbose=True):
+        self._name = name
+        self._t0 = 0
+        self._t1 = 0
+        self._verbose = verbose
+
+    @property
+    def s(self):
+        return self._t1 - self._t0
+
+    @property
+    def ms(self):
+        return self.s * 1000
+
+    def __enter__(self):
+        self._t0 = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self._t1 = time.time()
+
+        if self._verbose:
+            log.debug("%s in %.2fms" % (self._name, self.ms))
 
 
 def with_refresh_suspended(func):

@@ -1904,6 +1904,7 @@ def bake_simulation(selection=None, **opts):
     opts_ = {
         "deletePhysics": _opt("bakeDeletePhysics", opts),
         "bakeToLayer": _opt("bakeToLayer", opts),
+        "includeStatic": _opt("bakeIncludeStatic", opts),
         "unrollRotation": _opt("bakeUnrollRotation", opts),
     }
 
@@ -1911,16 +1912,23 @@ def bake_simulation(selection=None, **opts):
     if not rigids:
         return log.warning("No physics found!")
 
-    if _opt("bakePerformance", opts) == 1:
-        with isolate_select(rigids):
+    with i__.Timer("bake") as duration:
+        if _opt("bakePerformance", opts) == 1:
+            with isolate_select(rigids):
+                commands.bake_simulation(opts=opts_)
+
+        elif _opt("bakePerformance", opts) == 2:
+            with refresh_suspended():
+                commands.bake_simulation(opts=opts_)
+
+        else:
             commands.bake_simulation(opts=opts_)
 
-    elif _opt("bakePerformance", opts) == 2:
-        with refresh_suspended():
-            commands.bake_simulation(opts=opts_)
-
-    else:
-        commands.bake_simulation(opts=opts_)
+    cmds.inViewMessage(
+        amg="Baked simulation in <hl>%.2fs</hl>" % duration.s,
+        pos="topCenter",
+        fade=True
+    )
 
     return kSuccess
 

@@ -47,6 +47,7 @@ global proc AErdRigidTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
             editorTemplate -addControl "color";
+            editorTemplate -addControl "texture";
             editorTemplate -addControl "drawShaded";
         editorTemplate -endLayout;
 

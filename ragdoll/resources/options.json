@@ -513,7 +513,6 @@
     "bakeDeletePhysics": {
         "name": "bakeDeletePhysics",
         "label": "Delete Physics",
-        "enabled": false,
         "type": "Boolean",
         "default": true,
         "help": "Delete all on completion, they no longer have any effect."

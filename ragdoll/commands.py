@@ -2566,18 +2566,18 @@ def bake_simulation(rigids=None, opts=None):
 
     rigids = rigids or cmdx.ls(type="rdRigid")
 
-    transforms = []
+    rigid_to_transform = {}
     for rigid in rigids:
         if not opts["includeStatic"]:
             # No need to bake something that is unaffected by physics
             if rigid["kinematic"] and not rigid["kinematic"].animated():
                 continue
 
-        transforms += [rigid.parent()]
+        rigid_to_transform[rigid] = rigid.parent()
 
     time = tuple(t.value for t in (opts["startTime"], opts["endTime"]))
     cmds.bakeResults(
-        list(map(str, transforms)),
+        list(map(str, rigid_to_transform.values())),
         attribute=opts["attributes"],
         simulation=True,
         time=time,
@@ -2593,25 +2593,106 @@ def bake_simulation(rigids=None, opts=None):
     )
 
     if opts["unrollRotation"]:
-        rotate_channels = ["%s.rx" % t for t in transforms]
-        rotate_channels += ["%s.ry" % t for t in transforms]
-        rotate_channels += ["%s.rz" % t for t in transforms]
+        rotate_channels = ["%s.rx" % t for t in rigid_to_transform.values()]
+        rotate_channels += ["%s.ry" % t for t in rigid_to_transform.values()]
+        rotate_channels += ["%s.rz" % t for t in rigid_to_transform.values()]
         cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
         cmds.rotationInterpolation(rotate_channels, c="none")
 
-    # Haven't got much choice at the moment, as
-    # the cmds.bakeResults command *breaks* any
-    # connection from our rigid. Including when
-    # baking to a new layer. Will probably need
-    # to roll our own bake command.
+    def reconnect_physics():
+        attributes = {
+            "translateX": ("animCurveTL", "inTranslateX1", "outTranslateX"),
+            "translateY": ("animCurveTL", "inTranslateY1", "outTranslateY"),
+            "translateZ": ("animCurveTL", "inTranslateZ1", "outTranslateZ"),
+            "rotateX": ("animCurveTA", "inRotateX1", "outRotateX"),
+            "rotateY": ("animCurveTA", "inRotateY1", "outRotateY"),
+            "rotateZ": ("animCurveTA", "inRotateZ1", "outRotateZ"),
+        }
+
+        outputs = (
+            "outputTranslateX",
+            "outputTranslateY",
+            "outputTranslateZ",
+            "outputRotateX",
+            "outputRotateY",
+            "outputRotateZ"
+        )
+
+        with cmdx.DagModifier() as mod:
+            for rigid, transform in rigid_to_transform.items():
+
+                # Handle cases of some outputs not reaching the pairblend
+                # E.g. the user manually disconnected one or more.
+                for output in outputs:
+                    #
+                    #   ___________       ___________
+                    #  |           |     |           |
+                    #  | pairBlend |     | transform |
+                    #  |           o---->o           |
+                    #  |           o     |___________|
+                    #  |           o
+                    #  |           |
+                    #  |___________|
+                    #
+                    #
+                    pairblend = rigid[output].connection(type="pairBlend",
+                                                         source=False)
+
+                    # They'll all reach the same pairblend
+                    if pairblend:
+                        break
+
+                # In the rare case of no pairblend actually being there
+                if not pairblend:
+                    continue
+
+                #  ___________                      ___________
+                # |           |            /       |           |
+                # | bakedAnim o-.- - - - -/      .-o transform |
+                # |___________| |        /       | |___________|
+                #               |  ___________   |
+                #               | |           |  |
+                #               .-o pairBlend o--`
+                #                 |           |
+                #                 |           |
+                #                 |___________|
+                #
+                # 1. Find bakedAnim
+                # 2. Plug bakedAnim -> pairBlend
+                # 3. Swap bakedAnim for pairBlend
+                #
+                for a, (typ, inp, out) in attributes.items():
+                    baked = transform[a].connection(type=typ,
+                                                    destination=False,
+                                                    plug=True)
+
+                    if baked is None:
+                        # Channel could have been locked, and thus won't bake
+                        continue
+
+                    mod.connect(baked, pairblend[inp])
+                    mod.connect(pairblend[out], transform[a])
+
+                if "simulation" not in transform:
+                    proxy = i__.UserAttributes(pairblend,
+                                               transform,
+                                               owner=rigid)
+                    proxy.add_divider("Baked")
+                    proxy.add("weight",
+                              long_name="simulation",
+                              nice_name="Simulation")
+                    proxy.do_it()
+
+                mod.set_attr(transform["simulation"], 0.0)
+
     if opts["deletePhysics"]:
         delete_all_physics()
-
     else:
-        # Can we re-connect our pairBlends post-bake?
-        pass
+        # Baking automatically breaks the connection
+        # between rigid and transform.
+        reconnect_physics()
 
-    return transforms
+    return list(rigid_to_transform.values())
 
 
 """

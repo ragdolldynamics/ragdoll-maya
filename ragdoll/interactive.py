@@ -570,6 +570,7 @@ def install_menu():
 
         item("exportPhysics", export_physics, export_physics_options)
         item("importPhysics", import_physics_from_file, import_physics_options)
+        item("applyPhysics")
 
         divider()
 

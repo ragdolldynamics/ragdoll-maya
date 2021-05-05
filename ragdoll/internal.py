@@ -48,12 +48,15 @@ class UserAttributes(object):
     Arguments:
         source (cmdx.DagNode): Original node, e.g. an rdRigid
         target (cmdx.DagNode): Typically the animation control
+        owner (cmdx.DagNode, optional): When this node dies,
+            the attribute is deleted. Defaults to `source`
 
     """
 
-    def __init__(self, source, target):
+    def __init__(self, source, target, owner=None):
         self._source = source
         self._target = target
+        self._owner = owner or source
         self._added = []
 
     def do_it(self):
@@ -83,8 +86,8 @@ class UserAttributes(object):
 
         with cmdx.DagModifier() as mod:
             for new_plug in added:
-                index = self._source["userAttributes"].next_available_index()
-                mod.connect(new_plug, self._source["userAttributes"][index])
+                index = self._owner["userAttributes"].next_available_index()
+                mod.connect(new_plug, self._owner["userAttributes"][index])
 
                 # Can't figure out the next available index until the
                 # current index has been occupied. And we can't simply

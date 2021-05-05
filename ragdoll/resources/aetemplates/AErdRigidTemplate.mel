@@ -40,6 +40,7 @@ global proc AErdRigidTemplate(string $nodeName) {
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "sleepThreshold";
+            editorTemplate -addControl "wakeCounter";
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
         editorTemplate -endLayout;

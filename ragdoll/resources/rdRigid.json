@@ -217,6 +217,25 @@
             "animated": true,
             "summary": "Whether this rigid should be affected by contacts, constraints and forces."
         },
+        "sleepThreshold": {
+            "longName": "sleepThreshold",
+            "shortName": "slth",
+            "type": "float",
+            "default": 5e-6,
+            "keyable": false,
+            "animated": false,
+            "summary": "How strong does a force have to be to keep the wakeCounter from incrementing?",
+            "description": "Ragdoll optimises performance by putting inactive rigids to 'sleep'. It is a temporary state to conserve computational resources. 100 sleeping rigids are quicker to solve than 100 active ones. A rigid 'wakes up' whenever a force is applied or contact occurres."
+        },
+        "wakeCounter": {
+            "longName": "wakeCounter",
+            "shortName": "waco",
+            "type": "int",
+            "default": 0,
+            "keyable": false,
+            "animated": false,
+            "summary": "How many frames of not moving does it take to put this rigid to sleep? A value of 0 = insomnia, meaning it never goes to sleep."
+        },
         "collide": {
             "longName": "collide",
             "shortName": "coll",

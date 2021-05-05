@@ -2568,10 +2568,9 @@ def bake_simulation(rigids=None, opts=None):
 
     transforms = []
     for rigid in rigids:
-
         if not opts["includeStatic"]:
             # No need to bake something that is unaffected by physics
-            if rigid["kinematic"] and not rigid["kinematic"].animated:
+            if rigid["kinematic"] and not rigid["kinematic"].animated():
                 continue
 
         transforms += [rigid.parent()]

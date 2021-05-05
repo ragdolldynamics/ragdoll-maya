@@ -443,6 +443,7 @@ class Chain(object):
 
         # Forward some convenience attributes
         constraint_attrs = i__.UserAttributes(con, transform)
+        constraint_attrs.add("driveStrength", nice_name="Pose Strength")
         constraint_attrs.add("angularDriveStiffness", nice_name="Stiffness")
         constraint_attrs.add("angularDriveDamping", nice_name="Damping")
 

@@ -137,6 +137,14 @@
             "hidden": true,
             "summary": "Input attribute for the formatting of outputMatrix."
         },
+        "creationMatrix": {
+            "longName": "creationMatrix",
+            "shortName": "crma",
+            "type": "matrix",
+            "default": "identity",
+            "summary": "Matrix at the time of creation.",
+            "description": "This attribute is copied into the .restMatrix upon calling Clear Initial State."
+        },
         "restMatrix": {
             "longName": "restMatrix",
             "shortName": "rema",

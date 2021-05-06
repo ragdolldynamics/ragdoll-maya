@@ -36,6 +36,7 @@ global proc AErdSceneTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
+            editorTemplate -label "Mode" -addControl "drawMode";
             editorTemplate -label "Shapes" -addControl "drawShapes";
             editorTemplate -label "Constraints" -addControl "drawConstraints";
             editorTemplate -label "Drives" -addControl "drawDrives";

@@ -442,6 +442,15 @@
         "help": "Import onto selection, ignore everything else."
     },
 
+    "importIncludeControls": {
+        "name": "importIncludeControls",
+        "label": "Include Controls",
+        "type": "Boolean",
+        "default": false,
+        "enabled": false,
+        "help": "Include controls from imported file (if any)."
+    },
+
     "importIncludeAnimation": {
         "name": "importIncludeAnimation",
         "label": "Include Animation",
@@ -578,6 +587,13 @@
         "type": "Boolean",
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
+    },
+    "oldAutoInitialState": {
+        "name": "oldAutoInitialState",
+        "label": "Old Auto Initial State",
+        "type": "Boolean",
+        "default": false,
+        "help": "For backwards compatibility"
     },
     "frameskipHandling": {
         "name": "frameskipHandling",

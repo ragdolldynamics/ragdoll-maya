@@ -332,6 +332,7 @@
             "importMethod",
             "importMergePhysics",
             "importPreserveAttributes",
+            "importIncludeControls",
             "importIncludeAnimation",
             "importIncludeSimulation",
             "importUseSelection",
@@ -343,6 +344,7 @@
     "applyPhysics": {
         "label": "Apply Physics",
         "icon": "physics.png",
+        "enable": false,
         "summary": "Import, bake and delete physics from disk.",
         "description": "Eliminate any and all interactions with physics by immediately baking the provided file on import, and deleting physics afterwards. This can be useful for quickly applying physics to tails and such without requiring much up-front control. Or for automating physics altogeher on a farm.",
         "options": [
@@ -426,6 +428,7 @@
             "cacheMedia",
             "frameskipHandling",
             "autoInitialState",
+            "oldAutoInitialState",
             "autoReturnToStart",
             "cycleProtection",
             "ogsReset",

@@ -231,6 +231,18 @@ def install():
         # called "Include controllers in evaluation graph"
         cmds.optionVar(iv=("prepopulateController", 0))
 
+        # 2018 and consolidation doesn't play nicely without animated shaders
+        if cmdx.__maya_version__ < 2019:
+            def no_consolidate():
+                try:
+                    render = cmdx.encode("hardwareRenderingGlobals")
+                    render["consolidateWorld"] = 0
+                except Exception:
+                    # Not a big deal, try again next time.
+                    pass
+
+            cmds.evalDeferred(no_consolidate)
+
         if not c.RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
             cmds.evalDeferred(welcome_user)
             options.write("firstLaunch2", False)
@@ -1140,8 +1152,8 @@ def create_active_rigid(selection=None, **opts):
             }[initial_shape]
 
         try:
-            rigid = commands.create_rigid(node, scene,
-                                          opts=opts_)
+            rigid = commands.create_rigid(node, scene, opts=opts_)
+
         except Exception as e:
             _print_exception()
             log.error(str(e))
@@ -1228,7 +1240,7 @@ def create_active_chain(selection=None, **opts):
         if link.shape("rdRigid") is not None:
             return log.warning("Already dynamic: '%s'" % link)
 
-    opts = {
+    opts_ = {
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
         "passiveRoot": _opt("chainPassiveRoot", opts),
@@ -1238,7 +1250,13 @@ def create_active_chain(selection=None, **opts):
 
     shape_type = _opt("chainShapeType", opts)
     if shape_type != c.InitialShapeAuto:
-        opts["defaults"]["shapeType"] = shape_type + 1
+        opts_["defaults"]["shapeType"] = {
+            # UI -> API
+            c.InitialShapeBox: c.BoxShape,
+            c.InitialShapeSphere: c.SphereShape,
+            c.InitialShapeCapsule: c.CapsuleShape,
+            c.InitialShapeMesh: c.MeshShape,
+        }[shape_type]
 
     scene = _find_current_scene()
 
@@ -1267,7 +1285,7 @@ def create_active_chain(selection=None, **opts):
 
             return kFailure
 
-    tools.create_chain(links, scene, opts=opts)
+    tools.create_chain(links, scene, opts=opts_)
 
     root = links[0]
     cmds.select(str(root))

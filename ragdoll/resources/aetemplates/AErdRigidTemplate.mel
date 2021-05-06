@@ -26,6 +26,7 @@ global proc AErdRigidTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Matrices" -collapse true;
+            editorTemplate -addControl "creationMatrix";
             editorTemplate -addControl "restMatrix";
             editorTemplate -addControl "inputMatrix";
         editorTemplate -endLayout;

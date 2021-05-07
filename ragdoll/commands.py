@@ -177,7 +177,6 @@ def create_rigid(node, scene, opts=None, _cache=None):
     if opts.get("addUserAttributes"):
         uas = i__.UserAttributes(rigid, transform)
         uas.add_divider("Ragdoll")
-        uas.add("kinematic")
         uas.add("collide")
         uas.add("mass")
         uas.add("friction")
@@ -990,7 +989,7 @@ def is_a(node, typ):
                    kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode, cmdx.DagNode))
 def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
-    """Control a child_rigid body using a reference transform
+    """Control `child_rigid` relative to `parent_rigid` with `reference`
 
     Arguments:
         reference (transform): Follow this node
@@ -1082,6 +1081,64 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
         reference_proxies.do_it()
 
     return ctrl, con
+
+
+@i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs=None,
+                   returns=(cmdx.DagNode,))
+def create_active_control(reference, rigid):
+    """Control a rigid body using a reference transform
+
+    Arguments:
+        reference (transform): Follow this node
+        rigid (rdRigid): Rigid which should follow `reference`
+
+    """
+
+    if isinstance(reference, i__.string_types):
+        reference = cmdx.encode(reference)
+
+    if isinstance(rigid, i__.string_types):
+        rigid = cmdx.encode(rigid)
+
+    assert reference.isA(cmdx.kTransform), "%s was not a transform" % reference
+    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
+
+    scene = rigid["nextState"].connection()
+    assert scene and scene.type() == "rdScene", (
+        "%s was not part of a scene" % rigid
+    )
+
+    con = rigid.sibling(type="rdConstraint")
+    assert con is not None, "Need an existing constraint"
+
+    with cmdx.DagModifier() as mod:
+        ctrl = _rdcontrol(mod, "rActiveControl1", reference, rigid)
+        mod.connect(rigid["ragdollId"], ctrl["rigid"])
+        mod.connect(reference["matrix"], con["driveMatrix"])
+
+        mod.set_attr(con["driveEnabled"], True)
+        mod.set_attr(con["driveStrength"], 1.0)
+
+    forwarded = (
+        "driveStrength",
+        "linearDriveStiffness",
+        "linearDriveDamping",
+        "angularDriveStiffness",
+        "angularDriveDamping"
+    )
+
+    reference_proxies = i__.UserAttributes(con, reference)
+    reference_proxies.add_divider("Ragdoll")
+
+    for attr in forwarded:
+        # Expose on constraint node itself
+        reference_proxies.add(attr)
+
+    reference_proxies.do_it()
+
+    return ctrl
 
 
 @i__.with_undo_chunk

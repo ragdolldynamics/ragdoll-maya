@@ -240,6 +240,13 @@ def DefaultState():
         # }
         "constraints": [],
 
+        # Controls
+        # {
+        #    "entity": 18,
+        #    "options": {}
+        # }
+        "controls": [],
+
         # Individual constraint multiplier
         # {
         #    "entity": 19,
@@ -322,6 +329,7 @@ class Loader(object):
             "roots": [],
             "replace": [],
             "namespace": None,
+            "preserveControls": False,
             "preserveAttributes": True,
         })
 
@@ -400,10 +408,15 @@ class Loader(object):
         self._opts["preserveAttributes"] = preserve
         self._is_up_to_date = False
 
+    def set_preserve_control(self, preserve):
+        self._opts["preserveControls"] = preserve
+        self._is_up_to_date = False
+
     def is_valid(self):
         return len(self._invalid_reasons) == 0
 
     def invalid_reasons(self):
+        """Return reasons for failure, useful for reporting"""
         return self._invalid_reasons[:]
 
     def analyse(self):
@@ -416,6 +429,7 @@ class Loader(object):
         transforms, occupied = self._find_transforms()
         chains = self._find_chains()
         rigids = self._find_rigids()
+        controls = self._find_controls()
 
         # Only create a scene if it's related to an interesting rigid
         rigid_entities = [r["entity"] for r in rigids]
@@ -425,6 +439,7 @@ class Loader(object):
             scenes += self._find_scenes(chain["rigids"])
 
         # Allow roots of chains to already have a rigid
+        # To support e.g. two legs off of the same root
         for chain in chains:
             root = chain["rigids"][0]
 
@@ -462,6 +477,7 @@ class Loader(object):
             "scenes": scenes,
             "rigids": rigids,
             "chains": chains,
+            "controls": controls,
             "constraints": leftovers["constraints"],
             "constraintMultipliers": leftovers["constraintMultipliers"],
         })
@@ -932,6 +948,28 @@ class Loader(object):
             })
 
         return rigids
+
+    def _find_controls(self):
+        """Identify controls"""
+
+        controls = list()
+        for control in self.view("ControlUIComponent"):
+            controls.append(control)
+
+        controls = [
+            {
+                "entity": control,
+                "options": {}
+            }
+            for control in controls
+        ]
+
+        # Figure out options
+        for control in controls:
+            # No options yet
+            control["options"].update({})
+
+        return controls
 
     def _find_chains(self):
         r"""Identify chains amongst rigids

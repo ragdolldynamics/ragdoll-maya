@@ -82,6 +82,7 @@ def create_scene(name=None, parent=None):
                    returns=(cmdx.DagNode,),
                    opts=["addUserAttributes",
                          "computeMass",
+                         "passive",
                          "rigidDefaults"])
 def create_rigid(node, scene, opts=None, _cache=None):
     """Create a new rigid
@@ -1047,19 +1048,41 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
         for key, value in opts["defaults"].items():
             mod.set_attr(con[key], value)
 
-        # Drive this constraint relatively
-        local_matrix = cmdx.Tm()
-        local_matrix.setTranslation(reference["translate"].as_vector())
-        local_matrix.setRotation(reference["rotate"].as_euler())
+        def bake_joint_orient(mat, orient):
+            """Bake jointOrient values
 
-        inverse = (
-            local_matrix.as_matrix() *
-            reference["worldMatrix"][0].as_matrix() *
-            reference.parent()["worldMatrix"][0].as_matrix().inverse()
-        )
+            Such that keyframes can be made without
+            taking those into account. E.g. a joint with 0 rotate
+            but 45 degrees of jointOrient should only require a key
+            with 0 degrees.
+
+            """
+
+            assert isinstance(mat, cmdx.om.MMatrix)
+            assert isinstance(orient, cmdx.om.MQuaternion)
+
+            mat_tm = cmdx.om.MTransformationMatrix(mat)
+            new_quat = mat_tm.rotation(asQuaternion=True) * orient
+            mat_tm.setRotation(new_quat)
+
+            return mat_tm.asMatrix()
+
+        # From this space..
+        parent_matrix = child_rigid["inputParentInverseMatrix"].asMatrix()
+        parent_matrix = parent_matrix.inverse()
+
+        # To this space..
+        parent_rigid_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+        parent_rigid_matrix = parent_rigid_matrix.inverse()
+
+        total_matrix = parent_matrix * parent_rigid_matrix
+
+        if "jointOrient" in reference:
+            joint_orient = reference["jointOrient"].as_euler().as_quaternion()
+            total_matrix = bake_joint_orient(total_matrix, joint_orient)
 
         mod.connect(reference["matrix"], mult["matrixIn"][0])
-        mod.set_attr(mult["matrixIn"][1], inverse)
+        mod.set_attr(mult["matrixIn"][1], total_matrix)
         mod.connect(mult["matrixSum"], con["driveMatrix"])
 
     if opts["addUserAttributes"]:
@@ -1292,6 +1315,10 @@ def create_mimic(root, opts=None):
                 mod.set_attr(transform["translate"], 0)
                 mod.set_attr(transform["rotate"], 0)
                 mod.parent(transform, offset)
+
+                parent = transform.parent()
+                if parent is not None:
+                    mod.parent(offset, parent)
 
     passive_root = root["kinematic"].read()
 
@@ -1563,6 +1590,10 @@ def clear_initial_state(rigids):
         for rigid in rigids:
             mod.set_attr(rigid["cachedRestMatrix"],
                          rigid["creationMatrix"].asMatrix())
+
+    # Refresh current values
+    for rigid in rigids:
+        rigid["worldMatrix"][0].pull()
 
 
 @i__.with_undo_chunk

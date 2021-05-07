@@ -241,7 +241,8 @@ def install():
                     # Not a big deal, try again next time.
                     pass
 
-            cmds.evalDeferred(no_consolidate)
+            if options.read("maya2018ConsolidateWorldFix"):
+                cmds.evalDeferred(no_consolidate)
 
         if not c.RAGDOLL_NO_STARTUP_DIALOG and options.read("firstLaunch2"):
             cmds.evalDeferred(welcome_user)

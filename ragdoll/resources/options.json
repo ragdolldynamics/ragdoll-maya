@@ -593,7 +593,7 @@
         "label": "Old Auto Initial State",
         "type": "Boolean",
         "default": false,
-        "help": "For backwards compatibility"
+        "help": "For backwards compatibility with 2021.04.30, if something goes wrong. Don't forget to disable the new 'Auto Initial State'."
     },
     "frameskipHandling": {
         "name": "frameskipHandling",
@@ -703,6 +703,13 @@
         "type": "Boolean",
         "default": false,
         "help": "Improve viewport robustness when simulating in DG Evaluation mode, by calling `ogs -reset` on the start frame. Bear in mind this action is global to Maya and may negatively (or positively) affect other nodes in your scene."
+    },
+    "maya2018ConsolidateWorldFix": {
+        "name": "maya2018ConsolidateWorldFix",
+        "label": "Maya 2018 Consolidate World Fix",
+        "type": "Boolean",
+        "default": true,
+        "help": "Work around a limitation in Maya 2018 to better support rigid textures and sleep rendering."
     },
     "lastVisitedPath": {
         "name": "lastVisitedPath",

@@ -134,6 +134,26 @@ def test_undo_create_absolute_control():
           lambda: cmds.ls(type="rdControl"))
 
 
+def test_undo_create_relative_control():
+    _new()
+
+    # Setup
+    cube, _ = map(cmdx.encode, cmds.polyCube())
+    parent, _ = map(cmdx.encode, cmds.polyCube())
+    reference = cmdx.create_node("transform", name="reference")
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(cube, scene)
+    parent_rigid = commands.create_rigid(parent, scene)
+
+    # Worldspace constraint
+    commands.socket_constraint(scene, rigid)
+
+    _undo(lambda: commands.create_relative_control(rigid,
+                                                   parent_rigid,
+                                                   reference),
+          lambda: cmds.ls(type="rdControl"))
+
+
 def test_undo_create_active_control():
     _new()
 

@@ -69,57 +69,6 @@ def test_delete_all():
     assert_equals(len(cmds.ls(type="rdRigid")), 0)
 
 
-def test_convert_constraint():
-    pass
-
-
-def test_convert_rigid():
-    # Passive -> Active
-    # Active -> Passive
-    pass
-
-
-def manual():
-    import sys
-    import time
-
-    t0 = time.time()
-
-    mod = sys.modules[__name__]
-    tests = list(
-        func
-        for name, func in mod.__dict__.items()
-        if name.startswith("test_")
-    )
-
-    errors = []
-    for test in tests:
-        test()
-
-    # Cleanup
-    _new()
-    t1 = time.time()
-    duration = t1 - t0
-
-    if not errors:
-        print("Successfully ran %d tests in %.2fs" % (len(tests), duration))
-    else:
-        print("Ran %d tests with %d errors in %.2fs" % (
-            len(tests), len(errors), duration)
-        )
-
-
-def test_chain_tree_tiger():
-    # "simulated" attribute only appears on tree root
-    # multiplier applies to
-    pass
-
-
-def test_save_load_tiger():
-    # Animation/initial pose should not be affected by saving/loading
-    pass
-
-
 def test_scene_clean():
     """rdScene.clean accurately tells us whether it has been evaluated"""
 
@@ -182,6 +131,24 @@ def test_scene_clean_passive():
     )
 
 
+def test_convert_constraint():
+    pass
+
+
+def test_edit_constraint_pivot():
+    pass
+
+
+def test_edit_shape():
+    pass
+
+
+def test_convert_rigid():
+    # Passive -> Active
+    # Active -> Passive
+    pass
+
+
 def test_rotate_pivot():
     assert True
 
@@ -195,6 +162,16 @@ def test_rotate_axis():
 
 
 def test_joint_orient():
+    assert True
+
+
+def test_stable_no_gravity():
+    """Without gravity and contacts, a constrained hierarchy does not move"""
+    assert True
+
+
+def test_clear_initial_state():
+    """Clear initial state snaps a simulation back into creation state"""
     assert True
 
 
@@ -333,3 +310,33 @@ if cmdx.__maya_version__ >= 2019:
         _play(rigid, start=1, end=50)
         assert_almost_equals(rigid["outputTranslateY"].read(), 10.0, 1)
         assert_almost_equals(rigid["outputTranslateZ"].read(), 0.5, 2)
+
+
+def manual():
+    import sys
+    import time
+
+    t0 = time.time()
+
+    mod = sys.modules[__name__]
+    tests = list(
+        func
+        for name, func in mod.__dict__.items()
+        if name.startswith("test_")
+    )
+
+    errors = []
+    for test in tests:
+        test()
+
+    # Cleanup
+    _new()
+    t1 = time.time()
+    duration = t1 - t0
+
+    if not errors:
+        print("Successfully ran %d tests in %.2fs" % (len(tests), duration))
+    else:
+        print("Ran %d tests with %d errors in %.2fs" % (
+            len(tests), len(errors), duration)
+        )

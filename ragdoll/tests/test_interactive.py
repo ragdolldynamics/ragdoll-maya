@@ -253,16 +253,6 @@ def test_convert_active_rigid():
     assert_true(interactive.convert_rigid(**opts))
     assert_equals(rigid["kinematic"].read(), False)
 
-    cmds.select(str(cube1))
-    opts = {"convertRigidType": c.ConvertOpposite}
-    assert_true(interactive.convert_rigid(**opts))
-    assert_equals(rigid["kinematic"].read(), True)
-
-    cmds.select(str(cube1))
-    opts = {"convertRigidType": c.ConvertOpposite}
-    assert_true(interactive.convert_rigid(**opts))
-    assert_equals(rigid["kinematic"].read(), False)
-
 
 def test_convert_constraint():
     _new()

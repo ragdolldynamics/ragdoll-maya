@@ -1062,12 +1062,10 @@ def create_active_rigid(selection=None, **opts):
     # whether to convert or create something new.
     if selection[0].isA(cmdx.kShape):
         if selection[0].type() == "rdRigid":
-            # The user meant to convert the selection
             return convert_rigid(selection, **opts)
 
     elif selection[0].isA(cmdx.kTransform):
         if selection[0].shape("rdRigid"):
-            # The user meant to convert the selection
             return convert_rigid(selection, **opts)
 
     if not _validate_transforms(selection):
@@ -1621,10 +1619,7 @@ def convert_rigid(selection=None, **opts):
             continue
 
         # Toggle between kinematic and dynamic
-        if typ == c.ConvertOpposite:
-            passive = not rigid["kinematic"].read()
-        else:
-            passive = typ == c.ConvertPassive
+        passive = typ == c.ConvertPassive
 
         if _opt("cycleProtection", opts) and passive:
             scene = rigid["nextState"].connection(type="rdScene")

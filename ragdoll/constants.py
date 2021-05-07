@@ -66,9 +66,8 @@ InitialShapeMesh = 4
 
 CreateActive = 0
 CreatePassive = 1
-ConvertOpposite = 0
-ConvertActive = 1
-ConvertPassive = 2
+ConvertActive = 0
+ConvertPassive = 1
 ExistingIgnore = 0
 ExistingFollow = 1
 

@@ -96,7 +96,7 @@
         "label": "Rigid Type",
         "type": "Enum",
         "default": 0,
-        "items": ["Opposite", "Active", "Passive"],
+        "items": ["Active", "Passive"],
         "help": "Convert a rigid from active to kinematic or vice versa. 'Opposite' turns passive into active and vice versa automatically."
     },
     "rigidSelect": {

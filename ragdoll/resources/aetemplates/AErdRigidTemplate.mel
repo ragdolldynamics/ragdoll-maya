@@ -7,7 +7,6 @@ global proc AErdRigidTemplate(string $nodeName) {
             editorTemplate -beginNoOptimize;
                 editorTemplate -addControl "enabled";
                 editorTemplate -addControl "collide";
-                editorTemplate -addControl "kinematic";
             editorTemplate -endNoOptimize;
             editorTemplate -addControl "mass";
             editorTemplate -addControl "friction";

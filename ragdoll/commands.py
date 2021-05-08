@@ -80,10 +80,10 @@ def create_scene(name=None, parent=None):
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode,),
-                   opts=["addUserAttributes",
+                   opts=("rigidAddUserAttributes",
                          "computeMass",
-                         "passive",
-                         "rigidDefaults"])
+                         "createRigidType",
+                         "rigidDefaults"))
 def create_rigid(node, scene, opts=None, _cache=None):
     """Create a new rigid
 
@@ -142,6 +142,9 @@ def create_rigid(node, scene, opts=None, _cache=None):
         mod.set_attr(rigid["cachedRestMatrix"], rest)
         mod.set_attr(rigid["inputMatrix"], rest)
         mod.set_attr(rigid["kinematic"], opts.get("passive", False))
+
+        # Avoid contacts getting too excited
+        mod.set_attr(rigid["maxDepenetrationVelocity"], 20.0)
 
         # Add to scene
         _add_rigid(mod, rigid, scene)
@@ -1760,7 +1763,15 @@ def transfer_constraint(ca, cb, opts=None):
 
 
 @i__.with_undo_chunk
-def edit_constraint_frames(con):
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={},
+                   returns=(cmdx.DagNode, cmdx.DagNode),
+                   opts=("constraintAddUserAttributes"))
+def edit_constraint_frames(con, opts=None):
+    opts = dict({
+        "addUserAttributes": True,
+    }, **(opts or {}))
+
     if isinstance(con, i__.string_types):
         con = cmdx.encode(con)
 
@@ -1803,28 +1814,32 @@ def edit_constraint_frames(con):
         mod.connect(parent_frame["message"], con["exclusiveNodes"][index])
         mod.connect(child_frame["message"], con["exclusiveNodes"][index + 1])
 
-    proxies = i__.UserAttributes(con, child_frame)
-    proxies.add_divider("Limit")
-    proxies.add("limitEnabled")
-    proxies.add("limitStrength")
-    proxies.add("linearLimitX")
-    proxies.add("linearLimitY")
-    proxies.add("linearLimitZ")
-    proxies.add("angularLimitX")
-    proxies.add("angularLimitY")
-    proxies.add("angularLimitZ")
-    proxies.add("linearLimitStiffness")
-    proxies.add("linearLimitDamping")
-    proxies.add("angularLimitStiffness")
-    proxies.add("angularLimitDamping")
-    proxies.add_divider("Drive")
-    proxies.add("driveEnabled")
-    proxies.add("driveStrength")
-    proxies.add("linearDriveStiffness")
-    proxies.add("linearDriveDamping")
-    proxies.add("angularDriveStiffness")
-    proxies.add("angularDriveDamping")
-    proxies.do_it()
+    if opts["addUserAttributes"]:
+        proxies = i__.UserAttributes(con, child_frame)
+
+        proxies.add_divider("Limit")
+        proxies.add("limitEnabled")
+        proxies.add("limitStrength")
+        proxies.add("linearLimitX")
+        proxies.add("linearLimitY")
+        proxies.add("linearLimitZ")
+        proxies.add("angularLimitX")
+        proxies.add("angularLimitY")
+        proxies.add("angularLimitZ")
+        proxies.add("linearLimitStiffness")
+        proxies.add("linearLimitDamping")
+        proxies.add("angularLimitStiffness")
+        proxies.add("angularLimitDamping")
+
+        proxies.add_divider("Drive")
+        proxies.add("driveEnabled")
+        proxies.add("driveStrength")
+        proxies.add("linearDriveStiffness")
+        proxies.add("linearDriveDamping")
+        proxies.add("angularDriveStiffness")
+        proxies.add("angularDriveDamping")
+
+        proxies.do_it()
 
     return parent_frame, child_frame
 

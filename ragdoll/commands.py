@@ -531,15 +531,15 @@ def convert_to_point(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rPointConstraint"))
-        mod.set_attr(con["type"], c.PointConstraint)
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["limitStrength"], 1)
-        mod.set_attr(con["linearLimitX"], -1)
-        mod.set_attr(con["linearLimitY"], -1)
-        mod.set_attr(con["linearLimitZ"], -1)
-        mod.set_attr(con["angularLimitX"], 0)
-        mod.set_attr(con["angularLimitY"], 0)
-        mod.set_attr(con["angularLimitZ"], 0)
+        mod.smart_set_attr(con["type"], c.PointConstraint)
+        mod.smart_set_attr(con["limitEnabled"], True)
+        mod.smart_set_attr(con["limitStrength"], 1)
+        mod.smart_set_attr(con["linearLimitX"], -1)
+        mod.smart_set_attr(con["linearLimitY"], -1)
+        mod.smart_set_attr(con["linearLimitZ"], -1)
+        mod.smart_set_attr(con["angularLimitX"], 0)
+        mod.smart_set_attr(con["angularLimitY"], 0)
+        mod.smart_set_attr(con["angularLimitZ"], 0)
 
     return con
 
@@ -565,15 +565,15 @@ def convert_to_orient(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rOrientConstraint"))
-        mod.set_attr(con["type"], c.OrientConstraint)
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["limitStrength"], 1)
-        mod.set_attr(con["linearLimitX"], 0)
-        mod.set_attr(con["linearLimitY"], 0)
-        mod.set_attr(con["linearLimitZ"], 0)
-        mod.set_attr(con["angularLimitX"], cmdx.radians(-1))
-        mod.set_attr(con["angularLimitY"], cmdx.radians(-1))
-        mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
+        mod.smart_set_attr(con["type"], c.OrientConstraint)
+        mod.smart_set_attr(con["limitEnabled"], True)
+        mod.smart_set_attr(con["limitStrength"], 1)
+        mod.smart_set_attr(con["linearLimitX"], 0)
+        mod.smart_set_attr(con["linearLimitY"], 0)
+        mod.smart_set_attr(con["linearLimitZ"], 0)
+        mod.smart_set_attr(con["angularLimitX"], cmdx.radians(-1))
+        mod.smart_set_attr(con["angularLimitY"], cmdx.radians(-1))
+        mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(-1))
 
     return con
 
@@ -609,15 +609,15 @@ def convert_to_hinge(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rHingeConstraint"))
-        mod.set_attr(con["type"], c.HingeConstraint)
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["limitStrength"], 1)
-        mod.set_attr(con["linearLimitX"], -1)
-        mod.set_attr(con["linearLimitY"], -1)
-        mod.set_attr(con["linearLimitZ"], -1)
-        mod.set_attr(con["angularLimitX"], cmdx.radians(45))
-        mod.set_attr(con["angularLimitY"], cmdx.radians(-1))
-        mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
+        mod.smart_set_attr(con["type"], c.HingeConstraint)
+        mod.smart_set_attr(con["limitEnabled"], True)
+        mod.smart_set_attr(con["limitStrength"], 1)
+        mod.smart_set_attr(con["linearLimitX"], -1)
+        mod.smart_set_attr(con["linearLimitY"], -1)
+        mod.smart_set_attr(con["linearLimitZ"], -1)
+        mod.smart_set_attr(con["angularLimitX"], cmdx.radians(45))
+        mod.smart_set_attr(con["angularLimitY"], cmdx.radians(-1))
+        mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(-1))
 
     reorient(con)
 
@@ -645,19 +645,19 @@ def convert_to_socket(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rSocketConstraint"))
-        mod.set_attr(con["type"], c.SocketConstraint)
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["limitStrength"], 1)
-        mod.set_attr(con["driveEnabled"], True)
-        mod.set_attr(con["driveStrength"], 1)
-        mod.set_attr(con["linearDriveStiffness"], 0)
-        mod.set_attr(con["linearDriveDamping"], 0)
-        mod.set_attr(con["linearLimitX"], -1)
-        mod.set_attr(con["linearLimitY"], -1)
-        mod.set_attr(con["linearLimitZ"], -1)
-        mod.set_attr(con["angularLimitX"], cmdx.radians(45))
-        mod.set_attr(con["angularLimitY"], cmdx.radians(45))
-        mod.set_attr(con["angularLimitZ"], cmdx.radians(45))
+        mod.smart_set_attr(con["type"], c.SocketConstraint)
+        mod.smart_set_attr(con["limitEnabled"], True)
+        mod.smart_set_attr(con["limitStrength"], 1)
+        mod.smart_set_attr(con["driveEnabled"], True)
+        mod.smart_set_attr(con["driveStrength"], 1)
+        mod.smart_set_attr(con["linearDriveStiffness"], 0)
+        mod.smart_set_attr(con["linearDriveDamping"], 0)
+        mod.smart_set_attr(con["linearLimitX"], -1)
+        mod.smart_set_attr(con["linearLimitY"], -1)
+        mod.smart_set_attr(con["linearLimitZ"], -1)
+        mod.smart_set_attr(con["angularLimitX"], cmdx.radians(45))
+        mod.smart_set_attr(con["angularLimitY"], cmdx.radians(45))
+        mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(45))
 
     return con
 
@@ -685,15 +685,15 @@ def convert_to_parent(con, opts=None):
 
         node = con.parent() if opts["standalone"] else con
         mod.rename(node, i__.unique_name("rParentConstraint"))
-        mod.set_attr(con["type"], c.ParentConstraint)
-        mod.set_attr(con["limitEnabled"], True)
-        mod.set_attr(con["limitStrength"], 1)
-        mod.set_attr(con["linearLimitX"], -1)
-        mod.set_attr(con["linearLimitY"], -1)
-        mod.set_attr(con["linearLimitZ"], -1)
-        mod.set_attr(con["angularLimitX"], cmdx.radians(-1))
-        mod.set_attr(con["angularLimitY"], cmdx.radians(-1))
-        mod.set_attr(con["angularLimitZ"], cmdx.radians(-1))
+        mod.smart_set_attr(con["type"], c.ParentConstraint)
+        mod.smart_set_attr(con["limitEnabled"], True)
+        mod.smart_set_attr(con["limitStrength"], 1)
+        mod.smart_set_attr(con["linearLimitX"], -1)
+        mod.smart_set_attr(con["linearLimitY"], -1)
+        mod.smart_set_attr(con["linearLimitZ"], -1)
+        mod.smart_set_attr(con["angularLimitX"], cmdx.radians(-1))
+        mod.smart_set_attr(con["angularLimitY"], cmdx.radians(-1))
+        mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(-1))
 
     return con
 
@@ -1081,8 +1081,23 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
             joint_orient = reference["jointOrient"].as_euler().as_quaternion()
             total_matrix = bake_joint_orient(total_matrix, joint_orient)
 
-        mod.connect(reference["matrix"], mult["matrixIn"][0])
-        mod.set_attr(mult["matrixIn"][1], total_matrix)
+        # The drive operates relative the parent rigid. But the parent
+        # rigid may not be the same as the Maya parent transform.
+        # So, generate a realtive matrix, taking offset parent matrix
+        # pivots and what not into account.
+        mod.connect(reference["worldMatrix"][0], mult["matrixIn"][0])
+
+        reference_parent = reference.parent()
+        if reference_parent is not None:
+            # You might think "hey, what about parentInverseMatrix!?"
+            # And you'd be surprised to find out that offsetParentParent
+            # is *excluded* from that matrix, so we need to physically
+            # reach out onto the actual parent to find its inverse matrix.
+            # Sigh..
+            mod.connect(reference_parent["worldInverseMatrix"][0],
+                        mult["matrixIn"][1])
+
+        # mod.set_attr(mult["matrixIn"][2], total_matrix)
         mod.connect(mult["matrixSum"], con["driveMatrix"])
 
     if opts["addUserAttributes"]:
@@ -1338,7 +1353,7 @@ def create_mimic(root, opts=None):
             mod.set_attr(root_reference["translate"], tm.translation())
             mod.set_attr(root_reference["rotate"], tm.rotation())
 
-    root_reference, ctrl, con = create_absolute_control(
+    root_reference, root_ctrl, root_con = create_absolute_control(
         root,
         reference=root_reference,
 
@@ -1346,12 +1361,15 @@ def create_mimic(root, opts=None):
         opts={
             "name": "rSoftPinConstraint",
             "addUserAttributes": False,
+            "defaults": {
+                "driveStrength": 1.0 if opts["addMultiplier"] else 0.0
+            }
         }
     )
 
-    ctrls = [ctrl]
+    ctrls = [root_ctrl]
     local_cons = []
-    world_cons = [con]
+    world_cons = [root_con]
     multipliers = []
 
     # As we generate the mimic hierarchy, keep track
@@ -1376,7 +1394,7 @@ def create_mimic(root, opts=None):
     )
 
     if opts["addUserAttributes"]:
-        proxies = i__.UserAttributes(con, root_reference)
+        proxies = i__.UserAttributes(root_con, root_reference)
         proxies.add_divider("Soft Pin")
 
         for attr, name, nice in pin_attributes:
@@ -1452,6 +1470,16 @@ def create_mimic(root, opts=None):
                     "addUserAttributes": False
                 })
 
+            if parent_reference is not None:
+                parent_ctrl = parent_reference.shape(type="rdControl")
+            else:
+                parent_ctrl = root_ctrl
+
+            # Forwards compatibility
+            with cmdx.DagModifier() as mod:
+                mod.connect(parent_ctrl["ragdollId"],
+                            ctrl["parentControl"])
+
             if opts["addUserAttributes"]:
                 proxies = i__.UserAttributes(con, reference)
                 proxies.add_divider("Pose")
@@ -1470,6 +1498,11 @@ def create_mimic(root, opts=None):
                     opts={
                         "name": "rSoftPinConstraint",
                         "addUserAttributes": False,
+                        "defaults": {
+                            "driveStrength": (
+                                1.0 if opts["addMultiplier"] else 0.0
+                            )
+                        }
                     }
                 )
 
@@ -1568,7 +1601,7 @@ def create_mimic(root, opts=None):
                             nice_name=False)
                 proxies.do_it()
 
-    if opts["cleanChannelBox"]:
+    if opts["cleanChannelBox"] and opts["addUserAttributes"]:
         with cmdx.DagModifier() as mod:
             for mult in multipliers:
                 mod.set_attr(mult["isHistoricallyInteresting"], False)

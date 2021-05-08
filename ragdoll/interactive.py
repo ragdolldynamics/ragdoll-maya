@@ -1216,7 +1216,7 @@ def create_passive_rigid(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_active_chain(selection=None, **opts):
-    links = selection or cmdx.selection(type="transform")
+    links = selection or cmdx.selection(type="dagNode")
 
     # This is no chain
     if len(links) < 2:
@@ -2507,6 +2507,9 @@ def _Arg(var, label=None, callback=None):
     optionvar = options.read(var)
     if optionvar is not None:
         var["initial"] = optionvar
+
+    # Used elsewhere
+    _ = var.pop("arg", var["name"])
 
     depends = var.pop("depends", [])
     for dependency in depends:

@@ -64,14 +64,9 @@ def test_character():
     # the Y-position should end up being the capsule radius
 
     # Account for compiler differences
-    if os.name == "posix":
-        assert_almost_equals(result["tx"].read(), -2.95, 2)
-        assert_almost_equals(result["ty"].read(), 1.00, 2)
-        assert_almost_equals(result["tz"].read(), -8.44, 2)
-    else:
-        assert_almost_equals(result["tx"].read(), -2.95, 2)
-        assert_almost_equals(result["ty"].read(), 1.00, 2)
-        assert_almost_equals(result["tz"].read(), -8.44, 2)
+    assert_almost_equals(result["tx"].read(), -2.9, 1)
+    assert_almost_equals(result["ty"].read(), 1.0, 1)
+    assert_almost_equals(result["tz"].read(), -8.4, 1)
 
 
 def manual():

@@ -400,7 +400,7 @@ def test_chain(**opts):
     hierarchy = create_joint_arm()
     a, b, c = map(str, hierarchy[:3])
     cmds.select(a, b, c)
-    assert_true(interactive.create_active_chain(selection=None, **opts))
+    assert_true(interactive.create_active_chain(**opts))
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
@@ -410,17 +410,13 @@ def test_chain(**opts):
 
 
 def test_active_chain_opt1_mesh():
-    test_active_chain(dynamicControlShapeType="Capsule")
-    test_active_chain(dynamicControlShapeType="Mesh")
+    test_active_chain(dynamicControlShapeType=c.CapsuleShape)
+    test_active_chain(dynamicControlShapeType=c.MeshShape)
 
 
 def test_active_chain_opt2_auto_blend():
     test_active_chain(dynamicControlAutoBlend=False)
     test_active_chain(dynamicControlAutoBlend=True)
-
-
-def test_active_chain_opt3_blend_method():
-    test_active_chain(dynamicControlBlendMethod="Each Control")
 
 
 def test_active_chain_opt4_auto_multiplier_off():
@@ -429,7 +425,7 @@ def test_active_chain_opt4_auto_multiplier_off():
 
 
 def test_chain_opt1_mesh():
-    test_chain(chainShapeType="Mesh")
+    test_chain(chainShapeType=c.MeshShape)
 
 
 def test_chain_opt2_draw_shaded():
@@ -438,8 +434,8 @@ def test_chain_opt2_draw_shaded():
 
 
 def test_chain_opt3_blend_method():
-    test_chain(chainBlendMethod="Stepped")
-    test_chain(chainBlendMethod="Smooth")
+    test_chain(chainBlendMethod=c.SteppedBlendMethod)
+    test_chain(chainBlendMethod=c.SmoothBlendMethod)
 
 
 def test_chain_opt4_auto_multiplier_off():
@@ -531,7 +527,7 @@ def test_select_shapes():
     cmds.select(upperarm.shape().path(),
                 lowerarm.shape().path(),
                 hand.shape().path())
-    interactive.create_active_chain()
+    assert_true(interactive.create_active_chain())
 
     _play(upperarm)
 

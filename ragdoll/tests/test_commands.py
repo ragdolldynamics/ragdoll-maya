@@ -56,8 +56,10 @@ def test_delete_all():
     # 1 scene, 4 rigids, 3 constraints, 1 multiplier
     assert_equals(result["deletedRagdollNodeCount"], 9)
 
-    # Scene node transform
-    assert_equals(result["deletedExclusiveNodeCount"], 1)
+    # (1) Scene node transform
+    # (3) multMatrix
+    # (3) composeMatrix
+    assert_equals(result["deletedExclusiveNodeCount"], 7)
 
     assert_equals(len(cmds.ls(type="rdRigid")), 0)
 
@@ -132,11 +134,83 @@ def test_scene_clean_passive():
 
 
 def test_convert_constraint():
-    pass
+    _new()
+
+    parent = cmdx.create_node("transform", name="parent")
+    child = cmdx.create_node("transform", name="child", parent=parent)
+
+    scene = commands.create_scene()
+    parent_rigid = commands.create_rigid(parent, scene)
+    child_rigid = commands.create_rigid(child, scene)
+
+    con = commands.point_constraint(parent_rigid, child_rigid)
+
+    def almost_equals(e1, e2):
+        assert_almost_equals(e1[0], e2[0], 4)
+        assert_almost_equals(e1[1], e2[1], 4)
+        assert_almost_equals(e1[2], e2[2], 4)
+
+    almost_equals(con["linearLimit"].as_vector(), (-1, -1, -1))
+    almost_equals(con["angularLimit"].as_euler(), cmdx.Euler(0, 0, 0))
+
+    commands.convert_to_parent(con)
+    al = cmdx.radians(-1)  # Angular Locked
+    almost_equals(con["linearLimit"].as_vector(), (-1, -1, -1))
+    almost_equals(con["angularLimit"].as_euler(), cmdx.Euler(al, al, al))
+
+    commands.convert_to_socket(con)
+    a45 = cmdx.radians(45)
+    almost_equals(con["linearLimit"].as_vector(), (-1, -1, -1))
+    almost_equals(con["angularLimit"].as_euler(), cmdx.Euler(a45, a45, a45))
 
 
 def test_edit_constraint_pivot():
-    pass
+    _new()
+
+    parent = cmdx.create_node("transform")
+    child = cmdx.create_node("transform", parent=parent)
+    parent["ty"] = 5.0
+    child["tx"] = 5.0
+
+    scene = commands.create_scene()
+    parent_rigid = commands.create_rigid(parent, scene, opts={"passive": True})
+    child_rigid = commands.create_rigid(child, scene)
+
+    con = commands.point_constraint(parent_rigid, child_rigid)
+
+    child["worldMatrix"][0].pull()
+
+    # Before
+    assert_almost_equals(parent_rigid["owty"].read(), 5.0, 2)
+    assert_almost_equals(child_rigid["owty"].read(), 5.0, 2)
+
+    _step(child_rigid, 30)
+
+    # Point constaint holds it in place
+    assert_almost_equals(parent_rigid["owty"].read(), 5.0, 2)
+    assert_almost_equals(child_rigid["owty"].read(), 5.0, 2)
+
+    cmdx.currentTime(scene["startTime"].as_time())
+    child["worldMatrix"][0].pull()
+
+    # Move pivot to parent
+    #
+    #  |<---------   |
+    #  o-------------o
+    #
+    pframe, cframe = commands.edit_constraint_frames(con)
+    pframe["tx"] = 0.0
+    cframe["tx"] = -5.0
+
+    _step(child_rigid, 30)
+
+    # o
+    #  \
+    #   \
+    #    \
+    #     o
+    assert_almost_equals(child_rigid["owtx"].read(), 3.0, 2)
+    assert_almost_equals(child_rigid["owty"].read(), 1.0, 2)
 
 
 def test_edit_shape():
@@ -145,7 +219,9 @@ def test_edit_shape():
 
 def test_convert_rigid():
     # Passive -> Active
+    # Passive -> Passive
     # Active -> Passive
+    # Active -> Active
     pass
 
 

@@ -61,12 +61,23 @@
     },
     "computeMass": {
         "name": "computeMass",
+        "arg": "computeMass",
         "type": "Boolean",
         "default": false,
         "help": "Use the volume of the shape to determine its mass. Use with caution, as large differences (10x or more) in mass amongst rigids that interact can cause instability."
     },
     "createRigidType": {
         "name": "createRigidType",
+        "arg": "createRigidType",
+        "label": "Rigid Type",
+        "type": "Enum",
+        "default": 0,
+        "items": ["Active", "Passive"],
+        "help": "How to solve this rigid.<br>- <b>Active</b>  : Simulate this node<br>- <b>Passive</b> : Animate this node"
+    },
+    "rigidDefaults": {
+        "name": "rigidDefaults",
+        "arg": "defaults",
         "label": "Rigid Type",
         "type": "Enum",
         "default": 0,
@@ -286,6 +297,14 @@
         "type": "Boolean",
         "default": true,
         "help": "Forward attributes from shape nodes to the main transform of the mimic."
+    },
+    "rigidAddUserAttributes": {
+        "name": "rigidAddUserAttributes",
+        "arg": "addUserAttributes",
+        "label": "Add User Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward attributes from rigid to the parent transform."
     },
     "mimicAddSoftPin": {
         "name": "mimicAddSoftPin",
@@ -692,6 +711,14 @@
     },
     "constraintStandalone": {
         "name": "constraintStandalone",
+        "label": "Standalone",
+        "type": "Boolean",
+        "default": false,
+        "help": "Give constraints their own transform at the root of the outliner."
+    },
+    "constraintAddUserAttributes": {
+        "name": "constraintAddUserAttributes",
+        "arg": "addUserAttributes",
         "label": "Standalone",
         "type": "Boolean",
         "default": false,

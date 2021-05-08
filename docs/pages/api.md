@@ -174,3 +174,4 @@ ragdoll.interactive.install()
 | RAGDOLL_PLUGIN            | Override absolute path to binary plugin, .mll on Windows .so on Linux. This overrides whatever is on `MAYA_PLUG_IN_PATH` | <nobr>`"ragdoll"`</nobr>
 | RAGDOLL_NO_STARTUP_DIALOG | Do not display the startup-dialog on first launch. | `False`
 | RAGDOLL_AUTO_SERIAL       | Automatically activate Ragdoll on install using this serial number. | Unset
+| RAGDOLL_INSTALL_ON_IDLE   | Restore plug-in load behavior pre-2021.04.30 | Unset

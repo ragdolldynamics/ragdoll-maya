@@ -1,8 +1,33 @@
-<img class="boxshadow no-max-height" src=https://user-images.githubusercontent.com/47274066/103476508-7d7e2780-4dae-11eb-86c9-c099a08f1314.png>
+<p style="text-align: center" ><img class="boxshadow no-max-height" width=400 src=https://user-images.githubusercontent.com/47274066/103476508-7d7e2780-4dae-11eb-86c9-c099a08f1314.png></p>
 
-Each instance of Ragdoll requires an individual licence.
+<br>
 
-Activation requires a `Product Key` which you get by either [purchasing a licence](https://ragdolldynamics.com/pricing) or by being really awesome.
+## Overview
+
+Let's cover the basics..
+
+- Ragdoll requires a commercial licence for commercial use
+- Ragdoll is free for non-commercial use
+- Ragdoll is free for testing within a commercial environment
+
+About activation..
+
+- A commercial licence is activated with a `Product Key`
+- Get a `Product Key` by [purchasing a licence](https://ragdolldynamics.com/pricing)
+- A non-commercial licence is activated automatically on launch
+- A non-commercial licence expires 30 days after activation
+
+<br>
+
+## Ragdoll Apprentice
+
+Once activated without a `Product Key`, Ragdoll enters "Apprentice Mode", and is limited to the following.
+
+- Non-commercial projects
+- Ragdoll Apprentice cannot be used in the same pipeline as commercial versions of Ragdoll
+- Ragdoll Apprentice uses its own file format for Maya scenes
+
+See the [Ragdoll EULA](https://files.ragdolldynamics.com/api/public/dl/ZmfQearE/EULA%20-%20Ragdoll%20Dynamics.pdf) for details.
 
 <br>
 
@@ -45,7 +70,7 @@ Scenes will still load just fine and nothing else in your scene is affected. Onc
 
 Possibly.
 
-Reach out to us if this is relevant to you. We're contemplating a permanently active "Personal Learning Edition" with limitations on what you can do commercially, similar to SideFX Houdini.
+Reach out to us if this is relevant to you. We're contemplating a permanently active "Apprentice Edition" with limitations on what you can do commercially, similar to SideFX Houdini Apprentice.
 
 <br>
 
@@ -53,7 +78,7 @@ Reach out to us if this is relevant to you. We're contemplating a permanently ac
 
 No.
 
-Files made with the trial version will appear scrambled with a commercial version. The trial version is however able to use files saved with a commercial version.
+Files made with Ragdoll Apprentice will appear scrambled with a commercial version. Ragdoll Apprentice is however able to read files saved with a commercial version.
 
 <br>
 
@@ -61,7 +86,7 @@ Files made with the trial version will appear scrambled with a commercial versio
 
 Yes.
 
-You can activate and use each Ragdoll licence on up to 3 machines. You just can't run a simulation on more than 1 at a time, that could lead to suspension of the licence.
+You can activate and use each Ragdoll licence on up to 3 machines. You just can't run a simulation on more than 1 machine per 1 licence at any given time, that could lead to suspension of the licence.
 
 <br>
 
@@ -83,7 +108,9 @@ Activation can happen either offline or online, online happening from within May
 
 #### What if someone steals my licence key?
 
-That key is all that is required to run Ragdoll on any machine. If someone takes your key and activates 3 of their own machines, you won't be able to activate it yourself. If this happens, email us with proof of ownership (e.g. via the email used when purchasing) and you'll get a new one.
+That key is all that is required to run Ragdoll on any machine. If someone takes your key and activates 3 of their own machines, you won't be able to activate it yourself.
+
+If this happens, email us with proof of ownership (e.g. via the email used when purchasing) and you'll get a new one.
 
 <br>
 
@@ -110,7 +137,7 @@ A connection is made in one of two separate occasions.
 1. Calling `ragdoll.licence.install()`
 2. On simulating any frame
 
-`install()` is typically called on Maya startup when the plug-in is loaded and menu is installed. You can disable this.
+`install()` is typically called when the plug-in is loaded and menu is installed. You can disable this.
 
 That is, Maya can open a scene with Ragdoll in it without making a connection to the internet if neither of these things happen. This means you can simulate on one machine, bake or otherwise disable the solver and send it off to a farm (e.g. local or cloud) without worrying about licences.
 

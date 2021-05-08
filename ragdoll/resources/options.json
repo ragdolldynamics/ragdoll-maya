@@ -280,6 +280,13 @@
         "default": true,
         "help": "Add a multiplier to the root of the newly created mimic."
     },
+    "mimicAddUserAttributes": {
+        "name": "mimicAddUserAttributes",
+        "label": "Add User Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward attributes from shape nodes to the main transform of the mimic."
+    },
     "mimicAddSoftPin": {
         "name": "mimicAddSoftPin",
         "label": "Add Soft Pin",
@@ -294,20 +301,12 @@
         "default": true,
         "help": "Add hard pin influences between the mimic and chain."
     },
-    "mimicAddUserAttributes": {
-        "name": "mimicAddUserAttributes",
-        "label": "Add User Attributes",
-        "type": "Boolean",
-        "default": true,
-        "help": "Forward attributes from shape nodes to the main transform of the mimic."
-    },
     "mimicFreezeTransform": {
         "name": "mimicFreezeTransform",
         "label": "Freeze Transform",
         "type": "Boolean",
-        "default": false,
-        "enabled": false,
-        "help": "Zero out translate and rotate values on the newly created mimic."
+        "default": true,
+        "help": "Zero out translate and rotate values on the newly created mimic. (Requires Maya 2020 and above)"
     },
     "mimicCleanChannelBox": {
         "name": "mimicCleanChannelBox",

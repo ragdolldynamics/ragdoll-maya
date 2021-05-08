@@ -204,6 +204,10 @@ with open(_resource("options.json")) as f:
     __.optionvars = json.load(f)
     __.optionvars.pop("#", None)  # Exclude comments
 
+    if cmdx.__maya_version__ < 2020:
+        __.optionvars["mimicFreezeTransform"]["enabled"] = False
+        __.optionvars["mimicFreezeTransform"]["default"] = False
+
 
 # Every menu item
 with open(_resource("menu.json")) as f:
@@ -1870,12 +1874,17 @@ def create_mimic(selection=None, **opts):
 
     opts = {
         "exclusive": _opt("mimicExclusive", opts),
-        "addMultiplier": _opt("mimicAddMultiplier", opts),
+        "addSoftPin": _opt("mimicAddSoftPin", opts),
+        "addHardPin": _opt("mimicAddHardPin", opts),
         "addUserAttributes": _opt("mimicAddUserAttributes", opts),
-        "addHardPin": _opt("mimicAddHardPin", opts),
-        "addHardPin": _opt("mimicAddHardPin", opts),
+        "addMultiplier": _opt("mimicAddMultiplier", opts),
         "freezeTransform": _opt("mimicFreezeTransform", opts),
+        "cleanChannelBox": _opt("mimicCleanChannelBox", opts),
     }
+
+    # Uses offsetParentMatrix
+    if cmdx.__maya_version__ < 2020:
+        opts["freezeTransform"] = False
 
     mimic = commands.create_mimic(root, opts=opts)
 

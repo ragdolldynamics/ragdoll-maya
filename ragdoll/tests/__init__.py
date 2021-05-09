@@ -43,7 +43,7 @@ def _step(node, steps=1):
 
 
 def _rewind(scene):
-    cmds.currentTime(scene["startTime"].as_time().value, updat=True)
+    cmds.currentTime(scene["startTime"].as_time().value, update=True)
 
 
 def _save():

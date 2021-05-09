@@ -1,12 +1,10 @@
-import os
-from maya import cmds
 from .. import commands
 from ..tools import character_tool
 from ..vendor import cmdx
 from . import _new, _play
 
 from nose.tools import (
-    assert_almost_equals,
+    assert_equals,
 )
 
 
@@ -63,10 +61,9 @@ def test_character():
     # The chain should now be lying down, which means
     # the Y-position should end up being the capsule radius
 
-    # Account for compiler differences
-    assert_almost_equals(result["tx"].read(), -2.9, 1)
-    assert_almost_equals(result["ty"].read(), 1.0, 1)
-    assert_almost_equals(result["tz"].read(), -8.4, 1)
+    assert_equals(str(result["tx"].read())[:4], "-2.8")
+    assert_equals(str(result["ty"].read())[:4], "1.00")
+    assert_equals(str(result["tz"].read())[:4], "-8.4")
 
 
 def manual():

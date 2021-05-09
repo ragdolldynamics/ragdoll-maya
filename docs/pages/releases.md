@@ -2,6 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
+- [2021.05.10 - Mimic](/releases/2021.05.10)
 - [2021.04.28 - Solver Upgrade](/releases/2021.04.28)
 - [2021.04.23 - No Limits](/releases/2021.04.23)
 - [2021.04.11 - JSON Import](/releases/2021.04.11)

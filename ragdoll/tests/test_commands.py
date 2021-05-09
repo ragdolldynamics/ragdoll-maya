@@ -2,7 +2,7 @@ from maya import cmds
 from .. import commands, constants
 from ..vendor import cmdx
 from ..tools import chain_tool
-from . import _play, _new, _step
+from . import _play, _new, _step, _rewind
 
 from nose.tools import (
     assert_equals,
@@ -218,11 +218,28 @@ def test_edit_shape():
 
 
 def test_convert_rigid():
-    # Passive -> Active
-    # Passive -> Passive
-    # Active -> Passive
+    _new()
+
+    tm = cmdx.create_node("transform")
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(tm, scene)
+
     # Active -> Active
-    pass
+    assert_equals(rigid["kinematic"].read(), False)
+    commands.convert_rigid(rigid, opts={"passive": False})
+    assert_equals(rigid["kinematic"].read(), False)
+
+    # Active -> Passive
+    commands.convert_rigid(rigid, opts={"passive": True})
+    assert_equals(rigid["kinematic"].read(), True)
+
+    # Passive -> Active
+    commands.convert_rigid(rigid, opts={"passive": False})
+    assert_equals(rigid["kinematic"].read(), False)
+
+    # Passive -> Passive
+    commands.convert_rigid(rigid, opts={"passive": False})
+    assert_equals(rigid["kinematic"].read(), False)
 
 
 def test_rotate_pivot():
@@ -248,7 +265,14 @@ def test_stable_no_gravity():
 
 def test_clear_initial_state():
     """Clear initial state snaps a simulation back into creation state"""
-    assert True
+    _new()
+
+    tm = cmdx.create_node("transform")
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(tm, scene)
+
+    _step(rigid, 10)
+    _rewind(scene)
 
 
 def test_animation_constraint_1():

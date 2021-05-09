@@ -42,6 +42,10 @@ def _step(node, steps=1):
         cmds.currentTime(ct + 1, update=True)
 
 
+def _rewind(scene):
+    cmds.currentTime(scene["startTime"].as_time().value, updat=True)
+
+
 def _save():
     __.fname = cmds.file("test.ma", rename=True)
     cmds.file(save=True, force=True)

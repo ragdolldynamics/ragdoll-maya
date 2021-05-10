@@ -941,11 +941,12 @@ class Loader(object):
         ]
 
         # Figure out options
-        for rigid in rigids:
-            Rigid = self.component(rigid["entity"], "RigidComponent")
-            rigid["options"].update({
-                "passive": Rigid["kinematic"],
-            })
+        if self._opts["preserveAttributes"]:
+            for rigid in rigids:
+                Rigid = self.component(rigid["entity"], "RigidComponent")
+                rigid["options"].update({
+                    "passive": Rigid["kinematic"],
+                })
 
         return rigids
 
@@ -1229,19 +1230,20 @@ class Loader(object):
         # |_______________________________________|
         #
         #
-        for chain in chains:
-            root = chain["rigids"][0]
+        if self._opts["preserveAttributes"]:
+            for chain in chains:
+                root = chain["rigids"][0]
 
-            RootRigid = self.component(root, "RigidComponent")
-            RootRigidUi = self.component(root, "RigidUIComponent")
+                RootRigid = self.component(root, "RigidComponent")
+                RootRigidUi = self.component(root, "RigidUIComponent")
 
-            chain["options"].update({
-                "passiveRoot": RootRigid["kinematic"],
-                "autoMultiplier": chain["constraintMultipliers"] != [],
-                "defaults": {
-                    "drawShaded": RootRigidUi["shaded"],
-                },
-            })
+                chain["options"].update({
+                    "passiveRoot": RootRigid["kinematic"],
+                    "autoMultiplier": chain["constraintMultipliers"] != [],
+                    "defaults": {
+                        "drawShaded": RootRigidUi["shaded"],
+                    },
+                })
 
         return chains
 

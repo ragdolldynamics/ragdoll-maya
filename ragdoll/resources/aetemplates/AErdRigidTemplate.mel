@@ -41,6 +41,7 @@ global proc AErdRigidTemplate(string $nodeName) {
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "sleepThreshold";
             editorTemplate -addControl "wakeCounter";
+            editorTemplate -addControl "shapeVertexLimit";
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
         editorTemplate -endLayout;

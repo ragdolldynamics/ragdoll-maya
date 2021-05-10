@@ -2508,6 +2508,7 @@ class ImportOptions(Options):
         search_replace = parser.find("importSearchAndReplace")
         use_selection = parser.find("importUseSelection")
         auto_namespace = self.parser.find("importAutoNamespace")
+        preserve_attributes = self.parser.find("importPreserveAttributes")
 
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
@@ -2515,6 +2516,7 @@ class ImportOptions(Options):
         use_selection.changed.connect(self.on_selection_changed)
         auto_namespace.changed.connect(self.on_selection_changed)
         search_replace.changed.connect(self.on_search_and_replace)
+        preserve_attributes.changed.connect(self.on_preserve_attributes)
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")
         default_thumbnail = QtGui.QPixmap(default_thumbnail)
@@ -2676,6 +2678,9 @@ class ImportOptions(Options):
 
     def on_search_and_replace(self):
         # It'll get fetched during reset
+        self.reset()
+
+    def on_preserve_attributes(self):
         self.reset()
 
     def on_path_changed(self):

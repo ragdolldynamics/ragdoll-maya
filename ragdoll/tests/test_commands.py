@@ -243,7 +243,27 @@ def test_convert_rigid():
 
 
 def test_rotate_pivot():
-    assert True
+    _new()
+
+    #   /\     +
+    #  /  \
+    #  \  /
+    #   \/
+    #
+    #
+    # ______
+
+    box, _ = map(cmdx.encode, cmds.polyCube())
+    box["ty"] = 10
+    box["rz", cmdx.Degrees] = 46
+    box["rotatePivotX"] = 5
+
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(box, scene)
+
+    _step(rigid, 30)
+
+    assert_almost_equals(box["tx"].read(), -4.0, 1)
 
 
 def test_rotate_order():
@@ -251,16 +271,98 @@ def test_rotate_order():
 
 
 def test_rotate_axis():
-    assert True
+    _new()
+
+    #   /\     +
+    #  /  \
+    #  \  /
+    #   \/
+    #
+    #
+    # ______
+
+    box, _ = map(cmdx.encode, cmds.polyCube())
+    box["ty"] = 10
+    box["rotateAxisX", cmdx.Degrees] = 46
+
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(box, scene)
+
+    _step(rigid, 30)
+
+    assert_almost_equals(box["tz"].read(), 0.5, 1)
 
 
 def test_joint_orient():
-    assert True
+    _new()
+
+    joint1 = cmdx.create_node("joint")
+    joint2 = cmdx.create_node("joint", parent=joint1)
+    joint3 = cmdx.create_node("joint", parent=joint2)
+    joint4 = cmdx.create_node("joint", parent=joint3)
+
+    joint1["ty"] = 5.0
+    joint2["tx"] = 5.0
+    joint3["tx"] = 5.0
+    joint4["tx"] = 5.0
+
+    joint1["jointOrient", cmdx.Degrees] = (0, 0, -45)
+    joint2["jointOrient", cmdx.Degrees] = (0, 0, 90)
+    joint3["jointOrient", cmdx.Degrees] = (0, 0, -45)
+
+    scene = commands.create_scene()
+    scene["gravity"] = (0, 0, 0)
+
+    parent_rigid = None
+    for joint in (joint1, joint2, joint3, joint4):
+        rigid = commands.create_rigid(joint, scene)
+
+        if parent_rigid:
+            commands.socket_constraint(parent_rigid, rigid)
+
+        parent_rigid = rigid
+
+    # Simulation doesn't change anything, because gravity is off
+    _step(rigid, 10)
+
+    assert_almost_equals(joint1["jointOrientZ", cmdx.Degrees].read(), -45, 3)
+    assert_almost_equals(joint1["rx", cmdx.Degrees].read(), 0, 3)
 
 
 def test_stable_no_gravity():
     """Without gravity and contacts, a constrained hierarchy does not move"""
-    assert True
+    _new()
+
+    joint1 = cmdx.create_node("joint")
+    joint2 = cmdx.create_node("joint", parent=joint1)
+    joint3 = cmdx.create_node("joint", parent=joint2)
+    joint4 = cmdx.create_node("joint", parent=joint3)
+
+    joint1["ty"] = 5.0
+    joint2["tx"] = 5.0
+    joint3["tx"] = 5.0
+    joint4["tx"] = 5.0
+
+    joint1["jointOrient", cmdx.Degrees] = (0, 0, -45)
+    joint2["jointOrient", cmdx.Degrees] = (0, 0, 90)
+    joint3["jointOrient", cmdx.Degrees] = (0, 0, -45)
+
+    scene = commands.create_scene()
+    scene["gravity"] = (0, 0, 0)
+
+    parent_rigid = None
+    for joint in (joint1, joint2, joint3, joint4):
+        rigid = commands.create_rigid(joint, scene)
+
+        if parent_rigid:
+            commands.socket_constraint(parent_rigid, rigid)
+
+        parent_rigid = rigid
+
+    # Simulation doesn't change anything, because gravity is off
+    _step(rigid, 100)
+
+    assert_almost_equals(joint1["tx"].read(), 0.0, 3)
 
 
 def test_clear_initial_state():
@@ -268,11 +370,28 @@ def test_clear_initial_state():
     _new()
 
     tm = cmdx.create_node("transform")
+    tm["ty"] = 10.0
     scene = commands.create_scene()
     rigid = commands.create_rigid(tm, scene)
 
     _step(rigid, 10)
     _rewind(scene)
+
+    assert_almost_equals(tm["tx"].read(), 0.0, 3)
+    assert_almost_equals(tm["ty"].read(), 10.0, 3)
+
+    tm["tx"] = 5.0
+    commands.set_initial_state(rigids=[rigid])
+
+    _step(rigid, 10)
+
+    assert_almost_equals(tm["tx"].read(), 5.0, 3)
+
+    _rewind(scene)
+
+    # This should immediately snap the object back to the creation matrix
+    commands.clear_initial_state(rigids=[rigid])
+    assert_almost_equals(tm["tx"].read(), 0.0, 3)
 
 
 def test_animation_constraint_1():

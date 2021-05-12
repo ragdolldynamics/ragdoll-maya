@@ -3042,7 +3042,7 @@ class Plug(object):
 
     def asEulerRotation(self, order=kXYZ, time=None):
         value = self.read(time=time)
-        return om.MEulerRotation(value, order)
+        return Euler(om.MEulerRotation(value, order))
 
     asEuler = asEulerRotation
 

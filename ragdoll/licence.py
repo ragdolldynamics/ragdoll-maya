@@ -1,5 +1,6 @@
 """Ragdoll Licence API"""
 
+import os
 from maya import cmds
 import logging
 
@@ -11,6 +12,7 @@ STATUS_INET = 4                # Connection to the server failed.
 STATUS_INET_DELAYED = 21       # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5               # Maximum number of activations reached
 STATUS_TRIAL_EXPIRED = 30      # Maximum number of activations reached
+STATUS_NO_FREE_LEASES = 5        # Maximum number of leases reached
 
 log = logging.getLogger("ragdoll")
 
@@ -25,10 +27,66 @@ def install(key=None):
 
     """
 
+    if os.getenv("RAGDOLL_FLOATING"):
+        _install_floating()
+    else:
+        _install_nodelocked(key)
+
+
+def _parse_environment():
+    floating = os.getenv("RAGDOLL_FLOATING")
+
+    ip, port = (floating.rsplit(":") + ["13"])[:2]
+
+    try:
+        port = int(port)
+    except ValueError:
+        raise ValueError(
+            "RAGDOLL_FLOATING misformatted '%s', should be <ip>:<port>, "
+            "e.g. 127.0.0.1:13" % floating
+        )
+
+    return ip, port
+
+
+def _install_floating():
+    ip, port = _parse_environment()
+    status = cmds.ragdollLicence(initFloating=True)
+
+    if status == STATUS_OK:
+        log.debug("Successfully initialised Ragdoll licence.")
+    else:
+        raise RuntimeError(
+            "Failed to initialise floating licence, error code '%d'"
+            % status
+        )
+
+    status = request_lease(ip, port)
+
+    if status == STATUS_OK:
+        log.debug("Successfully leased a Ragdoll licence.")
+
+    elif status == STATUS_INET:
+        log.warning("Could not connect to licence server")
+
+    else:
+        log.warning(
+            "Failed to lease floating licence, error code '%d'"
+            % status
+        )
+
+    return status
+
+
+def _install_nodelocked(key=None):
     status = cmds.ragdollLicence(init=True)
 
     if status == STATUS_OK:
         log.debug("Successfully initialised Ragdoll licence.")
+
+        if key is not None and not cmds.ragdollLicence(isActivated=True):
+            log.info("Automatically activating Ragdoll licence")
+            return activate(key)
 
     elif status == STATUS_INET or status == STATUS_INET_DELAYED:
         log.warning(
@@ -61,16 +119,40 @@ def install(key=None):
             "this is a bug. Tell someone."
         )
 
-    if key is not None and not cmds.ragdollLicence(isActivated=True):
-        log.info("Automatically activating Ragdoll licence")
-        return activate(key)
-
     return status
 
 
 def current_key():
     """Return the currently activated key, if any"""
     return cmds.ragdollLicence(serial=True)
+
+
+def request_lease(ip="127.0.0.1", port=13):
+    """Request a licence from `ip` on `port`"""
+    status = cmds.ragdollLicence(requestLease=(ip, port))
+
+    if status == STATUS_OK:
+        log.debug("Successfully acquired a lease")
+
+    elif status == STATUS_NO_FREE_LEASES:
+        log.warning("All available licences are occupied")
+
+    else:
+        log.warning("Failed to acquire a lease")
+
+    return status
+
+
+def drop_lease():
+    status = cmds.ragdollLicence(dropLease=True)
+
+    if status == STATUS_OK:
+        log.debug("Successfully dropped lease")
+
+    else:
+        log.warning("Failed to drop lease")
+
+    return status
 
 
 def activate(key):
@@ -204,7 +286,10 @@ def data():
         edition="Enterprise",
 
         # Node-locked or floating
-        floating=False,
+        isFloating=cmds.ragdollLicence(isFloating=True, query=True),
+
+        # Is a licence currently leased?
+        hasLease=cmds.ragdollLicence(hasLease=True, query=True),
 
         # Is the current licence activated?
         isActivated=cmds.ragdollLicence(isActivated=True, query=True),

@@ -1361,7 +1361,7 @@ class SplashScreen(QtWidgets.QDialog):
 
     """
 
-    show_again_toggled = QtCore.Signal(bool)
+    instance = None
 
     def __init__(self, parent=None):
         super(SplashScreen, self).__init__(parent)
@@ -1390,6 +1390,12 @@ class SplashScreen(QtWidgets.QDialog):
             "activateOffline": QtWidgets.QPushButton("Activate Offline"),
             "deactivateOffline": QtWidgets.QPushButton("Deactivate Offline"),
             "continue": QtWidgets.QPushButton("Continue"),
+
+            # Floating licence widgets
+            "lease": QtWidgets.QPushButton("Request Lease"),
+            "drop": QtWidgets.QPushButton("Drop Lease"),
+            "ip": QtWidgets.QLineEdit(),
+            "port": QtWidgets.QLineEdit(),
         }
 
         for name, obj in widgets.items():
@@ -1435,9 +1441,13 @@ class SplashScreen(QtWidgets.QDialog):
 
         layout = QtWidgets.QHBoxLayout(panels["serial"])
         layout.addWidget(widgets["serial"])
+        layout.addWidget(widgets["ip"])
+        layout.addWidget(widgets["port"])
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QHBoxLayout(panels["buttons"])
+        layout.addWidget(widgets["lease"])
+        layout.addWidget(widgets["drop"])
         layout.addWidget(widgets["activate"])
         layout.addWidget(widgets["deactivate"])
         layout.addWidget(widgets["activateOffline"])
@@ -1448,8 +1458,8 @@ class SplashScreen(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(panels["body"])
         layout.addWidget(panels["status"])
         layout.addWidget(panels["serial"])
-        layout.addWidget(panels["buttons"])
         layout.addWidget(QtWidgets.QWidget(), 1)
+        layout.addWidget(panels["buttons"])
         layout.setSpacing(px(10))
         layout.setContentsMargins(px(10), px(10), px(10), px(10))
 
@@ -1460,9 +1470,17 @@ class SplashScreen(QtWidgets.QDialog):
 
         widgets["serial"].textChanged.connect(self.on_serial_changed)
         widgets["activate"].clicked.connect(self.on_activate_clicked)
+        widgets["lease"].clicked.connect(self.on_lease_clicked)
+        widgets["drop"].clicked.connect(self.on_drop_clicked)
         widgets["deactivate"].clicked.connect(self.on_deactivate_clicked)
         widgets["continue"].clicked.connect(self.on_continue_clicked)
 
+        widgets["ip"].hide()
+        widgets["ip"].setEnabled(False)
+        widgets["port"].hide()
+        widgets["port"].setEnabled(False)
+        widgets["lease"].hide()
+        widgets["drop"].hide()
         widgets["deactivate"].hide()
         widgets["deactivateOffline"].hide()
 
@@ -1474,8 +1492,6 @@ class SplashScreen(QtWidgets.QDialog):
         # Free-floating
         panels["body"].show()
         panels["body"].raise_()
-        # widgets["close"].show()
-        # widgets["close"].raise_()
 
         widgets["close"].clicked.connect(self.close)
 
@@ -1497,6 +1513,10 @@ class SplashScreen(QtWidgets.QDialog):
         self.on_serial_changed()
         self.activateWindow()
 
+        # For uninstall
+        SplashScreen.instance = self
+        __.widgets[self.windowTitle()] = self
+
     def refresh(self):
         data = licence.data()
 
@@ -1507,7 +1527,10 @@ class SplashScreen(QtWidgets.QDialog):
             self._widgets["serial"].setText("")
             self._widgets["serial"].setPlaceholderText(data["key"])
 
-        if data["isActivated"]:
+        if os.getenv("RAGDOLL_FLOATING"):
+            self.on_floating(data)
+
+        elif data["isActivated"]:
             self.on_activated()
 
         elif data["isTrial"]:
@@ -1575,6 +1598,14 @@ class SplashScreen(QtWidgets.QDialog):
         if status == licence.STATUS_OK:
             self.refresh()
 
+    def on_lease_clicked(self):
+        licence.request_lease()
+        self.refresh()
+
+    def on_drop_clicked(self):
+        licence.drop_lease()
+        self.refresh()
+
     def on_deactivate_clicked(self):
         msgbox = QtWidgets.QMessageBox()
         msgbox.setWindowTitle("Deactivate Ragdoll")
@@ -1606,6 +1637,19 @@ class SplashScreen(QtWidgets.QDialog):
         datestring += datetime.timedelta(days=trial_days)
         datestring = datestring.strftime("%d %B %Y")
         return datestring
+
+    def _hide_all(self):
+        self._widgets["activate"].hide()
+        self._widgets["activateOffline"].hide()
+        self._widgets["deactivate"].hide()
+        self._widgets["deactivateOffline"].hide()
+        self._widgets["serial"].hide()
+        self._widgets["ip"].hide()
+        self._widgets["port"].hide()
+        self._widgets["lease"].hide()
+        self._widgets["drop"].hide()
+        self._widgets["activate"].hide()
+        self._widgets["deactivate"].hide()
 
     def on_trial(self, trial_days):
         log.info("Ragdoll is in trial mode")
@@ -1704,6 +1748,43 @@ class SplashScreen(QtWidgets.QDialog):
 
         offline = self._widgets["activateOffline"]
         offline.setText("Deactivate Offline")
+
+    def on_floating(self, data):
+        log.info("Ragdoll is floating")
+
+        self._hide_all()
+
+        try:
+            ip, port = licence._parse_environment()
+        except (ValueError, RuntimeError):
+            ip, port = "unknown", 0
+
+        self._widgets["ip"].setText(ip)
+        self._widgets["port"].setText(str(port))
+        self._widgets["ip"].show()
+        self._widgets["port"].show()
+
+        if data["hasLease"]:
+            icon = "mode_green.png"
+            tooltip = "Enterprise is active"
+            self._widgets["drop"].show()
+        else:
+            icon = "mode_red.png"
+            tooltip = "Enterprise is inactive"
+            self._widgets["lease"].show()
+
+        status = _resource("ui", icon)
+        status = QtGui.QPixmap(status)
+        status = status.scaledToWidth(px(15), QtCore.Qt.SmoothTransformation)
+
+        icon = self._widgets["statusActivated"]
+        icon.setPixmap(status)
+        icon.setToolTip(tooltip)
+
+        self._widgets["statusMessage"].setText(
+            "Ragdoll - %s - Enterprise Edition (floating)"
+            % __.version_str
+        )
 
     def on_deactivated(self):
         log.info("Ragdoll is deactivated")

@@ -3,7 +3,7 @@ SplashScreen, SplashScreen:hover, SplashScreen:pressed {
     border: none;
 }
 
-SplashScreen #serial {
+SplashScreen #serial, SplashScreen #ip, SplashScreen #port {
     padding: 7px;
 }
 

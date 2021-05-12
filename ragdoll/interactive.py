@@ -221,8 +221,8 @@ def install():
 
     install_logger()
     install_plugin()
-    licence.install(c.RAGDOLL_AUTO_SERIAL)
     options.install()
+    licence.install(c.RAGDOLL_AUTO_SERIAL)
 
     if not _is_standalone():
         install_callbacks()
@@ -341,7 +341,9 @@ def _on_cycle(clientData=None):
 
 
 def _on_licence_expired(clientData=None):
-    welcome_user()
+    # Careful not to immediately call Qt,
+    # as it may put Maya into an infinite sleep.
+    cmds.evalDeferred(welcome_user)
 
 
 def install_callbacks():
@@ -2386,6 +2388,9 @@ def repeatable(func):
 
 
 def welcome_user(*args):
+    if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):
+        return ui.SplashScreen.instance.show()
+
     parent = ui.MayaWindow()
     win = ui.SplashScreen(parent)
     win.show()

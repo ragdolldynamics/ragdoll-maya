@@ -277,8 +277,8 @@ def create(root,
     # Forward some convenience attributes
     multiplier_attrs = i__.UserAttributes(mult, root)
     multiplier_attrs.add("driveStrength",
-                         long_name="strengthMultiplier",
-                         nice_name="Strength Multiplier")
+                         long_name="globalStrength",
+                         nice_name="Global Strength")
     multiplier_attrs.do_it()
 
     if control:

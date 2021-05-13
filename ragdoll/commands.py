@@ -277,8 +277,10 @@ def create_constraint(parent, child, transform=None, opts=None):
         "%s must be a rigid or scene" % parent.type()
     )
 
-    opts = opts or {}
-    opts = dict({"name": "rConstraint"}, **opts)
+    opts = dict({
+        "name": "rConstraint",
+        "outlinerStyle": c.RagdollStyle,
+    }, **(opts or {}))
 
     if parent.type() == "rdScene":
         scene = parent
@@ -295,6 +297,17 @@ def create_constraint(parent, child, transform=None, opts=None):
     name = i__.unique_name(opts["name"])
 
     with cmdx.DagModifier() as mod:
+        if not transform and opts["outlinerStyle"] != c.RagdollStyle:
+            if opts["outlinerStyle"] == c.MayaConstraintStyle:
+                transform = mod.create_node("transform",
+                                            name=name,
+                                            parent=child.parent())
+
+            if opts["outlinerStyle"] == c.nConstraintStyle:
+                transform = mod.create_node("transform", name=name)
+
+            name = i__.shape_name(name)
+
         transform = transform or child.parent()
         con = _rdconstraint(mod, name, parent=transform)
 
@@ -432,11 +445,12 @@ def point_constraint(parent, child, opts=None):
 
     # Setup default values
     opts = dict({
+        "name": "rPointConstraint",
         "maintainOffset": True,
-        "standalone": False,
+        "outlinerStyle": c.RagdollStyle,
     }, **opts)
 
-    con = create_constraint(parent, child)
+    con = create_constraint(parent, child, opts=opts)
     convert_to_point(con, opts=opts)
     return con
 
@@ -450,11 +464,12 @@ def orient_constraint(parent, child, opts=None):
 
     # Setup default values
     opts = dict({
+        "name": "rOrientConstraint",
         "maintainOffset": True,
-        "standalone": False,
+        "outlinerStyle": c.RagdollStyle,
     }, **opts)
 
-    con = create_constraint(parent, child)
+    con = create_constraint(parent, child, opts=opts)
     convert_to_orient(con, opts=opts)
     return con
 
@@ -468,11 +483,12 @@ def parent_constraint(parent, child, opts=None):
 
     # Setup default values
     opts = dict({
+        "name": "rParentConstraint",
         "maintainOffset": True,
-        "standalone": False,
+        "outlinerStyle": c.RagdollStyle,
     }, **opts)
 
-    con = create_constraint(parent, child)
+    con = create_constraint(parent, child, opts=opts)
     convert_to_parent(con, opts=opts)
     return con
 
@@ -486,11 +502,12 @@ def hinge_constraint(parent, child, opts=None):
 
     # Setup default values
     opts = dict({
+        "name": "rHingeConstraint",
         "maintainOffset": True,
-        "standalone": False,
+        "outlinerStyle": c.RagdollStyle,
     }, **opts)
 
-    con = create_constraint(parent, child)
+    con = create_constraint(parent, child, opts=opts)
     convert_to_hinge(con, opts=opts)
     return con
 
@@ -504,11 +521,12 @@ def socket_constraint(parent, child, opts=None):
 
     # Setup default values
     opts = dict({
+        "name": "rSocketConstraint",
         "maintainOffset": True,
-        "standalone": False,
+        "outlinerStyle": c.RagdollStyle,
     }, **opts)
 
-    con = create_constraint(parent, child)
+    con = create_constraint(parent, child, opts=opts)
     convert_to_socket(con, opts=opts)
     return con
 
@@ -523,7 +541,6 @@ def convert_to_point(con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "standalone": False,
     }, **opts)
 
     if isinstance(con, i__.string_types):
@@ -532,17 +549,25 @@ def convert_to_point(con, opts=None):
     with cmdx.DagModifier() as mod:
         _reset_constraint(mod, con, opts=opts)
 
-        node = con.parent() if opts["standalone"] else con
-        mod.rename(node, i__.unique_name("rPointConstraint"))
         mod.smart_set_attr(con["type"], c.PointConstraint)
         mod.smart_set_attr(con["limitEnabled"], True)
         mod.smart_set_attr(con["limitStrength"], 1)
-        mod.smart_set_attr(con["linearLimitX"], -1)
-        mod.smart_set_attr(con["linearLimitY"], -1)
-        mod.smart_set_attr(con["linearLimitZ"], -1)
         mod.smart_set_attr(con["angularLimitX"], 0)
         mod.smart_set_attr(con["angularLimitY"], 0)
         mod.smart_set_attr(con["angularLimitZ"], 0)
+
+        if opts["maintainOffset"]:
+            # Hard
+            mod.smart_set_attr(con["linearLimitX"], -1)
+            mod.smart_set_attr(con["linearLimitY"], -1)
+            mod.smart_set_attr(con["linearLimitZ"], -1)
+        else:
+            # Soft
+            mod.smart_set_attr(con["disableCollision"], False)
+            mod.smart_set_attr(con["limitStrength"], 0.01)
+            mod.smart_set_attr(con["linearLimitX"], 0.001)
+            mod.smart_set_attr(con["linearLimitY"], 0.001)
+            mod.smart_set_attr(con["linearLimitZ"], 0.001)
 
     return con
 
@@ -557,7 +582,6 @@ def convert_to_orient(con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "standalone": False,
     }, **opts)
 
     if isinstance(con, i__.string_types):
@@ -566,8 +590,6 @@ def convert_to_orient(con, opts=None):
     with cmdx.DagModifier() as mod:
         _reset_constraint(mod, con, opts=opts)
 
-        node = con.parent() if opts["standalone"] else con
-        mod.rename(node, i__.unique_name("rOrientConstraint"))
         mod.smart_set_attr(con["type"], c.OrientConstraint)
         mod.smart_set_attr(con["limitEnabled"], True)
         mod.smart_set_attr(con["limitStrength"], 1)
@@ -591,7 +613,6 @@ def convert_to_hinge(con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "standalone": False,
     }, **opts)
 
     if isinstance(con, i__.string_types):
@@ -610,17 +631,25 @@ def convert_to_hinge(con, opts=None):
     with cmdx.DagModifier() as mod:
         _reset_constraint(mod, con, opts=opts)
 
-        node = con.parent() if opts["standalone"] else con
-        mod.rename(node, i__.unique_name("rHingeConstraint"))
         mod.smart_set_attr(con["type"], c.HingeConstraint)
         mod.smart_set_attr(con["limitEnabled"], True)
         mod.smart_set_attr(con["limitStrength"], 1)
-        mod.smart_set_attr(con["linearLimitX"], -1)
-        mod.smart_set_attr(con["linearLimitY"], -1)
-        mod.smart_set_attr(con["linearLimitZ"], -1)
         mod.smart_set_attr(con["angularLimitX"], cmdx.radians(45))
         mod.smart_set_attr(con["angularLimitY"], cmdx.radians(-1))
         mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(-1))
+
+        if opts["maintainOffset"]:
+            # Hard
+            mod.smart_set_attr(con["linearLimitX"], -1)
+            mod.smart_set_attr(con["linearLimitY"], -1)
+            mod.smart_set_attr(con["linearLimitZ"], -1)
+        else:
+            # Soft
+            mod.smart_set_attr(con["disableCollision"], False)
+            mod.smart_set_attr(con["limitStrength"], 0.01)
+            mod.smart_set_attr(con["linearLimitX"], 0.001)
+            mod.smart_set_attr(con["linearLimitY"], 0.001)
+            mod.smart_set_attr(con["linearLimitZ"], 0.001)
 
     reorient(con)
 
@@ -637,7 +666,6 @@ def convert_to_socket(con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "standalone": False,
     }, **opts)
 
     if isinstance(con, i__.string_types):
@@ -646,8 +674,6 @@ def convert_to_socket(con, opts=None):
     with cmdx.DagModifier() as mod:
         _reset_constraint(mod, con, opts=opts)
 
-        node = con.parent() if opts["standalone"] else con
-        mod.rename(node, i__.unique_name("rSocketConstraint"))
         mod.smart_set_attr(con["type"], c.SocketConstraint)
         mod.smart_set_attr(con["limitEnabled"], True)
         mod.smart_set_attr(con["limitStrength"], 1)
@@ -655,12 +681,22 @@ def convert_to_socket(con, opts=None):
         mod.smart_set_attr(con["driveStrength"], 1)
         mod.smart_set_attr(con["linearDriveStiffness"], 0)
         mod.smart_set_attr(con["linearDriveDamping"], 0)
-        mod.smart_set_attr(con["linearLimitX"], -1)
-        mod.smart_set_attr(con["linearLimitY"], -1)
-        mod.smart_set_attr(con["linearLimitZ"], -1)
         mod.smart_set_attr(con["angularLimitX"], cmdx.radians(45))
         mod.smart_set_attr(con["angularLimitY"], cmdx.radians(45))
         mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(45))
+
+        if opts["maintainOffset"]:
+            # Hard
+            mod.smart_set_attr(con["linearLimitX"], -1)
+            mod.smart_set_attr(con["linearLimitY"], -1)
+            mod.smart_set_attr(con["linearLimitZ"], -1)
+        else:
+            # Soft
+            mod.smart_set_attr(con["disableCollision"], False)
+            mod.smart_set_attr(con["limitStrength"], 0.01)
+            mod.smart_set_attr(con["linearLimitX"], 0.001)
+            mod.smart_set_attr(con["linearLimitY"], 0.001)
+            mod.smart_set_attr(con["linearLimitZ"], 0.001)
 
     return con
 
@@ -677,7 +713,6 @@ def convert_to_parent(con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "standalone": False,
     }, **opts)
 
     if isinstance(con, i__.string_types):
@@ -686,17 +721,25 @@ def convert_to_parent(con, opts=None):
     with cmdx.DagModifier() as mod:
         _reset_constraint(mod, con, opts=opts)
 
-        node = con.parent() if opts["standalone"] else con
-        mod.rename(node, i__.unique_name("rParentConstraint"))
         mod.smart_set_attr(con["type"], c.ParentConstraint)
         mod.smart_set_attr(con["limitEnabled"], True)
         mod.smart_set_attr(con["limitStrength"], 1)
-        mod.smart_set_attr(con["linearLimitX"], -1)
-        mod.smart_set_attr(con["linearLimitY"], -1)
-        mod.smart_set_attr(con["linearLimitZ"], -1)
         mod.smart_set_attr(con["angularLimitX"], cmdx.radians(-1))
         mod.smart_set_attr(con["angularLimitY"], cmdx.radians(-1))
         mod.smart_set_attr(con["angularLimitZ"], cmdx.radians(-1))
+
+        if opts["maintainOffset"]:
+            # Hard
+            mod.smart_set_attr(con["linearLimitX"], -1)
+            mod.smart_set_attr(con["linearLimitY"], -1)
+            mod.smart_set_attr(con["linearLimitZ"], -1)
+        else:
+            # Soft
+            mod.smart_set_attr(con["disableCollision"], False)
+            mod.smart_set_attr(con["limitStrength"], 0.01)
+            mod.smart_set_attr(con["linearLimitX"], 0.001)
+            mod.smart_set_attr(con["linearLimitY"], 0.001)
+            mod.smart_set_attr(con["linearLimitZ"], 0.001)
 
     return con
 
@@ -1081,7 +1124,7 @@ def create_relative_control(child_rigid, parent_rigid, reference, opts=None):
         total_matrix = parent_matrix * parent_rigid_matrix
 
         if "jointOrient" in reference:
-            joint_orient = reference["jointOrient"].as_euler().as_quaternion()
+            joint_orient = reference["jointOrient"].as_quaternion()
             total_matrix = bake_joint_orient(total_matrix, joint_orient)
 
         # The drive operates relative the parent rigid. But the parent
@@ -1282,6 +1325,9 @@ def create_mimic(root, opts=None):
         # Add local and world multipliers
         "addMultiplier": True,
 
+        # Transforms for simplicity, joints for flexibility and IK
+        "nodeType": "transform",
+
         # Add user attributes
         "addUserAttributes": True,
 
@@ -1347,10 +1393,10 @@ def create_mimic(root, opts=None):
         tm = root.transform(cmdx.sWorld)
         transform = root.parent()
         name = make_name(transform.name())
-        root_reference = mod.create_node("transform", name=name)
+        root_reference = mod.create_node(opts["nodeType"], name=name)
         mod.set_keyable(root_reference["scale"], False)
 
-        if opts["freezeTransform"]:
+        if opts["freezeTransform"] and opts["nodeType"] != c.Joint:
             freeze_transform(tm, root_reference)
         else:
             mod.set_attr(root_reference["translate"], tm.translation())
@@ -1455,11 +1501,11 @@ def create_mimic(root, opts=None):
 
                 with cmdx.DagModifier() as mod:
                     name = make_name(transform.name())
-                    reference = mod.create_node("transform",
+                    reference = mod.create_node(opts["nodeType"],
                                                 name=name,
                                                 parent=parent_reference)
 
-                    if opts["freezeTransform"]:
+                    if opts["freezeTransform"] and opts["nodeType"] != c.Joint:
                         freeze_transform(tm, reference)
                     else:
                         mod.set_attr(reference["translate"], tm.translation())
@@ -1611,6 +1657,45 @@ def create_mimic(root, opts=None):
 
             for con in world_cons + local_cons:
                 mod.set_attr(con["isHistoricallyInteresting"], False)
+
+    if opts["nodeType"] == c.Joint:
+        with cmdx.DagModifier() as mod:
+            for rigid, reference in rigid_to_reference.items():
+
+                # Move rotation to jointOrient
+                mod.set_attr(reference["jointOrient"],
+                             reference["rotate"].as_euler())
+                mod.set_attr(reference["rotate"], (0, 0, 0))
+
+                # Find tip
+                if reference.child(type=reference.type()):
+                    continue
+
+                # Extend tip joints, for IK
+                name = reference.name(namespace=False) + "Tip"
+                tip = mod.create_node(opts["nodeType"],
+                                      name=name,
+                                      parent=reference)
+
+                # We can't simply `["tx"] = length`
+                # since that would assume joints have their
+                # length in the X-axis which is common but not
+                # guaranteed. Instead, we'll build on what is
+                # already established for the rigid body shape
+                offset = rigid["shapeOffset"].as_vector()
+                rotate = rigid["shapeRotation"].as_euler()
+
+                # Move center to end
+                #  _________________
+                # /        o------>o\
+                # \_________________/
+                #
+                offset.x *= 2
+                offset.y *= 2
+                offset.z *= 2
+
+                tm = cmdx.Tm(translate=offset, rotate=rotate)
+                mod.set_attr(tip["translate"], tm.translation())
 
     return root_reference
 

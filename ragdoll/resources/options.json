@@ -262,13 +262,19 @@
         "default": 1.0,
         "help": "Capsule radius, how thick of a muscle to make."
     },
-
     "initialStateUseSelection": {
         "name": "initialStateUseSelection",
         "label": "Use Selection",
         "type": "Boolean",
         "default": true,
         "help": "Clear initial state on selection only, or everything in the related scene."
+    },
+    "selectUseSelection": {
+        "name": "selectUseSelection",
+        "label": "Use Selection",
+        "type": "Boolean",
+        "default": false,
+        "help": "Filter current selection by type. For example, with an entire hierarchy selected, remove anything that isn't a 'rdRigid' node."
     },
 
 
@@ -333,6 +339,14 @@
         "type": "Boolean",
         "default": true,
         "help": "Hide shape nodes from the channel box, leaving only the attributes on the transform node present."
+    },
+    "mimicNodeType": {
+        "name": "mimicNodeType",
+        "label": "Node Type",
+        "type": "Enum",
+        "items": ["Transform", "Joint"],
+        "default": 0,
+        "help": "Transform for simplicity, joint for flexibility (such as IK)."
     },
 
 
@@ -709,12 +723,13 @@
         "default": true,
         "help": "Delete custom attributes, if any, in addition to Ragdoll nodes."
     },
-    "constraintStandalone": {
-        "name": "constraintStandalone",
-        "label": "Standalone",
-        "type": "Boolean",
-        "default": false,
-        "help": "Give constraints their own transform at the root of the outliner."
+    "constraintOutlinerStyle": {
+        "name": "constraintOutlinerStyle",
+        "label": "Outliner Style",
+        "type": "Enum",
+        "items": ["nConstraint", "Maya Constraint", "Ragdoll"],
+        "default": 2,
+        "help": "Where to put the new constraint, either as (1) a new transform at the root of your Maya scene like nCloth/nHair, (2) a child of the rigid parent like Maya's native constraints or (3) as a shape next to the rdRigid node."
     },
     "constraintAddUserAttributes": {
         "name": "constraintAddUserAttributes",

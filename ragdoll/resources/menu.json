@@ -104,6 +104,7 @@
         "description": "These are the primary way in which to achieve a desired motion or behavior of a rigid. They establish a relationship between exactly two rigid bodies and either limit the motion of a child relative some parent, and/or drive a child rigid into some position and orientation of a parent rigid.<br><br>Constraints can be made to the scene itself, in which case you can think of it as a worldspace constraint. This is mostly used/useful for guided simulation in worldspace. The same effect can however be achieved by constraining to any Passive Rigid, as the Scene is technically just a passive rigid with some additional attributes.",
         "options": [
             "constraintType",
+            "constraintOutlinerStyle",
             "maintainOffset",
             "autoOrient",
             "constraintUseRotatePivot",
@@ -163,6 +164,7 @@
         "summary": "Generate a target control hierarchy for the simulation to follow.",
         "description": "This command walks a hierarchy of rigid bodies and generates an equivalent kinematic hierarchy which you can animate. The simulation can then follow this hierarchy in 3 ways - relatively, like normal chains, absolute or kinematically.",
         "options": [
+            "mimicNodeType",
             "mimicExclusive",
             "mimicAddHardPin",
             "mimicAddSoftPin",
@@ -456,25 +458,37 @@
         "label": "Select Rigids",
         "icon": "rigid.png",
         "summary": "Select all rigids, or filter rigids from selection.",
-        "description": "Either select some hierarchy of nodes and use this to isolate only the rigids in that hierarchy, or deselect everything and then call it to select every single rigid in the scene."
+        "description": "Either select some hierarchy of nodes and use this to isolate only the rigids in that hierarchy, or deselect everything and then call it to select every single rigid in the scene.",
+        "options": [
+            "selectUseSelection"
+        ]
     },
     "selectConstraints": {
         "label": "Select Constraints",
         "icon": "constraint.png",
         "summary": "Select all constraints, or filter constraints from selection.",
-        "description": "Either select some hierarchy of nodes and use this to isolate only the constraints in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+        "description": "Either select some hierarchy of nodes and use this to isolate only the constraints in that hierarchy, or deselect everything and then call it to select every single constraint in the scene.",
+        "options": [
+            "selectUseSelection"
+        ]
     },
     "selectScenes": {
         "label": "Select Scenes",
         "icon": "logo.png",
         "summary": "Select all scenes, or filter scenes from selection.",
-        "description": "Either select some hierarchy of nodes and use this to isolate only the scenes in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+        "description": "Either select some hierarchy of nodes and use this to isolate only the scenes in that hierarchy, or deselect everything and then call it to select every single constraint in the scene.",
+        "options": [
+            "selectUseSelection"
+        ]
     },
     "selectControls": {
         "label": "Select Controls",
         "icon": "control.png",
         "summary": "Select all controls, or filter controls from selection.",
-        "description": "Either select some hierarchy of nodes and use this to isolate only the controls in that hierarchy, or deselect everything and then call it to select every single constraint in the scene."
+        "description": "Either select some hierarchy of nodes and use this to isolate only the controls in that hierarchy, or deselect everything and then call it to select every single constraint in the scene.",
+        "options": [
+            "selectUseSelection"
+        ]
     },
     "ragdoll": {
         "icon": "logo.png",

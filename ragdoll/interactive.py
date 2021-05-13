@@ -599,7 +599,7 @@ def install_menu():
 
         item("createDynamicControl",
              create_dynamic_control,
-             create_dynamic_control_options)
+             create_dynamic_control)
 
     with submenu("Rigging", icon="rigging.png"):
         item("editShape", edit_shape, edit_shape_options)
@@ -1520,7 +1520,7 @@ def create_constraint(selection=None, **opts):
     opts = {
         "maintainOffset": _opt("maintainOffset", opts),
         "useRotatePivot": _opt("constraintUseRotatePivot", opts),
-        "standalone": _opt("constraintStandalone", opts),
+        "outlinerStyle": _opt("constraintOutlinerStyle", opts),
     }
 
     if constraint_type == c.PointConstraint:
@@ -1875,6 +1875,7 @@ def create_mimic(selection=None, **opts):
         )
 
     opts = {
+        "nodeType": c.Joint if _opt("mimicNodeType", opts) else c.Transform,
         "exclusive": _opt("mimicExclusive", opts),
         "addSoftPin": _opt("mimicAddSoftPin", opts),
         "addHardPin": _opt("mimicAddHardPin", opts),
@@ -2196,11 +2197,15 @@ def delete_physics(selection=None, **opts):
 @requires_ui
 def create_dynamic_control(selection=None, **opts):
     message = """\
-Try using the new Active Chain command instead.
+"Dynamic Control" is now "Active Chain".
+
+It was renamed a few versions ago, so whenever you see
+"Dynamic Control", think "Active Chain". It's at the top
+of the Ragdoll menu.
 """
 
     MessageBox(
-        "Command Renamed",
+        "Heads up!",
         message,
         buttons=ui.OkButton,
         icon=ui.InformationIcon
@@ -2307,30 +2312,33 @@ def multiply_constraints(selection=None):
 
 
 def select_type(typ):
-    def select(selection=None):
-        selection = cmds.ls(selection=True)
-
-        if selection:
+    def select(selection=None, **opts):
+        use_selection = _opt("selectUseSelection", opts)
+        if use_selection:
+            selection = cmds.ls(selection=True)
             cmds.select(cmds.ls(selection, type=typ))
         else:
             cmds.select(cmds.ls(type=typ))
+
+        return kSuccess
+
     return select
 
 
-def select_rigids(selection=None):
-    return select_type("rdRigid")(selection)
+def select_rigids(selection=None, **opts):
+    return select_type("rdRigid")(selection, **opts)
 
 
-def select_constraints(selection=None):
-    return select_type("rdConstraint")(selection)
+def select_constraints(selection=None, **opts):
+    return select_type("rdConstraint")(selection, **opts)
 
 
-def select_controls(selection=None):
-    return select_type("rdControl")(selection)
+def select_controls(selection=None, **opts):
+    return select_type("rdControl")(selection, **opts)
 
 
-def select_scenes(selection=None):
-    return select_type("rdScene")(selection)
+def select_scenes(selection=None, **opts):
+    return select_type("rdScene")(selection, **opts)
 
 
 def show_explorer(selection=None):

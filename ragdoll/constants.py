@@ -81,3 +81,11 @@ SteppedBlendMethod = 0
 SmoothBlendMethod = 1
 
 Epsilon = 0.001
+
+# Control node types
+Transform = "transform"
+Joint = "joint"
+
+nConstraintStyle = 0
+MayaConstraintStyle = 1
+RagdollStyle = 2

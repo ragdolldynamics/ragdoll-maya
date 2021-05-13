@@ -409,7 +409,9 @@ class Chain(object):
         # to figure out draw scale
         mod.do_it()
 
-        con = commands.socket_constraint(previous_rigid, rigid)
+        con = commands.socket_constraint(previous_rigid, rigid, opts={
+            "name": "rPoseConstraint"
+        })
 
         # Rigids will overlap per default
         mod.set_attr(con["disableCollision"], True)

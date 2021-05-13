@@ -276,6 +276,7 @@ def create(root,
 
     # Forward some convenience attributes
     multiplier_attrs = i__.UserAttributes(mult, root)
+    multiplier_attrs.add_divider("Ragdoll")
     multiplier_attrs.add("driveStrength",
                          long_name="globalStrength",
                          nice_name="Global Strength")

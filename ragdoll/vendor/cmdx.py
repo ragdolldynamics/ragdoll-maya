@@ -6232,6 +6232,9 @@ class DagModifier(_BaseModifier):
         if SAFE_MODE:
             self._modifier.doIt()
 
+    reparent = parent
+    reparentNode = parent
+
     if ENABLE_PEP8:
         create_node = createNode
 
@@ -7636,6 +7639,9 @@ class _apiUndo(om.MPxCommand):
     def __init__(self, *args, **kwargs):
         super(_apiUndo, self).__init__(*args, **kwargs)
         _apiUndo._aliveCount += 1
+
+        self.undoId = None
+        self.redoId = None
 
     def __del__(self):
         _apiUndo._aliveCount -= 1

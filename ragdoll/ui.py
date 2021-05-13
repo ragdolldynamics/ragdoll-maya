@@ -1441,8 +1441,8 @@ class SplashScreen(QtWidgets.QDialog):
 
         layout = QtWidgets.QHBoxLayout(panels["serial"])
         layout.addWidget(widgets["serial"])
-        layout.addWidget(widgets["ip"])
-        layout.addWidget(widgets["port"])
+        layout.addWidget(widgets["ip"], 2)
+        layout.addWidget(widgets["port"], 1)
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QHBoxLayout(panels["buttons"])
@@ -1457,8 +1457,7 @@ class SplashScreen(QtWidgets.QDialog):
 
         layout = QtWidgets.QVBoxLayout(panels["body"])
         layout.addWidget(panels["status"])
-        layout.addWidget(panels["serial"])
-        layout.addWidget(QtWidgets.QWidget(), 1)
+        layout.addWidget(panels["serial"], 1)
         layout.addWidget(panels["buttons"])
         layout.setSpacing(px(10))
         layout.setContentsMargins(px(10), px(10), px(10), px(10))

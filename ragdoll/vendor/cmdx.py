@@ -3055,6 +3055,10 @@ class Plug(object):
         assert self.isArray or self.isCompound, "'%s' not an array" % self
         return Vector(self.read(time=time))
 
+    def asPoint(self, time=None):
+        assert self.isArray or self.isCompound, "'%s' not an array" % self
+        return Point(self.read(time=time))
+
     def asTime(self, time=None):
         attr = self._mplug.attribute()
         type = attr.apiType()
@@ -3874,6 +3878,7 @@ class Plug(object):
         as_euler = asEuler
         as_quaternion = asQuaternion
         as_vector = asVector
+        as_point = asPoint
         as_time = asTime
         channel_box = channelBox
         lock_and_hide = lockAndHide

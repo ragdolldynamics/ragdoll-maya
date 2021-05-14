@@ -17,6 +17,10 @@ About activation..
 - A non-commercial licence is activated automatically on launch
 - A non-commercial licence expires 30 days after activation
 
+**See also**
+
+- [Managing Floating Licences](/floating-licence)
+
 <br>
 
 ## Ragdoll Apprentice
@@ -106,19 +110,18 @@ Activation can happen either offline or online, online happening from within May
 
 <br>
 
-#### What if someone steals my licence key?
+#### How do I use my floating licence?
 
-That key is all that is required to run Ragdoll on any machine. If someone takes your key and activates 3 of their own machines, you won't be able to activate it yourself.
+Floating licences have two parts.
 
-If this happens, email us with proof of ownership (e.g. via the email used when purchasing) and you'll get a new one.
+1. A self-hosted licence server
+2. The Ragdoll plug-in
 
-<br>
+Whenever Ragdoll is loaded from Maya, it connects to your licence server in order to "lease" a licence. If you own 10 licences, then one of them will remain leased until the plug-in is unloaded from Maya.
 
-#### Can I have a floating licence?
+**See also**
 
-Yep, get in touch with licencing@ragdolldynamics.com.
-
-Later on, these will be as trivial as node-locked licences. All we need is you.
+- [Managing Floating Licences](/floating-licence)
 
 <br>
 
@@ -134,10 +137,10 @@ See [Offline Activation](#offline-activation) below.
 
 A connection is made in one of two separate occasions.
 
-1. Calling `ragdoll.licence.install()`
+1. Calling `ragdoll.licence.install()` from Python
 2. On simulating any frame
 
-`install()` is typically called when the plug-in is loaded and menu is installed. You can disable this.
+`install()` is typically called when the plug-in is loaded and menu is installed.
 
 That is, Maya can open a scene with Ragdoll in it without making a connection to the internet if neither of these things happen. This means you can simulate on one machine, bake or otherwise disable the solver and send it off to a farm (e.g. local or cloud) without worrying about licences.
 

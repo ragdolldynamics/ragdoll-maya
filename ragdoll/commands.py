@@ -1326,7 +1326,7 @@ def create_mimic(root, opts=None):
         "addMultiplier": True,
 
         # Transforms for simplicity, joints for flexibility and IK
-        "nodeType": "transform",
+        "nodeType": c.Transform,
 
         # Add user attributes
         "addUserAttributes": True,
@@ -1393,7 +1393,7 @@ def create_mimic(root, opts=None):
         tm = root.transform(cmdx.sWorld)
         transform = root.parent()
         name = make_name(transform.name())
-        root_reference = mod.create_node(opts["nodeType"], name=name)
+        root_reference = mod.create_node("transform", name=name)
         mod.set_keyable(root_reference["scale"], False)
 
         if opts["freezeTransform"] and opts["nodeType"] != c.Joint:
@@ -1501,7 +1501,7 @@ def create_mimic(root, opts=None):
 
                 with cmdx.DagModifier() as mod:
                     name = make_name(transform.name())
-                    reference = mod.create_node(opts["nodeType"],
+                    reference = mod.create_node("transform",
                                                 name=name,
                                                 parent=parent_reference)
 
@@ -1659,45 +1659,113 @@ def create_mimic(root, opts=None):
                 mod.set_attr(con["isHistoricallyInteresting"], False)
 
     if opts["nodeType"] == c.Joint:
+        rigid_to_joint = {}
+        joint_to_reference = {}
+        reference_to_joint = {}
+
+        # Convert hierarchy into a well-oriented joint chain,
+        # something suitable for IK.
         with cmdx.DagModifier() as mod:
             for rigid, reference in rigid_to_reference.items():
+                name = reference.name(namespace=False)
+                joint = mod.create_node("joint", name=name)
+                rigid_to_joint[rigid] = joint
+                joint_to_reference[joint] = (rigid, reference)
+                reference_to_joint[reference] = joint
 
-                # Move rotation to jointOrient
-                mod.set_attr(reference["jointOrient"],
-                             reference["rotate"].as_euler())
-                mod.set_attr(reference["rotate"], (0, 0, 0))
+        # Establish position and orientation
+        with cmdx.DagModifier() as mod:
+            for joint, (rigid, reference) in joint_to_reference.items():
+                parent = reference.parent(type="transform")
+                child = reference.child(type="transform")
 
-                # Find tip
-                if reference.child(type=reference.type()):
-                    continue
+                base = reference.translation(cmdx.sWorld)
+                aim = base + cmdx.Vector(1, 0, 0)
+                up = base + cmdx.Vector(0, 1, 0)
 
-                # Extend tip joints, for IK
-                name = reference.name(namespace=False) + "Tip"
-                tip = mod.create_node(opts["nodeType"],
-                                      name=name,
-                                      parent=reference)
+                if child:
+                    aim = child.translation(cmdx.sWorld)
 
-                # We can't simply `["tx"] = length`
-                # since that would assume joints have their
-                # length in the X-axis which is common but not
-                # guaranteed. Instead, we'll build on what is
-                # already established for the rigid body shape
-                offset = rigid["shapeOffset"].as_vector()
-                rotate = rigid["shapeRotation"].as_euler()
+                else:
+                    aim = cmdx.Vector(
+                        rigid["shapeOffset"].as_point() *
+                        reference["worldMatrix"][0].asMatrix()
+                    )
 
-                # Move center to end
-                #  _________________
-                # /        o------>o\
-                # \_________________/
-                #
-                offset.x *= 2
-                offset.y *= 2
-                offset.z *= 2
+                if parent:
+                    up = parent.translation(cmdx.sWorld)
 
-                tm = cmdx.Tm(translate=offset, rotate=rotate)
-                mod.set_attr(tip["translate"], tm.translation())
+                orient = orient_from_positions(base, aim, up)
+
+                mod.set_attr(joint["translate"], base)
+                mod.set_attr(joint["rotate"], orient)
+
+        # Joint Hierarchy
+        for joint, (rigid, reference) in joint_to_reference.items():
+            parent = reference.parent()
+
+            try:
+                joint_parent = reference_to_joint[parent]
+
+            except KeyError:
+                # Root joint
+                pass
+
+            else:
+                # Let Maya figure out rotate and jointOrient
+                cmds.parent(str(joint), str(joint_parent))
+
+            joint["jointOrient"] = joint.rotation()
+            joint["rotate"] = (0, 0, 0)
+
+        # Extend tip joints, for IK
+        with cmdx.DagModifier() as mod:
+            for joint, (rigid, reference) in joint_to_reference.items():
+                if reference.child(type="transform") is None:
+                    length = rigid["shapeLength"].read()
+                    name = joint.name(namespace=False) + "Tip"
+                    tip = mod.create_node("joint", name=name, parent=joint)
+                    tip["translateX"] = length
+                    tip["rotate"] = joint.rotation()
+
+        # Reference Hierarchy
+        for joint, (rigid, reference) in joint_to_reference.items():
+            cmds.parent(str(reference), str(joint))
+
+            if joint.parent(type="joint") is None:
+                root_reference = joint
 
     return root_reference
+
+
+def orient_from_positions(a, b, c=None):
+    """Look at `a` from `b`, with an optional up-vector `c`
+
+            a
+            o
+           /|
+          / |
+         /  |
+        /   |
+     c o____o b
+
+    """
+
+    assert isinstance(a, cmdx.om.MVector), type(a)
+    assert isinstance(b, cmdx.om.MVector), type(b)
+    assert c is None or isinstance(c, cmdx.om.MVector), type(c)
+
+    aim = (b - a).normal()
+    up = (c - a).normal() if c else cmdx.up_axis()
+
+    cross = aim ^ up  # Make axes perpendicular
+    up = cross ^ aim
+
+    orient = cmdx.Quaternion()
+    orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
+    orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
+
+    return orient
 
 
 @i__.with_undo_chunk

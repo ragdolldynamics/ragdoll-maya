@@ -4222,7 +4222,7 @@ class Vector(om.MVector):
                 self.z + value,
             )
 
-        return super(Vector, self).__add__(value)
+        return Vector(super(Vector, self).__add__(value))
 
     def __iadd__(self, value):
         if isinstance(value, (int, float)):
@@ -4232,13 +4232,13 @@ class Vector(om.MVector):
                 self.z + value,
             )
 
-        return super(Vector, self).__iadd__(value)
+        return Vector(super(Vector, self).__iadd__(value))
 
     def dot(self, value):
-        return super(Vector, self).__mul__(value)
+        return Vector(super(Vector, self).__mul__(value))
 
     def cross(self, value):
-        return super(Vector, self).__xor__(value)
+        return Vector(super(Vector, self).__xor__(value))
 
 
 # Alias, it can't take anything other than values
@@ -4897,6 +4897,9 @@ def _python_to_mod(value, plug, mod):
         for index, value in enumerate(value):
             value = om.MAngle(value, om.MAngle.kRadians)
             _python_to_mod(value, plug[index], mod)
+
+    elif isinstance(value, om.MQuaternion):
+        _python_to_mod(value.asEulerRotation(), plug, mod)
 
     else:
         raise TypeError(

@@ -1,0 +1,170 @@
+---
+title: Floating Licences
+description: Ragdoll now has a floating licence server!
+---
+
+Highlight for this release is support for **Floating Licences**!
+
+- [**ADDED** Floating Licence Server](#floating-licence-server) Convenient big-studio licencing
+- [**ADDED** Mimic IK](#mimic-ik) Turn mimic into a joint hierarchy, for IK and such
+- [**TIP** Bulk Edits](#bulk-edits) Some tips for a happier life
+- [**IMPROVED** Quality of Life](#quality-of-life) More joy for you
+
+<br>
+
+![image](https://user-images.githubusercontent.com/2152766/118122808-428aa100-b3eb-11eb-9b8a-88bb0ed10bbd.png)
+
+## Floating Licence Server
+
+So far, Ragdoll has been activated on a per-machine basis. It's been node-locked.
+
+But in many cases, you are a studio with a team of artists using Ragdoll. That's when it becomes impractical for each artist to manage their own licences, or for licences to become associated with a single machine.
+
+Floating licences solve this problem. With it, you register a fixed amount of licences with a *server* somewhere on your network, and then have Maya "lease" licences off of it. For example, with 10 floating licences, 10 artists can use Ragdoll in parallel. On Maya shutdown or plug-in unload, the lease is "dropped" meaning it can be picked up by another artist, on some other machine.
+
+**See also**
+
+- [Floating Licence Documentation](/floating-licence)
+
+<br>
+
+## Mimic IK
+
+The resulting "mimik" is a joint hierarchy suitable for IK, with a proper Joint Orient irregardless of what the original animation controls looked like.
+
+![mimik](https://user-images.githubusercontent.com/2152766/118243758-b0d86d80-b496-11eb-82b0-f04ba458e507.gif)
+
+They're great if IK is what you want, but they do make the overall hierarchy more complex and introduce an additional `jointOrient` offset onto the joints themselves. For that reason, `Transform` is the default node type and is currently the most simple mimic to work with.
+
+!!! info "Room for Improvement"
+    There's still room for improvement, the user attributes remain on the blue control nodes rather than the joints themselves for now. This will be addressed in a future release.
+
+<video autoplay="autoplay" loop="loop" width="100%">
+   <source src="https://user-images.githubusercontent.com/2152766/118245987-55f44580-b499-11eb-94c6-77c53b973e44.mp4" type="video/mp4">
+</video>
+
+<br>
+
+## Bulk Edits
+
+The Maya Channel Box is great for editing multiple nodes at once.
+
+Select two or more nodes, change an attribute in the Channel Box, and the change is applied to each of the selected nodes at once. Win!
+
+But what about attributes that *aren't* in the Channel Box?
+
+Here are 3 ways in which you can bulk-edit a class of Ragdoll nodes in one-go. In each case, I'm using the `Ragdoll -> Select` menu item to bulk-select all rigid bodies in the scene.
+
+<br>
+
+### 1. Attribute Editor
+
+Also known as "the slow way". Simply edit each attribute, one at a time, and watch paint dry.
+
+![bulkedits1](https://user-images.githubusercontent.com/2152766/118096421-3ee62280-b3c9-11eb-931f-ef712e33870a.gif)
+
+<br>
+
+### 2. Channel Editor
+
+All attributes found in the Attribute Editor are also available in the Channel Editor. The most-commonly used ones are already exposed, but you can expose more.
+
+![bulkedits2](https://user-images.githubusercontent.com/2152766/118096423-3f7eb900-b3c9-11eb-814c-ea1818a04022.gif)
+
+<br>
+
+### 3. Attribute Spreadsheet
+
+For total control, irregardless of the Channel Box and with searchability amongst attributes, you can also try the lesser-known Attribute Spreadsheet.
+
+![bulkedits3](https://user-images.githubusercontent.com/2152766/118096441-45749a00-b3c9-11eb-9fcc-d986d0a47fd3.gif)
+
+<br>
+
+## Quality of Life
+
+More quality, less problems. Hacuna matata!
+
+<br>
+
+### Constraint Outliner Style
+
+You can now choose how constraints appear in the outliner.
+
+| Style | Result
+|:------|:---------
+| `nConstraint` | At the root of the outliner, as its own transform
+| `Maya Constraint` | As a child transform
+| `Ragdoll` | As a shape
+
+![image](https://user-images.githubusercontent.com/2152766/118123020-8d0c1d80-b3eb-11eb-8e58-f584d7375047.png)
+
+The `rRigid` node appears as a shape of any node you apply physics too, and normally constraints appear alongside them. But normal Maya constraints do not, and neither does the constraints you get with nCloth and nHair.
+
+!!! hint "Subjective"
+    Whichever you prefer, it has no effect on the simulation and is strictly related to the Outliner only. They can also be re-parented after being created, it really doesn't matter where they are. So organise away!
+
+**Ragdoll Style**
+
+As a shape, alongside the `rRigid` node.
+
+![outlinerstyle1](https://user-images.githubusercontent.com/2152766/118120535-f5590000-b3e7-11eb-9335-137457c2f955.gif)
+
+**Maya Constraint Style**
+
+As a child, similar to native Maya constraints.
+
+![outlinerstyle2](https://user-images.githubusercontent.com/2152766/118120530-f427d300-b3e7-11eb-9d9b-224952c89054.gif)
+
+**nConstraint Style**
+
+As a new transform at the root of the scene, similar to nCloth and nHair constraints. Group them, hide them; if you can imagine it, you can achieve it!
+
+![outlinerstyle3](https://user-images.githubusercontent.com/2152766/118120525-f2f6a600-b3e7-11eb-8876-76b87b6b82fa.gif)
+
+<br>
+
+### Constraint Scale Rendering
+
+The last release made constraints render poorly if the node they were parented to was *scaled*. The simulation was still fine, but you couldn't see what you were doing.
+
+**Before**
+
+![constraintrendering2](https://user-images.githubusercontent.com/2152766/118113285-000e9780-b3de-11eb-8355-c22640cacb68.gif)
+
+**After**
+
+![constraintrendering3](https://user-images.githubusercontent.com/2152766/118113287-00a72e00-b3de-11eb-89b2-e416fd3ffc1a.gif)
+
+<br>
+
+### Constraint Maintain Offset
+
+Constraints typically maintain their offset on creation, such that rigids do not abruptly snap together on simulation start.
+
+But it's optional, and if you don't maintain offset then they *would* snap together. With this release, the default behavior is now *soft* as opposed to infinitely strong.
+
+![softmaintain](https://user-images.githubusercontent.com/2152766/118122597-f9d2e800-b3ea-11eb-8bdc-2ede430174ad.gif)
+
+<br>
+
+### Scene Scale
+
+The default distance unit in Maya is centimeters. Meaning `Translate X=5.0` means "5 centimeters along the X axis". And in some cases, characters get modeled by this unit too, to an average height of 160-190cm.
+
+But often this unit is ignored and now Ragdoll can too.
+
+![scenescale](https://user-images.githubusercontent.com/2152766/118095067-85d31880-b3c7-11eb-87e2-f66fa59298b8.gif)
+
+<br>
+
+### Quick Select
+
+The quick-select commands now feature an option to ignore whatever is currently selected.
+
+- Either *select all* of a certain type, like `rdRigid`
+- Or *filter* current selection by type, like `rdRigid`
+
+Filtering grows more useful as your scenes grow large. When you have e.g. 2 characters and want to edit all constraints in one of them, then filtering is what you're looking for.
+
+![selectselecter](https://user-images.githubusercontent.com/2152766/118117771-f12ae380-b3e3-11eb-9e64-60d63bb390c6.gif)

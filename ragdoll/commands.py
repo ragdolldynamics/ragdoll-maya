@@ -56,7 +56,8 @@ def create_scene(name=None, parent=None):
         mod.connect(parent["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
         mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
-        mod.set_attr(scene["gravity"], up * -98.2)
+        mod.set_attr(scene["gravity"], up * -982)
+        mod.set_attr(scene["spaceMultiplier"], 0.1)
 
         # The ground is really really bouncy since 2021.04.28
         mod.set_attr(scene["groundFriction"], 0.1)

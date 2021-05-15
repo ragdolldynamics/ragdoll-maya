@@ -18,7 +18,7 @@ global proc AErdSceneTemplate(string $nodeName) {
             editorTemplate -label "Restitution" -addControl "groundRestitution";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Time Attributes" -collapse true;
+        editorTemplate -beginLayout "Scale" -collapse true;
             editorTemplate -addControl "timeMultiplier";
             editorTemplate -addControl "spaceMultiplier";
         editorTemplate -endLayout;

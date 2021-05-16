@@ -24,7 +24,7 @@
 Ragdoll ships as a Maya [Module](https://around-the-corner.typepad.com/adn/2012/07/distributing-files-on-maya-maya-modules.html) for Windows and Linux.
 
 !!! info "Installation for Windows"
-    On the Windows platform, there's an executable you can run. However you can also do what Linux users do, and unzip the plug-in straight into your home directory.
+    On the Windows platform, there's an executable you can run.
 
     1. Run the `.msi` installer
     2. Restart Maya

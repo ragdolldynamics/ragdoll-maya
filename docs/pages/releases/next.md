@@ -22,6 +22,9 @@ But in many cases, you are a studio with a team of artists using Ragdoll. That's
 
 Floating licences solve this problem. With it, you register a fixed amount of licences with a *server* somewhere on your network, and then have Maya "lease" licences off of it. For example, with 10 floating licences, 10 artists can use Ragdoll in parallel. On Maya shutdown or plug-in unload, the lease is "dropped" meaning it can be picked up by another artist, on some other machine.
 
+!!! info "Windows"
+    On Windows, the floating licence mechanism is currently a dynamic library. 
+
 **See also**
 
 - [Floating Licence Documentation](/floating-licence)
@@ -45,42 +48,6 @@ They're great if IK is what you want, but they do make the overall hierarchy mor
 
 <br>
 
-## Bulk Edits
-
-The Maya Channel Box is great for editing multiple nodes at once.
-
-Select two or more nodes, change an attribute in the Channel Box, and the change is applied to each of the selected nodes at once. Win!
-
-But what about attributes that *aren't* in the Channel Box?
-
-Here are 3 ways in which you can bulk-edit a class of Ragdoll nodes in one-go. In each case, I'm using the `Ragdoll -> Select` menu item to bulk-select all rigid bodies in the scene.
-
-<br>
-
-### 1. Attribute Editor
-
-Also known as "the slow way". Simply edit each attribute, one at a time, and watch paint dry.
-
-![bulkedits1](https://user-images.githubusercontent.com/2152766/118096421-3ee62280-b3c9-11eb-931f-ef712e33870a.gif)
-
-<br>
-
-### 2. Channel Editor
-
-All attributes found in the Attribute Editor are also available in the Channel Editor. The most-commonly used ones are already exposed, but you can expose more.
-
-![bulkedits2](https://user-images.githubusercontent.com/2152766/118096423-3f7eb900-b3c9-11eb-814c-ea1818a04022.gif)
-
-<br>
-
-### 3. Attribute Spreadsheet
-
-For total control, irregardless of the Channel Box and with searchability amongst attributes, you can also try the lesser-known Attribute Spreadsheet.
-
-![bulkedits3](https://user-images.githubusercontent.com/2152766/118096441-45749a00-b3c9-11eb-9fcc-d986d0a47fd3.gif)
-
-<br>
-
 ## Quality of Life
 
 More quality, less problems. Hacuna matata!
@@ -97,12 +64,7 @@ You can now choose how constraints appear in the outliner.
 | `Maya Constraint` | As a child transform
 | `Ragdoll` | As a shape
 
-![image](https://user-images.githubusercontent.com/2152766/118123020-8d0c1d80-b3eb-11eb-8e58-f584d7375047.png)
-
-The `rRigid` node appears as a shape of any node you apply physics too, and normally constraints appear alongside them. But normal Maya constraints do not, and neither does the constraints you get with nCloth and nHair.
-
-!!! hint "Subjective"
-    Whichever you prefer, it has no effect on the simulation and is strictly related to the Outliner only. They can also be re-parented after being created, it really doesn't matter where they are. So organise away!
+The `rRigid` node appears as a shape of any node you apply physics to, and normally constraints appear alongside them. But normal Maya constraints do not, and neither does the constraints you get with nCloth and nHair. So which do you prefer?
 
 **Ragdoll Style**
 
@@ -121,6 +83,9 @@ As a child, similar to native Maya constraints.
 As a new transform at the root of the scene, similar to nCloth and nHair constraints. Group them, hide them; if you can imagine it, you can achieve it!
 
 ![outlinerstyle3](https://user-images.githubusercontent.com/2152766/118120525-f2f6a600-b3e7-11eb-8876-76b87b6b82fa.gif)
+
+!!! hint "Subjective"
+    Whichever you prefer, it has no effect on the simulation and is strictly related to the Outliner only. They can also be re-parented after being created, it really doesn't matter where they are. So organise away!
 
 <br>
 
@@ -148,13 +113,36 @@ But it's optional, and if you don't maintain offset then they *would* snap toget
 
 <br>
 
+### Installer Improvements
+
+On Windows, the MSI installer can now be used to install *multiple* versions of Ragdoll simultaneously, with a dedicated uninstall option each.
+
+![image](https://user-images.githubusercontent.com/2152766/118395063-51b65c80-b640-11eb-942e-4f1d0f0d9ca3.png)
+
+This should also help clear out issues with *upgrading* using the MSI, which has been problematic in the past since the installer really didn't like overwriting files.
+
+On all platforms, multiple Maya module files now co-exist, which means that if you want to disable or switch versions you can do that by removing the offending version - rather than editing the text file itself like in previous versions of Ragdoll.
+
+![image](https://user-images.githubusercontent.com/2152766/118395099-8aeecc80-b640-11eb-9e7b-add537d975a8.png)
+
+<br>
+
 ### Scene Scale
 
 The default distance unit in Maya is centimeters. Meaning `Translate X=5.0` means "5 centimeters along the X axis". And in some cases, characters get modeled by this unit too, to an average height of 160-190cm.
 
 But often this unit is ignored and now Ragdoll can too.
 
-![scenescale](https://user-images.githubusercontent.com/2152766/118095067-85d31880-b3c7-11eb-87e2-f66fa59298b8.gif)
+!!! info "Default Value"
+    Ragdoll has assumed a scene scale of 0.1 so far, meaning 10 centimeters meant 1 meter. That's the typical scale of most rigs, some having smaller - like the Fire Wolf at 0.01 - and some larger - like a real-world scale of 1.0.
+
+    This value used to be reflected in `Gravity Y` as `98.2` meaning `98.2 cm/s2`. Which means that an object falling for 1 second would reach a velocity of 98.2 cm/s and keep increasing by the amount each second until reaching terminal velocity.
+
+    It is now reflected in Scene Scale instead as 0.1. For a real-world scale, simply set this value to 1.0 and leave gravity unchanged.
+
+![image](https://user-images.githubusercontent.com/2152766/118354661-06c71700-b564-11eb-9bf5-929917dbcead.png)
+
+![scenescale2](https://user-images.githubusercontent.com/2152766/118354805-d7fd7080-b564-11eb-98f0-2c6325fd37d3.gif)
 
 <br>
 
@@ -168,3 +156,39 @@ The quick-select commands now feature an option to ignore whatever is currently 
 Filtering grows more useful as your scenes grow large. When you have e.g. 2 characters and want to edit all constraints in one of them, then filtering is what you're looking for.
 
 ![selectselecter](https://user-images.githubusercontent.com/2152766/118117771-f12ae380-b3e3-11eb-9e64-60d63bb390c6.gif)
+
+<br>
+
+## Bulk Edits
+
+The Maya Channel Box is great for editing multiple nodes at once.
+
+Select two or more nodes, change an attribute in the Channel Box, and the change is applied to each of the selected nodes at once. Win!
+
+But what about attributes that *aren't* in the Channel Box?
+
+Here are 3 ways in which you can bulk-edit a class of Ragdoll nodes in one-go. In each case, I'm using the `Ragdoll -> Select` menu item to bulk-select all rigid bodies in the scene.
+
+<br>
+
+### 1. Attribute Editor
+
+Also known as "the slow way". Simply edit each attribute, one at a time. Like watching paint dry. It's slow.
+
+![bulkedits1](https://user-images.githubusercontent.com/2152766/118096421-3ee62280-b3c9-11eb-931f-ef712e33870a.gif)
+
+<br>
+
+### 2. Channel Editor
+
+All attributes found in the Attribute Editor are also available in the Channel Editor. The most-commonly used ones are already exposed, but you can expose more.
+
+![bulkedits2](https://user-images.githubusercontent.com/2152766/118096423-3f7eb900-b3c9-11eb-814c-ea1818a04022.gif)
+
+<br>
+
+### 3. Attribute Spreadsheet
+
+For total control, irregardless of the Channel Box and with searchability amongst attributes, you can also try the lesser-known Attribute Spreadsheet.
+
+![bulkedits3](https://user-images.githubusercontent.com/2152766/118096441-45749a00-b3c9-11eb-9fcc-d986d0a47fd3.gif)

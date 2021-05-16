@@ -27,6 +27,9 @@ The server will need to remain running in order for Ragdoll to lease licences.
 
 Here's a typical series of commands for an x64 system, look inside [the .zip](https://files.ragdolldynamics.com/api/public/dl/hAlavAOP/TurboFloat-Server-Linux.zip) for alternative Linux-based platforms.
 
+!!! hint "Requirements"
+    Make sure you have `unzip` and `wget` at the ready, or use alternatives like `curl` and `tar` at your own leisure.
+
 ```bash
 mkdir turbofloat
 cd turbofloat
@@ -307,4 +310,14 @@ The expiry is when the lease will be renewed. Normally not something you need to
 2021-05-12, 11:58:51 <notification>: Lease was released by client (marcus, 1, IP=::ffff:127.0.0.1, PID=14328). Used / Total leases: 0 / 1
 ```
 
-A Python and web interface to this will be part of a future release.
+A Python and web interface to this will be part of a future release, but the formatting can be relied upon for building your own monitoring mechanism.
+
+<br>
+
+### What does the server say when a lease request is rejected?
+
+With `level="notification"` it'll say this.
+
+```bash
+2021-05-16, 14:52:50 <notification>: License lease request rejected because no more free slots, numTotalLics=9, pkey=YOUR-SERIAL-NUMBER
+```

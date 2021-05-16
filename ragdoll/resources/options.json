@@ -621,6 +621,13 @@
         "default": true,
         "help": "(Requires scene reopen) Whether or not to use the pose of a rigid at the start time as the active initial state. This feature records the pose from frame 1 at frame 2, by inserting itself in between finished evaluation of frame 1 and yet-to-begin evaluation of frame 2."
     },
+    "monitorScale": {
+        "name": "monitorScale",
+        "label": "Monitor Scale",
+        "type": "Boolean",
+        "default": true,
+        "help": "(Requires scene reopen) Synchonise viewport rendering with scale of rigids. Without this, synchronisation happens after playback followed by a re-select."
+    },
     "newAutoInitialState": {
         "name": "newAutoInitialState",
         "label": "New Auto Initial State",

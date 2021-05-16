@@ -56,10 +56,11 @@ def _install_floating():
     if status == STATUS_OK:
         log.debug("Successfully initialised Ragdoll licence.")
     else:
-        raise RuntimeError(
+        log.error(
             "Failed to initialise floating licence, error code '%d'"
             % status
         )
+        return status
 
     status = request_lease(ip, port)
 

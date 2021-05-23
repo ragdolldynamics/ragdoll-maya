@@ -1,0 +1,1 @@
+Maya's native persistent preferences, with support for access from C++.

@@ -1,0 +1,67 @@
+---
+site_name: Ragdoll Dynamics
+site_description: Real-time physics for Maya
+site_author: mottosso
+site_url: https://ragdolldynamics.com
+
+ragdoll_version: "2021.05.17"
+copyright: "Copyright &copy; 2021 mottosso"
+
+# Page tree
+nav:
+  - Ragdoll Dynamics:
+    - Ragdoll Dynamics: index.md
+
+docs_dir: pages
+
+theme:
+  name: material
+  logo: ragdoll_silhouette_white_512.png
+  # logo: favicon-256x256.png
+  scheme: slate
+  favicon: favicon-32x32.png
+  custom_dir: theme
+  palette:
+    primary: "white"
+    accent: "white"
+  # features:
+  #   - navigation.tabs
+
+extra_css:
+  - extra.css
+
+# Options
+extra:
+  feature:
+    tabs: true
+
+extra_javascript:
+  - "extra.js"
+
+markdown_extensions:
+  - codehilite:
+      guess_lang: false
+      use_pygments: true
+      noclasses: true
+      pygments_style: monokai
+  - admonition
+  - def_list
+  - footnotes
+  - meta
+  - toc
+  - pymdownx.extra
+  - pymdownx.arithmatex
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist
+  - pymdownx.tilde

@@ -201,6 +201,9 @@ The procedure is the same on each platform.
 ./turbofloatserver -aresp="~/ActivationResponse.xml" -a
 ```
 
+!!! hint "Coming up"
+    This will be automated in a later release, for activation/deactivation through a Web UI.
+
 <br>
 
 ### What happens when my server is offline?
@@ -237,6 +240,24 @@ The default port is `13` and can be edited via the `TurboFloatServer-config.xml`
 ```
 
 - [More Configuration Options](https://wyday.com/limelm/help/turbofloat-server/#config)
+
+<br>
+
+### What if I have multiple serial numbers?
+
+1 serial number, 1 server.
+
+Each server can all run on one machine, they just need their own unique port number. From there, provide each of your clients with the full server address to the pool it should lease licences from.
+
+For example.
+
+```bash
+# Render farm
+RAGDOLL_FLOATING=10.0.0.4:601
+
+# Artist workstations
+RAGDOLL_FLOATING=10.0.0.4:602
+```
 
 <br>
 
@@ -277,6 +298,16 @@ The time can be edited via the configuration file; a lower time means more compu
 Yes.
 
 Remove the `RAGDOLL_FLOATING` environment variable and reload the plug-in or restart Maya to attempt activation of a node-locked licence.
+
+<br>
+
+### Can I activate my server on a Virtual Machine?
+
+No.
+
+The server cannot distinguish between two virtual machines which would make it possible to activate an endless amount of them with their own duplicate pools of licences.
+
+Although the *server* cannot run on a VM, clients *can*. E.g. running Docker for testing in a continous-integration environment or automation for simulation baking or rendering etc.
 
 <br>
 

@@ -1281,7 +1281,7 @@ def create_active_chain(selection=None, **opts):
         return not i__.is_dynamic(root, scene)
 
     if _opt("cycleProtection", opts) and not cycle_protection():
-        if opts["passiveRoot"]:
+        if opts_["passiveRoot"]:
             log.warning("%s cannot be made passive" % links[0])
             MessageBox("Passive Child, Active Parent", (
                 "Cannot make *passive* rigid the "

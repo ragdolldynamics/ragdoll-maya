@@ -2201,6 +2201,31 @@ def duplicate(rigid):
     return dup
 
 
+def struct(name, **kwargs):
+    class Struct(object):
+        __slots__ = list(kwargs.keys())
+
+        def __init__(self):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def __str__(self):
+            return (
+                "Struct(\n%s\n)" % "\n".join(
+                    "  %s=%s" % (key, getattr(self, key))
+                    for key in self.__slots__
+                )
+            )
+
+        def copy(self, name):
+            kwargs = {}
+            for slot in self.__slots__:
+                kwargs[slot] = getattr(self, slot)
+            return struct(name, **kwargs)
+
+    return Struct
+
+
 def infer_geometry(root, parent=None, children=None):
     """Find length and orientation from `root`
 
@@ -2215,40 +2240,21 @@ def infer_geometry(root, parent=None, children=None):
 
     """
 
-    class Geometry(object):
-        __slots__ = [
-            "orient",
-            "extents",
-            "length",
-            "radius",
-            "shape_offset",
-            "shape_rotation",
-        ]
-
-        def __init__(self):
-            self.orient = cmdx.Quaternion()
-            self.extents = cmdx.Vector(1, 1, 1)
-            self.length = 0.0
-            self.radius = 0.0
-            self.shape_offset = cmdx.Vector()
-            self.shape_rotation = cmdx.Vector()
-
-        def mass(self):
-            return (
-                self.extents.x *
-                self.extents.y *
-                self.extents.z *
-                0.01
-            )
-
-        def copy(self):
-            geo = Geometry()
-            for slot in self.__slots__:
-                setattr(geo, slot, getattr(self, slot))
-            return geo
-
-    geometry = Geometry()
-    orient = cmdx.Quaternion()
+    Geometry = struct(
+        "Geometry",
+        orient=cmdx.Quaternion(),
+        extents=cmdx.Vector(1, 1, 1),
+        length=0.0,
+        radius=0.0,
+        shape_offset=cmdx.Vector(),
+        shape_rotation=cmdx.Vector(),
+        compute_mass=lambda self: (
+            self.extents.x *
+            self.extents.y *
+            self.extents.z *
+            0.01
+        )
+    )
 
     if children is None:
         # Better this than nothing
@@ -2257,10 +2263,10 @@ def infer_geometry(root, parent=None, children=None):
     # Special case of not wanting to use childhood, but
     # rather share whatever geometry the parent has
     if children is False and parent is not None:
-        if "_rdGeometry" in parent.data:
-            parent_geometry = parent.data.get("_rdGeometry")
-            return parent_geometry
+        return infer_geometry(parent)
 
+    geometry = Geometry()
+    orient = cmdx.Quaternion()
     root_tm = root.transform(cmdx.sWorld)
     root_pos = root_tm.translation()
     root_scale = root_tm.scale()
@@ -2404,12 +2410,37 @@ def infer_geometry(root, parent=None, children=None):
 
             """
 
-            pos1 = root.transform(cmdx.sWorld).translation()
+            pos1 = root.translation(cmdx.sWorld)
             positions = [pos1]
 
             # Start by figuring out a center point
             for child in root.children(type=root.type()):
-                positions += [child.transform(cmdx.sWorld).translation()]
+                positions += [child.translation(cmdx.sWorld)]
+
+            # There were no children, consider the parent instead
+            if len(positions) < 2:
+
+                # It's possible the immediate parent is an empty
+                # group without translation. We can't use that, so
+                # instead walk the hierarchy until you find the first
+                # parent with some usable translation to it.
+                for parent in root.lineage(type=root.type()):
+                    pos2 = parent.translation(cmdx.sWorld)
+
+                    if pos2.isEquivalent(pos1, 0.001):
+                        continue
+
+                    # The parent will be facing in the opposite direction
+                    # of what we want, so let's invert that.
+                    pos2 -= pos1
+                    pos2 *= -1
+                    pos2 += pos1
+
+                    positions += [pos2]
+
+            # There were neither parent nor children, what then?
+            if len(positions) < 2:
+                return cmdx.Vector(1, 1, 1), cmdx.Vector(0, 0, 0)
 
             center = cmdx.Vector()
             for pos in positions:
@@ -2473,16 +2504,13 @@ def infer_geometry(root, parent=None, children=None):
     if abs(root_scale.z) <= 0:
         geometry.extents.z = 0
 
-    # Store for subsequent accesses
-    root.data["_rdGeometry"] = geometry
-
     return geometry
 
 
 @i__.with_refresh_suspended
 @i__.with_timing
 @i__.with_undo_chunk
-def delete_physics(nodes):
+def delete_physics(nodes, dry_run=False):
     """Delete Ragdoll from anything related to `nodes`
 
     This will delete anything related to Ragdoll from your scenes, including
@@ -2490,6 +2518,10 @@ def delete_physics(nodes):
 
     Arguments:
         nodes (list): Delete physics from these nodes
+        dry_run (bool, optional): Do not actually delete anything,
+            but still run through the process and throw exceptions
+            if any, and still return the results of what *would*
+            have been deleted if it wasn't dry.
 
     """
 
@@ -2526,6 +2558,18 @@ def delete_physics(nodes):
     # Nothing to do!
     if not ragdoll_nodes:
         return result
+
+    # See whether any of the nodes are referenced, in which
+    # case we don't have permission to delete those.
+    for node in ragdoll_nodes[:]:
+        if node.is_referenced:
+            ragdoll_nodes.remove(node)
+            raise i__.UserWarning(
+                "Cannot Delete Referenced Nodes",
+                "I can't do that.\n\nSome of the nodes that "
+                "would have been deleted "
+                "are referenced and **cannot** be deleted."
+            )
 
     # Delete transforms exclusively made for Ragdoll nodes.
     #  _____________________       ___________________
@@ -2620,6 +2664,10 @@ def delete_physics(nodes):
     result["deletedExclusiveNodeCount"] = len(exclusives)
     result["deletedUserAttributeCount"] = len(user_attributes)
 
+    # It was just a joke, relax
+    if dry_run:
+        return result
+
     # Delete attributes first, as they may otherwise
     # disappear along with their node.
     with cmdx.DagModifier() as mod:
@@ -2646,7 +2694,7 @@ def delete_physics(nodes):
     return result
 
 
-def delete_all_physics():
+def delete_all_physics(dry_run=False):
     """Nuke it from orbit
 
     Return to simpler days, days before physics, with this one command.
@@ -2654,7 +2702,7 @@ def delete_all_physics():
     """
 
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    return delete_physics(cmdx.ls(type=all_nodetypes))
+    return delete_physics(cmdx.ls(type=all_nodetypes), dry_run=dry_run)
 
 
 @i__.with_undo_chunk
@@ -2854,6 +2902,20 @@ def bake_simulation(rigids=None, opts=None):
         "deletePhysics": True,
         "unrollRotation": True,
     }, **(opts or {}))
+
+    # Make sure we're actually allowed to delete physics
+    # E.g. the character(s) could be referenced.
+    if opts["deletePhysics"]:
+        try:
+            delete_all_physics(dry_run=True)
+        except i__.UserWarning:
+            raise i__.UserWarning(
+                "Cannot Delete Referenced Nodes",
+                "Some nodes are referenced, I cannot delete those "
+                "after baking.\n\n"
+                "Untick the 'Delete Physics' option to preserve "
+                "physics after baking, or import the referenced physics."
+            )
 
     rigids = rigids or cmdx.ls(type="rdRigid")
 

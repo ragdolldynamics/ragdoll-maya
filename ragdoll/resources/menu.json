@@ -430,7 +430,6 @@
             "cacheMedia",
             "frameskipHandling",
             "autoInitialState",
-            "monitorScale",
             "autoReturnToStart",
             "cycleProtection",
             "ogsReset",

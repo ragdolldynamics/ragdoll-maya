@@ -2165,18 +2165,18 @@ def duplicate_selected(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@with_exception_handling
 def delete_physics(selection=None, **opts):
+    delete = commands.delete_all_physics
+
     if _opt("deleteFromSelection", opts):
         selection = selection or cmdx.selection(type="dagNode")
 
-        if not selection:
-            result = commands.delete_all_physics()
+        if selection:
+            def delete():
+                return commands.delete_physics(selection)
 
-        else:
-            result = commands.delete_physics(selection)
-
-    else:
-        result = commands.delete_all_physics()
+    result = delete()
 
     any_node = cmds.ls()[0]
     cmds.select(any_node)  # Trigger a change to selection

@@ -1855,6 +1855,7 @@ def transfer_rigid(ra, rb):
         "shapeLength",
         "shapeRadius",
         "shapeOffset",
+        "shapeRotation",
     )
 
     with cmdx.DagModifier() as mod:
@@ -1863,7 +1864,7 @@ def transfer_rigid(ra, rb):
             # Account for locked attributes
             try:
                 # Account for user attributes
-                mod.smart_set_attr(rb[attr], ra[attr])
+                mod.smart_set_attr(rb[attr], ra[attr].read())
             except cmdx.LockedError:
                 log.warning(
                     "%s was locked and wasn't changed" % rb[attr].path()

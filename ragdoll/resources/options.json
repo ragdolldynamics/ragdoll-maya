@@ -292,7 +292,7 @@
     },
     "mimicAddMultiplier": {
         "name": "mimicAddMultiplier",
-        "label": "Add Multiplier",
+        "label": "Add Globals",
         "type": "Boolean",
         "default": true,
         "help": "Add a multiplier to the root of the newly created mimic."
@@ -373,7 +373,7 @@
     },
     "chainAutoMultiplier": {
         "name": "chainAutoMultiplier",
-        "label": "Auto Multiplier",
+        "label": "Auto Globals",
         "type": "Boolean",
         "default": true,
         "help": "Automatically add a constraint multiplier to the dynamic control root."
@@ -390,6 +390,7 @@
         "label": "Auto Limits",
         "type": "Boolean",
         "default": false,
+        "enabled": false,
         "help": "Generate suitable limits automatically from input."
     },
 

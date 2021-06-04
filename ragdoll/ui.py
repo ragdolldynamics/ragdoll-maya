@@ -1909,7 +1909,7 @@ class MessageBoard(QtWidgets.QDialog):
             if count > 1:
                 msg += " (%d)" % count
 
-            widgets["board"].addItem(msg)
+            widgets["board"].addItem(markdown.markdown(msg))
             count = 1
 
         layout = QtWidgets.QVBoxLayout(panels["body"])

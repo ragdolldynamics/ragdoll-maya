@@ -399,9 +399,6 @@ class Chain(object):
         mod.set_attr(rigid["shapeRotation"], geo.shape_rotation)
         mod.set_attr(rigid["shapeOffset"], geo.shape_offset)
 
-        if geo.length == 0:
-            self._opts["defaults"]["shapeType"] = c.SphereShape
-
         for key, value in self._opts["defaults"].items():
             mod.set_attr(rigid[key], value)
 

@@ -1710,7 +1710,7 @@ class DagNode(Node):
     # Alias
     root = assembly
 
-    def parent(self, type=None):
+    def parent(self, type=None, filter=None):
         """Return parent of node
 
         Arguments:
@@ -1724,6 +1724,13 @@ class DagNode(Node):
             >>> not child.parent(type="camera")
             True
             >>> parent.parent()
+            >>> child.parent(filter=om.MFn.kTransform) == parent
+            True
+            >>> child.parent(filter=om.MFn.kJoint) is None
+            True
+
+        Returns:
+            parent (Node): If any, else None
 
         """
 
@@ -1734,11 +1741,14 @@ class DagNode(Node):
 
         cls = self.__class__
 
+        if filter is not None and not mobject.hasFn(filter):
+            return None
+
         if not type or type == self._fn.__class__(mobject).typeName:
             return cls(mobject)
 
     @protected
-    def lineage(self, type=None):
+    def lineage(self, type=None, filter=None):
         """Yield parents all the way up a hierarchy
 
         Example:
@@ -1760,7 +1770,10 @@ class DagNode(Node):
         parent = self.parent(type)
         while parent is not None:
             yield parent
-            parent = parent.parent(type)
+            parent = parent.parent(type, filter)
+
+    # Alias
+    parenthood = lineage
 
     @protected
     def children(self,
@@ -4361,13 +4374,22 @@ class EulerRotation(om.MEulerRotation):
     def asMatrix(self):
         return Matrix4(super(EulerRotation, self).asMatrix())
 
-    order = {
+    strToOrder = {
         'xyz': kXYZ,
         'xzy': kXZY,
         'yxz': kYXZ,
         'yzx': kYZX,
         'zxy': kZXY,
         'zyx': kZYX
+    }
+
+    orderToStr = {
+        kXYZ: 'xyz',
+        kXZY: 'xzy',
+        kYXZ: 'yxz',
+        kYZX: 'yzx',
+        kZXY: 'zxy',
+        kZYX: 'zyx'
     }
 
     if ENABLE_PEP8:
@@ -6209,7 +6231,7 @@ class DagModifier(_BaseModifier):
         try:
             mobj = self._modifier.createNode(type, parent)
         except TypeError as e:
-            if e.message == "parent is not a transform type":
+            if str(e) == "parent is not a transform type":
                 raise TypeError("'%s' is not a transform type," % parent)
             else:
                 raise TypeError("'%s' is not a valid node type," % type)

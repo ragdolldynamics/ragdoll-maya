@@ -2201,31 +2201,6 @@ def duplicate(rigid):
     return dup
 
 
-def struct(name, **kwargs):
-    class Struct(object):
-        __slots__ = list(kwargs.keys())
-
-        def __init__(self):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-        def __str__(self):
-            return (
-                "Struct(\n%s\n)" % "\n".join(
-                    "  %s=%s" % (key, getattr(self, key))
-                    for key in self.__slots__
-                )
-            )
-
-        def copy(self, name):
-            kwargs = {}
-            for slot in self.__slots__:
-                kwargs[slot] = getattr(self, slot)
-            return struct(name, **kwargs)
-
-    return Struct
-
-
 def infer_geometry(root, parent=None, children=None):
     """Find length and orientation from `root`
 
@@ -2240,32 +2215,12 @@ def infer_geometry(root, parent=None, children=None):
 
     """
 
-    Geometry = struct(
-        "Geometry",
-        orient=cmdx.Quaternion(),
-        extents=cmdx.Vector(1, 1, 1),
-        length=0.0,
-        radius=0.0,
-        shape_offset=cmdx.Vector(),
-        shape_rotation=cmdx.Vector(),
-        compute_mass=lambda self: (
-            self.extents.x *
-            self.extents.y *
-            self.extents.z *
-            0.01
-        )
-    )
+    geometry = i__.Geometry()
 
     if children is None:
         # Better this than nothing
         children = list(root.children(type=root.type()))
 
-    # Special case of not wanting to use childhood, but
-    # rather share whatever geometry the parent has
-    if children is False and parent is not None:
-        return infer_geometry(parent)
-
-    geometry = Geometry()
     orient = cmdx.Quaternion()
     root_tm = root.transform(cmdx.sWorld)
     root_pos = root_tm.translation()
@@ -2354,12 +2309,7 @@ def infer_geometry(root, parent=None, children=None):
 
             if shape:
                 bbox = shape.bounding_box
-
-                # Bounding box is independent of global scale
                 bbox = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-                bbox.x *= root_scale.x
-                bbox.y *= root_scale.y
-                bbox.z *= root_scale.z
 
                 radius = sorted([bbox.x, bbox.y, bbox.z])
 
@@ -2371,16 +2321,13 @@ def infer_geometry(root, parent=None, children=None):
                 # |__________________|/
                 #
                 radius = radius[1]  # Pick middle one
-                radius /= 2  # Width to radius
-                radius /= 2  # Controls are typically larger than the model
+                radius *= 0.5  # Width to radius
+                radius *= 0.5  # Controls are typically larger than the model
 
             else:
                 # If there's no visible geometry what so ever, we have
                 # very little to go on in terms of establishing a radius.
                 radius = geometry.length * 0.1
-
-        # Keep radius at minimum 10% of its length to avoid stick-figures
-        radius = max(geometry.length * 0.1, radius)
 
         size = cmdx.Vector(geometry.length, radius, radius)
         offset = orient * cmdx.Vector(geometry.length / 2.0, 0, 0)
@@ -2389,92 +2336,7 @@ def infer_geometry(root, parent=None, children=None):
         geometry.radius = radius
 
     else:
-        def local_bounding_size(root):
-            """Bounding size taking immediate children into account
-
-                    _________
-                 o |    a    |
-            ---o-|-o----o----o--
-                 | |_________|
-                 |      |
-                o-o    bbox of a
-                | |
-                | |
-                o o
-                | |
-                | |
-               -o o-
-
-            DagNode.boundingBox on the other hand takes an entire
-            hierarchy into account.
-
-            """
-
-            pos1 = root.translation(cmdx.sWorld)
-            positions = [pos1]
-
-            # Start by figuring out a center point
-            for child in root.children(type=root.type()):
-                positions += [child.translation(cmdx.sWorld)]
-
-            # There were no children, consider the parent instead
-            if len(positions) < 2:
-
-                # It's possible the immediate parent is an empty
-                # group without translation. We can't use that, so
-                # instead walk the hierarchy until you find the first
-                # parent with some usable translation to it.
-                for parent in root.lineage(type=root.type()):
-                    pos2 = parent.translation(cmdx.sWorld)
-
-                    if pos2.isEquivalent(pos1, 0.001):
-                        continue
-
-                    # The parent will be facing in the opposite direction
-                    # of what we want, so let's invert that.
-                    pos2 -= pos1
-                    pos2 *= -1
-                    pos2 += pos1
-
-                    positions += [pos2]
-
-            # There were neither parent nor children, what then?
-            if len(positions) < 2:
-                return cmdx.Vector(1, 1, 1), cmdx.Vector(0, 0, 0)
-
-            center = cmdx.Vector()
-            for pos in positions:
-                center += pos
-            center /= len(positions)
-
-            # Then figure out a bounding box, relative this center
-            min_ = cmdx.Vector()
-            max_ = cmdx.Vector()
-
-            for pos2 in positions:
-                dist = pos2 - center
-
-                min_.x = min(min_.x, dist.x)
-                min_.y = min(min_.y, dist.y)
-                min_.z = min(min_.z, dist.z)
-
-                max_.x = max(max_.x, dist.x)
-                max_.y = max(max_.y, dist.y)
-                max_.z = max(max_.z, dist.z)
-
-            size = cmdx.Vector(
-                max_.x - min_.x,
-                max_.y - min_.y,
-                max_.z - min_.z,
-            )
-
-            # Keep smallest value within some sensible range
-            minimum = list(size).index(min(size))
-            size[minimum] = max(size) * 0.5
-
-            return size, center
-
-        size, center = local_bounding_size(root)
+        size, center = _hierarchy_bounding_size(root)
         offset = center - root_pos
 
         geometry.length = size.x
@@ -2482,7 +2344,8 @@ def infer_geometry(root, parent=None, children=None):
         geometry.extents = size
 
     # Compute final shape matrix with these ingredients
-    shape_tm = cmdx.Tm(translate=root_pos, rotate=geometry.orient)
+    shape_tm = cmdx.Tm(translate=root_pos,
+                       rotate=geometry.orient)
     shape_tm.translateBy(offset, cmdx.sPostTransform)
     shape_tm = cmdx.Tm(shape_tm.asMatrix() * root_tm.asMatrix().inverse())
 
@@ -2503,6 +2366,9 @@ def infer_geometry(root, parent=None, children=None):
 
     if abs(root_scale.z) <= 0:
         geometry.extents.z = 0
+
+    # Keep radius at minimum 10% of its length to avoid stick-figures
+    geometry.radius = max(geometry.length * 0.1, geometry.radius)
 
     return geometry
 
@@ -2562,13 +2428,12 @@ def delete_physics(nodes, dry_run=False):
     # See whether any of the nodes are referenced, in which
     # case we don't have permission to delete those.
     for node in ragdoll_nodes[:]:
-        if node.is_referenced:
+        if node.is_referenced():
             ragdoll_nodes.remove(node)
             raise i__.UserWarning(
                 "Cannot Delete Referenced Nodes",
-                "I can't do that.\n\nSome of the nodes that "
-                "would have been deleted "
-                "are referenced and **cannot** be deleted."
+                "I can't do that.\n\n%s is referenced "
+                "and **cannot** be deleted." % node.shortest_path()
             )
 
     # Delete transforms exclusively made for Ragdoll nodes.
@@ -3141,12 +3006,19 @@ def _interpret_shape(mod, rigid, shape):
     extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
     center = cmdx.Vector(bbox.center)
 
+    # Account for flat shapes, like a circle
+    radius = extents.x
+    length = max(extents.y, extents.x)
+
+    # Account for X not necessarily being
+    # represented by the width of the bounding box.
+    if radius < i__.tolerance:
+        radius = length * 0.5
+
     mod.set_attr(rigid["shapeOffset"], center)
     mod.set_attr(rigid["shapeExtents"], extents)
-    mod.set_attr(rigid["shapeRadius"], extents.x * 0.5)
-
-    # Account for flat shapes, like a circle
-    mod.set_attr(rigid["shapeLength"], max(extents.y, extents.x))
+    mod.set_attr(rigid["shapeRadius"], radius * 0.5)
+    mod.set_attr(rigid["shapeLength"], length)
 
     if shape.type() == "mesh":
         mod.connect(shape["outMesh"], rigid["inputMesh"])
@@ -3593,11 +3465,102 @@ def _apply_scale(mat):
 
 
 def _scale_from_rigid(rigid):
-    rest_tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
-
-    scale = sum(rest_tm.scale()) / 3.0
-
     if rigid.parent().type() == "joint":
-        return rigid["shapeLength"].read() * 0.25 / scale
+        return rigid["shapeLength"].read() * 0.25
     else:
-        return sum(rigid["shapeExtents"].read()) / 3.0 / scale
+        return sum(rigid["shapeExtents"].read()) / 3.0
+
+
+def _hierarchy_bounding_size(root):
+    """Bounding size taking immediate children into account
+
+            _________
+         o |    a    |
+    ---o-|-o----o----o--
+         | |_________|
+         |      |
+        o-o    bbox of a
+        | |
+        | |
+        o o
+        | |
+        | |
+       -o o-
+
+    DagNode.boundingBox on the other hand takes an entire
+    hierarchy into account.
+
+    """
+
+    pos1 = root.translation(cmdx.sWorld)
+    positions = [pos1]
+
+    # Start by figuring out a center point
+    for child in root.children(type=root.type()):
+        positions += [child.translation(cmdx.sWorld)]
+
+    # There were no children, consider the parent instead
+    if len(positions) < 2:
+
+        # It's possible the immediate parent is an empty
+        # group without translation. We can't use that, so
+        # instead walk the hierarchy until you find the first
+        # parent with some usable translation to it.
+        for parent in root.lineage():
+            pos2 = parent.translation(cmdx.sWorld)
+
+            if pos2.isEquivalent(pos1, i__.tolerance):
+                continue
+
+            # The parent will be facing in the opposite direction
+            # of what we want, so let's invert that.
+            pos2 -= pos1
+            pos2 *= -1
+            pos2 += pos1
+
+            positions += [pos2]
+
+            break
+
+    # There were neither parent nor children,
+    # we don't have a lot of options here.
+    if len(positions) < 2:
+        return (
+            # Default size
+            cmdx.Vector(1, 1, 1),
+
+            # Default center
+            cmdx.Vector(0, 0, 0)
+        )
+
+    center = cmdx.Vector()
+    for pos in positions:
+        center += pos
+    center /= len(positions)
+
+    # Then figure out a bounding box, relative this center
+    min_ = cmdx.Vector()
+    max_ = cmdx.Vector()
+
+    for pos2 in positions:
+        dist = pos2 - center
+
+        min_.x = min(min_.x, dist.x)
+        min_.y = min(min_.y, dist.y)
+        min_.z = min(min_.z, dist.z)
+
+        max_.x = max(max_.x, dist.x)
+        max_.y = max(max_.y, dist.y)
+        max_.z = max(max_.z, dist.z)
+
+    size = cmdx.Vector(
+        max_.x - min_.x,
+        max_.y - min_.y,
+        max_.z - min_.z,
+    )
+
+    # Keep smallest value within some sensible range
+    minimum = list(size).index(min(size))
+    size[minimum] = max(size) * 0.5
+
+    return size, center

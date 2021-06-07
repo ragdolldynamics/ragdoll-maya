@@ -1,11 +1,11 @@
 """Internal functions, don't look"""
 
 import re
+import json
 import time
 import random
 import logging
 import functools
-import contextlib
 
 from maya import cmds
 from .vendor import cmdx
@@ -15,6 +15,8 @@ log = logging.getLogger("ragdoll")
 # Python 2 backwards compatibility
 string_types = cmdx.string_types
 long = cmdx.long
+
+tolerance = 0.001
 
 
 class CycleError(RuntimeError):
@@ -146,6 +148,134 @@ class UserAttributes(object):
     def add_divider(self, label):
         assert isinstance(label, string_types), "%s was not a string" % label
         self._added.append(cmdx.Divider(label))
+
+
+def struct(name, **kwargs):
+    """Serialisable and strongly-typed data container"""
+
+    class Struct(object):
+        __slots__ = list(kwargs.keys())
+
+        def __init__(self):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def __str__(self):
+            return (
+                "Struct(\n%s\n)" % "\n".join(
+                    "  %s=%s" % (key, getattr(self, key))
+                    for key in self.__slots__
+                )
+            )
+
+        def copy(self, name):
+            kwargs = {}
+            for slot in self.__slots__:
+                kwargs[slot] = getattr(self, slot)
+            return struct(name, **kwargs)
+
+        def dump(self):
+            def _euler(value):
+                return {
+                    "type": "MEulerRotation",
+                    "values": [value.x, value.y, value.z],
+                    "order": value.order
+                }
+
+            def _vector(value):
+                return {
+                    "type": "MVector",
+                    "values": [value.x, value.y, value.z]
+                }
+
+            def _quaternion(value):
+                return {
+                    "type": "MQuaternion",
+                    "values": [value.x, value.y, value.z, value.w]
+                }
+
+            def serialise(value):
+                if isinstance(value, (int, float, str, bool)):
+                    return value
+
+                elif isinstance(value, cmdx.om.MEulerRotation):
+                    return _euler(value)
+
+                elif isinstance(value, cmdx.om.MVector):
+                    return _vector(value)
+
+                elif isinstance(value, cmdx.om.MQuaternion):
+                    return _quaternion(value)
+
+                else:
+                    raise TypeError("Cannot serialise %s" % value)
+
+            return json.dumps({
+                slot: serialise(getattr(self, slot))
+                for slot in self.__slots__
+                if not callable(getattr(self, slot))
+            })
+
+        def load(self, dump):
+            def _euler(value):
+                values = value["values"]
+                return cmdx.Euler(
+                    values[0], values[1], values[2], value["order"]
+                )
+
+            def _vector(value):
+                values = value["values"]
+                return cmdx.Vector(
+                    values[0], values[1], values[2]
+                )
+
+            def _quaternion(value):
+                values = value["values"]
+                return cmdx.Quaternion(
+                    values[0], values[1], values[2], values[3]
+                )
+
+            def deserialise(value):
+                if isinstance(value, dict):
+                    if value["type"] == "MEulerRotation":
+                        return _euler(value)
+
+                    elif value["type"] == "MVector":
+                        return _vector(value)
+
+                    elif value["type"] == "MQuaternion":
+                        return _quaternion(value)
+
+                    else:
+                        raise TypeError("Cannot deserialise %s" % value)
+
+                else:
+                    return value
+
+            for slot, value in json.loads(dump).items():
+                setattr(self, slot, deserialise(value))
+
+            return self
+
+    return Struct
+
+
+# Components
+Geometry = struct(
+    "Geometry",
+    orient=cmdx.Quaternion(),
+    extents=cmdx.Vector(1, 1, 1),
+    length=0.0,
+    radius=0.0,
+    shape_offset=cmdx.Vector(),
+    shape_rotation=cmdx.Vector(),
+    compute_mass=lambda self: (
+        self.extents.x *
+        self.extents.y *
+        self.extents.z *
+        0.01
+    )
+)
 
 
 def with_contract(args=None, kwargs=None, returns=None, opts=None):

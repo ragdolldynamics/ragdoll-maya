@@ -387,11 +387,38 @@ class Chain(object):
         #  |___\|/               |____|/
         #
         #
-        geo = commands.infer_geometry(
-            transform,
-            parent=previous or self._root[0],
-            children=[subsequent] if subsequent else False
-        )
+        # No need to compute geometry twice
+        #
+        # TODO(marcus): There is actually a deeper problem here.
+        # On computing the child geometry *after* a parent,
+        # we're inexplicably evaluating a new position for
+        # the child as a result of it now being driven by
+        # a dynamic parent. What *should* happen is pre-caching
+        # all transforms involved, and computing based solely
+        # on this information.
+        #
+        if not subsequent and previous.has_attr("_rdGeometry"):
+            geo = i__.Geometry()
+            geo.load(previous["_rdGeometry"].read())
+
+        else:
+            geo = commands.infer_geometry(
+                transform,
+                parent=previous,
+                children=[subsequent] if subsequent else False
+            )
+
+        # Cache for reuse
+        if not transform.has_attr("_rdGeometry"):
+            mod.add_attr(transform, cmdx.String("_rdGeometry"))
+            mod.do_it()
+
+        mod.set_attr(transform["_rdGeometry"], geo.dump())
+
+        # Clean this up when it's all over
+        index = rigid["userAttributes"].next_available_index()
+        mod.connect(transform["_rdGeometry"],
+                    rigid["userAttributes"][index])
 
         mod.set_attr(rigid["shapeExtents"], geo.extents)
         mod.set_attr(rigid["shapeLength"], geo.length)

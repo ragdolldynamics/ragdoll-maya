@@ -500,6 +500,18 @@ def test_animation_constraint_3():
     assert_almost_equals(b.translation(cmdx.sWorld).y, 10.0, 2)
 
 
+def test_simple_scale():
+    pass
+
+
+def test_scale_after_authoring():
+    pass
+
+
+def test_scale_chain():
+    pass
+
+
 if cmdx.__maya_version__ >= 2019:
     def test_up_axes():
         """Both Z and Y-up axes behave as you would expect"""

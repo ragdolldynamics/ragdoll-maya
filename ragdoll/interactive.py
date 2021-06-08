@@ -33,6 +33,7 @@ and can but generally *should not* be used for scripting.
 import os
 import copy
 import json
+import errno
 import logging
 import traceback
 import functools
@@ -48,6 +49,7 @@ from . import (
     ui,
     options,
     licence,
+    telemetry,
     dump,
     tools,
     constants as c,
@@ -219,6 +221,7 @@ def install():
     if __.installed:
         return
 
+    install_telemetry()
     install_logger()
     install_plugin()
     options.install()
@@ -271,6 +274,7 @@ def uninstall():
         # or via the Script Editor or userSetup.py etc.
         return
 
+    uninstall_telemetry()
     uninstall_logger()
     uninstall_callbacks()
     uninstall_menu()
@@ -305,6 +309,12 @@ class RagdollGuiLogHandler(MayaGuiLogHandler):
             RagdollGuiLogHandler.history.append(record)
             update_menu()
 
+        if record.levelno == logging.WARNING:
+            __.telemetry_data["maya"]["warnings"] += 1
+
+        if record.levelno >= logging.ERROR:
+            __.telemetry_data["maya"]["errors"] += 1
+
         return super(RagdollGuiLogHandler, self).emit(record)
 
 
@@ -320,6 +330,51 @@ def install_logger():
     handler.setFormatter(fmt)
     log.addHandler(handler)
     log.propagate = False
+
+
+def install_telemetry():
+    ragdoll_dir = os.path.expanduser("~/.ragdoll")
+    crash_fname = os.path.join(
+        ragdoll_dir, "ragdollCrashed_%d.txt" % os.getpid()
+    )
+
+    try:
+        os.makedirs(ragdoll_dir)
+
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            # This is fine
+            pass
+
+        else:
+            # Can't think of a reason why this would ever happen
+            log.debug("Could not create ~/.ragdoll user-directory")
+
+    if os.path.exists(crash_fname):
+        __.telemetry_data["maya"]["crashed"] = True
+        os.remove(crash_fname)
+        log.debug("Maya crashed last time, with Ragdoll loaded.")
+
+    with open(crash_fname, "w") as f:
+        f.write("Nothing to see here")
+
+
+def uninstall_telemetry():
+    ragdoll_dir = os.path.expanduser("~/.ragdoll")
+    crash_fname = os.path.join(
+        ragdoll_dir, "ragdollCrashed_%d.txt" % os.getpid()
+    )
+
+    try:
+        os.remove(crash_fname)
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            # If it isn't there, it isn't there
+            pass
+        else:
+            # Could be a permission issue, which I don't expect
+            # could ever happen.
+            log.debug("Could not remove crash file")
 
 
 def uninstall_logger():

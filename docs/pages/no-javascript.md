@@ -10,7 +10,7 @@ hide:
 
 <div class="hboxlayout justify-center">
 <p>
-You've just been redirected from a JavaScript-heavy landing page, but your browser won't permit JavaScript.
+You've just been redirected from a JavaScript-heavy landing page because your browser won't permit JavaScript.
 </p>
 </div>
 <div class="hboxlayout justify-center">

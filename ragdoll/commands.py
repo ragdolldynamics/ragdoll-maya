@@ -2376,7 +2376,7 @@ def infer_geometry(root, parent=None, children=None):
 @i__.with_refresh_suspended
 @i__.with_timing
 @i__.with_undo_chunk
-def delete_physics(nodes, dry_run=False):
+def delete_physics(nodes, dry_run=False, suspend=True):
     """Delete Ragdoll from anything related to `nodes`
 
     This will delete anything related to Ragdoll from your scenes, including
@@ -2388,6 +2388,8 @@ def delete_physics(nodes, dry_run=False):
             but still run through the process and throw exceptions
             if any, and still return the results of what *would*
             have been deleted if it wasn't dry.
+        suspend (bool, optional): Suspend viewport whilst deleting,
+            can enhance performance and avoid crashes.
 
     """
 
@@ -2559,7 +2561,7 @@ def delete_physics(nodes, dry_run=False):
     return result
 
 
-def delete_all_physics(dry_run=False):
+def delete_all_physics(dry_run=False, suspend=True):
     """Nuke it from orbit
 
     Return to simpler days, days before physics, with this one command.
@@ -2567,7 +2569,8 @@ def delete_all_physics(dry_run=False):
     """
 
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    return delete_physics(cmdx.ls(type=all_nodetypes), dry_run=dry_run)
+    all_nodes = cmdx.ls(type=all_nodetypes)
+    return delete_physics(all_nodes, dry_run=dry_run, suspend=suspend)
 
 
 @i__.with_undo_chunk
@@ -2772,7 +2775,7 @@ def bake_simulation(rigids=None, opts=None):
     # E.g. the character(s) could be referenced.
     if opts["deletePhysics"]:
         try:
-            delete_all_physics(dry_run=True)
+            delete_all_physics(dry_run=True, suspend=False)
         except i__.UserWarning:
             raise i__.UserWarning(
                 "Cannot Delete Referenced Nodes",

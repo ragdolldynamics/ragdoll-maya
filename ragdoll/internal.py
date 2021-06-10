@@ -401,13 +401,13 @@ class Timer(object):
 def with_refresh_suspended(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if kwargs.get("suspend", True):
+        if not kwargs.get("dry_run", False):
             cmds.refresh(suspend=True)
 
         try:
             return func(*args, **kwargs)
         finally:
-            if kwargs.get("suspend", True):
+            if not kwargs.get("dry_run", False):
                 cmds.refresh(suspend=False)
 
     return wrapper

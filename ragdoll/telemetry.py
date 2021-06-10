@@ -1,6 +1,8 @@
+import os
 import json
 import copy
 import logging
+import datetime
 from maya import cmds
 
 from . import __
@@ -40,6 +42,10 @@ def _gather_system():
             pass
 
     __.telemetry_data["system"].update({
+        "time": datetime.datetime.now().strftime(
+            "%d-%m-%Y, %H:%M:%S"
+        ),
+
         # E.g. win32
         "os": sys.platform,
 
@@ -68,7 +74,10 @@ def gather():
 
 
 def save():
-    fname = "ragdollTelemetry.json"
+    """Write telemetry to ~/.ragdoll/telemetry_<date>.json"""
+    date = datetime.datetime.now().strftime("%d-%m-%Y-%H%M%S")
+    fname = os.path.expanduser("~/.ragdoll")
+    fname = os.path.join(fname, "telemetry_%s.json" % date)
 
     with open(fname, "w") as f:
         json.dump(__.telemetry_data, f)
@@ -77,13 +86,6 @@ def save():
 
 
 def upload():
+    """Send anonymous telemetry to Ragdoll's server"""
     dump = json.dumps(__.telemetry_data)
     cmds.ragdollReport(json=dump)
-
-
-def install():
-    pass
-
-
-def uninstall():
-    pass

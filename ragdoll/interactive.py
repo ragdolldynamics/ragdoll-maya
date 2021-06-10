@@ -221,7 +221,7 @@ def install():
     if __.installed:
         return
 
-    install_telemetry()
+    install_telemetry() if c.RAGDOLL_TELEMETRY else None
     install_logger()
     install_plugin()
     options.install()
@@ -274,7 +274,7 @@ def uninstall():
         # or via the Script Editor or userSetup.py etc.
         return
 
-    uninstall_telemetry()
+    uninstall_telemetry() if c.RAGDOLL_TELEMETRY else None
     uninstall_logger()
     uninstall_callbacks()
     uninstall_menu()

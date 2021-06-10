@@ -2,6 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
+- [2021.06.10 - More Bugfixes](/releases/2021.06.10)
 - [2021.06.07 - Bugfixes](/releases/2021.06.07)
 - [2021.05.17 - Floating Licence](/releases/2021.05.17)
 - [2021.05.10 - Mimic](/releases/2021.05.10)

@@ -47,6 +47,7 @@ from . import (
     commands,
     upgrade,
     ui,
+    fixes,
     options,
     licence,
     telemetry,
@@ -224,6 +225,7 @@ def install():
     install_telemetry() if c.RAGDOLL_TELEMETRY else None
     install_logger()
     install_plugin()
+    fixes.paint_skin_weights()
     options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 

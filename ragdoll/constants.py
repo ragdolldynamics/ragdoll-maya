@@ -38,6 +38,7 @@ OrientConstraint = 1
 ParentConstraint = 2
 HingeConstraint = 3
 SocketConstraint = 4
+IgnoreContactsConstraint = 5
 
 # cacheMedia enum indices
 Off = 0
@@ -91,3 +92,5 @@ Joint = "joint"
 nConstraintStyle = 0
 MayaConstraintStyle = 1
 RagdollStyle = 2
+
+BakeAll = 0

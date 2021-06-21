@@ -441,6 +441,25 @@ def animation_constraint(rigid, opts=None):
 @i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
                    kwargs={"opts": (dict, None)},
                    returns=(cmdx.DagNode,))
+def ignore_contacts_constraint(parent, child, opts=None):
+    opts = opts or {}
+
+    # Setup default values
+    name = parent.parent().name(namespace=False)
+    opts = dict({
+        "name": "rIgnore_%s" % name,
+        "outlinerStyle": c.RagdollStyle,
+    }, **opts)
+
+    con = create_constraint(parent, child, opts=opts)
+    convert_to_ignore_contacts(con, opts=opts)
+    return con
+
+
+@i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode, cmdx.DagNode),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
 def point_constraint(parent, child, opts=None):
     opts = opts or {}
 
@@ -529,6 +548,22 @@ def socket_constraint(parent, child, opts=None):
 
     con = create_constraint(parent, child, opts=opts)
     convert_to_socket(con, opts=opts)
+    return con
+
+
+@i__.with_undo_chunk
+@i__.with_contract(args=(cmdx.DagNode,),
+                   kwargs={"opts": (dict, None)},
+                   returns=(cmdx.DagNode,))
+def convert_to_ignore_contacts(con, opts=None):
+    if isinstance(con, i__.string_types):
+        con = cmdx.encode(con)
+
+    with cmdx.DagModifier() as mod:
+        mod.smart_set_attr(con["disableCollision"], True)
+        mod.smart_set_attr(con["limitEnabled"], False)
+        mod.smart_set_attr(con["driveEnabled"], False)
+
     return con
 
 
@@ -1549,9 +1584,9 @@ def create_mimic(root, opts=None):
                         "name": "rSoftPinConstraint",
                         "addUserAttributes": False,
                         "defaults": {
-                            "driveStrength": (
-                                1.0 if opts["addMultiplier"] else 0.0
-                            )
+
+                            # Let the user enable this on a per-rigid basis
+                            "driveStrength": 0.0
                         }
                     }
                 )
@@ -1632,7 +1667,7 @@ def create_mimic(root, opts=None):
             soft_mult = multiply_constraints(
                 world_cons, parent=root_reference, opts={
                     "name": "rGlobalSoftPin",
-                    "defaults": {"driveStrength": 0.0}
+                    "defaults": {"driveStrength": 1.0}
                 })
 
             multipliers.append(soft_mult)
@@ -1924,7 +1959,7 @@ def transfer_constraint(ca, cb, opts=None):
                    opts=("constraintAddUserAttributes"))
 def edit_constraint_frames(con, opts=None):
     opts = dict({
-        "addUserAttributes": True,
+        "addUserAttributes": False,
     }, **(opts or {}))
 
     if isinstance(con, i__.string_types):
@@ -2794,22 +2829,28 @@ def bake_simulation(rigids=None, opts=None):
 
         rigid_to_transform[rigid] = rigid.parent()
 
+    if not rigid_to_transform:
+        raise UserWarning("Nothing to bake")
+
     time = tuple(t.value for t in (opts["startTime"], opts["endTime"]))
-    cmds.bakeResults(
-        list(map(str, rigid_to_transform.values())),
-        attribute=opts["attributes"],
-        simulation=True,
-        time=time,
-        sampleBy=1,
-        oversamplingRate=1,
-        disableImplicitControl=True,
-        preserveOutsideKeys=False,
-        sparseAnimCurveBake=False,
-        removeBakedAttributeFromLayer=False,
-        removeBakedAnimFromLayer=False,
-        bakeOnOverrideLayer=opts["bakeToLayer"],
-        minimizeRotation=False,
-    )
+
+    args = [str(rigid) for rigid in rigid_to_transform.values()]
+    kwargs = {
+        "attribute": opts["attributes"],
+        "simulation": True,
+        "time": time,
+        "sampleBy": 1,
+        "oversamplingRate": 1,
+        "disableImplicitControl": True,
+        "preserveOutsideKeys": False,
+        "sparseAnimCurveBake": False,
+        "removeBakedAttributeFromLayer": False,
+        "removeBakedAnimFromLayer": False,
+        "bakeOnOverrideLayer": opts["bakeToLayer"],
+        "minimizeRotation": False,
+    }
+
+    cmds.bakeResults(*args, **kwargs)
 
     if opts["unrollRotation"]:
         rotate_channels = ["%s.rx" % t for t in rigid_to_transform.values()]
@@ -2912,6 +2953,119 @@ def bake_simulation(rigids=None, opts=None):
         reconnect_physics()
 
     return list(rigid_to_transform.values())
+
+
+@i__.with_undo_chunk
+def extract_from_scene(rigids,
+                       scene=None,
+                       include_connected_rigids=False,
+                       discard_empty_scenes=True):
+    """Extract `rigids` from `scene`
+
+    Arguments:
+        rigids (tuple): Rigids to be extracted from `scene`
+        scene (cmdx.DagNode, optional): Scene to extract rigids into,
+            defaults to creating a new scene.
+        include_connected_rigids (bool, optional): Include rigids connected
+            via constraints.
+        discard_empty_scenes (bool, optional): Automatically delete
+            old scenes that no longer have any rigids in them.
+
+    """
+
+    assert isinstance(rigids, (tuple, list)), "rigids must be tuple"
+    assert len(rigids) > 0, "no rigids passed"
+    assert isinstance(rigids[0], cmdx.DagNode), "rigid was node a cmdx type"
+    assert all(rigid.type() == "rdRigid" for rigid in rigids), (
+        "%s were not of type rdRigid" % ", ".join(rigids)
+    )
+    assert scene is None or isinstance(scene, cmdx.DagNode), (
+        "rigid was node a cmdx type"
+    )
+
+    assert include_connected_rigids is False, (
+        "include_connected_rigids Not yet implemeneted"
+    )
+
+    def walk_constraints():
+        """Walk the constraint graph to include any connected rigids"""
+        connected_rigids = set()
+        for rigid in rigids:
+            for plug in rigid["ragdollId"].connections(type="rdConstraint",
+                                                       plugs=True):
+                # A constraint connects to two rigids, a parent and child
+                # We're only interested in those of which this rigid
+                # is a child.
+                if plug.name() != "childRigid":
+                    continue
+
+                con = plug.node()
+                parent = con["parentRigid"].connection(
+                    type="rdRigid", source=False)
+                child = con["childRigid"].connection(
+                    type="rdRigid", source=False)
+                connected_rigids.add(parent)
+                connected_rigids.add(child)
+
+                # Todo
+
+    new = scene or create_scene(name=i__.unique_name("rSceneExtracted"))
+    old_scenes = set()
+
+    with cmdx.DagModifier() as mod:
+        for rigid in rigids:
+            old = rigid["currentState"].connection(type="rdScene")
+            old_scenes.add(old)
+
+            if old:
+                _remove_rigid(mod, rigid, old)
+            else:
+                log.warning("%s wasn't part of a scene?" % rigid)
+
+            _add_rigid(mod, rigid, new)
+
+            for plug in rigid["ragdollId"].connections(type="rdConstraint",
+                                                       plugs=True):
+                # A constraint connects to two rigids, a parent and child
+                # We're only interested in those of which this rigid
+                # is a child.
+                if plug.name() != "childRigid":
+                    continue
+
+                con = plug.node()
+                _remove_constraint(mod, con, old)
+                _add_constraint(mod, con, new)
+
+    # Automatically delete empty scenes
+    if discard_empty_scenes:
+        with cmdx.DagModifier() as mod:
+            for scene in old_scenes:
+
+                # Can't use `.count` or `evaluateNumElements` for some reason.
+                # So let's check whether they are physically connected or not.
+                if not any(el.connection() for el in scene["outputObjects"]):
+                    mod.delete(scene)
+
+    return new
+
+
+def move_to_scene(rigids, scene):
+    return extract_from_scene(rigids, scene)
+
+
+def combine_scenes(scenes):
+    assert len(scenes) > 1, "Cannot combine anything less than 2 scenes"
+
+    master = scenes[0]
+    for scene in scenes[1:]:
+        rigids = filter(None, [
+            el.connection(type="rdRigid")
+            for el in scene["outputObjects"]
+        ])
+
+        move_to_scene(rigids, master)
+
+    return master
 
 
 """
@@ -3250,6 +3404,34 @@ def _add_rigid(mod, rigid, scene):
     mod.connect(rigid["currentState"], scene["inputActive"][index])
     mod.set_attr(rigid["version"], i__.version())
 
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
+
+
+def _remove_rigid(mod, rigid, scene):
+    assert rigid.type() == "rdRigid", rigid
+    assert scene.type() == "rdScene", scene
+
+    attributes = (
+        ("outputObjects", "nextState"),
+        ("startTime", "startTime"),
+        ("currentTime", "currentTime"),
+        ("inputActiveStart", "startState"),
+        ("inputActive", "currentState"),
+    )
+
+    for a, b in attributes:
+        if scene[a].isArray:
+            other = rigid[b].connection(type="rdScene", plug=True)
+            index = other._mplug.logicalIndex()
+            mod.disconnect(scene[a][index], rigid[b])
+
+        else:
+            mod.disconnect(scene[a], rigid[b])
+
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
+
 
 def _add_constraint(mod, con, scene):
     assert con["startState"].connection() != scene, (
@@ -3263,6 +3445,31 @@ def _add_constraint(mod, con, scene):
     mod.connect(con["startState"], scene["inputConstraintStart"][index])
     mod.connect(con["currentState"], scene["inputConstraint"][index])
     mod.set_attr(con["version"], i__.version())
+
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
+
+
+def _remove_constraint(mod, con, scene):
+    assert con.type() == "rdConstraint", con
+    assert scene.type() == "rdScene", scene
+
+    attributes = (
+        ("inputConstraintStart", "startState"),
+        ("inputConstraint", "currentState"),
+    )
+
+    for a, b in attributes:
+        if scene[a].isArray:
+            other = con[b].connection(type="rdScene", plug=True)
+            index = other._mplug.logicalIndex()
+            mod.disconnect(scene[a][index], con[b])
+
+        else:
+            mod.disconnect(scene[a], con[b])
+
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
 
 
 def _connect_transform(mod, node, transform):

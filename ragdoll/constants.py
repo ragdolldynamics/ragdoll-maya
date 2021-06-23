@@ -94,3 +94,4 @@ MayaConstraintStyle = 1
 RagdollStyle = 2
 
 BakeAll = 0
+BakeSelected = 1

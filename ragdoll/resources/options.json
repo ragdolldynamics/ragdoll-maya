@@ -606,6 +606,14 @@
         "default": 100,
         "help": "Finish baking at this time."
     },
+    "bakeScene": {
+        "name": "bakeScene",
+        "label": "Scene",
+        "type": "Enum",
+        "items": ["All", "Selected"],
+        "default": 0,
+        "help": "Limit baking to rigid bodies in this scene."
+    },
 
 
 

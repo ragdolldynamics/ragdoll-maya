@@ -50,7 +50,6 @@ from . import (
     fixes,
     options,
     licence,
-    telemetry,
     dump,
     tools,
     constants as c,
@@ -68,14 +67,10 @@ kSuccess = True
 kFailure = False
 
 # Internal
-__.previousvars = {
+__.previousvars = dict({
     "MAYA_SCRIPT_PATH": os.getenv("MAYA_SCRIPT_PATH", ""),
     "XBMLANGPATH": os.getenv("XBMLANGPATH", ""),
-}
-
-
-# Recording-related data
-_recorded_actions = []
+}, **__.previousvars)  # Keep exising previous vars, if any
 
 
 def _print_exception():
@@ -278,11 +273,13 @@ def uninstall():
 
     uninstall_telemetry() if c.RAGDOLL_TELEMETRY else None
     uninstall_logger()
-    uninstall_callbacks()
     uninstall_menu()
     uninstall_ui()
     options.uninstall()
     cmdx.uninstall()
+
+    if not _is_standalone():
+        uninstall_callbacks()
 
     # Call last, for Maya to properly unload and clean up
     try:
@@ -607,6 +604,9 @@ def install_menu():
 
         divider()
 
+        item("ignoreContacts", ignore_contacts_constraint,
+             _constraint_options(c.IgnoreContactsConstraint))
+
         item("animationConstraint", create_animation_constraint,
              create_animation_constraint_options)
 
@@ -642,13 +642,14 @@ def install_menu():
     with submenu("Animation", icon="animation.png"):
         item("bakeSimulation", bake_simulation, bake_simulation_options)
 
-        divider()
+        divider("I/O")
 
+        item("openPhysics", open_physics, open_physics_options)
         item("exportPhysics", export_physics, export_physics_options)
         item("importPhysics", import_physics_from_file, import_physics_options)
         item("applyPhysics")
 
-        divider()
+        divider("Utilities")
 
         item("multiplySelected",
              multiply_selected,
@@ -659,6 +660,8 @@ def install_menu():
              create_dynamic_control)
 
     with submenu("Rigging", icon="rigging.png"):
+        divider("Gizmos")
+
         item("editShape", edit_shape, edit_shape_options)
         item("editConstraintFrames", edit_constraint_frames)
 
@@ -671,7 +674,13 @@ def install_menu():
             item("convertToPolygons", convert_to_polygons)
             item("normaliseShapes", normalise_shapes)
 
-        divider()
+            divider("Scene Management")
+
+            item("extractFromScene", extract_from_scene)
+            item("moveToScene", move_to_scene)
+            item("combineScenes", combine_scenes)
+
+        divider("Initial State")
 
         item("setInitialState", set_initial_state,
              set_initial_state_options)
@@ -840,14 +849,23 @@ def _find_current_scene(autocreate=True):
         # it may come from another scene or at a time when it
         # did exist but got deleted
         try:
-            scene = cmdx.encode(scene)
+            node = cmdx.encode(scene)
+
+            if node.shortestPath() == scene:
+                scene = node
+
+            else:
+                # E.g. rSceneShape may exist, but _:rSceneShape is
+                # what exists because it's coming from a reference.
+                # We're only interested in the exact name.
+                raise cmdx.ExistError
 
         except cmdx.ExistError:
             # Ok, no persistent clue or request for a new scene
             try:
                 scene = cmdx.ls(type="rdScene")[0]
 
-            # Nothing in sight, now it's up to the function
+            # Nothing in sight, now it's up to the caller
             except IndexError:
                 if autocreate:
                     scene = create_scene()
@@ -1595,6 +1613,9 @@ def create_constraint(selection=None, **opts):
     elif constraint_type == c.ParentConstraint:
         con = commands.parent_constraint(parent, child, opts=opts)
 
+    elif constraint_type == c.IgnoreContactsConstraint:
+        con = commands.ignore_contacts_constraint(parent, child, opts=opts)
+
     else:
         return log.warning(
             "Unrecognised constraint type '%s'" % constraint_type
@@ -1762,6 +1783,12 @@ def create_hinge_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 def create_socket_constraint(selection=None, **opts):
     opts = dict(opts, **{"constraintType": c.SocketConstraint})
+    return create_constraint(selection, **opts)
+
+
+@i__.with_undo_chunk
+def ignore_contacts_constraint(selection=None, **opts):
+    opts = dict(opts, **{"constraintType": c.IgnoreContactsConstraint})
     return create_constraint(selection, **opts)
 
 
@@ -1990,23 +2017,34 @@ def bake_simulation(selection=None, **opts):
         "bakeToLayer": _opt("bakeToLayer", opts),
         "includeStatic": _opt("bakeIncludeStatic", opts),
         "unrollRotation": _opt("bakeUnrollRotation", opts),
+        "scene": _opt("bakeScene", opts),
     }
 
-    rigids = cmds.ls(type="rdRigid")
+    rigids = []
+
+    if opts_["scene"] == c.BakeAll:
+        rigids.extend(cmdx.ls(type="rdRigid"))
+
+    elif opts_["scene"] == c.BakeSelected:
+        for scene in _filtered_selection("rdScene"):
+            for element in scene["outputObjects"]:
+                rigid = element.connection(source=False, type="rdRigid")
+                rigids.append(rigid) if rigid else DoNothing
+
     if not rigids:
-        return log.warning("No physics found!")
+        return log.warning("No rigids found!")
 
     with i__.Timer("bake") as duration:
         if _opt("bakePerformance", opts) == 1:
             with isolate_select(rigids):
-                commands.bake_simulation(opts=opts_)
+                commands.bake_simulation(rigids, opts=opts_)
 
         elif _opt("bakePerformance", opts) == 2:
             with refresh_suspended():
-                commands.bake_simulation(opts=opts_)
+                commands.bake_simulation(rigids, opts=opts_)
 
         else:
-            commands.bake_simulation(opts=opts_)
+            commands.bake_simulation(rigids, opts=opts_)
 
     cmds.inViewMessage(
         amg="Baked simulation in <hl>%.2fs</hl>" % duration.s,
@@ -2312,6 +2350,62 @@ def normalise_shapes(selection=None):
     return True
 
 
+@with_exception_handling
+def combine_scenes(selection=None):
+    scenes = _filtered_selection("rdScene")
+
+    if not scenes or len(scenes) < 2:
+        raise i__.UserWarning(
+            "Invalid selection",
+            "Select two or more scene to combine them into one."
+        )
+
+    old_scenes = ", ".join(s.name() for s in scenes[1:])
+    master = commands.combine_scenes(scenes)
+    log.info("Successfully combined %s into %s" % (old_scenes, master))
+
+    return kSuccess
+
+
+@with_exception_handling
+def extract_from_scene(selection=None):
+    rigids = _filtered_selection("rdRigid")
+
+    if not rigids:
+        raise i__.UserWarning(
+            "Invalid selection",
+            "Select one or more rigids to extract from its scene."
+        )
+
+    count = len(rigids)
+    scene = commands.extract_from_scene(rigids)
+    log.info("Successfully extracted %d rigids into %s" % (count, scene))
+    return kSuccess
+
+
+@with_exception_handling
+def move_to_scene(selection=None):
+    rigids = _filtered_selection("rdRigid")
+    scenes = _filtered_selection("rdScene")
+
+    if not rigids:
+        raise i__.UserWarning(
+            "Invalid selection",
+            "Select one or more rigids to move into scene."
+        )
+
+    if not scenes or len(scenes) != 1:
+        raise i__.UserWarning(
+            "Invalid selection",
+            "Select one scene to move rigids into."
+        )
+
+    count = len(rigids)
+    scene = commands.move_to_scene(rigids, scenes[0])
+    log.info("Successfully moved %d rigids into %s" % (count, scene))
+    return kSuccess
+
+
 def multiply_selected(selection=None):
     rigids = _filtered_selection("rdRigid")
     constraints = _filtered_selection("rdConstraint")
@@ -2372,8 +2466,10 @@ def select_type(typ):
     def select(selection=None, **opts):
         use_selection = _opt("selectUseSelection", opts)
         if use_selection:
-            selection = cmds.ls(selection=True)
-            cmds.select(cmds.ls(selection, type=typ))
+            cmds.select(
+                cmds.ls(selection=True, type=typ) or
+                cmds.ls(type=typ)
+            )
         else:
             cmds.select(cmds.ls(type=typ))
 
@@ -2468,8 +2564,25 @@ def welcome_user(*args):
     return win
 
 
+def open_physics(selection=None):
+    pass
+
+
+def open_physics_options(selection=None):
+    pass
+
+
 @with_exception_handling
 def export_physics(selection=None, **opts):
+
+    # Initialise start and next frames of each scene
+    current_time = cmds.currentTime(query=True)
+    for scene in cmdx.ls(type="rdScene"):
+        start_time = scene["startTime"].asTime().value
+        cmds.currentTime(start_time)
+        cmds.currentTime(start_time + 1)
+    cmds.currentTime(current_time)
+
     data = cmds.ragdollDump()
     data = json.loads(data)
 
@@ -2768,7 +2881,7 @@ def _st_options(key, typ):
 
 
 select_rigids_options = _st_options("selectRigids", "rdRigid")
-select_constraints_options = _st_options("selectConstraints", "rdControl")
+select_constraints_options = _st_options("selectConstraints", "rdConstraint")
 select_scenes_options = _st_options("selectScenes", "rdScene")
 select_controls_options = _st_options("selectControls", "rdControl")
 

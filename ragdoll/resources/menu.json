@@ -140,6 +140,12 @@
         "summary": "Constrain the position and limit the orientation between two rigid bodies.",
         "description": "Constrain the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
+    "ignoreContacts": {
+        "label": "Ignore Contacts",
+        "icon": "ignore_contacts.png",
+        "summary": "Ignore contacts between the two selected rigids.",
+        "description": "This is a normal constraint with limits and guides disabled, and 'Allow Overlap' left enabled."
+    },
     "animationConstraint": {
         "label": "Animation Constraint",
         "icon": "animation.png",
@@ -303,6 +309,7 @@
         "summary": "Convert a live simulation into editable keyframes.",
         "description": "This uses Maya's Bake Simulation tool to convert a simulation into keyframes you can use for further editing.",
         "options": [
+            "bakeScene",
             "bakePerformance",
             "bakeRange",
             "bakeStartTime",
@@ -343,6 +350,16 @@
             "importSearchAndReplace"
         ]
     },
+    "openPhysics": {
+        "label": "Open Physics",
+        "icon": "physics.png",
+        "enable": false,
+        "summary": "Generate new Maya scene from .rag file",
+        "description": "Be rid of all native Maya nodes and work with pure physics at optimal performance. Export and apply the baked keyframes onto your original, heavy character rig once finished tinkering.",
+        "options": [
+        ]
+    },
+
     "applyPhysics": {
         "label": "Apply Physics",
         "icon": "physics.png",
@@ -352,6 +369,26 @@
         "options": [
         ]
     },
+
+    "combineScenes": {
+        "label": "Combine Scenes",
+        "icon": "combine.png",
+        "summary": "Combine two or more scenes into one.",
+        "description": "Move all rigids from two or more scenes into one common scene, where they can interact with each other."
+    },
+    "extractFromScene": {
+        "label": "Extract Rigids",
+        "icon": "extract.png",
+        "summary": "Extract rigids into new scene.",
+        "description": "Move rigids *out* of one scene and into a new scene, where they can run in parallel with the original, without interacting with each other."
+    },
+    "moveToScene": {
+        "label": "Move Rigids",
+        "icon": "move.png",
+        "summary": "Move rigids into existing scene.",
+        "description": "Move rigids from one scene into another, where they can interact with other rigids in the destination scene."
+    },
+
     "editConstraintFrames": {
         "label": "Edit Constraint Pivots",
         "icon": "frame.png",

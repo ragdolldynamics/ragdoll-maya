@@ -2777,7 +2777,7 @@ def convert_to_polygons(actor, worldspace=True):
 
 
 @i__.with_undo_chunk
-def bake_simulation(rigids=None, opts=None):
+def bake_simulation(rigids, opts=None):
     """Bake transforms associated with `rigids` with `opts`
 
     Arguments:
@@ -2790,8 +2790,9 @@ def bake_simulation(rigids=None, opts=None):
 
     """
 
-    assert rigids is None or isinstance(rigids, (tuple, list)), (
+    assert rigids or isinstance(rigids, (tuple, list)), (
         "rigids must be list")
+    assert len(rigids) > 0, "No rigids passed"
     assert opts is None or isinstance(opts, dict), "opts must be dict"
 
     opts = dict({
@@ -2817,8 +2818,6 @@ def bake_simulation(rigids=None, opts=None):
                 "Untick the 'Delete Physics' option to preserve "
                 "physics after baking, or import the referenced physics."
             )
-
-    rigids = rigids or cmdx.ls(type="rdRigid")
 
     rigid_to_transform = {}
     for rigid in rigids:

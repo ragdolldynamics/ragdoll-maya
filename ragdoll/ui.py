@@ -2661,7 +2661,7 @@ class ImportOptions(Options):
             log.debug(traceback.format_exc())
 
             # But don't bother the animator
-            log.warning("Failed")
+            log.warning("An unexpected error occurred, see Script Editor")
 
             return False
 

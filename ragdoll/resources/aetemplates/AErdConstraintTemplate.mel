@@ -37,6 +37,7 @@ global proc AErdConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "childRigid";
   
             editorTemplate -label "Allow Overlap" -addControl "disableCollision";
+            editorTemplate -addControl "frozen";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

@@ -8,6 +8,7 @@ import time
 import math
 import types
 import logging
+import getpass
 import operator
 import traceback
 import collections
@@ -18,7 +19,7 @@ from maya import cmds
 from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui
 from maya import OpenMaya as om1, OpenMayaMPx as ompx1, OpenMayaUI as omui1
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 PY3 = sys.version_info[0] == 3
 
@@ -2651,13 +2652,13 @@ class Plug(object):
             >>> plug[1] << tm["parentMatrix"][0]
             >>> plug[2] << tm["worldMatrix"][0]
 
-            >>> plug[2].connection(plug=True) == tm["worldMatrix"]
+            >>> plug[2].connection(plug=True) == tm["worldMatrix"][0]
             True
 
             # Notice how index 2 remains index 2 even on disconnect
             # The physical index moves to 1.
             >>> plug[1].disconnect()
-            >>> plug[2].connection(plug=True) == tm["worldMatrix"]
+            >>> plug[2].connection(plug=True) == tm["worldMatrix"][0]
             True
 
         """
@@ -3803,6 +3804,17 @@ class Plug(object):
             True
             >>> a["ihi"]
             2
+            >>> b["arrayAttr"] = Long(array=True)
+            >>> b["arrayAttr"][0] >> a["ihi"]
+            >>> b["arrayAttr"][1] >> a["visibility"]
+            >>> a["ihi"].connection() == b
+            True
+            >>> a["ihi"].connection(plug=True) == b["arrayAttr"][0]
+            True
+            >>> a["visibility"].connection(plug=True) == b["arrayAttr"][1]
+            True
+            >>> b["arrayAttr"][1].connection(plug=True) == a["visibility"]
+            True
 
         """
 
@@ -3819,7 +3831,27 @@ class Plug(object):
                     # sometimes, we have to convert them before using them.
                     # https://forums.autodesk.com/t5/maya-programming/maya-api-what-is-a-networked-plug-and-do-i-want-it-or-not/td-p/7182472
                     if plug.isNetworked:
-                        plug = node.findPlug(plug.partialName())
+
+                        if plug.isElement:
+                            # Name would be e.g. 'myArrayAttr[0]'
+                            # raise TypeError(plug.partialName() + "\n")
+                            name = plug.partialName()
+
+                            if name.endswith("]"):
+                                name, index = name.rsplit("[", 1)
+                                index = int(index.rstrip("]"))
+
+                            else:
+                                # E.g. worldMatrix[0] -> wm
+                                index = 0
+
+                            plug = node.findPlug(name)
+
+                            # The index returned is *logical*, not physical.
+                            plug = plug.elementByLogicalIndex(index)
+
+                        else:
+                            plug = node.findPlug(plug.partialName())
 
                     yield Plug(node, plug, unit)
                 else:
@@ -4931,15 +4963,24 @@ def _python_to_mod(value, plug, mod):
     return True
 
 
-def exists(path):
-    """Return whether any node at `path` exists"""
+def exists(path, strict=True):
+    """Return whether any node at `path` exists
 
-    selectionList = om.MSelectionList()
+    Arguments:
+        path (str): Full or partial path to node
+        strict (bool, optional): Error if the path isn't a full match,
+            including namespace.
+
+    """
 
     try:
-        selectionList.add(path)
+        node = encode(path)
     except RuntimeError:
         return False
+
+    if strict:
+        return node.path() == path
+
     return True
 
 
@@ -7529,8 +7570,14 @@ Distance4Attribute = Distance4
 # --------------------------------------------------------
 
 
-# E.g. ragdoll.vendor.cmdx => ragdoll_vendor_cmdx_plugin.py
-unique_plugin = "cmdx_%s_plugin.py" % __version__.replace(".", "_")
+# E.g. cmdx => cmdx_0_6_0_plugin_username0.py
+unique_plugin = "cmdx_%s_plugin_%s.py" % (
+    __version__.replace(".", "_"),
+
+    # Include username, in case two
+    # users occupy the same machine
+    getpass.getuser()
+)
 
 # Support for multiple co-existing versions of apiundo.
 unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
@@ -7621,18 +7668,50 @@ def install():
 
     """
 
+    import errno
     import shutil
-    import tempfile
 
-    tempdir = tempfile.gettempdir()
+    # E.g. c:\users\marcus\Documents\maya
+    tempdir = os.path.expanduser("~/maya/plug-ins")
+
+    try:
+        os.makedirs(tempdir)
+
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            # This is fine
+            pass
+
+        else:
+            # Can't think of a reason why this would ever
+            # happen but you can never be too careful..
+            log.debug("Could not create %s" % tempdir)
+
+            import tempfile
+            tempdir = tempfile.gettempdir()
+
     tempfname = os.path.join(tempdir, unique_plugin)
 
-    # We can't know whether we're a .pyc or .py file,
-    # but we need to copy the .py file *only*
-    fname = os.path.splitext(__file__)[0] + ".py"
+    if not os.path.exists(tempfname):
+        # We can't know whether we're a .pyc or .py file,
+        # but we need to copy the .py file *only*
+        fname = os.path.splitext(__file__)[0]
 
-    # Copy *and overwrite*
-    shutil.copy(fname, tempfname)
+        try:
+            shutil.copyfile(fname + ".py", tempfname)
+
+        except OSError:
+            # This could never really happen, but you never know.
+            # In which case, use the file as-is. This should work
+            # for a majority of cases and only really conflict when/if
+            # the undo mechanism of cmdx changes, which is exceedingly
+            # rare. The actual functionality of cmdx is independent of
+            # this plug-in and will still pick up the appropriate
+            # vendored module.
+            log.debug("Could not generate unique cmdx.py")
+            log.debug("Undo may still work, but cmdx may conflict\n"
+                      "with other instances of it.")
+            tempfname = __file__
 
     # Now we're guaranteed to not interfere
     # with other versions of cmdx. Win!

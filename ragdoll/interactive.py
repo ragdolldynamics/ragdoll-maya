@@ -669,6 +669,7 @@ def install_menu():
 
         item("duplicateSelected", duplicate_selected)
         item("transferAttributes", transfer_selected)
+        item("replaceMesh", replace_mesh, replace_mesh_options)
 
         if c.RAGDOLL_DEVELOPER:
             item("convertToPolygons", convert_to_polygons)
@@ -1019,7 +1020,7 @@ def validate_legacy_opengl():
     )
 
 
-def _filtered_selection(node_type):
+def _filtered_selection(node_type, selection=None):
     """Interpret user selection
 
     They should be able to..
@@ -1032,7 +1033,7 @@ def _filtered_selection(node_type):
 
     """
 
-    selection = list(cmdx.selection())
+    selection = list(selection or cmdx.selection())
 
     if not selection:
         return []
@@ -2070,6 +2071,55 @@ def transfer_selected(selection=None):
     return kSuccess
 
 
+@with_exception_handling
+def replace_mesh(selection=None):
+    meshes = (
+        _filtered_selection("mesh", selection) +
+        _filtered_selection("nurbsCurve", selection) +
+        _filtered_selection("nurbsSurface", selection)
+    )
+
+    rigids = _filtered_selection("rdRigid", selection)
+
+    if len(rigids) < 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "No rigid selected. Select 1 mesh and 1 rigid, in any order."
+        )
+
+    if len(rigids) > 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "2 or more rigids selected. Pick one."
+        )
+
+    if len(meshes) < 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "No meshes selected. Select 1 mesh and 1 rigid."
+        )
+
+    if len(meshes) > 1:
+        existing_msh = rigids[0]["inputMesh"].connection(destination=False)
+        existing_crv = rigids[0]["inputCurve"].connection(destination=False)
+        existing_srf = rigids[0]["inputSurface"].connection(destination=False)
+
+        for mesh in meshes[:]:
+            if mesh in (existing_msh, existing_crv, existing_srf):
+                meshes.remove(mesh)
+
+        # Still got more?
+        if len(meshes) > 1:
+            raise i__.UserWarning(
+                "Selection Problem",
+                "2 or more meshes selected, pick one."
+            )
+
+    commands.replace_mesh(rigids[0], meshes[0])
+
+    return kSuccess
+
+
 def edit_constraint_frames(selection=None):
     frames = []
 
@@ -2801,6 +2851,10 @@ def _constraint_options(typ):
 
 def create_kinematic_control_options(*args):
     return _Window("kinematic", create_kinematic_control)
+
+
+def replace_mesh_options(*args):
+    return _Window("replaceMesh", replace_mesh)
 
 
 def create_driven_control_options(*args):

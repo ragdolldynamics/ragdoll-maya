@@ -388,6 +388,16 @@
         "summary": "Move rigids into existing scene.",
         "description": "Move rigids from one scene into another, where they can interact with other rigids in the destination scene."
     },
+    "replaceMesh": {
+        "label": "Replace Mesh",
+        "icon": "replace.png",
+        "summary": "Replace input of the 'Mesh' shape type with another polygonal or NURBS mesh.",
+        "description": "Substitute the current input of the 'Mesh' shape type with another. Also taking worldspace into account, so the mesh can be anywhere in the scene, under any group or voodoo magic.",
+        "options": [
+            "replaceMeshExclusive",
+            "replaceMeshMaintainOffset"
+        ]
+    },
 
     "editConstraintFrames": {
         "label": "Edit Constraint Pivots",

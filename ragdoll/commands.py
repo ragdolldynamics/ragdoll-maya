@@ -3067,6 +3067,86 @@ def combine_scenes(scenes):
     return master
 
 
+def replace_mesh(rigid, mesh, maintain_offset=True, clean=True):
+    """Replace the 'Mesh' shape type in `rigid` with `mesh`.
+
+    Arguments:
+        rigid (cmdx.Node): Rigid whose mesh to replace
+        mesh (cmdx.Node): Mesh to replace with
+        clean (bool, optional): Remove other inputs, such as curve
+            or surface node. Multiple inputs are supported, so this
+            is optional. Defaults to True.
+
+    """
+
+    assert isinstance(rigid, cmdx.Node), "rigid must be of type cmdx.Node"
+    assert isinstance(mesh, cmdx.Node), "mesh must be of type cmdx.Node"
+    assert rigid.type() == "rdRigid", "rigid must be a 'rdRigid' node"
+    assert mesh.type() in ("mesh", "nurbsCurve", "nurbsSurface"), (
+        "`mesh` must be either 'mesh', 'nurbsSurface' or 'nurbsSurface'"
+    )
+
+    with cmdx.DGModifier(interesting=False) as mod:
+        if clean:
+            for mesh_type in ("inputMesh",
+                              "inputCurve",
+                              "inputSurface"):
+                input_mesh = rigid[mesh_type].connection(
+                    destination=False, plug=True
+                )
+
+                if input_mesh is not None:
+                    mod.disconnect(rigid[mesh_type], input_mesh)
+
+            mod.do_it()
+
+        if maintain_offset:
+            # Bake vertex positions with its current world matrix
+            tg = mod.create_node("transformGeometry")
+
+            # We can't connect to this directly, as it changes over time.
+            # We're only interested in a snapshot of its location.
+            mesh_world_matrix = mesh["worldMatrix"][0].as_matrix()
+            parent_inverse_matrix = rigid["parentInverseMatrix"][0].as_matrix()
+            relative_matrix = mesh_world_matrix * parent_inverse_matrix
+            mod.set_attr(tg["transform"], relative_matrix)
+
+            if mesh.type() == "mesh":
+                mod.connect(mesh["outMesh"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], rigid["inputMesh"])
+
+            elif mesh.type() == "nurbsCurve":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], rigid["inputCurve"])
+
+            elif mesh.type() == "nurbsSurface":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], rigid["inputSurface"])
+
+            else:
+                raise TypeError("Unsupported mesh type '%s'" % mesh.type())
+
+            # Remove this node along with the associated rigid
+            _take_ownership(mod, rigid, tg)
+
+            # TODO: Also check whether there already is such a node,
+            # so we can reuse it rather than keep spamming them.
+
+        else:
+            if mesh.type() == "mesh":
+                mod.connect(mesh["outMesh"], rigid["inputMesh"])
+
+            elif mesh.type() == "nurbsCurve":
+                mod.connect(mesh["local"], rigid["inputCurve"])
+
+            elif mesh.type() == "nurbsSurface":
+                mod.connect(mesh["local"], rigid["inputSurface"])
+
+        mod.set_attr(rigid["shapeType"], c.MeshShape)
+
+    return True
+
+
 """
 
 Internal helper functions

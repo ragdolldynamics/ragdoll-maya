@@ -394,6 +394,21 @@
         "help": "Generate suitable limits automatically from input."
     },
 
+    "replaceMeshExclusive": {
+        "name": "replaceMeshExclusive",
+        "label": "Exclusive",
+        "type": "Boolean",
+        "default": true,
+        "help": "Make this mesh the only input, removing any exising curve or surface that may or may not already be connected."
+    },
+    "replaceMeshMaintainOffset": {
+        "name": "replaceMeshMaintainOffset",
+        "label": "Maintain Offset",
+        "type": "Boolean",
+        "default": true,
+        "help": "Use the worldspace position of the mesh to be replaced."
+    },
+
 
     "#": "----------------",
     "#": " Import/Export  ",

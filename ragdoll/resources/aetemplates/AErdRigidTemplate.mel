@@ -31,6 +31,7 @@ global proc AErdRigidTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse true;
+            editorTemplate -addControl "frozen";
             editorTemplate -addControl "enableCCD";
             editorTemplate -addControl "airDensity";
             editorTemplate -label "Translate Damping" -addControl "linearDamping";
@@ -44,7 +45,6 @@ global proc AErdRigidTemplate(string $nodeName) {
             editorTemplate -addControl "shapeVertexLimit";
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
-            editorTemplate -addControl "frozen";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

@@ -3067,7 +3067,7 @@ def combine_scenes(scenes):
     return master
 
 
-def replace_mesh(rigid, mesh, maintain_offset=True, clean=True):
+def replace_mesh(rigid, mesh, opts=None):
     """Replace the 'Mesh' shape type in `rigid` with `mesh`.
 
     Arguments:
@@ -3086,21 +3086,25 @@ def replace_mesh(rigid, mesh, maintain_offset=True, clean=True):
         "`mesh` must be either 'mesh', 'nurbsSurface' or 'nurbsSurface'"
     )
 
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "exclusive": True,
+    }, **(opts or {}))
+
     with cmdx.DGModifier(interesting=False) as mod:
-        if clean:
+        if opts["exclusive"]:
             for mesh_type in ("inputMesh",
                               "inputCurve",
                               "inputSurface"):
-                input_mesh = rigid[mesh_type].connection(
-                    destination=False, plug=True
-                )
+                input_mesh = rigid[mesh_type].input(plug=True)
 
                 if input_mesh is not None:
                     mod.disconnect(rigid[mesh_type], input_mesh)
 
             mod.do_it()
 
-        if maintain_offset:
+        if opts["maintainOffset"]:
             # Bake vertex positions with its current world matrix
             tg = mod.create_node("transformGeometry")
 

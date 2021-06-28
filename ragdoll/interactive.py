@@ -220,7 +220,6 @@ def install():
     install_telemetry() if c.RAGDOLL_TELEMETRY else None
     install_logger()
     install_plugin()
-    fixes.paint_skin_weights()
     options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 
@@ -261,6 +260,9 @@ def install():
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
+
+        if options.read("skinweightsFix"):
+            fixes.paint_skin_weights()
 
     __.installed = True
 
@@ -671,9 +673,16 @@ def install_menu():
         item("transferAttributes", transfer_selected)
         item("replaceMesh", replace_mesh, replace_mesh_options)
 
+        divider("Evaluation")
+
+        item("freezeEvaluation", freeze_evaluation, freeze_evaluation_options)
+        item("unfreezeEvaluation",
+             unfreeze_evaluation,
+             unfreeze_evaluation_options)
+
         if c.RAGDOLL_DEVELOPER:
+            divider("Development")
             item("convertToPolygons", convert_to_polygons)
-            item("normaliseShapes", normalise_shapes)
 
             divider("Scene Management")
 
@@ -2072,7 +2081,12 @@ def transfer_selected(selection=None):
 
 
 @with_exception_handling
-def replace_mesh(selection=None):
+def replace_mesh(selection=None, **opts):
+    opts = {
+        "exclusive": _opt("replaceMeshExclusive", opts),
+        "maintainOffset": _opt("replaceMeshMaintainOffset", opts),
+    }
+
     meshes = (
         _filtered_selection("mesh", selection) +
         _filtered_selection("nurbsCurve", selection) +
@@ -2100,9 +2114,9 @@ def replace_mesh(selection=None):
         )
 
     if len(meshes) > 1:
-        existing_msh = rigids[0]["inputMesh"].connection(destination=False)
-        existing_crv = rigids[0]["inputCurve"].connection(destination=False)
-        existing_srf = rigids[0]["inputSurface"].connection(destination=False)
+        existing_msh = rigids[0]["inputMesh"].input()
+        existing_crv = rigids[0]["inputCurve"].input()
+        existing_srf = rigids[0]["inputSurface"].input()
 
         for mesh in meshes[:]:
             if mesh in (existing_msh, existing_crv, existing_srf):
@@ -2115,7 +2129,7 @@ def replace_mesh(selection=None):
                 "2 or more meshes selected, pick one."
             )
 
-    commands.replace_mesh(rigids[0], meshes[0])
+    commands.replace_mesh(rigids[0], meshes[0], opts=opts)
 
     return kSuccess
 
@@ -2266,7 +2280,7 @@ def assign_force(selection=None):
             target = node.shape(type="rdRigid")
 
         if not target or target.type() != "rdRigid":
-            log.warning("%s was not a rigid body", node)
+            log.warning("%s was not a rigid body" % node)
             continue
 
         if commands.assign_force(target, force):
@@ -2544,6 +2558,44 @@ def select_scenes(selection=None, **opts):
     return select_type("rdScene")(selection, **opts)
 
 
+def freeze_evaluation(selection=None, **opts):
+    opts = dict({
+        "freeze": _opt("freezeEvaluation", opts),
+        "includeHierarchy": _opt("freezeSelectionHierarchy", opts),
+        "shapesOnly": _opt("freezeSelectionShapesOnly", opts),
+    }, **(opts or {}))
+
+    selection = cmdx.selection()
+
+    if opts["includeHierarchy"]:
+        for transform in cmdx.selection(type="dagNode"):
+            selection.extend(transform.descendents())
+
+    with cmdx.DGModifier() as mod:
+        for node in set(selection):
+
+            if node.isA(cmdx.kShape) or not opts["shapesOnly"]:
+                mod.set_attr(node["frozen"], opts["freeze"])
+
+            if node.type() == "rdRigid":
+                other = node["enabled"].input(plug=True)
+                mod.disconnect(node["enabled"], other)
+                mod.do_it()
+                mod.set_attr(node["enabled"], not opts["freeze"])
+
+    return kSuccess
+
+
+def unfreeze_evaluation(selection=None, **opts):
+    opts["freezeSelection"] = False
+    return freeze_evaluation(selection, **opts)
+
+
+#
+# User Interface
+#
+
+
 def show_explorer(selection=None):
     def get_fresh_dump(*args, **kwargs):
         return json.loads(cmds.ragdollDump(*args, **kwargs))
@@ -2554,11 +2606,6 @@ def show_explorer(selection=None):
     win = ui.Explorer(parent=ui.MayaWindow())
     win.load(get_fresh_dump)
     win.show(dockable=True)
-
-
-#
-# User Interface
-#
 
 
 def _last_command():
@@ -2847,6 +2894,16 @@ def _constraint_options(typ):
         return window
 
     return _create_constraint_options
+
+
+def freeze_evaluation_options(*args):
+    options.write("freezeSelection", True)
+    return _Window("freezeEvaluation", freeze_evaluation)
+
+
+def unfreeze_evaluation_options(*args):
+    options.write("freezeSelection", False)
+    return _Window("freezeEvaluation", freeze_evaluation)
 
 
 def create_kinematic_control_options(*args):

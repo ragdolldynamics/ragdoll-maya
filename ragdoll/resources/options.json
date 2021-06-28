@@ -276,6 +276,27 @@
         "default": false,
         "help": "Filter current selection by type. For example, with an entire hierarchy selected, remove anything that isn't a 'rdRigid' node."
     },
+    "freezeSelection": {
+        "name": "freezeSelection",
+        "label": "Freeze",
+        "type": "Boolean",
+        "default": true,
+        "help": "Freeze, or unfreeze the selected nodes."
+    },
+    "freezeSelectionHierarchy": {
+        "name": "freezeSelectionHierarchy",
+        "label": "Include Hierarchy",
+        "type": "Boolean",
+        "default": true,
+        "help": "Include the selected hierarchy, including shapes."
+    },
+    "freezeSelectionShapesOnly": {
+        "name": "freezeSelectionShapesOnly",
+        "label": "Shapes Only",
+        "type": "Boolean",
+        "default": false,
+        "help": "Leave transforms alone. This won't bring half as much performance, but can make e.g. joint hierarchies render properly."
+    },
 
 
     "#": "----------------",
@@ -783,6 +804,13 @@
         "type": "Boolean",
         "default": true,
         "help": "Work around a limitation in Maya 2018 to better support rigid textures and sleep rendering."
+    },
+    "skinweightsFix": {
+        "name": "skinweightsFix",
+        "label": "Fix right-click menu on joints with a rigid.",
+        "type": "Boolean",
+        "default": true,
+        "help": "When joints have a shape, such as a rigid body, the right-click menu breaks when wanting to 'Select Influence'. This fixes that, but *may* cause issues elsewhere since it modifies the Maya native context menu for joints. Disable this if it causes any other inconvenience."
     },
     "lastVisitedPath": {
         "name": "lastVisitedPath",

@@ -398,6 +398,28 @@
             "replaceMeshMaintainOffset"
         ]
     },
+    "freezeEvaluation": {
+        "label": "Freeze",
+        "icon": "freeze.png",
+        "summary": "Exclude selected node from Maya's Parallel Evaluation.",
+        "description": "Optimise performance by excluding nodes from both Ragdoll and Maya's native evaluation. Normally, disabling evaluation of a rigid body excludes this from the simulation. But simulation isn't the primary bottleneck, evaluating transforms are. Simply having a series of parented controls means Maya is forced to evaluate them serially, in order. Parents first. For deep hierarchies this can be very expensive. Freezing allows you to explicitly tell Maya 'hey, don't bother' which can increase performance. This really only works on when freezing a hierarchy all the way to its leaf. Freezing an elbow but leaving the hand for example will unlikely have an effect, you'd need to freeze the whole arm.",
+        "options": [
+            "freezeSelection",
+            "freezeSelectionHierarchy",
+            "freezeSelectionShapesOnly"
+        ]
+    },
+
+    "unfreezeEvaluation": {
+        "label": "Unfreeze",
+        "icon": "unfreeze.png",
+        "summary": "Undo the effect of freezing evaluation.",
+        "options": [
+            "freezeSelection",
+            "freezeSelectionHierarchy",
+            "freezeSelectionShapesOnly"
+        ]
+    },
 
     "editConstraintFrames": {
         "label": "Edit Constraint Pivots",
@@ -481,6 +503,7 @@
             "cycleProtection",
             "ogsReset",
             "maya2018ConsolidateWorldFix",
+            "skinweightsFix",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",

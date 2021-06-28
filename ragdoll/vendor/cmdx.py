@@ -268,16 +268,16 @@ def add_metaclass(metaclass):
 
     def wrapper(cls):
         orig_vars = cls.__dict__.copy()
-        slots = orig_vars.get('__slots__')
+        slots = orig_vars.get("__slots__")
         if slots is not None:
             if isinstance(slots, str):
                 slots = [slots]
             for slots_var in slots:
                 orig_vars.pop(slots_var)
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        if hasattr(cls, '__qualname__'):
-            orig_vars['__qualname__'] = cls.__qualname__
+        orig_vars.pop("__dict__", None)
+        orig_vars.pop("__weakref__", None)
+        if hasattr(cls, "__qualname__"):
+            orig_vars["__qualname__"] = cls.__qualname__
         return metaclass(cls.__name__, cls.__bases__, orig_vars)
     return wrapper
 
@@ -1289,19 +1289,6 @@ class Node(object):
                              source=source,
                              destination=destination,
                              connections=connection), None)
-
-    def inputs(self,
-               type=None,
-               unit=None,
-               plugs=False,
-               connections=False):
-        """Return input connections from :func:`connections()`"""
-        return self.connections(type=type,
-                                unit=unit,
-                                plugs=plugs,
-                                source=True,
-                                destination=False,
-                                connections=connections)
 
     def input(self,
               type=None,
@@ -2843,7 +2830,7 @@ class Plug(object):
     @property
     def arrayIndices(self):
         if not self._mplug.isArray:
-            raise TypeError('{} is not an array'.format(self.path()))
+            raise TypeError("{} is not an array".format(self.path()))
 
         # Convert from `p_OpenMaya_py2.rItemNot3Strs` to list
         return list(self._mplug.getExistingArrayAttributeIndices())
@@ -6382,7 +6369,8 @@ def ls(*args, **kwargs):
 
 
 def selection(*args, **kwargs):
-    return list(map(encode, cmds.ls(*args, selection=True, **kwargs)))
+    kwargs["selection"] = True
+    return ls(*args, **kwargs)
 
 
 def createNode(type, name=None, parent=None):

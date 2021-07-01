@@ -48,6 +48,7 @@ global proc AErdSceneTemplate(string $nodeName) {
             editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";
             editorTemplate -label "Limit Scale" -addControl "drawLimitScale";
             editorTemplate -label "Line Width" -addControl "drawLineWidth";
+            editorTemplate -addControl "visibility";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

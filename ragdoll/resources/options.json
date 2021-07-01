@@ -807,7 +807,7 @@
     },
     "skinweightsFix": {
         "name": "skinweightsFix",
-        "label": "Fix right-click menu on joints with a rigid.",
+        "label": "Fix right-click menu on joints with a rigid",
         "type": "Boolean",
         "default": true,
         "help": "When joints have a shape, such as a rigid body, the right-click menu breaks when wanting to 'Select Influence'. This fixes that, but *may* cause issues elsewhere since it modifies the Maya native context menu for joints. Disable this if it causes any other inconvenience."

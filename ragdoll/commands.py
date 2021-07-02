@@ -244,6 +244,11 @@ def _compute_mass(rigid, scene, density=c.WaterDensity):
     # Take overall scene scale into account too
     scene_scale = scene["spaceMultiplier"].read()
 
+    # Guard against zero widths, like circles
+    extents.x = max(0.1 * scene_scale, extents.x)
+    extents.y = max(0.1 * scene_scale, extents.y)
+    extents.z = max(0.1 * scene_scale, extents.z)
+
     return (
         extents.x *
         extents.y *

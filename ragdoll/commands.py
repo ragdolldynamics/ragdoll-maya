@@ -169,15 +169,48 @@ def create_rigid(node, scene, opts=None, _cache=None):
             _interpret_transform(mod, rigid, transform)
 
         if opts.get("computeMass"):
+            mod.do_it()  # Solidify shapeExtents from above
+
             # Establish a sensible default mass, also taking into
             # consideration that joints must be comparable to meshes.
-            # Mass unit is kg, whereas lengths are in centimeters
-            mod.set_attr(rigid["mass"], (
-                rigid["shapeExtentsX"].read() *
-                rigid["shapeExtentsY"].read() *
-                rigid["shapeExtentsZ"].read() *
-                0.01
-            ))
+            # Mass unit is kg, whereas lengths are in centimeters.
+            #
+            # Reference:
+            # https://www.engineeringtoolbox.com/density-materials-d_1652.html
+            #
+            densities = {
+                c.WaterDensity: 993,
+                c.WoodDensity: 200,
+                c.FeatherDensity: 16,
+                c.AirDensity: 12,
+            }
+
+            density = densities.get(
+                opts["computeMass"],
+
+                # Default
+                c.WaterDensity
+            )
+
+            # Approximate via bounding box
+            extents = rigid["shapeExtents"].as_vector()
+            extents *= 0.01  # From cm to m
+
+            scale = cmdx.Tm(rest).scale()
+            extents.x *= scale.x
+            extents.y *= scale.y
+            extents.z *= scale.z
+
+            # Take overall scene scale into account too
+            scene_scale = scene["spaceMultiplier"].read()
+
+            mass = (
+                extents.x *
+                extents.y *
+                extents.z
+            ) * density / scene_scale
+
+            mod.set_attr(rigid["mass"], mass)
 
     if opts.get("addUserAttributes"):
         uas = i__.UserAttributes(rigid, transform)
@@ -3065,6 +3098,50 @@ def combine_scenes(scenes):
         move_to_scene(rigids, master)
 
     return master
+
+
+
+def _sort_scene(scene):
+    """Disconnect and rearrange all array attributes"""
+    rigids = {
+        "outputObjects": ([], []),
+        "inputActive": ([], []),
+        "inputActiveStart": ([], [])
+    }
+
+    constriants = {
+        "inputConstraint": ([], []),
+        "inputConstraintStart": ([], [])
+    }
+
+    def sort(mod, plugs):
+        for attr in plugs.keys():
+            for element in scene[attr]:
+                in_plug = element.input(plug=True)  # E.g. rdRigid.startState
+                out_plug = element.output(plug=True) # E.g. rdRigid.nextState
+
+                if in_plug is not None:
+                    plugs[attr][0].append(in_plug)
+                    mod.disconnect(element, in_plug)
+
+                if out_plug is not None:
+                    plugs[attr][1].append(out_plug)
+                    mod.disconnect(out_plug, element)
+                    
+                mod.do_it()
+
+        mod.do_it()
+
+        for attr in plugs.keys():
+            for i, plug in enumerate(plugs[attr][0]):
+                mod.connect(plug, scene[attr][i])
+
+            for i, plug in enumerate(plugs[attr][1]):
+                mod.connect(scene[attr][i], plug)
+
+    with cmdx.DGModifier() as mod:
+        sort(mod, rigids)
+        sort(mod, constriants)
 
 
 def replace_mesh(rigid, mesh, opts=None):

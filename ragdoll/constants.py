@@ -95,3 +95,9 @@ RagdollStyle = 2
 
 BakeAll = 0
 BakeSelected = 1
+
+# Compute mass
+WaterDensity = 1
+WoodDensity = 2
+FeatherDensity = 3
+AirDensity = 4

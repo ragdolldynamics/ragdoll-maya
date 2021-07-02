@@ -802,16 +802,9 @@ class Chain(object):
             commands._connect_active(mod, rigid, transform)
 
         if self._opts["computeMass"]:
-            # Establish a sensible default mass, also taking into
-            # consideration that joints must be comparable to meshes.
-            # Mass unit is kg, whereas lengths are in centimeters
-            extents = rigid["extents"].as_vector()
-            mod.set_attr(rigid["mass"], max(0.01, (
-                extents.x *
-                extents.y *
-                extents.z *
-                0.01
-            )))
+            mod.do_it()  # Ensure shapeExtents is up-to-date
+            mass = commands._compute_mass(rigid, self._scene)
+            mod.set_attr(rigid["mass"], mass)
 
         return rigid
 

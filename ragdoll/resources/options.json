@@ -59,12 +59,14 @@
         "default": "#da8f7e",
         "help": "Initial color used, can be changed later."
     },
-    "computeMass": {
-        "name": "computeMass",
+    "computeMass2": {
+        "name": "computeMass2",
+        "label": "Compute Mass",
         "arg": "computeMass",
-        "type": "Boolean",
-        "default": false,
-        "help": "Use the volume of the shape to determine its mass. Use with caution, as large differences (10x or more) in mass amongst rigids that interact can cause instability."
+        "type": "Enum",
+        "default": 0,
+        "items": ["Off", "Water", "Wood", "Feather", "Air"],
+        "help": "Use the volume and density of the shape to determine its mass. Use with caution, as large differences (10x or more) in mass amongst rigids that interact can cause instability."
     },
     "createRigidType": {
         "name": "createRigidType",
@@ -276,22 +278,22 @@
         "default": false,
         "help": "Filter current selection by type. For example, with an entire hierarchy selected, remove anything that isn't a 'rdRigid' node."
     },
-    "freezeSelection": {
-        "name": "freezeSelection",
+    "freezeEvaluation": {
+        "name": "freezeEvaluation",
         "label": "Freeze",
         "type": "Boolean",
         "default": true,
         "help": "Freeze, or unfreeze the selected nodes."
     },
-    "freezeSelectionHierarchy": {
-        "name": "freezeSelectionHierarchy",
+    "freezeEvaluationHierarchy": {
+        "name": "freezeEvaluationHierarchy",
         "label": "Include Hierarchy",
         "type": "Boolean",
         "default": true,
         "help": "Include the selected hierarchy, including shapes."
     },
-    "freezeSelectionShapesOnly": {
-        "name": "freezeSelectionShapesOnly",
+    "freezeEvaluationShapesOnly": {
+        "name": "freezeEvaluationShapesOnly",
         "label": "Shapes Only",
         "type": "Boolean",
         "default": false,

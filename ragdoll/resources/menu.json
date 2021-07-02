@@ -38,8 +38,8 @@
             "createRigidType",
             "existingAnimation",
             "initialShape",
+            "computeMass2",
             "addUserAttributes",
-            "computeMass",
             "rigidSelect"
         ]
     },

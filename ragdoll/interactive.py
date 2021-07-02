@@ -673,13 +673,6 @@ def install_menu():
         item("transferAttributes", transfer_selected)
         item("replaceMesh", replace_mesh, replace_mesh_options)
 
-        divider("Evaluation")
-
-        item("freezeEvaluation", freeze_evaluation, freeze_evaluation_options)
-        item("unfreezeEvaluation",
-             unfreeze_evaluation,
-             unfreeze_evaluation_options)
-
         if c.RAGDOLL_DEVELOPER:
             divider("Development")
             item("convertToPolygons", convert_to_polygons)
@@ -698,7 +691,16 @@ def install_menu():
              clear_initial_state_options)
 
     with submenu("System", icon="system.png"):
+        divider("Scene")
+
         item("deleteAllPhysics", delete_physics, delete_physics_options)
+
+        divider("Evaluation")
+
+        item("freezeEvaluation", freeze_evaluation, freeze_evaluation_options)
+        item("unfreezeEvaluation",
+             unfreeze_evaluation,
+             unfreeze_evaluation_options)
 
         divider()
 
@@ -1224,7 +1226,7 @@ def create_active_rigid(selection=None, **opts):
         )
 
         opts_ = {
-            "computeMass": _opt("computeMass", opts),
+            "computeMass": _opt("computeMass2", opts),
             "passive": passive,
             "defaults": {},
             "addUserAttributes": _opt("addUserAttributes", opts),
@@ -2561,8 +2563,8 @@ def select_scenes(selection=None, **opts):
 def freeze_evaluation(selection=None, **opts):
     opts = dict({
         "freeze": _opt("freezeEvaluation", opts),
-        "includeHierarchy": _opt("freezeSelectionHierarchy", opts),
-        "shapesOnly": _opt("freezeSelectionShapesOnly", opts),
+        "includeHierarchy": _opt("freezeEvaluationHierarchy", opts),
+        "shapesOnly": _opt("freezeEvaluationShapesOnly", opts),
     }, **(opts or {}))
 
     selection = cmdx.selection()
@@ -2587,7 +2589,7 @@ def freeze_evaluation(selection=None, **opts):
 
 
 def unfreeze_evaluation(selection=None, **opts):
-    opts["freezeSelection"] = False
+    opts["freezeEvaluation"] = False
     return freeze_evaluation(selection, **opts)
 
 
@@ -2897,12 +2899,12 @@ def _constraint_options(typ):
 
 
 def freeze_evaluation_options(*args):
-    options.write("freezeSelection", True)
+    options.write("freezeEvaluation", True)
     return _Window("freezeEvaluation", freeze_evaluation)
 
 
 def unfreeze_evaluation_options(*args):
-    options.write("freezeSelection", False)
+    options.write("freezeEvaluation", False)
     return _Window("freezeEvaluation", freeze_evaluation)
 
 

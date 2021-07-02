@@ -107,10 +107,10 @@ def test_create_rigid():
 def test_compute_mass():
     _new()
 
-    cube, _ = cmds.polyCube()
+    cube, _ = cmds.polyCube(width=1, height=1, depth=1)
     cmds.select(cube)
 
-    opts = {"computeMass": True}
+    opts = {"computeMass2": c.WaterDensity}
     assert_true(interactive.create_active_rigid(**opts))
     rigid = cmdx.ls(type="rdRigid")[0]
     assert_almost_equals(rigid["mass"].read(), 0.01, 3)

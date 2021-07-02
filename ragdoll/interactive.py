@@ -677,11 +677,11 @@ def install_menu():
             divider("Development")
             item("convertToPolygons", convert_to_polygons)
 
-            divider("Scene Management")
+        divider("Scene Management")
 
-            item("extractFromScene", extract_from_scene)
-            item("moveToScene", move_to_scene)
-            item("combineScenes", combine_scenes)
+        item("extractFromScene", extract_from_scene)
+        item("moveToScene", move_to_scene)
+        item("combineScenes", combine_scenes)
 
         divider("Initial State")
 

@@ -2,6 +2,7 @@
 
 Stay up to date with the latest improvements and fixes to Ragdoll.
 
+- [2021.07.02 - Quality of Life](/releases/2021.07.02)
 - [2021.06.10 - Telemetry](/releases/2021.06.10)
 - [2021.06.07 - Bugfixes](/releases/2021.06.07)
 - [2021.05.17 - Floating Licence](/releases/2021.05.17)

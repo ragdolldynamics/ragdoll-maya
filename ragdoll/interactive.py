@@ -1336,6 +1336,7 @@ def create_active_chain(selection=None, **opts):
         "autoMultiplier": _opt("chainAutoMultiplier", opts),
         "autoLimits": _opt("chainAutoLimits", opts),
         "passiveRoot": _opt("chainPassiveRoot", opts),
+        "computeMass": _opt("computeMass2", opts),
         "drawShaded": False,
         "defaults": {}
     }
@@ -2445,6 +2446,7 @@ def extract_from_scene(selection=None):
 
     count = len(rigids)
     scene = commands.extract_from_scene(rigids)
+    cmds.select(str(scene.parent()))
     log.info("Successfully extracted %d rigids into %s" % (count, scene))
     return kSuccess
 

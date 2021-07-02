@@ -171,44 +171,7 @@ def create_rigid(node, scene, opts=None, _cache=None):
         if opts.get("computeMass"):
             mod.do_it()  # Solidify shapeExtents from above
 
-            # Establish a sensible default mass, also taking into
-            # consideration that joints must be comparable to meshes.
-            # Mass unit is kg, whereas lengths are in centimeters.
-            #
-            # Reference:
-            # https://www.engineeringtoolbox.com/density-materials-d_1652.html
-            #
-            densities = {
-                c.WaterDensity: 993,
-                c.WoodDensity: 200,
-                c.FeatherDensity: 16,
-                c.AirDensity: 12,
-            }
-
-            density = densities.get(
-                opts["computeMass"],
-
-                # Default
-                c.WaterDensity
-            )
-
-            # Approximate via bounding box
-            extents = rigid["shapeExtents"].as_vector()
-            extents *= 0.01  # From cm to m
-
-            scale = cmdx.Tm(rest).scale()
-            extents.x *= scale.x
-            extents.y *= scale.y
-            extents.z *= scale.z
-
-            # Take overall scene scale into account too
-            scene_scale = scene["spaceMultiplier"].read()
-
-            mass = (
-                extents.x *
-                extents.y *
-                extents.z
-            ) * density / scene_scale
+            mass = _compute_mass(rigid, scene, density=opts["computeMass"])
 
             mod.set_attr(rigid["mass"], mass)
 
@@ -242,6 +205,50 @@ def create_active_rigid(node, scene, **kwargs):
 
 def create_passive_rigid(node, scene, **kwargs):
     return create_rigid(node, scene, opts={"passive": True}, **kwargs)
+
+
+def _compute_mass(rigid, scene, density=c.WaterDensity):
+    """Use the shape extents as an approximate volume
+
+    Also taking into consideration that joints must be
+    comparable to meshes. Mass unit is kg, whereas lengths
+    are in centimeters.
+
+    """
+
+    # Reference:
+    # https://www.engineeringtoolbox.com/density-materials-d_1652.html
+    densities = {
+        c.WaterDensity: 993,
+        c.WoodDensity: 200,
+        c.FeatherDensity: 16,
+        c.AirDensity: 12,
+    }
+
+    density = densities.get(
+        density,
+
+        # Default
+        c.WaterDensity
+    )
+
+    # Approximate via bounding box
+    extents = rigid["shapeExtents"].as_vector()
+    extents *= 0.01  # From cm to m
+
+    scale = cmdx.Tm(rigid["cachedRestMatrix"].as_matrix()).scale()
+    extents.x *= scale.x
+    extents.y *= scale.y
+    extents.z *= scale.z
+
+    # Take overall scene scale into account too
+    scene_scale = scene["spaceMultiplier"].read()
+
+    return (
+        extents.x *
+        extents.y *
+        extents.z
+    ) * density / scene_scale
 
 
 @i__.with_undo_chunk
@@ -3100,7 +3107,6 @@ def combine_scenes(scenes):
     return master
 
 
-
 def _sort_scene(scene):
     """Disconnect and rearrange all array attributes"""
     rigids = {
@@ -3109,7 +3115,7 @@ def _sort_scene(scene):
         "inputActiveStart": ([], [])
     }
 
-    constriants = {
+    constraints = {
         "inputConstraint": ([], []),
         "inputConstraintStart": ([], [])
     }
@@ -3118,7 +3124,7 @@ def _sort_scene(scene):
         for attr in plugs.keys():
             for element in scene[attr]:
                 in_plug = element.input(plug=True)  # E.g. rdRigid.startState
-                out_plug = element.output(plug=True) # E.g. rdRigid.nextState
+                out_plug = element.output(plug=True)  # E.g. rdRigid.nextState
 
                 if in_plug is not None:
                     plugs[attr][0].append(in_plug)
@@ -3127,7 +3133,7 @@ def _sort_scene(scene):
                 if out_plug is not None:
                     plugs[attr][1].append(out_plug)
                     mod.disconnect(out_plug, element)
-                    
+
                 mod.do_it()
 
         mod.do_it()
@@ -3141,7 +3147,9 @@ def _sort_scene(scene):
 
     with cmdx.DGModifier() as mod:
         sort(mod, rigids)
-        sort(mod, constriants)
+        sort(mod, constraints)
+
+    return True
 
 
 def replace_mesh(rigid, mesh, opts=None):

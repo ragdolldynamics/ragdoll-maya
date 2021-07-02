@@ -51,6 +51,7 @@
         "options": [
             "solver",
             "chainShapeType",
+            "computeMass2",
             "chainPassiveRoot",
             "chainAutoMultiplier",
             "chainAutoLimits"

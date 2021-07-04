@@ -2281,7 +2281,7 @@ def duplicate(rigid):
     return dup
 
 
-def infer_geometry(root, parent=None, children=None):
+def infer_geometry(root, parent=None, children=None, geometry=None):
     """Find length and orientation from `root`
 
     This function looks at the child and parent of
@@ -2295,16 +2295,43 @@ def infer_geometry(root, parent=None, children=None):
 
     """
 
-    geometry = i__.Geometry()
+    geometry = geometry or i__.Geometry()
 
     if children is None:
         # Better this than nothing
         children = list(root.children(type=root.type()))
 
+    def position_incl_pivot(node, debug=False):
+        """Return the final position of the translate and rotate handles
+
+        That includes the rotate pivot, which isn't part
+        of the worldspace matrix.
+
+        """
+
+        tm = node.transformation()
+        rotate_pivot = tm.rotatePivot()
+
+        world_tm = node.transform(cmdx.sWorld)
+        world_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
+
+        pos = world_tm.translation()
+
+        if debug:
+            loc = cmdx.encode(cmds.spaceLocator(name=node.name())[0])
+            loc["translate"] = pos
+
+        return pos
+
     orient = cmdx.Quaternion()
     root_tm = root.transform(cmdx.sWorld)
-    root_pos = root_tm.translation()
+    root_pos = position_incl_pivot(root)
     root_scale = root_tm.scale()
+
+    if children is False:
+        orient = root_tm.rotation(asQuaternion=True)
+        orient *= cmdx.Quaternion(cmdx.radians(90), cmdx.Vector(0, 0, 1))
+        geometry.orient = orient
 
     # There is a lot we can gather from the childhood
     if children:
@@ -2319,7 +2346,7 @@ def infer_geometry(root, parent=None, children=None):
         #
         positions = []
         for child in children:
-            positions += [child.transform(cmdx.sWorld).translation()]
+            positions += [position_incl_pivot(child)]
 
         pos2 = cmdx.Vector()
         for pos in positions:
@@ -2355,7 +2382,7 @@ def infer_geometry(root, parent=None, children=None):
                 parent = center_node.child(type=root.type())
 
             if parent:
-                up = parent.transform(cmdx.sWorld).translation()
+                up = position_incl_pivot(parent)
                 up = (up - root_pos).normal()
             else:
                 up = cmdx.up_axis()
@@ -2367,7 +2394,7 @@ def infer_geometry(root, parent=None, children=None):
             orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
             orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
 
-            center_node_pos = center_node.transform(cmdx.sWorld).translation()
+            center_node_pos = position_incl_pivot(center_node)
             length = (center_node_pos - root_pos).length()
 
             geometry.orient = orient

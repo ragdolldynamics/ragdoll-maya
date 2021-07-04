@@ -397,16 +397,19 @@ class Chain(object):
         # all transforms involved, and computing based solely
         # on this information.
         #
-        if not subsequent and previous.has_attr("_rdGeometry"):
-            geo = i__.Geometry()
-            geo.load(previous["_rdGeometry"].read())
 
-        else:
-            geo = commands.infer_geometry(
-                transform,
-                parent=previous,
-                children=[subsequent] if subsequent else False
-            )
+        # Borrow length from last geo
+        last_geo = None
+        if not subsequent and previous.has_attr("_rdGeometry"):
+            last_geo = i__.Geometry()
+            last_geo.load(previous["_rdGeometry"].read())
+
+        geo = commands.infer_geometry(
+            transform,
+            parent=previous,
+            children=[subsequent] if subsequent else False,
+            geometry=last_geo
+        )
 
         # Cache for reuse
         if not transform.has_attr("_rdGeometry"):

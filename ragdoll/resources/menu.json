@@ -152,13 +152,13 @@
         "summary": "Convert translate/rotate channels into a target guide.",
         "description": "Turn the animatable translate and rotate channels into a suitable guide target pose."
     },
-    "kinematic": {
+    "hardPin": {
         "label": "Hard Pin",
         "icon": "hardpin.png",
         "summary": "Pin a rigid body in worldspace.",
         "description": "Pin the selected rigid body at its current worldspace position. The pin may be animated and disabled/enabled at run-time."
     },
-    "guide": {
+    "softPin": {
         "label": "Soft Pin",
         "icon": "control.png",
         "summary": "Pin a rigid body in worldspace, with a spring-like softness.",

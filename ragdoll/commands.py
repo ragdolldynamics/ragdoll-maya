@@ -839,6 +839,11 @@ def orient(con, aim=None, up=None):
     determines hierarchy rather than Maya's physical hierarchy, the
     `aim` is mandatory.
 
+    Arguments:
+        con (rdConstraint): Constraint to orient towards `aim` and `up`
+        aim (cmdx.Vector, optional): Face this direction
+        up (cmdx.Vector, optional): Up this direction
+
     """
 
     if isinstance(con, i__.string_types):
@@ -858,9 +863,24 @@ def orient(con, aim=None, up=None):
         # the user won't be expecting anything out of it.
         return
 
-    # Rather than ask the node for where it is, which could
-    # trigger an evaluation, we fetch an input matrix that
-    # isn't computed by Ragdoll
+    def _get_pivoted_matrix(rigid):
+        """Get cachedRestMatrix taking rotatePivot into account
+
+        The rotatePivot changes where the user expects the center of an
+        object to be, so let's use it.
+
+        """
+
+        rotate_pivot = rigid.parent().transformation().rotatePivot()
+
+        # Rather than ask the node for where it is, which could
+        # trigger an evaluation, we fetch an input matrix that
+        # is an *input* attribute to Ragdoll
+        tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
+        tm.translateBy(-rotate_pivot, cmdx.sPreTransform)
+
+        return tm.asMatrix()
+
     child_matrix = _get_pivoted_matrix(child_rigid)
     parent_matrix = _get_pivoted_matrix(parent_rigid)
 
@@ -932,12 +952,12 @@ def orient(con, aim=None, up=None):
     orient = orient_from_positions(origin, aim, up)
     mat = cmdx.Tm(translate=origin, rotate=orient).asMatrix()
 
-    parent_frame = mat * parent_matrix.inverse()
-    child_frame = mat * child_matrix.inverse()
+    parent_frame = cmdx.Tm(mat * parent_matrix.inverse())
+    child_frame = cmdx.Tm(mat * child_matrix.inverse())
 
     with cmdx.DagModifier() as mod:
-        mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], child_frame)
+        mod.set_attr(con["parentFrame"], parent_frame.as_matrix())
+        mod.set_attr(con["childFrame"], child_frame.as_matrix())
 
 
 @i__.with_undo_chunk
@@ -1012,7 +1032,7 @@ def _take_ownership(mod, rdnode, node):
                    returns=(cmdx.DagNode,
                             cmdx.DagNode,
                             cmdx.DagNode))
-def create_absolute_control(rigid, reference=None, opts=None):
+def create_soft_pin(rigid, reference=None, opts=None):
     """Control a rigid body in worldspace
 
     Given a worldmatrix, attempt to guide a rigid body to match,
@@ -1057,6 +1077,17 @@ def create_absolute_control(rigid, reference=None, opts=None):
 
             shape_name = i__.shape_name(name)
 
+            mod.do_it()
+
+            # Leverage MFnTransform's ability to *balance* the pivot
+            rotate_pivot = rigid["rotatePivot"].as_vector()
+            reference._tfn.setRotatePivot(
+                cmdx.Point(rotate_pivot), cmdx.sPreTransform,
+
+                # Balance
+                True
+            )
+
         ctrl = reference.shape(type="rdControl")
 
         if not ctrl:
@@ -1068,6 +1099,14 @@ def create_absolute_control(rigid, reference=None, opts=None):
         con = _rdconstraint(mod, shape_name, reference)
 
         mod.connect(rigid["ragdollId"], con["childRigid"])
+        mod.connect(scene["ragdollId"], con["parentRigid"])
+
+        _reset_constraint(mod, con)
+
+        # TODO: Figure out why this isn't handled by _reset_constraint
+        child_frame = cmdx.Tm(con["childFrame"].as_matrix())
+        child_frame.translateBy(rotate_pivot, cmdx.sTransform)
+        mod.set_attr(con["childFrame"], child_frame.as_matrix())
 
         mod.set_attr(con["driveEnabled"], True)
         mod.set_attr(con["driveStrength"], 1.0)
@@ -1079,7 +1118,6 @@ def create_absolute_control(rigid, reference=None, opts=None):
         for key, value in opts["defaults"].items():
             mod.set_attr(con[key], value)
 
-        mod.connect(scene["ragdollId"], con["parentRigid"])
         mod.connect(reference["worldMatrix"][0], con["driveMatrix"])
 
         # Add to scene
@@ -1310,7 +1348,13 @@ def create_active_control(reference, rigid):
 @i__.with_contract(args=(cmdx.DagNode,),
                    kwargs={"reference": (cmdx.DagNode, None)},
                    returns=(cmdx.DagNode,))
-def create_kinematic_control(rigid, reference=None):
+def create_hard_pin(rigid, reference=None):
+    """Create a new transform to drive the `.inputMatrix` of a rigid
+
+    Note that there can (currently) only be *1* hard pin per rigid body.
+
+    """
+
     if reference is not None and isinstance(reference, i__.string_types):
         reference = cmdx.encode(reference)
 
@@ -1359,7 +1403,7 @@ def create_kinematic_control(rigid, reference=None):
 
 
 # Alias
-create_passive_control = create_kinematic_control
+create_passive_control = create_hard_pin
 
 
 def _list_children(rigid):
@@ -1483,7 +1527,7 @@ def create_mimic(root, opts=None):
             mod.set_attr(root_reference["translate"], tm.translation())
             mod.set_attr(root_reference["rotate"], tm.rotation())
 
-    root_reference, root_ctrl, root_con = create_absolute_control(
+    root_reference, root_ctrl, root_con = create_soft_pin(
         root,
         reference=root_reference,
 
@@ -1623,7 +1667,7 @@ def create_mimic(root, opts=None):
             local_cons.append(con)
 
             if opts["addSoftPin"]:
-                _, ctrl, con = create_absolute_control(
+                _, ctrl, con = create_soft_pin(
                     child, reference=reference,
                     opts={
                         "name": "rSoftPinConstraint",
@@ -3792,22 +3836,6 @@ def _connect_active(mod, rigid, transform, existing=None):
     return pair_blend
 
 
-def _get_pivoted_matrix(rigid):
-    """Get cachedRestMatrix taking rotatePivot into account
-
-    The rotatePivot changes where the user expects the center of an
-    object to be, so let's use it.
-
-    """
-
-    rotate_pivot = rigid.parent().transformation().rotatePivot()
-
-    tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
-    tm.translateBy(-rotate_pivot, cmdx.sPreTransform)
-
-    return tm.asMatrix()
-
-
 def _reset_constraint(mod, con, opts=None):
     """Reset a constraint
 
@@ -3849,20 +3877,31 @@ def _reset_constraint(mod, con, opts=None):
     child_rigid = con["childRigid"].connection(type="rdRigid")
 
     # Align constraint to whatever the local transformation is
-    if opts["maintainOffset"] and parent_rigid and child_rigid:
+    if opts["maintainOffset"] and child_rigid:
 
-        child_matrix = _get_pivoted_matrix(child_rigid)
-        parent_matrix = _get_pivoted_matrix(parent_rigid)
-        child_frame = cmdx.Matrix4()
+        if parent_rigid is not None:
+            parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+            parent_rotate_pivot = parent_rigid["rotatePivot"].as_vector()
+        else:
+            # It's connected to the world
+            parent_matrix = cmdx.MatrixType()
+            parent_rotate_pivot = cmdx.Vector(0, 0, 0)
 
-        parent_frame = child_matrix * parent_matrix.inverse()
+        child_rotate_pivot = child_rigid["rotatePivot"].as_vector()
+        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
+
+        child_frame = cmdx.Tm()
+        child_frame.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+
+        parent_frame = cmdx.Tm(child_matrix * parent_matrix.inverse())
+        parent_frame.translateBy(parent_rotate_pivot, cmdx.sPreTransform)
 
         # Drive to where you currently are
         if con["driveMatrix"].writable:
-            mod.set_attr(con["driveMatrix"], parent_frame)
+            mod.set_attr(con["driveMatrix"], parent_frame.as_matrix())
 
-        mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], child_frame)
+        mod.set_attr(con["parentFrame"], parent_frame.as_matrix())
+        mod.set_attr(con["childFrame"], child_frame.as_matrix())
 
 
 def _apply_scale(mat):

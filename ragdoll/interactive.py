@@ -619,10 +619,10 @@ def install_menu():
              label="Edit Pivots")
 
     with submenu("Controls", icon="control.png"):
-        item("kinematic", create_kinematic_control,
-             create_kinematic_control_options)
-        item("guide", create_driven_control,
-             create_driven_control_options)
+        item("hardPin", create_hard_pin,
+             create_hard_pin_options)
+        item("softPin", create_soft_pin,
+             create_soft_pin_options)
         item("mimic", create_mimic, create_mimic_options)
         item("motor")
         item("actuator")
@@ -1881,7 +1881,7 @@ def clear_initial_state(selection=None, **opts):
 
 
 @i__.with_undo_chunk
-def create_driven_control(selection=None, **opts):
+def create_soft_pin(selection=None, **opts):
     controls = []
     selection = selection or cmdx.selection()
 
@@ -1894,7 +1894,7 @@ def create_driven_control(selection=None, **opts):
         if not actor:
             return log.warning("%s was not a Ragdoll Rigid", selection[0])
 
-        _, ctrl, _ = commands.create_absolute_control(actor)
+        _, ctrl, _ = commands.create_soft_pin(actor)
         controls += [ctrl.parent().path()]
 
     elif len(selection) == 2:
@@ -1910,7 +1910,7 @@ def create_driven_control(selection=None, **opts):
             ctrl = commands.create_active_control(
                 actor, reference=reference)
         else:
-            _, ctrl, _ = commands.create_absolute_control(
+            _, ctrl, _ = commands.create_soft_pin(
                 actor, reference=reference
             )
 
@@ -1926,7 +1926,7 @@ def create_driven_control(selection=None, **opts):
 
 
 @i__.with_undo_chunk
-def create_kinematic_control(selection=None, **opts):
+def create_hard_pin(selection=None, **opts):
     controls = []
 
     for node in selection or cmdx.selection():
@@ -1939,7 +1939,7 @@ def create_kinematic_control(selection=None, **opts):
             log.warning("%s was not an Ragdoll Rigid", node)
             continue
 
-        con = commands.create_kinematic_control(actor)
+        con = commands.create_hard_pin(actor)
         controls += [con.path()]
 
     if not controls:
@@ -2909,16 +2909,16 @@ def unfreeze_evaluation_options(*args):
     return _Window("freezeEvaluation", freeze_evaluation)
 
 
-def create_kinematic_control_options(*args):
-    return _Window("kinematic", create_kinematic_control)
+def create_hard_pin_options(*args):
+    return _Window("hardPin", create_hard_pin)
 
 
 def replace_mesh_options(*args):
     return _Window("replaceMesh", replace_mesh)
 
 
-def create_driven_control_options(*args):
-    return _Window("guide", create_driven_control)
+def create_soft_pin_options(*args):
+    return _Window("softPin", create_soft_pin)
 
 
 def create_push_force_options(*args):

@@ -861,8 +861,8 @@ def orient(con, aim=None, up=None):
     # Rather than ask the node for where it is, which could
     # trigger an evaluation, we fetch an input matrix that
     # isn't computed by Ragdoll
-    child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
-    parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+    child_matrix = _get_pivoted_matrix(child_rigid)
+    parent_matrix = _get_pivoted_matrix(parent_rigid)
 
     child_tm = child_rigid.transform(cmdx.sWorld)
 
@@ -2309,8 +2309,7 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
         """
 
-        tm = node.transformation()
-        rotate_pivot = tm.rotatePivot()
+        rotate_pivot = node.transformation().rotatePivot()
 
         world_tm = node.transform(cmdx.sWorld)
         world_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
@@ -3793,6 +3792,22 @@ def _connect_active(mod, rigid, transform, existing=None):
     return pair_blend
 
 
+def _get_pivoted_matrix(rigid):
+    """Get cachedRestMatrix taking rotatePivot into account
+
+    The rotatePivot changes where the user expects the center of an
+    object to be, so let's use it.
+
+    """
+
+    rotate_pivot = rigid.parent().transformation().rotatePivot()
+
+    tm = cmdx.Tm(rigid["cachedRestMatrix"].asMatrix())
+    tm.translateBy(-rotate_pivot, cmdx.sPreTransform)
+
+    return tm.asMatrix()
+
+
 def _reset_constraint(mod, con, opts=None):
     """Reset a constraint
 
@@ -3810,7 +3825,6 @@ def _reset_constraint(mod, con, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "useRotatePivot": True,
     }, **opts)
 
     def reset_attr(attr):
@@ -3836,19 +3850,10 @@ def _reset_constraint(mod, con, opts=None):
 
     # Align constraint to whatever the local transformation is
     if opts["maintainOffset"] and parent_rigid and child_rigid:
-        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
-        parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+
+        child_matrix = _get_pivoted_matrix(child_rigid)
+        parent_matrix = _get_pivoted_matrix(parent_rigid)
         child_frame = cmdx.Matrix4()
-
-        if opts["useRotatePivot"]:
-            # Use rotate pivot as an offset to the native parent/child frames
-            rotate_pivot = child_rigid["rotatePivot"].as_vector()
-            offset_tm = cmdx.Tm(child_matrix)
-            offset_tm.translate_by(rotate_pivot)
-            offset_matrix = offset_tm.as_matrix()
-
-            child_frame = offset_matrix * child_matrix.inverse()
-            child_matrix = offset_matrix
 
         parent_frame = child_matrix * parent_matrix.inverse()
 

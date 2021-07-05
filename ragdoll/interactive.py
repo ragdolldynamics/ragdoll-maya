@@ -1607,7 +1607,6 @@ def create_constraint(selection=None, **opts):
 
     opts = {
         "maintainOffset": _opt("maintainOffset", opts),
-        "useRotatePivot": _opt("constraintUseRotatePivot", opts),
         "outlinerStyle": _opt("constraintOutlinerStyle", opts),
     }
 

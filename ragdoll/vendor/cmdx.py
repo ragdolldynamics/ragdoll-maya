@@ -1290,6 +1290,19 @@ class Node(object):
                              destination=destination,
                              connections=connection), None)
 
+    def inputs(self,
+               type=None,
+               unit=None,
+               plugs=False,
+               connections=False):
+        """Return input connections from :func:`connections()`"""
+        return self.connections(type=type,
+                                unit=unit,
+                                plugs=plugs,
+                                source=True,
+                                destination=False,
+                                connections=connections)
+
     def input(self,
               type=None,
               unit=None,
@@ -4046,6 +4059,11 @@ class TransformationMatrix(om.MTransformationMatrix):
         space = space or sTransform
         return Vector(super(TransformationMatrix, self).rotatePivot(space))
 
+    def setRotatePivot(self, pivot, space=sTransform, balance=False):
+        pivot = pivot if isinstance(pivot, om.MPoint) else om.MPoint(pivot)
+        return super(TransformationMatrix, self).setRotatePivot(
+            pivot, space, balance)
+
     def rotatePivotTranslation(self, space=None):
         """This method does not typically support optional arguments"""
         space = space or sTransform
@@ -4097,11 +4115,8 @@ class TransformationMatrix(om.MTransformationMatrix):
         return super(TransformationMatrix, self).setScale(seq, space)
 
     def rotation(self, asQuaternion=False):
-        return Quaternion(
-            super(TransformationMatrix, self).rotation(asQuaternion)
-        ) if asQuaternion else Euler(
-            super(TransformationMatrix, self).rotation(asQuaternion)
-        )
+        rotation = super(TransformationMatrix, self).rotation(asQuaternion)
+        return Quaternion(rotation) if asQuaternion else Euler(rotation)
 
     def setRotation(self, rot):
         """Interpret three values as an euler rotation"""

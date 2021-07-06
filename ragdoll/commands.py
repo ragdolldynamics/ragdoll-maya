@@ -871,7 +871,7 @@ def orient(con, aim=None, up=None):
 
         """
 
-        rotate_pivot = rigid.parent().transformation().rotatePivot()
+        rotate_pivot = rigid["rotatePivot"].as_vector()
 
         # Rather than ask the node for where it is, which could
         # trigger an evaluation, we fetch an input matrix that
@@ -903,10 +903,13 @@ def orient(con, aim=None, up=None):
 
         if not child:
             aim = cmdx.Tm(child_tm)
+            aim.translateBy(child_rigid["rotatePivot"].as_vector())
             aim.translateBy(cmdx.Vector(1, 0, 0), cmdx.sPreTransform)
             aim = aim.translation()
         else:
-            aim = child.transform(cmdx.sWorld).translation()
+            aim = child.transform(cmdx.sWorld)
+            aim.translateBy(child_rigid["rotatePivot"].as_vector())
+            aim = aim.translation()
 
     # The up direction should typically be the parent rigid, but
     # can be overridden too.
@@ -917,7 +920,9 @@ def orient(con, aim=None, up=None):
     #    o---------o
     #
     if up is None:
-        up = parent_rigid.transform(cmdx.sWorld).translation()
+        up = parent_rigid.transform(cmdx.sWorld)
+        up.translateBy(parent_rigid["rotatePivot"].as_vector())
+        up = up.translation()
 
     def orient_from_positions(a, b, c=None):
         """Look at `a` from `b`, with an optional up-vector `c`
@@ -952,8 +957,15 @@ def orient(con, aim=None, up=None):
     orient = orient_from_positions(origin, aim, up)
     mat = cmdx.Tm(translate=origin, rotate=orient).asMatrix()
 
-    parent_frame = cmdx.Tm(mat * parent_matrix.inverse())
-    child_frame = cmdx.Tm(mat * child_matrix.inverse())
+    new_parent_frame = cmdx.Tm(mat * parent_matrix.inverse())
+    new_child_frame = cmdx.Tm(mat * child_matrix.inverse())
+
+    # Update orientation, but keep the pivots
+    parent_frame = cmdx.Tm(con["parentFrame"].asMatrix())
+    parent_frame.setRotation(new_parent_frame.rotation(asQuaternion=True))
+
+    child_frame = cmdx.Tm(con["childFrame"].asMatrix())
+    child_frame.setRotation(new_child_frame.rotation(asQuaternion=True))
 
     with cmdx.DagModifier() as mod:
         mod.set_attr(con["parentFrame"], parent_frame.as_matrix())
@@ -2371,11 +2383,6 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
     root_pos = position_incl_pivot(root)
     root_scale = root_tm.scale()
 
-    if children is False:
-        orient = root_tm.rotation(asQuaternion=True)
-        orient *= cmdx.Quaternion(cmdx.radians(90), cmdx.Vector(0, 0, 1))
-        geometry.orient = orient
-
     # There is a lot we can gather from the childhood
     if children:
 
@@ -2487,11 +2494,16 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
     else:
         size, center = _hierarchy_bounding_size(root)
-        offset = center - root_pos
 
         geometry.length = size.x
         geometry.radius = min([size.y, size.z])
         geometry.extents = size
+
+        # Embed length
+        tm = cmdx.Tm(root_tm)
+        tm.translateBy(cmdx.Vector(0, size.x * -0.5, 0))
+
+        offset = center - tm.translation()
 
     # Compute final shape matrix with these ingredients
     shape_tm = cmdx.Tm(translate=root_pos,
@@ -3881,27 +3893,28 @@ def _reset_constraint(mod, con, opts=None):
 
         if parent_rigid is not None:
             parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
-            parent_rotate_pivot = parent_rigid["rotatePivot"].as_vector()
         else:
             # It's connected to the world
-            parent_matrix = cmdx.MatrixType()
-            parent_rotate_pivot = cmdx.Vector(0, 0, 0)
+            parent_matrix = cmdx.Matrix4()
 
         child_rotate_pivot = child_rigid["rotatePivot"].as_vector()
         child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
 
         child_frame = cmdx.Tm()
-        child_frame.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+        child_frame.translateBy(child_rotate_pivot)
+        child_frame = child_frame.as_matrix()
 
-        parent_frame = cmdx.Tm(child_matrix * parent_matrix.inverse())
-        parent_frame.translateBy(parent_rotate_pivot, cmdx.sPreTransform)
+        child_tm = cmdx.Tm(child_matrix)
+        child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+
+        parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
 
         # Drive to where you currently are
         if con["driveMatrix"].writable:
-            mod.set_attr(con["driveMatrix"], parent_frame.as_matrix())
+            mod.set_attr(con["driveMatrix"], parent_frame)
 
-        mod.set_attr(con["parentFrame"], parent_frame.as_matrix())
-        mod.set_attr(con["childFrame"], child_frame.as_matrix())
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], child_frame)
 
 
 def _apply_scale(mat):

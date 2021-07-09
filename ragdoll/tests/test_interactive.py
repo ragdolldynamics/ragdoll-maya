@@ -298,7 +298,7 @@ def test_transfer_attributes():
     assert_almost_equals(b["shapeRadius"].read(), 5.6, 3)
 
 
-def test_create_kinematic_control():
+def test_create_hard_pin():
     _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
@@ -309,7 +309,7 @@ def test_create_kinematic_control():
     commands.create_rigid(cube1, scene)
 
     cmds.select(str(cube1))
-    assert_true(interactive.create_kinematic_control())
+    assert_true(interactive.create_hard_pin())
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 1)
@@ -317,7 +317,7 @@ def test_create_kinematic_control():
     assert_equals(len(cmds.ls(type="rdControl")), 1)
 
 
-def test_create_driven_control():
+def test_create_soft_pin():
     _new()
 
     cube1, _ = map(cmdx.encode, cmds.polyCube())
@@ -328,7 +328,7 @@ def test_create_driven_control():
     commands.create_rigid(cube1, scene)
 
     cmds.select(str(cube1))
-    assert_true(interactive.create_driven_control())
+    assert_true(interactive.create_soft_pin())
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 1)

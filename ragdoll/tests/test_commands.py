@@ -512,6 +512,10 @@ def test_scale_chain():
     pass
 
 
+def test_extract_scene():
+    pass
+
+
 if cmdx.__maya_version__ >= 2019:
     def test_up_axes():
         """Both Z and Y-up axes behave as you would expect"""

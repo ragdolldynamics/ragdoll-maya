@@ -122,7 +122,7 @@ def test_undo_convert_constraint():
           lambda: con["angularLimitX"] < 0 and con["linearLimitX"] < 0)
 
 
-def test_undo_create_absolute_control():
+def test_undo_create_soft_pin():
     _new()
 
     # Setup
@@ -130,7 +130,7 @@ def test_undo_create_absolute_control():
     scene = commands.create_scene()
     rigid = commands.create_rigid(cube, scene)
 
-    _undo(lambda: commands.create_absolute_control(rigid),
+    _undo(lambda: commands.create_soft_pin(rigid),
           lambda: cmds.ls(type="rdControl"))
 
 

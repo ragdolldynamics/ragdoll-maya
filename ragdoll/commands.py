@@ -1092,9 +1092,8 @@ def create_soft_pin(rigid, reference=None, opts=None):
             mod.do_it()
 
             # Leverage MFnTransform's ability to *balance* the pivot
-            rotate_pivot = rigid["rotatePivot"].as_vector()
             reference._tfn.setRotatePivot(
-                cmdx.Point(rotate_pivot), cmdx.sPreTransform,
+                rigid["rotatePivot"].as_point(), cmdx.sPreTransform,
 
                 # Balance
                 True
@@ -1117,7 +1116,7 @@ def create_soft_pin(rigid, reference=None, opts=None):
 
         # TODO: Figure out why this isn't handled by _reset_constraint
         child_frame = cmdx.Tm(con["childFrame"].as_matrix())
-        child_frame.translateBy(rotate_pivot, cmdx.sTransform)
+        child_frame.translateBy(rigid["rotatePivot"].as_vector())
         mod.set_attr(con["childFrame"], child_frame.as_matrix())
 
         mod.set_attr(con["driveEnabled"], True)

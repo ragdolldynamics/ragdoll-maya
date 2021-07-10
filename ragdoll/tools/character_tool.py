@@ -296,7 +296,7 @@ def create(root,
         root_proxies.do_it()
 
         # Absolute control on hip
-        ref, _, con = commands.create_absolute_control(rigid, reference=root)
+        ref, _, con = commands.create_soft_pin(rigid, reference=root)
 
         with cmdx.DagModifier() as mod:
             mod.smart_set_attr(con["driveStrength"], 0)  # Default to off

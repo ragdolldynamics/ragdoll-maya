@@ -500,12 +500,57 @@ def test_animation_constraint_3():
     assert_almost_equals(b.translation(cmdx.sWorld).y, 10.0, 2)
 
 
-def test_simple_scale():
-    pass
+def test_scale_transform():
+    _new()
+
+    cube, _ = map(cmdx.encode, cmds.polyCube())
+    cube["translateY"] = 2
+    cube["scale"] = (0.5, 2, 0.5)
+
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(cube, scene)
+
+    # Inferred from polyCube
+    assert_equals(rigid["shapeType"].read(), constants.BoxShape)
+
+    # Extents are local to the overall transform, so the physics shape
+    # will be elongated along Y, but the internal values will remain 1
+    assert_equals(rigid["shapeExtents"].read(), (1, 1, 1))
+
+    _play(rigid, start=1, end=10)
+
+    assert_almost_equals(cube["translateY"].read(), 1.0, 2)
 
 
 def test_scale_after_authoring():
-    pass
+    _new()
+
+    cube, _ = map(cmdx.encode, cmds.polyCube())
+    cube["translateY"] = 2
+
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(cube, scene)
+
+    _play(rigid, start=1, end=20)
+
+    assert_almost_equals(cube["translateY"].read(), 0.5, 2)
+
+    # After creating it
+    cube["scale"] = (0.5, 2, 0.5)
+
+    _play(rigid, start=1, end=20)
+
+    # It won't actually come into effect, because we aren't dynamically
+    # listening to scale.
+    assert_almost_equals(cube["translateY"].read(), 0.5, 2)
+
+    _play(rigid, start=1, end=20)
+
+    # Trigger the new size (also happens on auto initial state)
+    commands.set_initial_state([rigid])
+
+    _play(rigid, start=1, end=20)
+    assert_almost_equals(cube["translateY"].read(), 1.0, 2)
 
 
 def test_scale_chain():

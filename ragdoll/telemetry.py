@@ -66,6 +66,10 @@ def _gather_system():
     })
 
 
+def install():
+    pass
+
+
 def gather():
     _gather_ragdoll()
     _gather_system()

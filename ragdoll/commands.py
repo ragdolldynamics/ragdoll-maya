@@ -145,7 +145,7 @@ def create_rigid(node, scene, opts=None, _cache=None):
         mod.set_attr(rigid["kinematic"], opts.get("passive", False))
 
         # Avoid contacts getting too excited
-        mod.set_attr(rigid["maxDepenetrationVelocity"], 20.0)
+        mod.set_attr(rigid["maxDepenetrationVelocity"], 2000.0)
 
         # Add to scene
         _add_rigid(mod, rigid, scene)

@@ -52,6 +52,7 @@ from . import (
     licence,
     dump,
     tools,
+    telemetry,
     constants as c,
     internal as i__,
     __
@@ -224,6 +225,7 @@ def install():
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 
     if not _is_standalone():
+        telemetry.install()
         install_callbacks()
 
         # Give Maya's GUI a chance to boot up

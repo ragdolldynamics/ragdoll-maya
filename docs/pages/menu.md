@@ -101,23 +101,23 @@ Like normal Maya constraints, these limit the motion of one rigid relative anoth
 
 ## Control
 
-High-level control, either direct (kinematic, passive) or indirect (driven, guided).
+High-level control, either direct (Hard Pin) or indirect (Soft Pin).
 
 <br>
 
-### Kinematic Control
+### Hard Pin
 
-{{ menu.kinematic.description }}
-{{ menu.kinematic.options }}
-{{ menu.kinematic.media }}
+{{ menu.hardPin.description }}
+{{ menu.hardPin.options }}
+{{ menu.hardPin.media }}
 
 <br>
 
-### Guide Control
+### Soft Pin
 
-{{ menu.guide.description }}
-{{ menu.guide.options }}
-{{ menu.guide.media }}
+{{ menu.softPin.description }}
+{{ menu.softPin.options }}
+{{ menu.softPin.media }}
 
 <br>
 

@@ -16,4 +16,4 @@ Like Euphoria, WeightShift developed a physically based animation tool, except t
 
 Ragdoll carries on where WeightShift left off, but turns things on its head. Rather than targeting riggers and technical animators, Ragdoll adopts a "no-rigging required" approach.
 
-**Sometime in 2021** Ragdoll is released.
+**July 28th 2021** Ragdoll is launched.

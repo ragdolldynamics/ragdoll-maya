@@ -496,6 +496,7 @@
         "description": "Edit the scale of manipulators and visual elements of Ragdoll, especially constriants. If you work at a scale other than Maya's currently set units, this command is your friend.",
         "options": [
             "scale",
+            "sceneScale",
             "cacheMedia",
             "frameskipHandling",
             "autoInitialState",

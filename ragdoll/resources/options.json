@@ -25,7 +25,7 @@
     },
     "scale": {
         "name": "scale",
-        "label": "Gizmo Scale",
+        "label": "Draw Scale",
         "type": "Float",
         "default": 1.0,
         "min": 0.01,
@@ -765,6 +765,16 @@
         "default": false,
         "help": "Let the user know of a Ragdoll limitation, that scale is unsupported."
     },
+    "sceneScale": {
+        "name": "sceneScale",
+        "type": "Float",
+        "default": 0.1,
+        "min": 0.01,
+        "max": 100.0,
+        "help": "Internal tolerances to use when computing convex meshes and some forces, default is 0.1 meaning things are assumed 10x smaller than real-world scale e.g. a character is 17 cm tall."
+    },
+
+
     "deleteFromSelection": {
         "name": "deleteFromSelection",
         "type": "Boolean",

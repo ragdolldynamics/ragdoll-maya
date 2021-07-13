@@ -7,6 +7,7 @@ convenient method of Python to C++ communication.
 
 """
 
+import copy
 import logging
 from maya import cmds
 from . import internal as i__, __
@@ -134,8 +135,8 @@ def install(reset=False):
     """
 
     for arg in __.optionvars.values():
-        key = _optionvarkey(arg["name"])
-        if cmds.optionVar(exists=key) and not reset:
+        var = _optionvarkey(arg["name"])
+        if cmds.optionVar(exists=var) and not reset:
             continue
 
         write(arg)
@@ -156,20 +157,25 @@ def reset():
     total = 0
     changed = 0
     previous = {}
-    for key in cmds.optionVar(list=True):
-        if key.startswith("ragdoll"):
-            previous[key] = cmds.optionVar(query=key)
-            cmds.optionVar(remove=key)
+    old = copy.deepcopy(__.optionvars)
+
+    for var in cmds.optionVar(list=True):
+        if var.startswith("ragdoll"):
+            previous[var] = cmds.optionVar(query=var)
+            cmds.optionVar(remove=var)
             total += 1
 
     install()
 
-    for key in __.optionvars:
-        prev = previous.get(_optionvarkey(key), "")
-        new = read(key)
+    for arg in __.optionvars.values():
+        var = _optionvarkey(arg["name"])  # sceneScale -> ragdollSceneScale
+        prev = previous.get(var, "''")
+        new = read(arg["name"])
 
         if prev != new:
             changed += 1
-            log.info("Resetting %s (%s = %s)" % (key, prev, new))
+            log.info("Resetting %s (%s = %s)" % (arg["name"], prev, new))
 
     log.info("Resetted %d/%d optionvars" % (changed, total))
+
+    return old

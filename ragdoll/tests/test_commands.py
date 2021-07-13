@@ -303,14 +303,14 @@ def test_rotate_order():
 
     _step(rigid, 30)
 
-    assert_almost_equals(box["rx", cmdx.Degrees].read(), -180.0, 2)
-    assert_almost_equals(box["rz", cmdx.Degrees].read(), 90.0, 2)
+    assert_almost_equals(box["rx", cmdx.Degrees].read(), -180.0, 0)
+    assert_almost_equals(box["rz", cmdx.Degrees].read(), 90.0, 0)
 
     box["rotateOrder"] = 1  # YZX
 
-    assert_almost_equals(box["rx", cmdx.Degrees].read(), -90.0, 2)
-    assert_almost_equals(box["ry", cmdx.Degrees].read(), -90.0, 2)
-    assert_almost_equals(box["rz", cmdx.Degrees].read(), -90.0, 2)
+    assert_almost_equals(box["rx", cmdx.Degrees].read(), -90.0, 0)
+    assert_almost_equals(box["ry", cmdx.Degrees].read(), -90.0, 0)
+    assert_almost_equals(box["rz", cmdx.Degrees].read(), -90.0, 0)
 
 
 def test_rotate_axis():

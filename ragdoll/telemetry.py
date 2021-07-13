@@ -1,8 +1,10 @@
 import os
+import sys
 import json
 import copy
 import logging
 import datetime
+import platform
 from maya import cmds
 
 from . import __
@@ -21,8 +23,6 @@ def _gather_ragdoll():
 
 
 def _gather_system():
-    import sys
-    import platform
 
     device = dict()
 
@@ -93,3 +93,20 @@ def upload():
     """Send anonymous telemetry to Ragdoll's server"""
     dump = json.dumps(__.telemetry_data)
     cmds.ragdollReport(json=dump)
+
+
+def on_exit():
+    """Called on Maya exit"""
+
+    # Only capture interactive sessions
+    if not hasattr(cmds, "about") or cmds.about(batch=True):
+        return
+
+    try:
+        gather()
+        save()
+        upload()
+
+    except Exception:
+        import traceback
+        sys.stderr.write(traceback.format_exc())

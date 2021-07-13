@@ -89,6 +89,11 @@ def _is_standalone():
     return not hasattr(cmds, "about") or cmds.about(batch=True)
 
 
+def _is_interactive():
+    """Is Maya running with a GUI?"""
+    return not _is_standalone()
+
+
 MessageBox = ui.MessageBox
 
 
@@ -224,7 +229,7 @@ def install():
     options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 
-    if not _is_standalone():
+    if _is_interactive():
         telemetry.install()
         install_callbacks()
 

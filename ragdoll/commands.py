@@ -2143,14 +2143,14 @@ def edit_shape(rigid):
     parent_transform = rigid.parent()
 
     with cmdx.DagModifier() as mod:
-        shape = mod.create_node("transform",
-                                name="shapeTransform",
-                                parent=parent_transform)
+        editor = mod.create_node("transform",
+                                 name="shapeEditor",
+                                 parent=parent_transform)
 
-        mod.set_attr(shape["displayHandle"], True)
-        mod.set_attr(shape["displayLocalAxis"], True)
+        mod.set_attr(editor["displayHandle"], True)
+        mod.set_attr(editor["displayLocalAxis"], True)
 
-        mod.add_attr(shape, cmdx.Enum(
+        mod.add_attr(editor, cmdx.Enum(
             "shapeType", fields=[(c.BoxShape, "Box"),
                                  (c.SphereShape, "Sphere"),
                                  (c.CapsuleShape, "Capsule"),
@@ -2159,34 +2159,34 @@ def edit_shape(rigid):
         mod.do_it()
 
         # Transfer current values
-        mod.set_attr(shape["translateX"], rigid["shapeOffsetX"])
-        mod.set_attr(shape["translateY"], rigid["shapeOffsetY"])
-        mod.set_attr(shape["translateZ"], rigid["shapeOffsetZ"])
+        mod.set_attr(editor["translateX"], rigid["shapeOffsetX"])
+        mod.set_attr(editor["translateY"], rigid["shapeOffsetY"])
+        mod.set_attr(editor["translateZ"], rigid["shapeOffsetZ"])
 
-        mod.set_attr(shape["rotateX"], rigid["shapeRotationX"])
-        mod.set_attr(shape["rotateY"], rigid["shapeRotationY"])
-        mod.set_attr(shape["rotateZ"], rigid["shapeRotationZ"])
+        mod.set_attr(editor["rotateX"], rigid["shapeRotationX"])
+        mod.set_attr(editor["rotateY"], rigid["shapeRotationY"])
+        mod.set_attr(editor["rotateZ"], rigid["shapeRotationZ"])
 
-        mod.set_attr(shape["shapeType"], rigid["shapeType"])
+        mod.set_attr(editor["shapeType"], rigid["shapeType"])
 
         if rigid["shapeType"] in (c.BoxShape, c.MeshShape):
-            mod.set_attr(shape["scale"], rigid["shapeExtents"])
+            mod.set_attr(editor["scale"], rigid["shapeExtents"])
         else:
-            mod.set_attr(shape["scaleX"], rigid["shapeLength"])
-            mod.set_attr(shape["scaleY"], rigid["shapeRadius"])
+            mod.set_attr(editor["scaleX"], rigid["shapeLength"])
+            mod.set_attr(editor["scaleY"], rigid["shapeRadius"])
 
-        mod.connect(shape["translate"], rigid["shapeOffset"])
-        mod.connect(shape["rotate"], rigid["shapeRotation"])
-        mod.connect(shape["scale"], rigid["shapeExtents"])
-        mod.connect(shape["scaleX"], rigid["shapeLength"])
-        mod.connect(shape["scaleY"], rigid["shapeRadius"])
-        mod.connect(shape["shapeType"], rigid["shapeType"])
+        mod.connect(editor["translate"], rigid["shapeOffset"])
+        mod.connect(editor["rotate"], rigid["shapeRotation"])
+        mod.connect(editor["scale"], rigid["shapeExtents"])
+        mod.connect(editor["scaleX"], rigid["shapeLength"])
+        mod.connect(editor["scaleY"], rigid["shapeRadius"])
+        mod.connect(editor["shapeType"], rigid["shapeType"])
 
         # Have this deleted alongside the constraint
         index = rigid["exclusiveNodes"].next_available_index()
-        mod.connect(shape["message"], rigid["exclusiveNodes"][index])
+        mod.connect(editor["message"], rigid["exclusiveNodes"][index])
 
-    return shape
+    return editor
 
 
 @i__.with_undo_chunk
@@ -3191,6 +3191,10 @@ def combine_scenes(scenes):
         move_to_scene(rigids, master)
 
     return master
+
+
+# Alias
+merge_scenes = combine_scenes
 
 
 def _sort_scene(scene):

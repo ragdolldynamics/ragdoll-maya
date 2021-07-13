@@ -1,10 +1,12 @@
 from .. import commands
-from ..tools import character_tool
+from ..tools import create_character, create_chain
 from ..vendor import cmdx
 from . import _new, _play
 
+import math
 from nose.tools import (
     assert_equals,
+    assert_almost_equals,
 )
 
 
@@ -53,7 +55,7 @@ def test_character():
     # Create with root
     root = joints[0]
     scene = commands.create_scene()
-    result = character_tool.create(root, scene, copy=False)
+    result = create_character(root, scene, copy=False)
 
     # After 100 frames, the simulation has come to a rest
     _play(result, 1, 101)
@@ -61,9 +63,47 @@ def test_character():
     # The chain should now be lying down, which means
     # the Y-position should end up being the capsule radius
 
-    assert_equals(str(result["tx"].read())[:4], "-2.8")
-    assert_equals(str(result["ty"].read())[:4], "1.00")
-    assert_equals(str(result["tz"].read())[:4], "-8.4")
+    assert_equals(math.trunc(result["tx"].read() * 10), -28)
+    assert_equals(math.trunc(result["ty"].read() * 10), 10)
+    assert_equals(math.trunc(result["tz"].read() * 10), -84)
+
+
+def test_scale_chain():
+    _new()
+
+    with cmdx.DagModifier() as mod:
+        nodes = []
+        parent = None
+
+        for link in range(3):
+            cube = mod.create_node("transform", parent=parent)
+            cube["translateX"] = 2
+            nodes += [cube]
+            parent = cube
+
+        nodes[0]["translateY"] = 2
+        nodes[0]["scale"] = (2, 2, 2)
+
+    scene = commands.create_scene()
+    rigids = create_chain(nodes, scene, opts={"passiveRoot": False})
+
+    # Ignore any automatically computed radius
+    for rigid in rigids:
+        if rigid.type() != "rdRigid":
+            continue
+
+        rigid["shapeRadius"] = 0.5
+
+    _play(rigids[0], start=1, end=10)
+
+    # It should be lying down by now, 1 unit from the ground given
+    # it was scaled at the root, which should scale all of them.
+    def t(node):
+        return node.translation(cmdx.sWorld)
+
+    assert_almost_equals(t(nodes[0]).y, 1.0, 2)
+    assert_almost_equals(t(nodes[1]).y, 1.0, 2)
+    assert_almost_equals(t(nodes[2]).y, 1.0, 2)
 
 
 def manual():

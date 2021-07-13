@@ -214,7 +214,23 @@ def test_edit_constraint_pivot():
 
 
 def test_edit_shape():
-    pass
+    _new()
+
+    tm = cmdx.create_node("transform")
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(tm, scene)
+
+    assert_almost_equals(rigid["shapeOffsetX"], 0.0, 3)
+
+    editor = commands.edit_shape(rigid)
+    editor["tx"] = 5.0
+
+    assert_almost_equals(rigid["shapeOffsetX"], 5.0, 3)
+
+    # Editor is optional
+    cmdx.delete(editor)
+
+    assert_almost_equals(rigid["shapeOffsetX"], 5.0, 3)
 
 
 def test_convert_rigid():
@@ -267,7 +283,34 @@ def test_rotate_pivot():
 
 
 def test_rotate_order():
-    assert True
+    _new()
+
+    #   /\     +
+    #  /  \
+    #  \  /
+    #   \/
+    #
+    #
+    # ______
+
+    box, _ = map(cmdx.encode, cmds.polyCube())
+    box["ty"] = 2
+    box["rotateX", cmdx.Degrees] = 180
+    box["rotateZ", cmdx.Degrees] = 50
+
+    scene = commands.create_scene()
+    rigid = commands.create_rigid(box, scene)
+
+    _step(rigid, 30)
+
+    assert_almost_equals(box["rx", cmdx.Degrees].read(), -180.0, 2)
+    assert_almost_equals(box["rz", cmdx.Degrees].read(), 90.0, 2)
+
+    box["rotateOrder"] = 1  # YZX
+
+    assert_almost_equals(box["rx", cmdx.Degrees].read(), -90.0, 2)
+    assert_almost_equals(box["ry", cmdx.Degrees].read(), -90.0, 2)
+    assert_almost_equals(box["rz", cmdx.Degrees].read(), -90.0, 2)
 
 
 def test_rotate_axis():
@@ -540,8 +583,8 @@ def test_scale_after_authoring():
 
     _play(rigid, start=1, end=20)
 
-    # It won't actually come into effect, because we aren't dynamically
-    # listening to scale.
+    # It won't actually come into effect, because we aren't
+    # actively responding to scale. (Not yet)
     assert_almost_equals(cube["translateY"].read(), 0.5, 2)
 
     _play(rigid, start=1, end=20)
@@ -553,12 +596,65 @@ def test_scale_after_authoring():
     assert_almost_equals(cube["translateY"].read(), 1.0, 2)
 
 
-def test_scale_chain():
-    pass
-
-
 def test_extract_scene():
-    pass
+    _new()
+
+    scene = commands.create_scene()
+    nodes = [cmdx.create_node("transform") for i in range(3)]
+    rigids = [commands.create_rigid(nodes[i], scene) for i in range(3)]
+
+    assert_equals(rigids[0]["nextState"].connection(), scene)
+    assert_equals(rigids[1]["nextState"].connection(), scene)
+    assert_equals(rigids[2]["nextState"].connection(), scene)
+
+    scene2 = commands.extract_from_scene(rigids[0:1])
+    scene3 = commands.extract_from_scene(rigids[1:2])
+
+    assert_equals(rigids[0]["nextState"].connection(), scene2)
+    assert_equals(rigids[1]["nextState"].connection(), scene3)
+    assert_equals(rigids[2]["nextState"].connection(), scene)
+
+
+def test_move_scene():
+    _new()
+
+    scene1 = commands.create_scene()
+    scene2 = commands.create_scene()
+    scene3 = commands.create_scene()
+
+    nodes = [cmdx.create_node("transform") for i in range(3)]
+    rigids = [commands.create_rigid(nodes[i], scene1) for i in range(3)]
+
+    assert_equals(rigids[0]["nextState"].connection(), scene1)
+    assert_equals(rigids[1]["nextState"].connection(), scene1)
+    assert_equals(rigids[2]["nextState"].connection(), scene1)
+
+    scene2 = commands.move_to_scene(rigids[0:1], scene2)
+    scene3 = commands.move_to_scene(rigids[1:2], scene3)
+
+    assert_equals(rigids[0]["nextState"].connection(), scene2)
+    assert_equals(rigids[1]["nextState"].connection(), scene3)
+    assert_equals(rigids[2]["nextState"].connection(), scene1)
+
+
+def test_combine_scenes():
+    _new()
+
+    scene1 = commands.create_scene()
+    scene2 = commands.create_scene()
+
+    node1 = cmdx.create_node("transform")
+    node2 = cmdx.create_node("transform")
+    rigid1 = commands.create_rigid(node1, scene1)
+    rigid2 = commands.create_rigid(node2, scene2)
+
+    assert_equals(rigid1["nextState"].connection(), scene1)
+    assert_equals(rigid2["nextState"].connection(), scene2)
+
+    commands.combine_scenes([scene1, scene2])
+
+    assert_equals(rigid1["nextState"].connection(), scene1)
+    assert_equals(rigid2["nextState"].connection(), scene1)
 
 
 if cmdx.__maya_version__ >= 2019:

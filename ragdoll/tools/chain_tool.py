@@ -788,7 +788,7 @@ class Chain(object):
 
         mod.set_attr(rigid["cachedRestMatrix"], rest)
         mod.set_attr(rigid["inputMatrix"], rest)
-        mod.set_attr(rigid["maxDepenetrationVelocity"], 20.0)
+        mod.set_attr(rigid["maxDepenetrationVelocity"], 2000.0)
 
         commands._add_rigid(mod, rigid, self._scene)
 

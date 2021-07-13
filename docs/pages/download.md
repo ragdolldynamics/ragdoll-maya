@@ -116,13 +116,7 @@ The plug-in is now available via the Plug-in Manager.
     Your scenes will still open, but the solver will be disabled. Contact [licence@ragdolldynamics.com](mailto:licence@ragdolldynamics.com) for renewal of your licence.
 
 ??? question "What happens when I skip frames?"
-    Best not to, you'll see this warning message in your Script Editor.
-
-    ```bash
-    Warning: Ragdoll evaluation skipped, frame change too large
-    ```
-
-    Letting you know to rewind and not trust the results until you do.
+    The simulation gracefully pauses until you revisit the last simulated frame.
 
 ??? question "How do I disable the ground?"
     A static collider is automatically added on the Maya grid per default, it can be disabled on the `rdScene` node via the `.useGround` attribute.

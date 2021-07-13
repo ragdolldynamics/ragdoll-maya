@@ -1,7 +1,7 @@
 from .. import commands
 from ..tools import create_character, create_chain
 from ..vendor import cmdx
-from . import _new, _play
+from . import _new, _play, _step
 
 import math
 from nose.tools import (
@@ -94,24 +94,28 @@ def test_scale_chain():
 
         rigid["shapeRadius"] = 0.5
 
-    _play(rigids[0], start=1, end=10)
+    _play(nodes[0], start=1, end=10)
 
     # It should be lying down by now, 1 unit from the ground given
     # it was scaled at the root, which should scale all of them.
     def t(node):
-        return node.translation(cmdx.sWorld)
+        return node.translation(cmdx.sWorld).y
 
-    assert_almost_equals(t(nodes[0]).y, 1.0, 2)
-    assert_almost_equals(t(nodes[1]).y, 1.0, 2)
-    assert_almost_equals(t(nodes[2]).y, 1.0, 2)
+    assert_almost_equals(t(nodes[0]), 1.0, 2)
+    assert_almost_equals(t(nodes[1]), 1.0, 2)
+    assert_almost_equals(t(nodes[2]), 1.0, 2)
 
 
 def manual():
+    import sys
     import time
     t0 = time.time()
 
-    tests = (
-        test_character,
+    mod = sys.modules[__name__]
+    tests = list(
+        func
+        for name, func in mod.__dict__.items()
+        if name.startswith("test_")
     )
 
     errors = []

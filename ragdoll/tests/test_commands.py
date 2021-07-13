@@ -583,12 +583,6 @@ def test_scale_after_authoring():
 
     _play(rigid, start=1, end=20)
 
-    # It won't actually come into effect, because we aren't
-    # actively responding to scale. (Not yet)
-    assert_almost_equals(cube["translateY"].read(), 0.5, 2)
-
-    _play(rigid, start=1, end=20)
-
     # Trigger the new size (also happens on auto initial state)
     commands.set_initial_state([rigid])
 

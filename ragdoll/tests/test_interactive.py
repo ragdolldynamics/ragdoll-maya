@@ -52,7 +52,7 @@ CONTROL_3CHAIN = (
 
 
 def setup():
-    options.reset()
+    pass
 
 
 def create_joint_arm():

@@ -513,6 +513,11 @@
             "validatePlaybackSpeed"
         ]
     },
+    "selectInvalidConstraints": {
+        "label": "Select Invalid Constraints",
+        "icon": "save.png",
+        "summary": "Select constraints without connected rigid bodies."
+    },
     "savePreferences": {
         "label": "Save Preferences",
         "icon": "save.png",

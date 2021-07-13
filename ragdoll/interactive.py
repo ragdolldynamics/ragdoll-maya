@@ -725,6 +725,10 @@ def install_menu():
             item("loggingWarning", logging_warning)
             item("loggingDebug", logging_debug)
 
+        if c.RAGDOLL_DEVELOPER:
+            with submenu("Debug"):
+                item("selectInvalidConstraints", select_invalid_constraints)
+
     with submenu("Select", icon="select.png"):
         item("selectRigids", select_rigids, select_rigids_options)
         item("selectConstraints",
@@ -2599,6 +2603,33 @@ def freeze_evaluation(selection=None, **opts):
 def unfreeze_evaluation(selection=None, **opts):
     opts["freezeEvaluation"] = False
     return freeze_evaluation(selection, **opts)
+
+
+def select_invalid_constraints(selection=None, **opts):
+    """Select constraints without a valid rigid body
+
+    Sometimes constraints get disconnected from their rigid bodies.
+    These should ideally be automatically deleted, but sometimes are not.
+
+    """
+
+    invalid = []
+
+    for con in cmdx.ls(type="rdConstraint"):
+        if not con["childRigid"].input():
+            invalid.append(str(con))
+
+        if not con["parentRigid"].input():
+            invalid.append(str(con))
+
+    cmds.select(deselect=True)
+
+    if invalid:
+        cmds.select(invalid)
+    else:
+        log.warning("No invalid constraints found")
+
+    return kSuccess
 
 
 #

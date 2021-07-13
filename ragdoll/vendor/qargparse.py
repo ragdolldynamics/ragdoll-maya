@@ -745,6 +745,10 @@ class Number(QArgument):
             stepsize = 0.1 if delta < 10 else 1.0
             widget.setSingleStep(stepsize)
 
+            minimum = self._data.get("min", 0.0)
+            decimals = len(str(minimum - int(minimum)).rsplit(".")[-1])
+            widget.setDecimals(max(1, decimals))
+
         else:
             slider = _with_entered_exited(QtWidgets.QSlider, self)()
             widget = _with_entered_exited(QtWidgets.QSpinBox, self)()

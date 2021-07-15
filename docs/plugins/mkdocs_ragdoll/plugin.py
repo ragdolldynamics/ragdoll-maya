@@ -1,3 +1,4 @@
+import io
 import re
 import os
 import sys
@@ -72,6 +73,11 @@ def _resource(*fname):
     dirname = os.path.dirname(ragdoll.__file__)
     resdir = os.path.join(dirname, "resources")
     return os.path.normpath(os.path.join(resdir, *fname))
+
+
+def _page(*path):
+    dirname = os.getcwd()  # Assume root of docs/
+    return os.path.normpath(os.path.join(dirname, "pages", *path))
 
 
 def camel_to_title(text):
@@ -309,6 +315,47 @@ def attributes(markdown):
     return os.linesep.join(lines)
 
 
+def releases(markdown):
+    """Convert {{ releases }}"""
+
+    def find_title(fname):
+        with io.open(fname, "r", encoding="utf8") as f:
+            max_lines = 5
+            for index, line in enumerate(f):
+
+                if not line.startswith("title:"):
+                    continue
+
+                title = line.split("title:", 1)[-1].strip(" ").rstrip()
+                return title
+
+                if index > max_lines:
+                    break
+
+        raise ValueError("Couldn't find title of %s" % fname)
+
+    rows = []
+    for version, fname in get_releases():
+
+        # Find title
+        title = find_title(fname)
+
+        rows.append(
+            "- [{version} - {title}](/releases/{version})".format(
+                version=version, title=title
+            )
+        )
+
+    replace = os.linesep.join(rows)
+
+    markdown = re.sub(
+        r"\{\{(\s)*releases(\s)*\}\}", replace, markdown,
+        flags=re.IGNORECASE
+    )
+
+    return markdown
+
+
 def meta(markdown, page, config):
     for key, value in page.meta.items():
         if "page.meta.%s" % key not in markdown:
@@ -331,17 +378,58 @@ def meta(markdown, page, config):
     return markdown
 
 
+def get_releases():
+    releases_dir = _page("releases")
+
+    for root, dirs, fnames in os.walk(releases_dir):
+        for fname in reversed(fnames):
+            if not fname.endswith(".md"):
+                continue
+
+            version = fname.rsplit(".md", 1)[0]
+            yield version, os.path.join(root, fname)
+
+
 class MenuGeneratorPlugin(BasePlugin):
     def __init__(self):
         self.enabled = True
+        self.latest_version = list(get_releases())[0][0]
 
     def on_page_markdown(self, markdown, page, config, files):
         if not self.enabled:
             return markdown
 
-        markdown = menu_all(markdown)
-        markdown = menu(markdown)
-        markdown = attributes(markdown)
+        config.data["latest_version"] = self.latest_version
+
+        if page.title == "Menu Reference":
+            markdown = menu_all(markdown)
+            markdown = menu(markdown)
+
+        if "nodes" in page.url.lower():
+            markdown = attributes(markdown)
+
         markdown = meta(markdown, page, config)
 
+        if page.title == "Releases":
+            markdown = releases(markdown)
+
         return markdown
+
+    def on_nav(self, nav, config, files):
+        import mkdocs.structure.nav as nav_
+
+        for item in nav.items:
+            if item.title == "Release History":
+                children = []
+
+                for index, (version, _) in enumerate(get_releases()):
+                    url = "releases/%s/" % version
+                    link = nav_.Link(version, url)
+                    link.is_page = True
+                    link.is_link = True
+
+                    children.append(link)
+
+                item.children[:] = children
+
+        return nav

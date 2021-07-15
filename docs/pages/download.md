@@ -10,7 +10,7 @@
 <div class="vboxlayout align-center justify-center">
     <div class="hboxlayout align-center">
         <a href="https://files.ragdolldynamics.com" class="button red"><b>Download</b></a>
-        <p>Ragdoll <b>{{ config.ragdoll_version }}</b> awaits.<br>
+        <p>Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
         <i>Click here to get started.</i></p>
     </div>
     <a class="padding-top" href="https://files.ragdolldynamics.com/files/distribution">Previous versions</a>
@@ -130,8 +130,7 @@ The plug-in is now available via the Plug-in Manager.
 
 ## Limitations
 
-As of `Ragdoll {{ config.ragdoll_version }}` these are the current known limitations of Ragdoll.
+As of `Ragdoll {{ config.latest_version }}` these are the current known limitations of Ragdoll.
 
 - Must visit start frame on scene open
-- When weight painting rigid joints, cannot right-click "Select influence" (see [workaround](https://forums.ragdolldynamics.com/t/swing-physics-test/40/2))
 - More since [2021.04.23](/releases/2021.04.23#known-issues)

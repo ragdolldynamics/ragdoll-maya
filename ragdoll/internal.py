@@ -469,9 +469,9 @@ def sort_filenames(fnames, suffix=".rag"):
 
 def unique_name(name):
     """Internal utility function"""
-    if cmdx.exists(name):
+    if cmdx.exists(name, strict=False):
         index = 1
-        while cmdx.exists("%s%d" % (name, index)):
+        while cmdx.exists("%s%d" % (name, index), strict=False):
             index += 1
         name = "%s%d" % (name, index)
 

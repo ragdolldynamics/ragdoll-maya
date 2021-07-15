@@ -590,6 +590,28 @@ def test_scale_after_authoring():
     assert_almost_equals(cube["translateY"].read(), 1.0, 2)
 
 
+def test_unique_names():
+    _new()
+
+    scene = commands.create_scene()
+
+    for i in range(3):
+        node = cmdx.create_node("transform")
+        rigid = commands.create_rigid(node, scene)
+        assert_equals(len(cmds.ls(rigid.name())), 1)
+
+    for i in range(3):
+        node = cmdx.create_node("transform")
+        rigid = commands.create_rigid(node, scene)
+        assert_equals(len(cmds.ls(rigid.name())), 1)
+
+    nodes = [
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+    ]
+
+
 if cmdx.__maya_version__ <= 2020:
     # These aren't happy with Maya 2022
 

@@ -106,6 +106,31 @@ def test_scale_chain():
     assert_almost_equals(t(nodes[2]), 1.0, 2)
 
 
+def test_unique_name():
+    _new()
+
+    nodes = [
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+    ]
+
+    scene = commands.create_scene()
+
+    for node in create_chain(nodes, scene):
+        assert_equals(len(cmdx.ls(node.path())), 1)
+
+    # Do it again
+    nodes = [
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+        cmdx.create_node("transform"),
+    ]
+
+    for node in create_chain(nodes, scene):
+        assert_equals(len(cmdx.ls(node.path())), 1)
+
+
 def manual():
     import sys
     import time

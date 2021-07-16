@@ -3884,6 +3884,12 @@ def _reset_constraint(mod, con, opts=None):
             return
         mod.reset_attr(attr)
 
+    def get_rest_matrix(rigid):
+        if rigid["kinematic"]:
+            return rigid["inputMatrix"].as_matrix()
+        else:
+            return rigid["cachedRestMatrix"].as_matrix()
+
     reset_attr(con["limitEnabled"])
     reset_attr(con["limitStrength"])
     reset_attr(con["linearLimitX"])
@@ -3904,13 +3910,13 @@ def _reset_constraint(mod, con, opts=None):
     if opts["maintainOffset"] and child_rigid:
 
         if parent_rigid is not None:
-            parent_matrix = parent_rigid["cachedRestMatrix"].asMatrix()
+            parent_matrix = get_rest_matrix(parent_rigid)
         else:
             # It's connected to the world
             parent_matrix = cmdx.Matrix4()
 
         child_rotate_pivot = child_rigid["rotatePivot"].as_vector()
-        child_matrix = child_rigid["cachedRestMatrix"].asMatrix()
+        child_matrix = get_rest_matrix(child_rigid)
 
         child_frame = cmdx.Tm()
         child_frame.translateBy(child_rotate_pivot)
@@ -3938,7 +3944,7 @@ def _apply_scale(mat):
     translate.z *= scale.z
     tm.setTranslation(translate)
     tm.setScale((1, 1, 1))
-    return tm.asMatrix()
+    return tm.as_matrix()
 
 
 def _scale_from_rigid(rigid):

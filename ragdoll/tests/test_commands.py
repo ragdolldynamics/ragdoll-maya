@@ -6,6 +6,7 @@ from . import _play, _new, _step, _rewind
 
 from nose.tools import (
     assert_equals,
+    assert_true,
     assert_almost_equals,
 )
 
@@ -605,11 +606,71 @@ def test_unique_names():
         rigid = commands.create_rigid(node, scene)
         assert_equals(len(cmds.ls(rigid.name())), 1)
 
-    nodes = [
-        cmdx.create_node("transform"),
-        cmdx.create_node("transform"),
-        cmdx.create_node("transform"),
-    ]
+
+def test_infer_geometry_free():
+    _new()
+    a, b, c, d = [cmdx.create_node("transform") for i in range(4)]
+    [n["displayLocalAxis"].write(True) for n in (a, b, c, d)]
+
+    #   c
+    #    o-----o d
+    #   /
+    #  /
+    # o  b
+    # |
+    # |
+    # |
+    # o a
+    #
+    a["t"] = (0, 0, 0)
+    b["t"] = (0, 2, 0)
+    c["t"] = (1, 3, 0)
+    d["t"] = (3, 3, 0)
+
+    # a
+    g = commands.infer_geometry(a, parent=None, children=[b])
+    assert_true(g.orient.as_euler().is_equivalent(
+                cmdx.Euler(0, 0, cmdx.pi / 2)))
+    assert_true(g.shape_offset.is_equivalent(
+                cmdx.Vector(0, 1, 0)))
+    assert_equals(g.length, 2.0)  # 2 - 0
+    assert_true(g.shape_rotation.is_equivalent(
+                cmdx.Euler(0, 0, cmdx.pi / 2)))  # 90 degrees
+
+    # b
+    g = commands.infer_geometry(b, parent=a, children=[c])
+    assert_true(g.orient.as_euler().is_equivalent(
+                cmdx.Euler(0, 0, cmdx.pi / 4)))  # 45 degrees
+    assert_true(g.shape_offset.is_equivalent(
+                cmdx.Vector(0.5, 0.5, 0)))
+    assert_almost_equals(g.length, 1.4, 1)  # 45 degree triangle
+    assert_true(g.shape_rotation.is_equivalent(
+                cmdx.Euler(0, 0, cmdx.pi / 4)))  # 45 degrees
+
+    # c
+    g = commands.infer_geometry(c, parent=b, children=[d])
+    assert_true(g.orient.as_euler().is_equivalent(
+                cmdx.Euler(cmdx.pi, 0, 0)))  # 180 degrees
+    assert_true(g.shape_offset.is_equivalent(
+                cmdx.Vector(1.0, 0, 0)))
+    assert_almost_equals(g.length, 2.0, 1)
+    assert_true(g.shape_rotation.is_equivalent(
+                cmdx.Euler(cmdx.pi, 0, 0)))  # 45 degrees
+
+
+def test_infer_geometry_single_joint():
+    # These are special in that they (a) have no rotate pivot
+    # and (b) don't need no length.
+    _new()
+
+    joint = cmdx.create_node("joint")
+    joint["t"] = (0, 5, 0)
+    geo = commands.infer_geometry(joint)
+
+    assert_true(geo.shape_offset.is_equivalent(cmdx.Vector(0, 0, 0)))
+    assert_equals(geo.length, 0.0)
+    assert_true(geo.shape_rotation.is_equivalent(cmdx.Euler(0, 0, 0)))
+    assert_true(geo.orient.as_euler().is_equivalent(cmdx.Euler(0, 0, 0)))
 
 
 if cmdx.__maya_version__ <= 2020:

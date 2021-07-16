@@ -9,11 +9,11 @@
 
 <div class="vboxlayout align-center justify-center">
     <div class="hboxlayout align-center">
-        <a href="https://files.ragdolldynamics.com" class="button red"><b>Download</b></a>
+        <a href="https://learn.ragdolldynamics.com/blog/20210713_july28/" class="button red"><b>Download</b></a>
         <p>Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
         <i>Click here to get started.</i></p>
     </div>
-    <a class="padding-top" href="https://files.ragdolldynamics.com/files/distribution">Previous versions</a>
+    <a class="padding-top" href="https://learn.ragdolldynamics.com/blog/20210713_july28/">Previous versions</a>
 </div>
 
 <br>
@@ -80,7 +80,7 @@ The plug-in is now available via the Plug-in Manager.
     ```py
     from os.path import join
     modules_path = r"c:\Users\marcus\Documents\maya\modules"
-    ragdoll_path = join(modules_path, "Ragdoll-Maya-2021_06_06\scripts")
+    ragdoll_path = join(modules_path, "Ragdoll-Maya-2021_11_06\scripts")
 
     import sys
     sys.path.insert(0, ragdoll_path)
@@ -122,9 +122,7 @@ The plug-in is now available via the Plug-in Manager.
     A static collider is automatically added on the Maya grid per default, it can be disabled on the `rdScene` node via the `.useGround` attribute.
 
 ??? question "Why not use nHair for overlapping animation?"
-    Yes, and while your at it, why not stick razor blades in your eyes?
-
-    Seriously though, Ragdoll simulates your translate and rotate channels, whereas nHair simulates point geometry. You can convert those points into translation and rotation, but given the choice why would you? Besides, Ragdoll has far more robust collisions, control and constraints than nHair or nCloth could ever hope to achieve, at much greater performance.
+    Ragdoll simulates your translate and rotate channels, whereas nHair simulates point geometry. You can convert those points into translation and rotation, but given the choice why would you? Besides, Ragdoll has far more robust collisions, control and constraints than nHair or nCloth could ever hope to achieve, at much greater performance.
 
 <br>
 

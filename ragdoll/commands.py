@@ -2364,6 +2364,9 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
         """
 
+        if node.type() == "joint":
+            return node.translation(cmdx.sWorld)
+
         rotate_pivot = node.transformation().rotatePivot()
 
         world_tm = node.transform(cmdx.sWorld)
@@ -2493,14 +2496,20 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
     else:
         size, center = _hierarchy_bounding_size(root)
-
-        geometry.length = size.x
-        geometry.radius = min([size.y, size.z])
-        geometry.extents = size
-
-        # Embed length
         tm = cmdx.Tm(root_tm)
-        tm.translateBy(cmdx.Vector(0, size.x * -0.5, 0))
+
+        if all(axis == 0 for axis in size):
+            geometry.length = 0
+            geometry.radius = 1
+            geometry.extents = cmdx.Vector(1, 1, 1)
+
+        else:
+            geometry.length = size.x
+            geometry.radius = min([size.y, size.z])
+            geometry.extents = size
+
+            # Embed length
+            tm.translateBy(cmdx.Vector(0, size.x * -0.5, 0))
 
         offset = center - tm.translation()
 
@@ -2949,7 +2958,7 @@ def bake_simulation(rigids, opts=None):
     for rigid in rigids:
         if not opts["includeStatic"]:
             # No need to bake something that is unaffected by physics
-            if rigid["kinematic"] and not rigid["kinematic"].animated():
+            if rigid["kinematic"] and rigid["kinematic"].input() is None:
                 continue
 
         rigid_to_transform[rigid] = rigid.parent()
@@ -3977,7 +3986,7 @@ def _hierarchy_bounding_size(root):
         for parent in root.lineage():
             pos2 = parent.translation(cmdx.sWorld)
 
-            if pos2.isEquivalent(pos1, i__.tolerance):
+            if pos2.is_equivalent(pos1, i__.tolerance):
                 continue
 
             # The parent will be facing in the opposite direction
@@ -3994,11 +4003,11 @@ def _hierarchy_bounding_size(root):
     # we don't have a lot of options here.
     if len(positions) < 2:
         return (
-            # Default size
-            cmdx.Vector(1, 1, 1),
+            # No size
+            cmdx.Vector(0, 0, 0),
 
-            # Default center
-            cmdx.Vector(0, 0, 0)
+            # Original center
+            pos1
         )
 
     center = cmdx.Vector()

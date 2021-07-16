@@ -4291,6 +4291,12 @@ class Vector(om.MVector):
     def cross(self, value):
         return Vector(super(Vector, self).__xor__(value))
 
+    def isEquivalent(self, other, tolerance=om.MVector.kTolerance):
+        return super(Vector, self).isEquivalent(other, tolerance)
+
+    if ENABLE_PEP8:
+        is_equivalent = isEquivalent
+
 
 # Alias, it can't take anything other than values
 # and yet it isn't explicit in its name.
@@ -4367,6 +4373,9 @@ class Quaternion(om.MQuaternion):
     def isNormalised(self, tol=0.0001):
         return abs(self.length() - 1.0) < tol
 
+    def asEulerRotation(self):
+        return Euler(super(Quaternion, self).asEulerRotation())
+
     def asMatrix(self):
         return Matrix4(super(Quaternion, self).asMatrix())
 
@@ -4374,6 +4383,8 @@ class Quaternion(om.MQuaternion):
         as_matrix = asMatrix
         is_normalised = isNormalised
         length_squared = lengthSquared
+        as_euler_rotation = asEulerRotation
+        as_euler = asEulerRotation
 
 
 # Alias
@@ -4411,6 +4422,12 @@ class EulerRotation(om.MEulerRotation):
 
     def asMatrix(self):
         return Matrix4(super(EulerRotation, self).asMatrix())
+
+    def isEquivalent(self, other, tolerance=om.MEulerRotation.kTolerance):
+        return super(EulerRotation, self).isEquivalent(other, tolerance)
+
+    if ENABLE_PEP8:
+        is_equivalent = isEquivalent
 
     strToOrder = {
         'xyz': kXYZ,

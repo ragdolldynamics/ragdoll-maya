@@ -2,18 +2,18 @@
     <img class="hero-image" src=/car14.png>
 </div>
 
-> At the time of this writing, Ragdoll is still in early access. [Reach out](https://ragdolldynamics.com/contact) for access.
-
-<br>
 <br>
 
 <div class="vboxlayout align-center justify-center">
+    <!-- <h3>Download</h3> -->
+    <b>Download</b>
+    <p>Select your chosen platform</p>
     <div class="hboxlayout align-center">
-        <a href="https://learn.ragdolldynamics.com/blog/20210713_july28/" class="button red"><b>Download</b></a>
-        <p>Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
-        <i>Click here to get started.</i></p>
+        <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=windows" class="button red"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Windows</b></a>
+        <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=linux" class="button blue"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Linux</b></a>
     </div>
-    <a class="padding-top" href="https://learn.ragdolldynamics.com/blog/20210713_july28/">Previous versions</a>
+    <p class="text-align-center">Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
+    <a href="https://files.ragdolldynamics.com">Previous versions</a></p>
 </div>
 
 <br>
@@ -75,12 +75,12 @@ The plug-in is now available via the Plug-in Manager.
     ```
 
 ??? bug "No module named 'ragdoll'"
-    Fair enough, let's go deeper.
+    A clue! Let's go deeper.
 
     ```py
-    from os.path import join
+    import os
     modules_path = r"c:\Users\marcus\Documents\maya\modules"
-    ragdoll_path = join(modules_path, "Ragdoll-Maya-2021_11_06\scripts")
+    ragdoll_path = os.path.join(modules_path, "Ragdoll-Maya-2021_11_06\scripts")
 
     import sys
     sys.path.insert(0, ragdoll_path)
@@ -92,7 +92,7 @@ The plug-in is now available via the Plug-in Manager.
     Make sure you replace the version number (date) with the version you are using. At this point, I expect you've uncovered why your module wasn't working in the first place and should probably revisit that as this process would require you to manually update the version number in that path each time you upgrade. No fun.
 
 ??? bug "Something else happened"
-    Oh no! I'd like to know about what happened, please let me know [here](mailto:marcus@ragdolldynamics.com).
+    Oh no! I'd like to know about what happened, please let me know [here](mailto:support@ragdolldynamics.com).
 
 <br>
 
@@ -107,10 +107,7 @@ The plug-in is now available via the Plug-in Manager.
     - Maya 2018-2022
 
 ??? question "What are my licensing options?"
-    - `Trial` - 30 days of non-commercial use, no strings attached
-    - `NodeLocked` - Any number of users, one machine per licence
-    - `Floating` - Any number of machines, one user per licence
-    - `Headless` - A cost-effective alternative for distributed simulations
+    See [Pricing](https://ragdolldynamics.com/pricing).
 
 ??? question "What happens when my licence runs out?"
     Your scenes will still open, but the solver will be disabled. Contact [licence@ragdolldynamics.com](mailto:licence@ragdolldynamics.com) for renewal of your licence.
@@ -120,6 +117,15 @@ The plug-in is now available via the Plug-in Manager.
 
 ??? question "How do I disable the ground?"
     A static collider is automatically added on the Maya grid per default, it can be disabled on the `rdScene` node via the `.useGround` attribute.
+
+??? question "Can I use Rez?"
+    Yes, the only environment variable needed for Rez is `MAYA_MODULE_PATH`, such as:
+
+    ```py
+    env["MAYA_MODULE_PATH"].append("{root}")
+    ```
+
+    Where the `Ragdoll-2021_07_28` folder and `Ragdoll-2021_07_28.mod` file resides at `{root}`.
 
 ??? question "Why not use nHair for overlapping animation?"
     Ragdoll simulates your translate and rotate channels, whereas nHair simulates point geometry. You can convert those points into translation and rotation, but given the choice why would you? Besides, Ragdoll has far more robust collisions, control and constraints than nHair or nCloth could ever hope to achieve, at much greater performance.
@@ -131,4 +137,8 @@ The plug-in is now available via the Plug-in Manager.
 As of `Ragdoll {{ config.latest_version }}` these are the current known limitations of Ragdoll.
 
 - Must visit start frame on scene open
-- More since [2021.04.23](/releases/2021.04.23#known-issues)
+- Maya 2022 crashes when calling `Delete Physics`
+
+<div class="hboxlayout align-center">
+    <a href="/releases/2021.04.23#known-issues" class="button blue"><b>More</b></a>
+</div>

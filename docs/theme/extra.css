@@ -23,6 +23,19 @@ a[title="Edit this page"] {
     display: none;
 }
 
+.space {
+  min-width: 50px;
+  min-height: 50px;
+}
+
+.spacing {
+  flex-grow: 2;
+}
+
+.disabled {
+    cursor: not-allowed;
+}
+
 .md-grid {
     max-width: 57rem;
 }
@@ -400,6 +413,34 @@ h2, h3, h4, b, strong {
   color: #333;
 }
 
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button img {
+  height: 20px;
+}
+
+.button:active {
+  position: relative;
+  top: 6px;
+}
+
+.button img {
+  max-width: 100%
+}
+
+.button .image {
+  /*flex-basis: 40%*/
+}
+
+.button a {
+  font-size: 20px;
+  padding-left: 20px;
+}
+
 .button b {
   color: inherit;
 }
@@ -521,11 +562,11 @@ button.tab.active div.tab-gap {
   min-width: 120px;
   -webkit-appearance: none;
   -moz-appearance: none;
-  display: block;
+  /*display: block;*/
   border-radius: 3px;
   margin: 5px;
   margin-left: 0;
-  margin-right: 10px;
+  /*margin-right: 10px;*/
   padding: 15px;
   text-align: center;
   text-decoration: none;
@@ -556,9 +597,58 @@ button.tab.active div.tab-gap {
   justify-content: left;
 }
 
-.button:active {
+.lightblue {
+  background: #B2D9F6;
+  box-shadow: 0px 6px #6eb7ee;
+}
+
+.white:active {
+  background: #ddd;
+  box-shadow: 0px 0px #ddd;
+}
+
+.white:hover {
+  background: #fff;
   position: relative;
-  top: 6px;
+}
+
+.light:active {
+  background: #81ADCD;
+  box-shadow: 0px 0px #599FD3;
+}
+
+.light:hover {
+  background: #CADFEE;
+}
+
+.gold {
+  background: #C3B774;
+  box-shadow: 0px 6px #A79C5D;
+}
+
+.lightgreen {
+  background: #7BCFB3;
+  box-shadow: 0px 6px #5FB397;
+}
+
+.rust {
+  background: #BE8170;
+  box-shadow: 0px 6px #9b5946;
+}
+
+.salmon {
+  background: #F6BCB2;
+  box-shadow: 0px 6px #ee806e;
+}
+
+.grey {
+  background: #C1C7CC;
+  box-shadow: 0px 6px #949FA9;
+}
+
+.darkgrey {
+  background: #8F9397;
+  box-shadow: 0px 6px #747A80;
 }
 
 .green {
@@ -573,6 +663,16 @@ button.tab.active div.tab-gap {
 
 .green:hover {
   background: #79c15c;
+}
+
+.yellow {
+  background: #DAB431;
+  box-shadow: 0px 6px #BF9B1F;
+}
+
+.black {
+  background: #414141;
+  box-shadow: 0px 6px #292929;
 }
 
 .blue {
@@ -601,6 +701,21 @@ button.tab.active div.tab-gap {
 
 .red:hover {
   background: #E55E50;
+  position: relative;
+}
+
+.gray {
+  box-shadow: 0px 6px #777;
+  background: #999;
+}
+
+.gray:active {
+  box-shadow: 0px 0px #777;
+  background: #777;
+}
+
+.gray:hover {
+  background: #777;
   position: relative;
 }
 
@@ -679,6 +794,10 @@ div.tabs button.active p {
 
 .no-max-height {
   max-height: inherit !important;
+}
+
+.text-align-center {
+  text-align: center;
 }
 
 .align-center {

@@ -7,13 +7,13 @@
 <div class="vboxlayout align-center justify-center">
     <!-- <h3>Download</h3> -->
     <b>Download</b>
-    <p>Select your chosen platform</p>
+    <p>If you agree with the <a href="https://ragdolldynamics.com/eula"><u>Ragdoll Dynamics EULA</u></a>, you may select a platform below.</p>
     <div class="hboxlayout align-center">
         <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=windows" class="button red"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Windows</b></a>
         <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=linux" class="button blue"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Linux</b></a>
     </div>
     <p class="text-align-center">Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
-    <a href="https://files.ragdolldynamics.com">Previous versions</a></p>
+    <a href="https://files.ragdolldynamics.com">Previous versions</a>
 </div>
 
 <br>

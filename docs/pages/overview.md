@@ -14,6 +14,7 @@ Depending on where you are and what you are looking for, one of these should fit
 
 | Source | Description
 |:-------|:----------
+| [Chat](https://discord.gg/JCHydekJqX) | Come join the party on Discord!
 | [Release Notes](/releases) | Every new release comes with examples of every new feature and squashed bug.
 | Search | Top-right on this website there's a field to search for any word or phrase on this domain, including node attribute reference.
 | [UI Help](/menu#help) | Find help without leaving Maya

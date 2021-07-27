@@ -13,10 +13,16 @@
         <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=linux" class="button blue"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Linux</b></a>
     </div>
     <p class="text-align-center">Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
-    <a href="https://files.ragdolldynamics.com">Previous versions</a>
+    <a href="https://files.ragdolldynamics.com">Previous versions</a></p>
+    <p>Join the community of ragdollers on Discord and/or Discourse.</p>
+    <div class="hboxlayout align-center justify-center">
+        <div class="hboxlayout align-center"><img width=30 src=https://user-images.githubusercontent.com/2152766/127173502-8aada209-7cf0-42e0-84ee-18afeb29f826.png><a class="padding-left" href="https://discord.gg/JCHydekJqX">Chat</a></div>
+        <div class="space"></div>
+        <div class="hboxlayout align-center"><img width=30 src=https://user-images.githubusercontent.com/2152766/127173868-a8af18ca-c799-4017-be7c-6966abdd4443.png><a class="padding-left" href="https://forums.ragdolldynamics.com/">Forums</a></div>
+        <div class="spacing"></div>
+    </div>
 </div>
 
-<br>
 <br>
 
 ## Install

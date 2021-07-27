@@ -24,6 +24,7 @@ a[title="Edit this page"] {
 }
 
 .space {
+  display: inline-block;
   min-width: 50px;
   min-height: 50px;
 }
@@ -810,6 +811,10 @@ div.tabs button.active p {
 
 .padding-top {
   padding-top: 10px;
+}
+
+.padding-left {
+  padding-left: 5px;
 }
 
 .node-header {

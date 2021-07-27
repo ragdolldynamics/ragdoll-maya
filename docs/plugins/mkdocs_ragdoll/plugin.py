@@ -417,21 +417,18 @@ class MenuGeneratorPlugin(BasePlugin):
 
         return markdown
 
-    def on_nav(self, nav, config, files):
-        import mkdocs.structure.nav as nav_
+    def on_config(self, config):
+        section = next(
+            entry for entry in config["nav"]
+            if "Release History" in entry
+        )["Release History"]
 
-        for item in nav.items:
-            if item.title == "Release History":
-                children = []
+        # Start from scratch
+        section[:] = []
 
-                for index, (version, _) in enumerate(get_releases()):
-                    url = "releases/%s/" % version
-                    link = nav_.Link(version, url)
-                    link.is_page = True
-                    link.is_link = True
+        for version, _ in get_releases():
+            section.append(
+                {version: "releases/%s.md" % version}
+            )
 
-                    children.append(link)
-
-                item.children[:] = children
-
-        return nav
+        return config

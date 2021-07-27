@@ -113,6 +113,6 @@ Two steps forward, one step back.
 
 ### Team Ragdoll
 
-After a brief stint developing [Allzpark](https://allzpark.com) for the Japanese [Studio Anima](studioanima.co.jp/) and then animating for Redfall and Horizon Zero Dawn II at [Goodbye Kansas](goodbyekansasstudios.com) it was now 2020. With funding and experience spanning animation, programming, business and now physics all the pieces were in place. What he could not do in 2012 was now made possible.
+After a brief stint developing [Allzpark](https://allzpark.com) for the Japanese [Studio Anima](https://studioanima.co.jp/) and then animating for Redfall and Horizon Zero Dawn II at [Goodbye Kansas](https://goodbyekansasstudios.com) it was now 2020. With funding and experience spanning animation, programming, business and now physics all the pieces were in place. What he could not do in 2012 was now made possible.
 
 <img class="poster" src=https://user-images.githubusercontent.com/2152766/127115947-18054044-e8f3-44b5-b23a-46650d02e64d.png>

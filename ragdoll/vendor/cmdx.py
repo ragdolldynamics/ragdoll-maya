@@ -4989,10 +4989,31 @@ def _python_to_mod(value, plug, mod):
 def exists(path, strict=True):
     """Return whether any node at `path` exists
 
+    This will return True for nodes that are *about to* be
+    created via a DG or Dag modifier.
+
     Arguments:
         path (str): Full or partial path to node
         strict (bool, optional): Error if the path isn't a full match,
             including namespace.
+
+    Examples:
+        >>> _new()
+        >>> exists("uniqueName", strict=False)
+        False
+        >>> _ = createNode("transform", name="uniqueName")
+        >>> exists("uniqueName", strict=False)
+        True
+
+        # Note that even to-be-created nodes also register as existing
+        >>> exists("uniqueName2", strict=False)
+        False
+        >>> with DagModifier() as mod:
+        ...    _ = mod.createNode("transform", name="uniqueName2")
+        ...    assert exists("uniqueName2", strict=False)
+        ...
+        >>> exists("uniqueName2", strict=False)
+        True
 
     """
 

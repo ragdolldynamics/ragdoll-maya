@@ -399,7 +399,9 @@ class MenuGeneratorPlugin(BasePlugin):
         if not self.enabled:
             return markdown
 
-        config.data["latest_version"] = self.latest_version
+        config.data.update({
+            "latest_version": self.latest_version,
+        })
 
         if page.title == "Menu Reference":
             markdown = menu_all(markdown)

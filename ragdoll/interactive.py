@@ -1914,7 +1914,7 @@ def create_soft_pin(selection=None, **opts):
         if actor.isA(cmdx.kTransform):
             actor = selection[1].shape(type="rdRigid")
 
-        if not actor or actor.type() == "rdRigid":
+        if not actor or actor.type() != "rdRigid":
             return log.warning("%s was not a Ragdoll Rigid" % selection[1])
 
         if actor.sibling(type="rdConstraint"):
@@ -1946,7 +1946,7 @@ def create_hard_pin(selection=None, **opts):
         if actor.isA(cmdx.kTransform):
             actor = node.shape(type="rdRigid")
 
-        if not actor or actor.type() == "rdRigid":
+        if not actor or actor.type() != "rdRigid":
             log.warning("%s was not an Ragdoll Rigid", node)
             continue
 

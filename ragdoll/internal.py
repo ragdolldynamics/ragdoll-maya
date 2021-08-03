@@ -9,7 +9,6 @@ import functools
 
 from maya import cmds
 from .vendor import cmdx
-from . import options
 
 log = logging.getLogger("ragdoll")
 
@@ -63,6 +62,9 @@ class UserAttributes(object):
         self._added = []
 
     def do_it(self):
+        # Avoid cyclic import by importing on-demand
+        from . import options
+
         if not self._added:
             pass
 

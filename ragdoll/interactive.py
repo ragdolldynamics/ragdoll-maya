@@ -1903,7 +1903,7 @@ def create_soft_pin(selection=None, **opts):
             actor = selection[0].shape(type="rdRigid")
 
         if not actor:
-            return log.warning("%s was not a Ragdoll Rigid", selection[0])
+            return log.warning("%s was not a Ragdoll Rigid" % selection[0])
 
         _, ctrl, _ = commands.create_soft_pin(actor)
         controls += [ctrl.parent().path()]
@@ -1914,8 +1914,8 @@ def create_soft_pin(selection=None, **opts):
         if actor.isA(cmdx.kTransform):
             actor = selection[1].shape(type="rdRigid")
 
-        if not actor:
-            return log.warning("%s was not a Ragdoll Rigid", selection[1])
+        if not actor or actor.type() == "rdRigid":
+            return log.warning("%s was not a Ragdoll Rigid" % selection[1])
 
         if actor.sibling(type="rdConstraint"):
             ctrl = commands.create_active_control(
@@ -1946,7 +1946,7 @@ def create_hard_pin(selection=None, **opts):
         if actor.isA(cmdx.kTransform):
             actor = node.shape(type="rdRigid")
 
-        if not actor:
+        if not actor or actor.type() == "rdRigid":
             log.warning("%s was not an Ragdoll Rigid", node)
             continue
 
@@ -2160,6 +2160,10 @@ def edit_constraint_frames(selection=None):
                 # Last created constraint
                 con = cons[-1]
 
+        if not con.type() == "rdConstraint":
+            log.warning("%s is not a constraint", con)
+            continue
+
         if not con:
             log.warning("%s had no constraint", node)
             continue
@@ -2339,6 +2343,16 @@ def duplicate_selected(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def delete_physics(selection=None, **opts):
+    if cmds.about(apiVersion=True) == 20220000:
+        MessageBox(
+            "Warning",
+            "Maya 2022.0 has a critical bug leading to a crash "
+            "when running this command. You will need the "
+            "service pack 2022.1 or greater."
+        )
+
+        return kFailure
+
     delete = commands.delete_all_physics
 
     if _opt("deleteFromSelection", opts):
@@ -2759,6 +2773,14 @@ def export_physics(selection=None, **opts):
     except Exception:
         _print_exception()
         return log.warning("Could not export %s" % fname)
+
+    # Update any currently opened Import UI
+    for title, widget in __.widgets.items():
+        if not isinstance(widget, ui.ImportOptions):
+            continue
+
+        log.warning("Updating currently opened Import UI")
+        widget.on_path_changed(force=True)
 
     options.write("exportPath", fname)
     log.info(

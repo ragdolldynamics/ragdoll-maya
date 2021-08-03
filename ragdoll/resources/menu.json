@@ -505,6 +505,7 @@
             "ogsReset",
             "maya2018ConsolidateWorldFix",
             "skinweightsFix",
+            "useProxyAttributes",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",

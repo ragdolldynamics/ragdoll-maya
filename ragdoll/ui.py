@@ -2763,7 +2763,7 @@ class ImportOptions(Options):
     def on_preserve_attributes(self):
         self.reset()
 
-    def on_path_changed(self):
+    def on_path_changed(self, force=False):
         SUFFIX = ".rag"
 
         import_paths = self.parser.find("importPaths")
@@ -2777,7 +2777,7 @@ class ImportOptions(Options):
         dirname, selected_fname = os.path.split(import_path_str)
 
         # No need to refresh the directory listing if it's the same directory
-        if self._previous_dirname != dirname:
+        if self._previous_dirname != dirname or force:
             self._previous_dirname = dirname
 
             fnames = []

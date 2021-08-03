@@ -9,6 +9,7 @@ import functools
 
 from maya import cmds
 from .vendor import cmdx
+from . import options
 
 log = logging.getLogger("ragdoll")
 
@@ -82,7 +83,11 @@ class UserAttributes(object):
             else:
                 attr, long_name, nice_name = attr
                 name = long_name or attr
-                plug = self.semi_proxy(attr, long_name, nice_name)
+
+                if options.read("useProxyAttributes"):
+                    plug = self.proxy(attr, long_name, nice_name)
+                else:
+                    plug = self.semi_proxy(attr, long_name, nice_name)
 
             added += [plug]
 
@@ -442,21 +447,24 @@ def sort_filenames(fnames, suffix=".rag"):
     """
 
     # Separate name from numbered suffix,
-    # e.g. filename10 -> filename, 10
+    # filename10 -> (filename, 10)
     fnames = [
         re.split(r"(\d+)$", item.rsplit(suffix)[0])
         for item in fnames
     ]
 
+    # (filename, 10, '') -> (filename, "10")
+    fnames = [
+        tuple(filter(None, item))
+        for item in fnames
+    ]
+
     # Sort by suffix first, alphabetical second
     def sort(item):
-        item = filter(None, item)  # Remove empty matches
-        item = tuple(item)  # Make indexable
-
         if len(item) == 2:
             return item[0], int(item[-1])
         else:
-            return item[0]
+            return item
 
     fnames = sorted(fnames, key=sort)
 

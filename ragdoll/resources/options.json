@@ -773,6 +773,12 @@
         "max": 100.0,
         "help": "(Requires plug-in reload) Internal tolerances to use when computing convex meshes and some forces, default is 0.1 meaning things are assumed 10x smaller than real-world scale e.g. a character is 17 cm tall."
     },
+    "useProxyAttributes": {
+        "name": "useProxyAttributes",
+        "type": "Boolean",
+        "default": false,
+        "help": "Use native Maya proxy attributes for Ragdoll user attributes. CAUTION! This is unstable and may fatal crash Maya, especially during deletion of physics."
+    },
 
 
     "deleteFromSelection": {

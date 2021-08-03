@@ -22,6 +22,7 @@ from .constants import (
     BoxShape,
     SphereShape,
     CapsuleShape,
+    MeshShape,
     ConvexHullShape,
 )
 
@@ -215,6 +216,7 @@ __all__ = [
     "BoxShape",
     "SphereShape",
     "CapsuleShape",
+    "MeshShape",
     "ConvexHullShape",
 
     # Camel case

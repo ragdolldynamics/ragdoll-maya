@@ -8,7 +8,7 @@ Here's a brief overview of how Ragdoll came to be.
 
 **In 2017** He started a company called [WeightShift](https://www.youtube.com/watch?v=YR3hvaY-0hQ) with co-founders Danny Chapman and Tim Daust. They had just wrapped up the [Endorphin](https://www.youtube.com/watch?v=xbDd8PH9jio) and [Euphoria](https://www.youtube.com/watch?v=ATr38G2hR5Y) projects at Natural Motion.
 
-Like Euphoria, WeightShift developed a physically based animation tool, except this one was tailed to Autodesk Maya and got adopted by major feature film studios including Framestore (Harry Potter, Gravity et. al.) and Weta Digital (Avatar, Lord of the Rings et. al.)
+Like Euphoria, WeightShift developed a physically based animation tool, except this one was tailored to Autodesk Maya and got adopted by major feature film studios including Framestore (Harry Potter, Gravity et. al.) and Weta Digital (Avatar, Lord of the Rings et. al.)
 
 **In 2020** WeightShift is purchased by Epic Games
 

@@ -19,6 +19,10 @@ blockquote p {
   margin-bottom: 0px !important;
 }
 
+img {
+  border-radius: 5px;
+}
+
 a[title="Edit this page"] {
     display: none;
 }
@@ -85,6 +89,10 @@ a[title="Edit this page"] {
   color: #c2185b;  /* Redish */
   padding: 0 3px;
   background-color: transparent;
+}
+
+td code {
+    white-space: nowrap;
 }
 
 .md-typeset ol, .md-typeset ul {
@@ -272,7 +280,7 @@ Tables
 
 .md-typeset table:not([class]) tr td {
   padding-left: 16px;
-  padding-right: 26px;
+  /*padding-right: 26px;*/
   border-left: 1px solid #e5e5e5;
 }
 
@@ -317,25 +325,6 @@ Tables
   z-index: -1;
   border: none;
 }
-
-
-img.hero-image {
-  /*position: relative;*/
-  /*margin: -50% auto;*/
-  /*width: 100%;*/
-  /*height: auto;*/
-  /*vertical-align: middle;*/
-}
-
-.hero-container {
-  /*display: block;*/
-  /*height: 150px;*/
-  /*line-height: 0;*/
-  /*overflow: hidden;*/
-  /*border-bottom: 1px solid #eee;*/
-  /*border-top: 1px solid #eee;*/
-}
-
 
 .overlaid-media {
   position: relative;
@@ -414,6 +403,11 @@ h2, h3, h4, b, strong {
   color: #333;
 }
 
+.md-typeset h5, .md-typeset h6 {
+    font-weight: initial;
+    font-size: 1.1em;
+}
+
 .button {
   display: flex;
   align-items: center;
@@ -464,9 +458,14 @@ a strong {
   display: none;
 }
 
-.md-typeset h3, .md-typeset h4 {
+.md-typeset h3 {
   font-weight: bold;
   font-size: 1rem;
+}
+
+.md-typeset h4 {
+  font-weight: inherit;
+  font-size: 0.9rem;
 }
 
 .md-footer-copyright__highlight, .md-footer-copyright {
@@ -799,6 +798,21 @@ div.tabs button.active p {
 
 .text-align-center {
   text-align: center;
+}
+
+.code-red {
+  color: #B13333 !important;
+  background: #f7d7d733 !important
+}
+
+.code-green {
+  color: #527C14 !important;
+  background: #dfeaa933 !important;
+}
+
+.code-blue {
+  color: #339FB1 !important;
+  background: #a9e1ea29 !important;
 }
 
 .align-center {

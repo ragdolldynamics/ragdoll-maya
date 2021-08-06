@@ -422,6 +422,16 @@ def install_callbacks():
 
     __.callbacks.append(
         om.MSceneMessage.addCallback(
+            om.MSceneMessage.kAfterLoadReference, _after_scene_open)
+    )
+
+    __.callbacks.append(
+        om.MSceneMessage.addCallback(
+            om.MSceneMessage.kAfterImportReference, _after_scene_open)
+    )
+
+    __.callbacks.append(
+        om.MSceneMessage.addCallback(
             om.MSceneMessage.kBeforeNew, _before_scene_new)
     )
 
@@ -857,25 +867,26 @@ def _evaluate_need_to_upgrade():
 
 
 def _find_current_scene(autocreate=True):
-    scene = options.read("solver")
+    current_scene = None
+    scene_enum = options.read("solver")
 
     try:
         # Enum -> String
-        scene = __.solvers[scene]
+        scene_name = __.solvers[scene_enum]
 
     except IndexError:
         # No questions asked, just make a new one
-        scene = create_scene()
+        current_scene = create_scene()
 
     else:
         # The one stored persistently may not actually exist,
         # it may come from another scene or at a time when it
         # did exist but got deleted
         try:
-            node = cmdx.encode(scene)
+            node = cmdx.encode(scene_name)
 
-            if node.shortestPath() == scene:
-                scene = node
+            if node.shortestPath() == scene_name:
+                current_scene = node
 
             else:
                 # E.g. rSceneShape may exist, but _:rSceneShape is
@@ -886,21 +897,21 @@ def _find_current_scene(autocreate=True):
         except cmdx.ExistError:
             # Ok, no persistent clue or request for a new scene
             try:
-                scene = cmdx.ls(type="rdScene")[0]
+                current_scene = cmdx.ls(type="rdScene")[0]
 
             # Nothing in sight, now it's up to the caller
             except IndexError:
                 if autocreate:
-                    scene = create_scene()
+                    current_scene = create_scene()
                 else:
                     raise cmdx.ExistError("No Ragdoll scene was found")
 
-    if scene is not None:
+    if current_scene is not None:
         # Use this from now on
-        current = __.solvers.index(scene.shortestPath())
+        current = __.solvers.index(current_scene.shortestPath())
         options.write("solver", current)
 
-    return scene
+    return current_scene
 
 
 @requires_ui

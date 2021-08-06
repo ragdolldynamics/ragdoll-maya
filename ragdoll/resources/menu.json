@@ -236,8 +236,6 @@
         "summary": "Generate a character from the selected joint hierarchy.",
         "icon": "ragdoll.png",
         "options": [
-            "characterCopy",
-            "characterControl",
             "characterNormalise",
             "characterLabels",
             "characterStopBehaviour"

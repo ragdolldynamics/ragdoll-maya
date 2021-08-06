@@ -160,10 +160,6 @@ def create(root,
     Arguments:
         root (joint): Starting joint for character, typically pelvis
         scene (rdScene): Scene to which newly created character belongs
-        copy (bool): Make character from a duplicate of `root`,
-            or connect provided `root` to physics
-        control (bool): Make `root` an input control
-            to copy (implies copy=True)
         inclusive (bool): Does "stop" mean before or after a labelled joint?
         normalise_shapes (bool): Retroactively resize shapes
             relative each other
@@ -186,10 +182,6 @@ def create(root,
     Stop = "stop"
 
     exclusive = not inclusive
-
-    # Can't do control without copying first
-    if not copy:
-        control = False
 
     # Protect against duplicate rigid-making
     self = create
@@ -236,6 +228,10 @@ def create(root,
                     constraint = commands.socket_constraint(parent, rigid)
                     commands.orient(constraint)
 
+                    # Let the user establish these
+                    with cmdx.DagModifier() as mod:
+                        mod.set_attr(constraint["angularLimit"], (0, 0, 0))
+
                 constraint["disableCollision"] = True
 
                 self.new_constraints += [constraint]
@@ -258,16 +254,6 @@ def create(root,
             _recurse(gc, rigid)
 
     result = root
-
-    if copy:
-        result = cmds.duplicate(result.path(),
-                                renameChildren=True,
-                                returnRootsOnly=True)[0]
-        result = cmdx.encode(result)
-
-        with cmdx.DagModifier() as mod:
-            mod.parent(result, None)
-
     _recurse(result)
 
     # Add multiplier
@@ -281,47 +267,6 @@ def create(root,
                          long_name="globalStrength",
                          nice_name="Global Strength")
     multiplier_attrs.do_it()
-
-    if control:
-        rigid = result.shape(type="rdRigid")
-
-        with cmdx.DagModifier() as mod:
-            # Facilitate kinematic attribute
-            mod.connect(root["matrix"], rigid["inputMatrix"])
-
-        # Forward the kinematic attribute to the root guide
-        root_proxies = i__.UserAttributes(rigid, root)
-        root_proxies.add_divider("Ragdoll")
-        root_proxies.add("kinematic")
-        root_proxies.do_it()
-
-        # Absolute control on hip
-        ref, _, con = commands.create_soft_pin(rigid, reference=root)
-
-        with cmdx.DagModifier() as mod:
-            mod.smart_set_attr(con["driveStrength"], 0)  # Default to off
-
-        with cmdx.DagModifier() as mod:
-            for reference, joint in zip(root.descendents(type="joint"),
-                                        result.descendents(type="joint")):
-
-                rigid = joint.shape(type="rdRigid")
-
-                if rigid is None:
-                    continue
-
-                # Forward kinematics from children too
-                reference_proxies = i__.UserAttributes(rigid, reference)
-                reference_proxies.add_divider("Ragdoll")
-                reference_proxies.add("kinematic")
-                reference_proxies.do_it()
-
-                commands.create_active_control(reference, rigid)
-
-                mod.smart_set_attr(rigid["kinematic"], False)
-                mod.do_it()
-
-                mod.connect(reference["worldMatrix"][0], rigid["inputMatrix"])
 
     if normalise_shapes:
         commands.normalise_shapes(result)

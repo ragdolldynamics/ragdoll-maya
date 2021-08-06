@@ -373,10 +373,9 @@ def test_create_character():
 
     assert_equals(len(cmds.ls(type="rdScene")), 1)
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
-    assert_equals(len(cmds.ls(type="rdControl")), 3)
 
-    # Two sockets, and one absolute for the root
-    assert_equals(len(cmds.ls(type="rdConstraint")), 3)
+    # Two sockets
+    assert_equals(len(cmds.ls(type="rdConstraint")), 2)
 
 
 def test_active_chain(**opts):

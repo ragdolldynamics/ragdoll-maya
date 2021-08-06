@@ -1,3 +1,7 @@
+---
+icon: "rigid_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/car14.png>
 </div>
@@ -194,7 +198,7 @@ Here's a more practical example, of a dynamic joint being replaced with the mesh
 
 <br>
 
-## Edit Shape
+#### Edit Shape
 
 Manipulate shapes with a native Maya transform, as an alternative to fiddling with numbers in the Channel Box.
 

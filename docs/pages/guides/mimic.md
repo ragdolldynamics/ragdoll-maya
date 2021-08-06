@@ -1,3 +1,7 @@
+---
+icon: "mimic_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/car14.png>
 </div>

@@ -16,6 +16,7 @@ nav:
   - Home: index.md
   - Overview: overview.md
   - Documentation:
+    # - Solver: guides/solver.md
     - Active Rigid: guides/active_rigid.md
     - Active Chain: guides/active_chain.md
     - Active Character: guides/character.md
@@ -27,12 +28,14 @@ nav:
     - Bake Simulation: guides/bake_simulation.md
     - Import Physics: guides/import_physics.md
     - Export Physics: guides/export_physics.md
-    - Cached Playback: guides/cached_playback.md
+    # - Cached Playback: guides/cached_playback.md
     - Scene Management: guides/scene_management.md
+    - Cycle Protection: guides/cycle_protection.md
+    - Debugging Tips: guides/debugging_tips.md
     - Performance Tips: guides/performance_tips.md
-    - Workflow Tips: guides/workflow_tips.md
+    # - Workflow Tips: guides/workflow_tips.md
   - Tutorials:
-    - Quick Tail Setup: quick-tail-setup.md
+    - Dynamic Tail: quick-tail-setup.md
   - Download: download.md
   - Examples: examples.md
   - Menu Reference: menu.md
@@ -43,6 +46,9 @@ nav:
   - Licencing: licencing.md
   - Serialisation: serialisation.md
   - About: about.md
+
+icons:
+  - Active Rigid: icons/rigid.png
 
 docs_dir: pages
 

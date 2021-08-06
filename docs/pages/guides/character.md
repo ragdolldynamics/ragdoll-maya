@@ -1,3 +1,7 @@
+---
+icon: "ragdoll_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/car14.png>
 </div>
@@ -25,6 +29,5 @@ As you can see, nothing special. What a `Character` does in addition to a normal
 | Feature | Description
 |:--------|:--------
 | Walk Hierarchy | Save precious seconds selecting objects in the right order
-| Auto Mimic  | Automatically creates a mimic for the resulting tree of rigids
 | Auto Limits | *(Coming soon)* Automatically generates suitable hinge and socket joints for e.g. knees and shoulders
 | Fits Shapes | *(Coming soon)* Automatically resizes shapes to fit the overall character

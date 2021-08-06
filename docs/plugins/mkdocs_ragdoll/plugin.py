@@ -432,3 +432,8 @@ class MenuGeneratorPlugin(BasePlugin):
             )
 
         return config
+
+    def on_page_content(self, html, page, config, files):
+        print(page)
+
+        return html

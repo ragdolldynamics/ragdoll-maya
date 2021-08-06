@@ -1,3 +1,7 @@
+---
+icon: "chain_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/car12.png>
 </div>

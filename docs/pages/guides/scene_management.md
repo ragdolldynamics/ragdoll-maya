@@ -1,3 +1,7 @@
+---
+icon: "scene_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/car12.png>
 </div>
@@ -18,7 +22,7 @@ From the Ragdoll menu, select the one of the `Extract`, `Move` and `Combine` opt
 
 Sometimes, you find yourself with rigid bodies that could run separately, in parallel. Either for performance, or because they could benefit from independent solver settings like iterations and substeps, or time scale and more.
 
-Now you can extract rigid bodies from one scene into a new scene, akin to extracting polygons from one mesh into another.
+Scene management tools allow you to *extract* rigid bodies from one scene into a new scene, akin to extracting polygons from one mesh into another.
 
 <br>
 

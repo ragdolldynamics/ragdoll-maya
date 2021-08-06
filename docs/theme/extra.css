@@ -23,6 +23,18 @@ img {
   border-radius: 5px;
 }
 
+a.md-nav__link img {
+  width: 17px;
+  margin-right: 3px;
+}
+
+[data-md-color-primary="white"] .md-nav__link--active,
+[data-md-color-primary="white"] .md-nav__link:active,
+[data-md-color-primary="white"] .md-nav__link {
+    display: flex;
+    align-items: center;
+}
+
 a[title="Edit this page"] {
     display: none;
 }

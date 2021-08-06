@@ -1,3 +1,7 @@
+---
+icon: "hardpin_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/yoga12.png>
 </div>

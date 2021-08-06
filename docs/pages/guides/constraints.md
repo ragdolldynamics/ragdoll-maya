@@ -1,3 +1,7 @@
+---
+icon: "constraint_black.png"
+---
+
 <div class="hero-container">
     <img class="hero-image" src=/yoga14.png>
 </div>

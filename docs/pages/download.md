@@ -142,8 +142,7 @@ The plug-in is now available via the Plug-in Manager.
 
 As of `Ragdoll {{ config.latest_version }}` these are the current known limitations of Ragdoll.
 
-- Must visit start frame on scene open
-- Maya 2022 crashes when calling `Delete Physics`
+- Maya 2022.0 crashes when calling `Delete Physics`, use Maya 2022.1
 
 <div class="hboxlayout align-center">
     <a href="/releases/2021.04.23#known-issues" class="button blue"><b>More</b></a>

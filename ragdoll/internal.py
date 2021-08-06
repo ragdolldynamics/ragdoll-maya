@@ -27,6 +27,7 @@ class UserWarning(UserWarning):
     def __init__(self, title, message):
         super(UserWarning, self).__init__(message)
         self.title = title
+        self.message = message
 
 
 class UserAttributes(object):
@@ -112,7 +113,7 @@ class UserAttributes(object):
             "longName": name,
         }
 
-        if nice_name is not None:
+        if nice_name:
             kwargs["niceName"] = nice_name
 
         kwargs["proxy"] = self._source[attr].path()

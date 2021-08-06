@@ -162,6 +162,20 @@ The format of `RAGDOLL_FLOATING` is `<ip-address>:<port-number>`.
 
 <br>
 
+**Everything ok?**
+
+??? bug "Failed to initialise floating licence"
+    If this message appears in your Script Editor upon loading the plug-in, take a closer look at your Output Window on Windows or terminal on Unix.
+
+    ```py
+    # Error: ragdoll._install_floating() - Failed to initialise floating licence, error code '1' # 
+    ```
+
+??? bug "Could not load ragdollfloat.dll"
+    Windows users may experience this issue, which indicates a broken install. In your distribution, you should have seen both a `ragdoll.mll` and `ragdollfloat.dll`. Make sure this file exists, else [contact us](mailto:licencing@ragdolldynamics.com) and we'll help you sort it.
+
+<br>
+
 ## Python
 
 Just like with a node-locked licence, you can control the leasing of licences via Python.

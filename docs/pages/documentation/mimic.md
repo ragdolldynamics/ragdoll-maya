@@ -1,4 +1,5 @@
 ---
+title: Mimic
 icon: "mimic_black.png"
 ---
 
@@ -68,3 +69,24 @@ Sometimes you only want a *little* bit of control.
 
 !!! hint "Pro tip"
     You can also *delete* and *reparent* the resulting hierarchy of mimics, if all you wanted was for example the first few rigids in a hierarchy.
+
+<br>
+
+## IK
+
+> Added `2021.05.17`
+
+The Mimic introduced in [2021.05.10](/releases/2021.05.10/#mimic) generated a clean hierarchy of transforms.
+
+In 2021.05.17 "mimik" was introduced, which is a *joint hierarchy* suitable for skinning and IK. It's got a proper Joint Orient too, irregardless of what the original animation controls looked like.
+
+![mimik](https://user-images.githubusercontent.com/2152766/118243758-b0d86d80-b496-11eb-82b0-f04ba458e507.gif)
+
+They're great if IK is what you want, but they do make the overall hierarchy more complex and introduce an additional `jointOrient` offset onto the joints themselves. For that reason, `Transform` is the default node type and is currently the most simple mimic to work with.
+
+!!! info "Room for Improvement"
+    There's still room for improvement, the user attributes remain on the blue control nodes rather than the joints themselves for now. This will be addressed in a future release.
+
+<video autoplay="autoplay" loop="loop" width="100%">
+   <source src="https://user-images.githubusercontent.com/2152766/118245987-55f44580-b499-11eb-94c6-77c53b973e44.mp4" type="video/mp4">
+</video>

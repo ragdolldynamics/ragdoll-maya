@@ -16,26 +16,27 @@ nav:
   - Home: index.md
   - Overview: overview.md
   - Documentation:
-    # - Solver: guides/solver.md
-    - Active Rigid: guides/active_rigid.md
-    - Active Chain: guides/active_chain.md
-    - Active Character: guides/character.md
-    - Constraints: guides/constraints.md
-    - Soft Pin: guides/soft_pin.md
-    - Hard Pin: guides/hard_pin.md
-    - Mimic: guides/mimic.md
-    - Forces: guides/forces.md
-    - Bake Simulation: guides/bake_simulation.md
-    - Import Physics: guides/import_physics.md
-    - Export Physics: guides/export_physics.md
-    # - Cached Playback: guides/cached_playback.md
-    - Scene Management: guides/scene_management.md
-    - Cycle Protection: guides/cycle_protection.md
-    - Debugging Tips: guides/debugging_tips.md
-    - Performance Tips: guides/performance_tips.md
-    # - Workflow Tips: guides/workflow_tips.md
+    # - Solver: documentation/solver.md
+    - Active Rigid: documentation/active_rigid.md
+    - Active Chain: documentation/active_chain.md
+    - Active Character: documentation/character.md
+    - Constraints: documentation/constraints.md
+    - Soft Pin: documentation/soft_pin.md
+    - Hard Pin: documentation/hard_pin.md
+    - Mimic: documentation/mimic.md
+    - Forces: documentation/forces.md
+    - Bake Simulation: documentation/bake_simulation.md
+    - Import Physics: documentation/import_physics.md
+    - Export Physics: documentation/export_physics.md
+    # - Cached Playback: documentation/cached_playback.md
+    - Scene Management: documentation/scene_management.md
+    - Cycle Protection: documentation/cycle_protection.md
+    - Debugging Tips: documentation/debugging_tips.md
+    - Performance Tips: documentation/performance_tips.md
+    # - Workflow Tips: documentation/workflow_tips.md
   - Tutorials:
-    - Dynamic Tail: quick-tail-setup.md
+    - Rally Car: tutorials/rally_car.md
+    - Dynamic Tail: tutorials/dynamic_tail.md
   - Download: download.md
   - Examples: examples.md
   - Menu Reference: menu.md

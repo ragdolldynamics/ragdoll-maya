@@ -1,4 +1,5 @@
 ---
+title: Hard Pin
 icon: "hardpin_black.png"
 ---
 
@@ -26,7 +27,7 @@ Let's look at how things can go wrong when using Hard Pin.
 
 #### Hard Conflict
 
-Unlike a [Soft Pin](/guides/soft_pin), a Hard Pin will respect your command even it means disobeying physics.
+Unlike a [Soft Pin](/documentation/soft_pin), a Hard Pin will respect your command even it means disobeying physics.
 
 In this example, two hard pins are asking for an impossible pose with limbs also being asked to stick together.
 

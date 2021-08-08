@@ -1,4 +1,5 @@
 ---
+title: Constraints
 icon: "constraint_black.png"
 ---
 
@@ -217,3 +218,38 @@ Give some extra flare to your constraints, by editing the `Twist` and `Swing` co
 
 ![constraintcolors3](https://user-images.githubusercontent.com/2152766/116964947-9dfab780-aca4-11eb-978f-b896756a5731.gif)
 ![customconstraintcolor2](https://user-images.githubusercontent.com/2152766/116921663-2bf68400-ac4c-11eb-874c-dcfcd3e84597.gif)
+
+<br>
+
+### Constraint Outliner Style
+
+Choose how constraints appear in the outliner.
+
+| Style | Result
+|:------|:---------
+| `nConstraint` | At the root of the outliner, as its own transform
+| `Maya Constraint` | As a child transform
+| `Ragdoll` | As a shape
+
+The `rRigid` node appears as a shape of any node you apply physics to, and normally constraints appear alongside them. But normal Maya constraints do not, and neither does the constraints you get with nCloth and nHair. So which do you prefer?
+
+**Ragdoll Style**
+
+As a shape, alongside the `rRigid` node.
+
+![outlinerstyle1](https://user-images.githubusercontent.com/2152766/118120535-f5590000-b3e7-11eb-9335-137457c2f955.gif)
+
+**Maya Constraint Style**
+
+As a child, similar to native Maya constraints.
+
+![outlinerstyle2](https://user-images.githubusercontent.com/2152766/118120530-f427d300-b3e7-11eb-9d9b-224952c89054.gif)
+
+**nConstraint Style**
+
+As a new transform at the root of the scene, similar to nCloth and nHair constraints. Group them, hide them; if you can imagine it, you can achieve it!
+
+![outlinerstyle3](https://user-images.githubusercontent.com/2152766/118120525-f2f6a600-b3e7-11eb-8876-76b87b6b82fa.gif)
+
+!!! hint "Subjective"
+    Whichever you prefer, it has no effect on the simulation and is strictly related to the Outliner only. They can also be re-parented after being created, it really doesn't matter where they are. So organise away!

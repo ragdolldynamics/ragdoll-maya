@@ -1,4 +1,5 @@
 ---
+title: Scene Management
 icon: "scene_black.png"
 ---
 

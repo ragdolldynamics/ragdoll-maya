@@ -1,4 +1,5 @@
 ---
+title: Soft Pin
 icon: "control_black.png"
 ---
 

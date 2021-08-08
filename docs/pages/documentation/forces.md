@@ -1,4 +1,5 @@
 ---
+title: Forces
 icon: "force_black.png"
 ---
 

@@ -1,4 +1,5 @@
 ---
+title: Active Chain
 icon: "chain_black.png"
 ---
 
@@ -90,7 +91,7 @@ There are 3 typical solutions for this.
 |:---------|:----------
 | Avoid overlap | Ideally the shapes would not overlap, but this is not always possible
 | `Collide = Off` | Disable collisions for the offending rigid(s)
-| [Ignore Contact Constraint](/guides/constraints/#ignore-contact-constraint) | Disable collisions between the two overlapping rigids
+| [Ignore Contact Constraint](/documentation/constraints/#ignore-contact-constraint) | Disable collisions between the two overlapping rigids
 
 ![overlappingshapes](https://user-images.githubusercontent.com/2152766/127827143-47298854-acbb-4e74-a44d-69de0f3fe447.gif)
 
@@ -100,16 +101,25 @@ There are 3 typical solutions for this.
 
 Here's how to use the Active Chain from the Ragdoll API.
 
+![chainexample](https://user-images.githubusercontent.com/2152766/128610157-e9181587-814d-4981-a798-79a8e0184ae1.gif)
+
 ```py
-# from maya import cmds
-# from ragdoll import api as rd
+from maya import cmds
+from ragdoll import api as rd
 
-# cube, _ = cmds.polyCube()
-# cmds.move(0, 10, 0)
-# cmds.rotate(35, 50, 30)
+ctrl1 = cmds.createNode("joint")
+ctrl2 = cmds.createNode("joint", parent=ctrl1)
+ctrl3 = cmds.createNode("joint", parent=ctrl2)
 
-# scene = rd.createScene()
-# rigid = rd.createChain(cube, scene)
+cmds.move(0, 5, 0, ctrl1)
+cmds.move(5, 5, 0, ctrl2)
+cmds.move(10, 5, 0, ctrl3)
+cmds.rotate(0, 0, 30, ctrl1)
 
-# cmds.evalDeferred(cmds.play)
+scene = rd.createScene()
+chain = rd.createChain([ctrl1, ctrl2, ctrl3], scene)
+
+cmds.setAttr(ctrl1 + ".globalStrength", 0.02)
+
+cmds.evalDeferred(cmds.play)
 ```

@@ -1,4 +1,5 @@
 ---
+title: Performance Tips
 icon: "motor_black.png"
 ---
 

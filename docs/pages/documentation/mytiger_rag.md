@@ -1,4 +1,5 @@
 ---
+hidden: true
 title: mytiger.rag
 hide:
   - navigation # Hide navigation

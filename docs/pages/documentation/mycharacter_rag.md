@@ -1,5 +1,6 @@
 ---
-title: mytiger.rag
+hidden: true
+title: mycharacter.rag
 hide:
   - navigation # Hide navigation
   - toc        # Hide table of contents

@@ -1,4 +1,5 @@
 ---
+title: Cycle Protection
 icon: "swirl_black.png"
 ---
 

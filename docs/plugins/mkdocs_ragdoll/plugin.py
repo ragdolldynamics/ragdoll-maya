@@ -315,34 +315,15 @@ def attributes(markdown):
     return os.linesep.join(lines)
 
 
-def releases(markdown):
+def releases(markdown, page):
     """Convert {{ releases }}"""
-
-    def find_title(fname):
-        with io.open(fname, "r", encoding="utf8") as f:
-            max_lines = 5
-            for index, line in enumerate(f):
-
-                if not line.startswith("title:"):
-                    continue
-
-                title = line.split("title:", 1)[-1].strip(" ").rstrip()
-                return title
-
-                if index > max_lines:
-                    break
-
-        raise ValueError("Couldn't find title of %s" % fname)
 
     rows = []
     for version, fname in get_releases():
-
-        # Find title
-        title = find_title(fname)
-
+        meta = get_metadata(fname)
         rows.append(
             "- [{version} - {title}](/releases/{version})".format(
-                version=version, title=title
+                version=version, title=meta.get("title", ["Untitled"])[0]
             )
         )
 
@@ -350,6 +331,42 @@ def releases(markdown):
 
     markdown = re.sub(
         r"\{\{(\s)*releases(\s)*\}\}", replace, markdown,
+        flags=re.IGNORECASE
+    )
+
+    return markdown
+
+
+def documentation(markdown, page):
+    """Convert {{ documentation }}"""
+
+    rows = []
+
+    for root, dirs, fnames in os.walk(_page("documentation")):
+        for fname in fnames:
+            if not fname.endswith(".md"):
+                continue
+
+            name = fname.rsplit(".", 1)[0]
+            path = os.path.join(root, fname)
+            meta = get_metadata(path)
+
+            if "hidden" in meta:
+                continue
+
+            if "title" not in meta:
+                continue
+
+            rows.append(
+                "- [{title}](/documentation/{name})".format(
+                    title=meta.get("title", ["Untitled"])[0], name=name
+                )
+            )
+
+    replace = os.linesep.join(rows)
+
+    markdown = re.sub(
+        r"\{\{(\s)*documentation(\s)*\}\}", replace, markdown,
         flags=re.IGNORECASE
     )
 
@@ -376,6 +393,16 @@ def meta(markdown, page, config):
         )
 
     return markdown
+
+
+def get_metadata(path):
+    markdown = md.Markdown(extensions=["meta"])
+
+    with io.open(path, "r", encoding="utf8") as f:
+        markdown.convert(f.read())
+
+    meta = markdown.Meta
+    return meta
 
 
 def get_releases():
@@ -413,7 +440,10 @@ class MenuGeneratorPlugin(BasePlugin):
         markdown = meta(markdown, page, config)
 
         if page.title == "Releases":
-            markdown = releases(markdown)
+            markdown = releases(markdown, page)
+
+        if page.title == "Documentation":
+            markdown = documentation(markdown, page)
 
         return markdown
 

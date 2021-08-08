@@ -1,4 +1,5 @@
 ---
+title: Character
 icon: "ragdoll_black.png"
 ---
 
@@ -20,7 +21,7 @@ From the Ragdoll menu, select the `New` option from the `Character` sub-menu.
 
 #### Manual Character
 
-To better understand what Character does, let's walk through a manual character using [Active Chain](/guides/active_chain).
+To better understand what Character does, let's walk through a manual character using [Active Chain](/documentation/active_chain).
 
 ![characterchain](https://user-images.githubusercontent.com/2152766/127824955-22c6e4cc-5176-43b3-8ef0-6c1b15751493.gif)
 

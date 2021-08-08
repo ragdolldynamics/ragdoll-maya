@@ -1,4 +1,5 @@
 ---
+title: Import Physics
 icon: "save_black.png"
 ---
 
@@ -120,9 +121,9 @@ The export-format is identical to what game developers use to author physics in 
 
 **Example Files**
 
-- [`mytiger.rag`](/guides/mytiger_rag)
-- [`mycharacter.rag`](/guides/mycharacter_rag)
-- [`ragcar.rag`](/guides/mycar_rag)
+- [`mytiger.rag`](/documentation/mytiger_rag)
+- [`mycharacter.rag`](/documentation/mycharacter_rag)
+- [`ragcar.rag`](/documentation/mycar_rag)
 
 It means some information is lost, in particular any custom connections made or custom attributes added or removed. It will use the same menu items you used to author a ragdoll, and nothing else. So things not possible with those commands will not be captured in the exported file format.
 
@@ -259,6 +260,13 @@ assert isinstance(analysis, dict)
 
 # Print a brief human-readable summary of the current analysis
 loader.report()
+
+# Actually apply the contained physics in this file
+#
+# "Re-interpret" means it will attempt to call the same command
+# as you did when creating the file, like `Active Chain` and
+# any constraints, in the same order (where possible).
+loader.reinterpret()
 ```
 
 !!! hint "Heads up"

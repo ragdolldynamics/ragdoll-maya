@@ -1,4 +1,5 @@
 ---
+title: Active Rigid
 icon: "rigid_black.png"
 ---
 
@@ -168,7 +169,7 @@ Before meshes are used for simulation they are converted into a "convex hull", w
 ![convexhull](https://user-images.githubusercontent.com/2152766/127818504-f831a7bd-b421-4250-9748-82578e0d8474.gif)
 
 !!! question "How do I make more complex collision shapes?"
-    You can break a mesh into several rigid bodies and use a Ragdoll Parent Constraint to hold them together. See [Parent Constraint](/guides/constraints/#parent-constraint) for details.
+    You can break a mesh into several rigid bodies and use a Ragdoll Parent Constraint to hold them together. See [Parent Constraint](/documentation/constraints/#parent-constraint) for details.
 
     This approach isn't very convenient however - and also doesn't perform well - so in a future release you will be able to turn individual polygon islands of a single mesh into a *combined* convex hull.
 
@@ -209,6 +210,8 @@ Manipulate shapes with a native Maya transform, as an alternative to fiddling wi
 ### API
 
 Here's how to use the Active Rigid from the Ragdoll API.
+
+![](https://user-images.githubusercontent.com/2152766/95583484-1a415b00-0a34-11eb-8f24-5a83b4ae2629.gif)
 
 ```py
 from maya import cmds

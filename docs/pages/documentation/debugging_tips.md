@@ -1,4 +1,5 @@
 ---
+title: Debugging Tips
 icon: "convert_black.png"
 ---
 

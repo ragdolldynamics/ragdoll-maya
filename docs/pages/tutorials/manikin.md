@@ -1,0 +1,1 @@
+Something the animator can import and throw around for reference on how it would look like.

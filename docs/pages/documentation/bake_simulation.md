@@ -1,4 +1,5 @@
 ---
+title: Bake Simulation
 icon: "bake_black.png"
 ---
 

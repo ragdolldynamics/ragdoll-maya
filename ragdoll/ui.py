@@ -1333,6 +1333,15 @@ def MessageBox(title, text, buttons=None, icon=QuestionIcon):
     return message.exec_() == QtWidgets.QMessageBox.Yes
 
 
+def product_to_marketingname(product):
+    return {
+        "enterprise": "Unlimited",
+        "headless": "Batch",
+        "personal": "Personal",
+        "complete": "Complete",
+    }[product]
+
+
 class SplashScreen(QtWidgets.QDialog):
     """Ragdoll Splash
      ____________________________________________
@@ -1526,28 +1535,21 @@ class SplashScreen(QtWidgets.QDialog):
             self._widgets["serial"].setText("")
             self._widgets["serial"].setPlaceholderText(data["key"])
 
-        if os.getenv("RAGDOLL_FLOATING"):
+        if data["isFloating"]:
             self.on_floating(data)
 
         elif data["isActivated"]:
-            self.on_activated()
+            self.on_activated(data)
 
         elif data["isTrial"]:
             if data["trialDays"] > 0:
                 self.on_trial(data["trialDays"])
 
             elif data["trialDays"] < 1:
-                if data["magicDays"] > 0:
-                    self.on_magic(data["magicDays"])
-                else:
-                    self.on_expired(data["trialDays"])
+                self.on_expired(data["trialDays"])
 
             elif data["isVerified"]:
                 self.on_verified()
-
-        elif data["magicDays"] > 0:
-            # It's in the air
-            self.on_magic(data["magicDays"])
 
         else:
             self.on_deactivated()
@@ -1671,29 +1673,6 @@ class SplashScreen(QtWidgets.QDialog):
         expiry = self._widgets["expiryDate"]
         expiry.setText("Expires %s" % datestring)
 
-    def on_magic(self, magic_days):
-        self.on_deactivated()
-
-        log.info("Ragdoll is magic")
-
-        status = _resource("ui", "mode_orange.png")
-        status = QtGui.QPixmap(status)
-        status = status.scaledToWidth(px(15), QtCore.Qt.SmoothTransformation)
-
-        icon = self._widgets["statusActivated"]
-        icon.setPixmap(status)
-        icon.setToolTip("Licence is in magic mode")
-
-        message = self._widgets["statusMessage"]
-        message.setText(
-            "Ragdoll - %s - Magic Version"
-            % __.version_str
-        )
-
-        datestring = self._expiry_string(magic_days)
-        expiry = self._widgets["expiryDate"]
-        expiry.setText("Expires %s" % datestring)
-
     def on_expired(self, trial_days):
         log.info("Ragdoll is expired")
 
@@ -1723,7 +1702,7 @@ class SplashScreen(QtWidgets.QDialog):
         expiry = self._widgets["expiryDate"]
         expiry.setText("Expired %s" % datestring)
 
-    def on_activated(self):
+    def on_activated(self, data):
         log.info("Ragdoll is activated")
 
         self._widgets["activate"].hide()
@@ -1737,16 +1716,25 @@ class SplashScreen(QtWidgets.QDialog):
 
         icon = self._widgets["statusActivated"]
         icon.setPixmap(status)
-        icon.setToolTip("Enterprise licence is active")
+        icon.setToolTip("%s licence is active" % licence)
 
         message = self._widgets["statusMessage"]
         message.setText(
-            "Ragdoll - %s - Enterprise Edition (node-locked)"
-            % __.version_str
+            "Ragdoll - {version} - <b>{product}</b> ({licence})".format(
+                version=__.version_str,
+                product=product_to_marketingname(data["product"]),
+                licence="floating" if data["isFloating"] else "node-locked",
+            )
         )
 
         offline = self._widgets["activateOffline"]
         offline.setText("Deactivate Offline")
+
+        if data["product"] == "personal":
+            pixmap = QtGui.QPixmap(_resource("ui", "splash_personal.png"))
+            pixmap = pixmap.scaledToWidth(
+                px(500), QtCore.Qt.SmoothTransformation)
+            self._widgets["background"].setPixmap(pixmap)
 
     def on_floating(self, data):
         log.info("Ragdoll is floating")
@@ -1765,11 +1753,13 @@ class SplashScreen(QtWidgets.QDialog):
 
         if data["hasLease"]:
             icon = "mode_green.png"
-            tooltip = "Enterprise is active"
+            name = product_to_marketingname(data["product"])
+            tooltip = "{product} is active".format(name)
             self._widgets["drop"].show()
         else:
             icon = "mode_red.png"
-            tooltip = "Enterprise is inactive"
+            name = product_to_marketingname(data["product"])
+            tooltip = "{product} is inactive".format(name)
             self._widgets["lease"].show()
 
         status = _resource("ui", icon)
@@ -1780,9 +1770,13 @@ class SplashScreen(QtWidgets.QDialog):
         icon.setPixmap(status)
         icon.setToolTip(tooltip)
 
-        self._widgets["statusMessage"].setText(
-            "Ragdoll - %s - Enterprise Edition (floating)"
-            % __.version_str
+        message = self._widgets["statusMessage"]
+        message.setText(
+            "Ragdoll - {version} - <b>{product}</b> ({licence})".format(
+                version=__.version_str,
+                product=product_to_marketingname(data["product"]),
+                licence="floating" if data["isFloating"] else "node-locked",
+            )
         )
 
     def on_deactivated(self):

@@ -283,8 +283,8 @@ def data():
         key=cmds.ragdollLicence(serial=True, query=True),
 
         # Which edition of Ragdoll is this?
-        # Standard or Enterprise
-        edition="Enterprise",
+        # trial, personal, complete, unlimited or batch
+        product=cmds.ragdollLicence(product=True, query=True),
 
         # Node-locked or floating
         isFloating=cmds.ragdollLicence(isFloating=True, query=True),
@@ -308,6 +308,6 @@ def data():
         # How many days until this trial expires?
         trialDays=cmds.ragdollLicence(trialDays=True, query=True),
 
-        # How many magic days are left?
-        magicDays=cmds.ragdollLicence(magicDays=True, query=True),
+        # It's either a Trial or Personal licence
+        isNonCommercial=cmds.ragdollLicence(isNonCommercial=True, query=True),
     )

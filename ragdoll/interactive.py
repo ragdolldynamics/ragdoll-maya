@@ -749,7 +749,12 @@ def install_menu():
 
     divider()
 
-    item("ragdoll", welcome_user, label="Ragdoll %s" % __.version_str)
+    label = "Ragdoll %s" % __.version_str
+
+    if licence.data()["isNonCommercial"]:
+        label += " (nc)"
+
+    item("ragdoll", welcome_user, label=label)
 
 
 def logging_debug():

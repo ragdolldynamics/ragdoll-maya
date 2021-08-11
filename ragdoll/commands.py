@@ -25,10 +25,11 @@ log = logging.getLogger("ragdoll")
 
 
 @i__.with_contract(kwargs={"name": (cmdx.string_types, None),
-                           "parent": (cmdx.DagNode, None)},
+                           "parent": (cmdx.DagNode, None),
+                           "opts": (dict, None)},
                    returns=(cmdx.DagNode,))
 @i__.with_undo_chunk
-def create_scene(name=None, parent=None):
+def create_scene(name=None, parent=None, opts=None):
     """Create a new Ragdoll scene
 
     Arguments:
@@ -36,6 +37,9 @@ def create_scene(name=None, parent=None):
         parent (DagNode, optional): Do not create a new transform, use this
 
     """
+
+    opts = opts or {}
+    defaults = opts.get("defaults", {})
 
     time = cmdx.encode("time1")
     up = cmdx.up_axis()
@@ -71,6 +75,9 @@ def create_scene(name=None, parent=None):
             mod.set_keyable(scene["gravityZ"])
             mod.set_nice_name(scene["gravityZ"], "Gravity")
             mod.set_attr(parent["rotateX"], cmdx.radians(90))
+
+        for key, value in defaults.items():
+            mod.set_attr(scene[key], value)
 
         mod.connect(parent["message"], scene["exclusiveNodes"][0])
 
@@ -472,6 +479,9 @@ def animation_constraint(rigid, opts=None):
 
         # Add to scene
         _add_constraint(mod, con, scene)
+
+        if "animStrength" in transform:
+            mod.delete_attr(transform["animStrength"])
 
     uas = i__.UserAttributes(con, transform)
     uas.add("driveStrength",
@@ -1002,28 +1012,30 @@ def reorient(con):
     parent = con["parentRigid"].connection()
     child = con["childRigid"].connection()
 
-    if parent and child:
-        assert parent.type() == "rdRigid", (
-            "Bad parentRigid connection: %s" % parent
-        )
-        assert child.type() == "rdRigid", (
-            "Bad childRigid connection: %s" % parent
-        )
+    assert parent and child, (
+        "Parent or child rigid missing from constraint: %s" % con
+    )
+    assert parent.type() == "rdRigid", (
+        "Bad parentRigid connection: %s" % parent
+    )
+    assert child.type() == "rdRigid", (
+        "Bad childRigid connection: %s" % parent
+    )
 
-        rotation = cmdx.Quat(cmdx.radians(-90), cmdx.Vector(0, 0, 1))
-        rotation *= cmdx.Quat(cmdx.radians(90), cmdx.Vector(1, 0, 0))
+    rotation = cmdx.Quat(cmdx.radians(-90), cmdx.Vector(0, 0, 1))
+    rotation *= cmdx.Quat(cmdx.radians(90), cmdx.Vector(1, 0, 0))
 
-        parent_frame = cmdx.Tm(con["parentFrame"].asMatrix())
-        parent_frame.rotateBy(rotation, cmdx.sPreTransform)
-        parent_frame = parent_frame.asMatrix()
+    parent_frame = cmdx.Tm(con["parentFrame"].asMatrix())
+    parent_frame.rotateBy(rotation, cmdx.sPreTransform)
+    parent_frame = parent_frame.asMatrix()
 
-        child_frame = cmdx.Tm(con["childFrame"].asMatrix())
-        child_frame.rotateBy(rotation, cmdx.sPreTransform)
-        child_frame = child_frame.asMatrix()
+    child_frame = cmdx.Tm(con["childFrame"].asMatrix())
+    child_frame.rotateBy(rotation, cmdx.sPreTransform)
+    child_frame = child_frame.asMatrix()
 
-        with cmdx.DagModifier() as mod:
-            mod.set_attr(con["parentFrame"], parent_frame)
-            mod.set_attr(con["childFrame"], child_frame)
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], child_frame)
 
 
 def _take_ownership(mod, rdnode, node):

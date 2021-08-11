@@ -142,7 +142,7 @@ Each axis can be in one of 3 possible states.
 | Free    | `= 0` | A value of exactly 0 means "free", it is free to change
 | Limited | `> 0` | A value greater than 0 means "limited", it is free to move within this *range*
 
-When an axis is "limited", the value represents the number of degrees it is limited to (or centimters for a translation limit).
+When an axis is "limited", the value represents the *amount* it is limited, which is centimeters and degrees. The same as the `Translate` and `Rotate` values of a regular control, as per the Maya preferences.
 
 ![](https://user-images.githubusercontent.com/2152766/117270305-fa9ad580-ae50-11eb-9258-fbfb08bcbd12.gif)
 

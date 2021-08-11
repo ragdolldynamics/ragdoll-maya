@@ -4,7 +4,16 @@ icon: "hair2_black.png"
 
 <img width=49% src=https://user-images.githubusercontent.com/8775944/104851801-0c328e80-58ef-11eb-862f-8c57b9e409ed.gif> <img width=49% src=https://user-images.githubusercontent.com/8775944/105234661-7f443b00-5b63-11eb-93cf-692ccfb902aa.gif>
 
+### Dynamic Tail
+
 In this tutorial you'll learn how to **setup a tail** with physics and **how to steer** the look and feel of the simulation using normal keyframing techniques. We'll use one of the excellent rigs by [Truong CG Artist](https://gumroad.com/truongcgartist?sort=page_layout#krsIT).
+
+!!! warning "Out of date"
+    This tutorial was written for 2021.03.01 and a few things have changed since then.
+
+    - `Dynamic Control` menu item was renamed `Active Chain`
+    - `rGuideMultiplier` shape node was renamed `rGlobalStrength`
+    - `Blend Simulation = 1.0` attribute was renamed `Simulated = On/Off`
 
 **Optional example files**
 

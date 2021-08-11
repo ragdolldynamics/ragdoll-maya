@@ -56,6 +56,27 @@ Here are some options for getting into Ragdoll.
 
 <br>
 
+<!-- 
+## Press
+
+Mentions of Ragdoll in the press.
+
+| Date | Source | Title
+|:-----|:-------|:---------
+| 2021-08-03 | [CGChannel](http://www.cgchannel.com/2021/08/ragdoll-dynamics-adds-real-time-physics-to-your-maya-rigs/) | Ragdoll Dynamics adds real-time physics to your Maya rigs
+| 2021-07-30 | [CGPress](https://cgpress.org/archives/ragdoll-dynamics-plugin-for-maya.html) | Ragdoll Dynamics plugin for Maya
+| 2021-07-28 | [80lv](https://80.lv/articles/ragdoll-a-new-tool-lets-you-animate-with-physics-in-real-time/) | New Tool Lets You Animate With Physics in Real-Time
+
+!!! hint "Share your sources"
+      Know of anywhere else Ragdoll got mentioned? Let us know and we'll add it to the list!
+
+      <div class="hboxlayout">
+      <a href="https://ragdolldynamics.com/contact" class="button red"><b>Contact Us</b></a>
+      </div>
+
+<br>
+ -->
+
 <video class=poster autoplay="autoplay" loop="loop" width="100%">
    <source src="/driving.mp4" type="video/mp4">
 </video>

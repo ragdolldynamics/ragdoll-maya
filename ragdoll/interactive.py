@@ -621,7 +621,7 @@ def install_menu():
         item("socket", create_socket_constraint,
              _constraint_options(c.SocketConstraint))
 
-        divider()
+        divider("Utilities")
 
         item("ignoreContacts", ignore_contacts_constraint,
              _constraint_options(c.IgnoreContactsConstraint))
@@ -629,7 +629,7 @@ def install_menu():
         item("animationConstraint", create_animation_constraint,
              create_animation_constraint_options)
 
-        divider()
+        divider("Gizmos")
 
         item("editConstraintFrames",
              edit_constraint_frames,
@@ -2177,16 +2177,16 @@ def edit_constraint_frames(selection=None):
                 con = cons[-1]
 
         if not con.type() == "rdConstraint":
-            log.warning("%s is not a constraint", con)
+            log.warning("%s is not a constraint" % con)
             continue
 
         if not con:
-            log.warning("%s had no constraint", node)
+            log.warning("%s had no constraint" % node)
             continue
 
         frames.extend(commands.edit_constraint_frames(con))
 
-    log.info("Created %d frames", len(frames))
+    log.info("Created %d frames" % len(frames))
     cmds.select(map(str, frames))
     return kSuccess
 
@@ -2209,12 +2209,12 @@ def edit_shape(selection=None):
             continue
 
         if not rigid:
-            log.warning("%s had no constraint", node)
+            log.warning("%s had no constraint" % node)
             continue
 
         editors.append(commands.edit_shape(rigid))
 
-    log.info("Created %d shape editors", len(editors))
+    log.info("Created %d shape editors" % len(editors))
     cmds.select(map(str, editors))
     return kSuccess
 
@@ -2231,7 +2231,7 @@ def _create_force(selection=None, force_type=None):
             rigid = node.shape(type="rdRigid")
 
         if not rigid:
-            log.warning("%s was not an Ragdoll Rigid", node)
+            log.warning("%s was not an Ragdoll Rigid" % node)
             continue
 
         rigids += [rigid]
@@ -2284,7 +2284,7 @@ def create_slice(selection=None):
 
     slice = commands.create_slice(scene)
     cmds.select(slice.parent().path())
-    log.info("Created %s", slice)
+    log.info("Created %s" % slice)
     return kSuccess
 
 
@@ -2303,7 +2303,7 @@ def assign_force(selection=None):
         force = force.shape(type="rdForce")
 
     if not force or force.type() != "rdForce":
-        return log.warning("%s was not a force", sel[0])
+        return log.warning("%s was not a force" % sel[0])
 
     assignments = []
     for node in targets:
@@ -2320,7 +2320,7 @@ def assign_force(selection=None):
             assignments += [force]
 
     if assignments:
-        return log.info("Assigned %s to %d rigids", force, len(assignments))
+        return log.info("Assigned %s to %d rigids" % (force, len(assignments)))
     else:
         log.warning("No forces assigned")
         return kSuccess
@@ -2339,10 +2339,10 @@ def duplicate_selected(selection=None, **opts):
             rigid = node.shape(type="rdRigid")
 
         if not rigid:
-            log.warning("%s skipped, not a rigid", node)
+            log.warning("%s skipped, not a rigid" % node)
             continue
 
-        log.info("Duplicating %s", rigid)
+        log.info("Duplicating %s" % rigid)
 
         dup = commands.duplicate(rigid)
         duplicates += [dup]
@@ -2350,7 +2350,7 @@ def duplicate_selected(selection=None, **opts):
         cmds.select(dup.parent().path(), add=True)
 
     if duplicates:
-        log.info("Duplicated %d rigids", len(duplicates))
+        log.info("Duplicated %d rigids" % len(duplicates))
         return kSuccess
     else:
         return log.warning("Nothing duplicated")

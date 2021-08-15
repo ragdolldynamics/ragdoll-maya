@@ -373,6 +373,31 @@ def documentation(markdown, page):
     return markdown
 
 
+def mp4(markdown, page):
+    """Convert any .mp4 links into video players"""
+
+    regex = r"\n\s+?(https\:\/\/[a-zA-Z0-9\.\/-]*.\.(mp4|mov))\s+([a-z ]*)?"
+
+    def replace(match):
+        # Get rid of surrounding newlines
+        prefix = match.group(0).strip("\n").split("https://", 1)[0]
+        url = match.group(1).strip().rstrip()
+        extras = match.group(3).strip().rstrip()
+
+        return r'''
+{prefix}<video class="poster" muted loop width=100% {extras}>
+{prefix}    <source src="{url}" type="video/mp4">
+{prefix}</video>
+'''.format(prefix=prefix, url=url, extras=extras)
+
+    markdown = re.sub(
+        regex, replace, markdown,
+        flags=re.IGNORECASE
+    )
+
+    return markdown
+
+
 def meta(markdown, page, config):
     for key, value in page.meta.items():
         if "page.meta.%s" % key not in markdown:
@@ -438,6 +463,7 @@ class MenuGeneratorPlugin(BasePlugin):
             markdown = attributes(markdown)
 
         markdown = meta(markdown, page, config)
+        markdown = mp4(markdown, page)
 
         if page.title == "Releases":
             markdown = releases(markdown, page)
@@ -465,5 +491,4 @@ class MenuGeneratorPlugin(BasePlugin):
 
     def on_page_content(self, html, page, config, files):
         print(page)
-
         return html

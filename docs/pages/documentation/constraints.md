@@ -104,7 +104,7 @@ The above types mostly vary the "limit" attribute of a constraint, but what *is*
 
 <br>
 
-#### Degrees of Freedon
+#### Degrees of Freedom
 
 The axes of a limit are called "degrees of freedom" (or DOF) and comes in 6 flavours.
 

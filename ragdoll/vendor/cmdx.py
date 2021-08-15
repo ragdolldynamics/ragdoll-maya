@@ -7268,6 +7268,9 @@ class Enum(_AbstractAttribute):
 class Divider(Enum):
     """Visual divider in channel box"""
 
+    ChannelBox = True
+    Keyable = False
+
     def __init__(self, label, **kwargs):
         kwargs.pop("name", None)
         kwargs.pop("fields", None)

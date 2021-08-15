@@ -201,7 +201,7 @@ The wheels are currently unable to roll. To test this, let's put some ground und
 
 #### Set Initial State
 
-Let's move the car to higher ground and set a new "initial state".
+Let's move the car to higher ground and set a new "initial state", meaning the position and rotation from which to start simulating.
 
 1. Move the car along `Translate Y = 10.0`
 2. Play
@@ -425,11 +425,27 @@ Here are some suggestions for how to take the results of this tutorial further.
 
 #### Mecabricks
 
-A fantastic resource with *tons* of mechanical contraptions, ready to be turned into mechadolls and ragcars!
+A fantastic resource with *tons* of mechanical contraptions, most if not all of which are ready to be turned into *mechadolls* and **ragcars**!
 
-- https://www.mecabricks.com/en/library/selection
+<a href="https://www.mecabricks.com"><img width=400 src=https://user-images.githubusercontent.com/2152766/129214429-4a4554e9-18c4-42b8-9985-a8b67cbb858e.png></a>
 
-![image](https://user-images.githubusercontent.com/2152766/128638116-b9bfe6ce-12cd-4050-909a-308ae46187fc.png)
+- [https://www.mecabricks.com](https://www.mecabricks.com/en/library/selection)
+
+Speaking of ragcars, here's one Ragdoll-powered example using [this excellent model](https://www.mecabricks.com/en/models/7X2RJxJY2ZY) by [@Estevanpoa](https://www.mecabricks.com/en/user/Estevanpoa).
+
+https://user-images.githubusercontent.com/2152766/112102248-e308d580-8b9f-11eb-94f7-eec3a9c4a482.mp4 autoplay
+
+Which has an interesting mechanism for steering that was accurately recreated with Ragdoll rigids and constraints.
+
+https://user-images.githubusercontent.com/2152766/112152983-c047e280-8bda-11eb-85cf-d0c68b67e0c5.mp4 controls
+
+??? info "More Videos"
+    Can't get enough, huh? :)
+    <br>
+    <br>
+    https://user-images.githubusercontent.com/2152766/112102251-e43a0280-8b9f-11eb-9ad9-3606ab80168f.mp4 controls
+    https://user-images.githubusercontent.com/2152766/112102256-e56b2f80-8b9f-11eb-927d-2b36e95ca290.mp4 controls
+    https://user-images.githubusercontent.com/2152766/112102261-e603c600-8b9f-11eb-9012-23c661113721.mp4 controls
 
 <br>
 
@@ -443,5 +459,8 @@ Find any vehicle model and either parent the geometry directly to the chassi and
 
 Given what you've learnt, how would you enable steering? How does it work on a real car?
 
-??? tip "Click to reveal a hint"
+??? tip "Click to reveal a hint #1"
     Is there a part missing between the chassi and wheel?
+
+??? tip "Click to reveal a hint #2"
+    The Ragcar from the Mecabricks section above has steering, how does that work?

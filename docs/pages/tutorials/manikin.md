@@ -65,7 +65,7 @@ https://user-images.githubusercontent.com/2152766/129519170-59d6a109-e9eb-4fd0-8
 
 > Why should we even bother simulating a character?
 
-Finding *motion reference* is one of the most important activity for any animator. And yet I can safely challenge you to find reference for perhaps the most common motion in all blockbuster movies today, something that is either *impossible* or **dangerous** for actors or animators alike.
+Finding *motion reference* is one of the most important activities for any animator. And yet I can safely challenge you to find reference for perhaps the most common motion in all blockbuster movies today, something that is either *impossible* or **dangerous** for actors or animators alike.
 
 https://user-images.githubusercontent.com/2152766/129709932-643b186b-af06-41d0-ab67-38e9a4cc679c.mp4 controls
 

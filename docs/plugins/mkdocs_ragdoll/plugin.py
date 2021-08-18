@@ -376,7 +376,7 @@ def documentation(markdown, page):
 def mp4(markdown, page):
     """Convert any .mp4 links into video players"""
 
-    regex = r"\n\s+?(https\:\/\/[a-zA-Z0-9\.\/-]*.\.(mp4|mov))\s+([a-z ]*)?"
+    regex = r"\n\s+?(https\:\/\/[a-zA-Z0-9\.\/-]*.\.(mp4|mov))\s+([a-z ]*)?\n"
 
     def replace(match):
         # Get rid of surrounding newlines
@@ -384,11 +384,11 @@ def mp4(markdown, page):
         url = match.group(1).strip().rstrip()
         extras = match.group(3).strip().rstrip()
 
-        return r'''
-{prefix}<video class="poster" muted loop width=100% {extras}>
-{prefix}    <source src="{url}" type="video/mp4">
-{prefix}</video>
-'''.format(prefix=prefix, url=url, extras=extras)
+        return (
+'\n{prefix}<p><video autoplay class="poster" muted loop width=100% {extras}>'
+'<source src="{url}" type="video/mp4">'
+'</video></p>\n'
+).format(prefix=prefix, url=url, extras=extras)
 
     markdown = re.sub(
         regex, replace, markdown,

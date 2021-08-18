@@ -36,6 +36,7 @@ nav:
     # - Workflow Tips: documentation/workflow_tips.md
   - Tutorials:
     - Rally Car: tutorials/rally_car.md
+    - Manikin: tutorials/manikin.md
     - Dynamic Tail: tutorials/dynamic_tail.md
   - Download: download.md
   - Examples: examples.md

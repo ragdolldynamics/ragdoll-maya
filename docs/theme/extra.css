@@ -107,6 +107,17 @@ td code {
     white-space: nowrap;
 }
 
+/* Task list styling */
+.md-typeset .task-list-item [type="checkbox"] {
+    position: absolute;
+    top: 0;
+    left: -20px;
+}
+
+.md-typeset .task-list-item {
+    padding-left: 5px;
+}
+
 .md-typeset ol, .md-typeset ul {
     line-height: 1.3em;
 }

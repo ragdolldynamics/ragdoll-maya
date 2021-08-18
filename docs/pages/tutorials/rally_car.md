@@ -15,12 +15,23 @@ In this tutorial, we will create the wheels and chassi of a car in a semi-realis
 !!! success "Up to date"
     Written for Ragdoll `2021.08.06` and above, but should still apply for `2021.06` and newer.
 
+**Estimated Time**
+
+- 🕐 30 minutes
+
 **You will learn**
 
 - ✔️ How to make geometry *dynamic*
 - ✔️ How to *constrain* two rigids
 - ✔️ How to make wheels with translate and rotate "*limits*"
 - ✔️ How to build a *static environment*
+
+**Where to find help**
+
+If you find or run into any issues with this tutorials, here's what you can do.
+
+- ✔️ Ask in [the chat](https://discord.gg/JCHydekJqX)
+- ✔️ Ask on [the forums](https://forums.ragdolldynamics.com/)
 
 <div class="hboxlayout">
 <a href="https://files.ragdolldynamics.com/api/public/dl/TQf6flzc/rallycar_v001.zip" class="button red"><b>Download Final Scene</b></a>
@@ -441,10 +452,11 @@ https://user-images.githubusercontent.com/2152766/112152983-c047e280-8bda-11eb-8
 
 ??? info "More Videos"
     Can't get enough, huh? :)
-    <br>
-    <br>
+
     https://user-images.githubusercontent.com/2152766/112102251-e43a0280-8b9f-11eb-9ad9-3606ab80168f.mp4 controls
+
     https://user-images.githubusercontent.com/2152766/112102256-e56b2f80-8b9f-11eb-927d-2b36e95ca290.mp4 controls
+
     https://user-images.githubusercontent.com/2152766/112102261-e603c600-8b9f-11eb-9012-23c661113721.mp4 controls
 
 <br>

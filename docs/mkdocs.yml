@@ -30,11 +30,13 @@ nav:
     - Export Physics: documentation/export_physics.md
     # - Cached Playback: documentation/cached_playback.md
     - Scene Management: documentation/scene_management.md
+    # - Rewind & Resume: documentation/rewind_resume.md
     - Cycle Protection: documentation/cycle_protection.md
     - Debugging Tips: documentation/debugging_tips.md
     - Performance Tips: documentation/performance_tips.md
     # - Workflow Tips: documentation/workflow_tips.md
   - Tutorials:
+    - Bouncing Ball: tutorials/bouncing_ball.md
     - Rally Car: tutorials/rally_car.md
     - Manikin: tutorials/manikin.md
     - Dynamic Tail: tutorials/dynamic_tail.md

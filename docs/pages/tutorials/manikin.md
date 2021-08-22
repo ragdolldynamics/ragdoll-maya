@@ -7,17 +7,14 @@ icon: "ragdoll_black.png"
 <video autoplay class="poster" muted="muted" loop="loop" width=100%>
     <source src="https://user-images.githubusercontent.com/2152766/129716006-ca769612-8a14-4fff-9305-683fe00f26f4.mp4" type="video/mp4">
 </video>
-<!-- 
-<video autoplay class="poster" muted="muted" loop="loop" width=100%>
-    <source src="https://user-images.githubusercontent.com/2152766/129542605-093a22fc-6f25-478a-b8d4-c6e14345add8.mp4 controls" type="video/mp4">
-</video>
- -->
 
 ### Manikin
 
 > "Make your own motion reference"
 
 In this tutorial, we will setup a human-like character for use as reference or constraint target to your rig. You will be able to pose and position this Manikin like you would a real Manikin, and drop it from various heights and onto various obstacles to produce realistic poses as it falls.
+
+Something the animator can import and throw around for *reference* on how it would look like.
 
 !!! success "Version 1.0 - Up to date"
     Written for Ragdoll `2021.08.06` and above, but should still apply for `2021.06` and newer.
@@ -36,10 +33,8 @@ In this tutorial, we will setup a human-like character for use as reference or c
 
 If you find or run into any issues with this tutorials, here's what you can do.
 
-- ✔️ Ask in [the chat](https://discord.gg/JCHydekJqX)
+- ✔️ Ask in [the chat](https://ragdolldynamics.com/chat)
 - ✔️ Ask on [the forums](https://forums.ragdolldynamics.com/)
-
-Something the animator can import and throw around for reference on how it would look like.
 
 ??? question "Spelling"
     There's two ways to spell "Manikin", this tutorial is based on this term here.

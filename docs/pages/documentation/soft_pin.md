@@ -61,11 +61,6 @@ The amount of damping represents a *resistance* to change. Wherever a guide says
 
 <br>
 
-### Troubleshooting
-
-
-<br>
-
 ### Limitations
 
 What *can't* you do with Soft Pin?

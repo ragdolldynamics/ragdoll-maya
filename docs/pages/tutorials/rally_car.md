@@ -30,7 +30,7 @@ In this tutorial, we will create the wheels and chassi of a car in a semi-realis
 
 If you find or run into any issues with this tutorials, here's what you can do.
 
-- ✔️ Ask in [the chat](https://discord.gg/JCHydekJqX)
+- ✔️ Ask in [the chat](https://ragdolldynamics.com/chat)
 - ✔️ Ask on [the forums](https://forums.ragdolldynamics.com/)
 
 <div class="hboxlayout">

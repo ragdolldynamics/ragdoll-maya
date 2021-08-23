@@ -438,8 +438,14 @@ def get_releases():
             if not fname.endswith(".md"):
                 continue
 
+            abspath = os.path.join(root, fname)
+            meta = get_metadata(abspath)
+
+            if "hidden" in meta:
+                continue
+
             version = fname.rsplit(".md", 1)[0]
-            yield version, os.path.join(root, fname)
+            yield version, abspath
 
 
 class MenuGeneratorPlugin(BasePlugin):

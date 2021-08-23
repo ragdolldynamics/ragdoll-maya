@@ -4,7 +4,7 @@ description: Learn how to create a physically realistic race car.
 icon: "car_black.png"
 ---
 
-<video autoplay class="poster" muted="muted" loop="loop" width=100%>
+<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401211-0a9b5eea-cd62-4bf7-9bee-26347a06bd25.png">
     <source src="https://user-images.githubusercontent.com/2152766/128611375-82a3f65e-7c89-4e42-a40e-3ae1b10c12ce.mp4" type="video/mp4">
 </video>
 
@@ -458,6 +458,16 @@ https://user-images.githubusercontent.com/2152766/112152983-c047e280-8bda-11eb-8
     https://user-images.githubusercontent.com/2152766/112102256-e56b2f80-8b9f-11eb-927d-2b36e95ca290.mp4 controls
 
     https://user-images.githubusercontent.com/2152766/112102261-e603c600-8b9f-11eb-9012-23c661113721.mp4 controls
+
+<br>
+
+#### Robot Wars
+
+Why not design a contender, and have yourself a little Robot War?
+
+- https://www.youtube.com/watch?v=mBmvgJyQwGk
+
+![image](https://user-images.githubusercontent.com/2152766/130363142-c282c1b2-5620-4cf5-96c6-7279d4aa8225.png)
 
 <br>
 

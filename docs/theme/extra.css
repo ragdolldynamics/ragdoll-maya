@@ -358,6 +358,10 @@ Tables
   border-radius: 10px;
 }
 
+.no-padding {
+  padding: 0 !important;
+}
+
 .overlaid-container code {
     border: 1px solid #854a4a;
     color: #f25757;
@@ -820,7 +824,7 @@ div.tabs button.active p {
 }
 
 .text-align-center {
-  text-align: center;
+  text-align: center !important;
 }
 
 .code-red {

@@ -4,7 +4,7 @@ description: Expore the fundamentals of Ragdoll
 icon: "physics_black.png"
 ---
 
-<video autoplay class="poster" muted="muted" loop="loop" width=100%>
+<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401392-0d4549ab-3545-46ec-98d2-6b084b2a8465.jpg">
     <source src="https://user-images.githubusercontent.com/2152766/130034996-98912ff5-7a3c-4ca4-8486-3906b50cc780.mp4" type="video/mp4">
 </video>
 

@@ -232,7 +232,7 @@ Leasing is re-done once every 30 minutes.
 
 30 minutes is the default value (see below), which means that if the server goes down whilst an artist is using it, the solver will be disabled within 30 minutes.
 
-The duration can be adjusted, however it is a balance since the time is also how long it takes for the server to free a realise as a result of a Maya crash.
+The duration can be adjusted, however it is a balance since the time is also how long it takes for the server to *free* a lease as a result of a Maya crash.
 
 - See [What happens to a lease when Maya crashes?](#what-happens-to-a-lease-when-maya-crashes)
 
@@ -248,7 +248,7 @@ The default port is `13` and can be edited via the `TurboFloatServer-config.xml`
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     ...
-    <bind port="666"/>
+    <bind port="13"/>
     ...
 </config>
 ```
@@ -259,9 +259,12 @@ The default port is `13` and can be edited via the `TurboFloatServer-config.xml`
 
 ### What if I have multiple serial numbers?
 
-1 serial number, 1 server.
+Complete, Unlimited and Batch have their own serial numbers and each serial number needs its own server.
 
-Each server can all run on one machine, they just need their own unique port number. From there, provide each of your clients with the full server address to the pool it should lease licences from.
+- Each server needs to be a physical machine, but can under certain circumstances be allowed to run within a virtual machine; [contact us](mailto:licencing@ragdolldynamics.com) if this is you.
+- Each server needs their own unique address. If they run on the same machine, you can assign a unique port number (see [above](#can-i-change-the-port-used-by-the-server)).
+
+From there, provide each of your clients with the full server address to the pool it should lease licences from.
 
 For example.
 

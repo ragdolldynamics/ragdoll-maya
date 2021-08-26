@@ -635,6 +635,8 @@ def install_menu():
              edit_constraint_frames,
              label="Edit Pivots")
 
+        item("constraintEditor", show_constraint_editor)
+
     with submenu("Controls", icon="control.png"):
         item("hardPin", create_hard_pin,
              create_hard_pin_options)
@@ -2188,6 +2190,104 @@ def edit_constraint_frames(selection=None):
 
     log.info("Created %d frames" % len(frames))
     cmds.select(map(str, frames))
+    return kSuccess
+
+
+def show_constraint_editor(selection=None):
+    window = ui.PivotEditor(parent=ui.MayaWindow())
+    tools.show_pivot_editor(window)
+    pass
+
+
+def _rotate_constraint_frames(degrees, axis, selection=None):
+    rotated = []
+
+    for node in selection or cmdx.selection():
+        con = node
+
+        if con.isA(cmdx.kTransform):
+            cons = list(node.shapes(type="rdConstraint"))
+
+            if cons:
+                # Last created constraint
+                con = cons[-1]
+
+        if not con.type() == "rdConstraint":
+            log.warning("%s is not a constraint" % con)
+            continue
+
+        if not con:
+            log.warning("%s had no constraint" % node)
+            continue
+
+        rotated += [con]
+        commands.rotate_constraint(con, degrees=degrees, axis=axis)
+
+    log.info("Rotated %d constraints" % len(rotated))
+    return kSuccess
+
+
+def rotate_constraint_frames_x(selection=None):
+    return _rotate_constraint_frames(90, (1, 0, 0), selection)
+
+
+def rotate_constraint_frames_y(selection=None):
+    return _rotate_constraint_frames(90, (0, 1, 0), selection)
+
+
+def rotate_constraint_frames_z(selection=None):
+    return _rotate_constraint_frames(90, (0, 0, 1), selection)
+
+
+def tune_constraint_frames_x_add(selection=None):
+    return _rotate_constraint_frames(5, (1, 0, 0), selection)
+
+
+def tune_constraint_frames_y_add(selection=None):
+    return _rotate_constraint_frames(5, (0, 1, 0), selection)
+
+
+def tune_constraint_frames_z_add(selection=None):
+    return _rotate_constraint_frames(5, (0, 0, 1), selection)
+
+
+def tune_constraint_frames_x_sub(selection=None):
+    return _rotate_constraint_frames(-5, (1, 0, 0), selection)
+
+
+def tune_constraint_frames_y_sub(selection=None):
+    return _rotate_constraint_frames(-5, (0, 1, 0), selection)
+
+
+def tune_constraint_frames_z_sub(selection=None):
+    return _rotate_constraint_frames(-5, (0, 0, 1), selection)
+
+
+def reset_constraint_frames(selection=None):
+    resetted = []
+
+    for node in selection or cmdx.selection():
+        con = node
+
+        if con.isA(cmdx.kTransform):
+            cons = list(node.shapes(type="rdConstraint"))
+
+            if cons:
+                # Last created constraint
+                con = cons[-1]
+
+        if not con.type() == "rdConstraint":
+            log.warning("%s is not a constraint" % con)
+            continue
+
+        if not con:
+            log.warning("%s had no constraint" % node)
+            continue
+
+        resetted += [con]
+        commands.reset_constraint_frames(con)
+
+    log.info("Resetted %d constraints" % len(resetted))
     return kSuccess
 
 

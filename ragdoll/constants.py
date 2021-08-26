@@ -101,3 +101,8 @@ WaterDensity = 1
 WoodDensity = 2
 FeatherDensity = 3
 AirDensity = 4
+
+# Rotate frames
+Both = 0
+Parent = 1
+Child = 2

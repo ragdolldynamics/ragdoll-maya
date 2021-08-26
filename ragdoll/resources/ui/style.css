@@ -136,3 +136,85 @@ HelpPage #mediaTitle {
     min-width: 100px;
     font-weight: bold;
 }
+
+
+PivotEditor QPushButton#tune {
+    background-color: #222;
+}
+
+PivotEditor QPushButton#tune:hover {
+    background-color: #111;
+}
+
+PivotEditor QPushButton {
+    max-width: 24px;
+}
+
+PivotEditor #tooltip {
+    color: white;
+}
+
+PivotEditor QPushButton, QPushButton:hover, QPushButton:checked, QPushButton:pressed {
+    border: none;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: transparent;
+}
+
+PivotEditor QPushButton:hover {
+    background-color: #333;
+}
+
+PivotEditor QRadioButton, QRadioButton::indicator {
+    width: 48px;
+    max-width: 48px;
+    height: 48px;
+    border-radius: 5px;
+}
+
+PivotEditor QRadioButton::indicator:hover {
+    background: #333;
+}
+
+PivotEditor QRadioButton::indicator:checked {
+    background: #222;
+}
+
+PivotEditor HorizontalLine {
+    min-height: 2px;
+    max-height: 2px;
+    border-image: url("%(res)s/ui/pivot_editor/horizontalLine.png");
+}
+
+PivotEditor VerticalLine {
+    min-width: 2px;
+    max-width: 2px;
+    border-image: url("%(res)s/ui/pivot_editor/verticalLine.png");
+}
+
+PivotEditor #swing::indicator::unchecked {
+    image: url("%(res)s/ui/pivot_editor/swing_unchecked.png");
+}
+
+PivotEditor #swing::indicator::checked {
+    image: url("%(res)s/ui/pivot_editor/swing_checked.png");
+}
+
+PivotEditor #twist::indicator::unchecked {
+    image: url("%(res)s/ui/pivot_editor/twist_unchecked.png");
+}
+
+PivotEditor #twist::indicator::checked {
+    image: url("%(res)s/ui/pivot_editor/twist_checked.png");
+}
+
+PivotEditor #z::indicator::unchecked {
+    image: url("%(res)s/ui/pivot_editor/z_unchecked.png");
+}
+
+PivotEditor #z::indicator::checked {
+    image: url("%(res)s/ui/pivot_editor/z_checked.png");
+}
+
+
+"""

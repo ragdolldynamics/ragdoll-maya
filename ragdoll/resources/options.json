@@ -300,6 +300,21 @@
         "help": "Leave transforms alone. This won't bring half as much performance, but can make e.g. joint hierarchies render properly."
     },
 
+    "tuneMirrored": {
+        "name": "tuneMirrored",
+        "label": "Tune Mirrored",
+        "type": "Boolean",
+        "default": false,
+        "help": "Dragging left rotates in the positive per default, this toggle flips that around."
+    },
+
+    "tuneMirrored": {
+        "name": "tuneMirrored",
+        "label": "Tune Mirrored",
+        "type": "Boolean",
+        "default": false,
+        "help": "Dragging left rotates in the positive per default, this toggle flips that around."
+    },
 
     "#": "----------------",
     "#": " Mimic ",

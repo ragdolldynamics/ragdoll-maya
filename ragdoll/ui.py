@@ -91,7 +91,9 @@ def _scaled_stylesheet(style):
             value = px(int(value[:-3]))
             line = "%s %dpx;" % (key, value)
         output += [line]
-    return "\n".join(output)
+    result = "\n".join(output)
+    result = result % {"res": _resource().replace("\\", "/")}
+    return result
 
 
 def _with_entered_exited_signals(cls):
@@ -2918,6 +2920,512 @@ class ImportOptions(Options):
         """
 
         self.uninstall_selection_callback()
+
+
+class DragButton(QtWidgets.QPushButton):
+    dragged = QtCore.Signal(QtCore.QPoint, QtCore.QPoint)  # delta, total
+
+    # The native pressed/release cancel when the cursor
+    # exits the button area, but these won't.
+    really_pressed = QtCore.Signal()
+    really_released = QtCore.Signal()
+
+    def mousePressEvent(self, event):
+        self._press_position = None
+        self._move_position = None
+
+        if event.button() == QtCore.Qt.LeftButton:
+            self._press_position = event.globalPos()
+            self._move_position = event.globalPos()
+
+        self.really_pressed.emit()
+        super(DragButton, self).mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == QtCore.Qt.LeftButton:
+            new_pos = event.globalPos()
+
+            try:
+                delta = new_pos - self._move_position
+                total = new_pos - self._press_position
+            except TypeError:
+                # Work around PySide2 bug in Maya 2020
+                # Where subtraction won't work if the user
+                # drags outside of the main Maya window
+                delta = QtCore.QPoint(0, 0)
+                total = QtCore.QPoint(0, 0)
+
+            self.dragged.emit(delta, total)
+            self._move_position = new_pos
+
+        super(DragButton, self).mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.really_released.emit()
+
+        if self._press_position is not None:
+            moved = event.globalPos() - self._press_position
+            if moved.manhattanLength() > 3:
+                event.ignore()
+                return
+
+        super(DragButton, self).mouseReleaseEvent(event)
+
+
+class VerticalLine(QtWidgets.QLabel):
+    pass
+
+
+class HorizontalLine(QtWidgets.QLabel):
+    pass
+
+
+class PivotEditor(QtWidgets.QDialog):
+    flip_add_pressed = QtCore.Signal(tuple)  # Axis
+    flip_sub_pressed = QtCore.Signal(tuple)
+    swap_pressed = QtCore.Signal()
+
+    tune_pressed = QtCore.Signal(bool)  # Mirror
+    tune_dragged = QtCore.Signal(float, tuple)  # Amount, axis
+    tune_released = QtCore.Signal()
+
+    reset_pressed = QtCore.Signal()
+    undo_pressed = QtCore.Signal()
+    on_redo_pressed = QtCore.Signal()
+    hard_reset_pressed = QtCore.Signal()
+    finished = QtCore.Signal()  # Window closed, cleanup
+    exited = QtCore.Signal()
+
+    instance = None
+
+    def __init__(self, parent=None):
+        super(PivotEditor, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setWindowTitle("Pivot Editor")
+
+        flags = QtCore.Qt.WindowFlags()
+        flags |= QtCore.Qt.Window
+        flags |= QtCore.Qt.WindowTitleHint
+        flags |= QtCore.Qt.WindowCloseButtonHint
+
+        self.setWindowFlags(flags)
+
+        if PivotEditor.instance is not None:
+            if isValid(PivotEditor.instance):
+                PivotEditor.instance.close()
+
+        panels = {
+            "header": QtWidgets.QWidget(),
+            "footer": QtWidgets.QLabel(),
+
+            "axis": QtWidgets.QWidget(),
+            "tune": QtWidgets.QWidget(),
+            "flip": QtWidgets.QWidget(),
+            "history": QtWidgets.QWidget(),
+        }
+
+        widgets = {
+            "swing": QtWidgets.QRadioButton(),
+            "twist": QtWidgets.QRadioButton(),
+            "z": QtWidgets.QRadioButton(),
+            "undo": QtWidgets.QPushButton(),
+            "reset": QtWidgets.QPushButton(),
+            "redo": QtWidgets.QPushButton(),
+            "flipAdd": QtWidgets.QPushButton(),
+            "swap": QtWidgets.QPushButton(),
+            "flipSub": QtWidgets.QPushButton(),
+            "tune": DragButton(),
+            "mirror": QtWidgets.QCheckBox("Mirror"),
+            "snap": QtWidgets.QCheckBox("Snap"),
+
+            "tuneAmountText": QtWidgets.QLabel("Drag me"),
+
+            "swingText": QtWidgets.QLabel("Swing"),
+            "twistText": QtWidgets.QLabel("Twist"),
+            "zText": QtWidgets.QLabel("Z"),
+            "tuneText": QtWidgets.QLabel("Tune"),
+            "undoText": QtWidgets.QLabel("Undo"),
+            "resetText": QtWidgets.QLabel("Reset"),
+            "redoText": QtWidgets.QLabel("Redo"),
+            "flipAddText": QtWidgets.QLabel("Flip +"),
+            "swapText": QtWidgets.QLabel("Swap"),
+            "flipSubText": QtWidgets.QLabel("Flip -"),
+
+            "tooltip": QtWidgets.QLabel("No constraint selected"),
+        }
+
+        extras = {
+            "axis": QtWidgets.QButtonGroup(),
+        }
+
+        for name, obj in widgets.items():
+            obj.setObjectName(name)
+            obj.setProperty("pivotEditor", True)
+
+        tooltips = {
+            "swing": "Swing, a.k.a. the X axis",
+            "twist": "Twist, a.k.a. the Y axis",
+            "z": "Rotate around the Y axis",
+            "undo": "Undo last action",
+            "reset": (
+                "Reset all changes<br>"
+                "Hold 'Ctrl' for 'Hard Reset'"
+            ),
+            "redo": "Redo last action",
+            "flipAdd": (
+                "Flip both parent and child<br>"
+                "frames around current axis"
+            ),
+            "swap": "Swap parent and child frames",
+            "flipSub": (
+                "Flip both parent and child<br>"
+                "frames around current axis"
+            ),
+            "tuneAmountText": (
+                "Drag to rotate parent frame<br>"
+                "<b>Shift</b> to rotate faster<br>"
+                "<b>Ctrl</b> to snap"
+            ),
+            "mirror": (
+                "Apply the opposite amount<br>"
+                "to every-other selected constraint"
+            ),
+            "snap": (
+                "Snap amounts to<br>"
+                "increments of 10"
+            ),
+        }
+
+        for name, tooltip in tooltips.items():
+            obj = widgets[name]
+            obj.setToolTip(tooltip)
+
+        extras["axis"].addButton(widgets["swing"])
+        extras["axis"].addButton(widgets["twist"])
+        extras["axis"].addButton(widgets["z"])
+
+        def icon(*path):
+            return QtGui.QPixmap(_resource(*path))
+
+        tune_icon = icon("ui", "pivot_editor", "tune.png")
+        swap_icon = icon("ui", "pivot_editor", "swap.png")
+        flipsub_icon = icon("ui", "pivot_editor", "flipSub.png")
+        flipadd_icon = icon("ui", "pivot_editor", "flipAdd.png")
+        undo_icon = icon("icons", "back.png")
+        redo_icon = icon("icons", "forward.png")
+        reset_icon = icon("icons", "reset.png")
+        footer_bkg = icon("ui", "pivot_editor", "footer.png")
+
+        self.setFixedWidth(px(200))
+
+        footer_height = px(75)
+        footer_bkg = footer_bkg.scaledToHeight(
+            footer_height, QtCore.Qt.SmoothTransformation)
+        rect = footer_bkg.rect()
+        rect.setTopLeft(QtCore.QPoint(footer_bkg.width() - px(200), 0))
+        panels["footer"].setPixmap(footer_bkg.copy(rect))
+
+        widgets["tune"].setFlat(True)
+        widgets["tune"].setIcon(tune_icon)
+        widgets["tune"].setIconSize(QtCore.QSize(px(150), px(50)))
+        widgets["tune"].setFixedSize(px(160), px(60))
+
+        widgets["flipSub"].setIcon(flipsub_icon)
+        widgets["flipAdd"].setIcon(flipadd_icon)
+        widgets["swap"].setIcon(swap_icon)
+        widgets["undo"].setIcon(undo_icon)
+        widgets["redo"].setIcon(redo_icon)
+        widgets["reset"].setIcon(reset_icon)
+
+        for name in ("flipSub", "flipAdd", "swap", "undo", "redo", "reset"):
+            widgets[name].setAttribute(QtCore.Qt.WA_StyledBackground)
+            widgets[name].setIconSize(QtCore.QSize(px(32), px(32)))
+
+        widgets["tuneAmountText"].setParent(widgets["tune"])
+        widgets["tuneAmountText"].setFixedSize(widgets["tune"].size())
+        widgets["tuneAmountText"].setProperty(
+            "inactiveStyle", lambda: widgets["tuneAmountText"].setStyleSheet(
+                _scaled_stylesheet("""
+                    QLabel {
+                        color: #888;
+                        font-size: 9px;
+                    }
+                """)
+            )
+        )
+        widgets["tuneAmountText"].setProperty(
+            "activeStyle", lambda: widgets["tuneAmountText"].setStyleSheet(
+                _scaled_stylesheet("""
+                QLabel {
+                    color: #ddd;
+                    font-size: 11px;
+                    font-weight: bold;
+                }
+            """)
+            )
+        )
+        widgets["tuneAmountText"].property("inactiveStyle")()
+
+        for name, obj in widgets.items():
+            if name.endswith("Text"):
+                obj.setAlignment(QtCore.Qt.AlignCenter)
+
+        widgets["swing"].setChecked(True)
+        widgets["tune"].setCursor(QtCore.Qt.SizeHorCursor)
+        widgets["snap"].setTristate(True)
+
+        layout = QtWidgets.QVBoxLayout(panels["footer"])
+        layout.addWidget(widgets["tooltip"], QtCore.Qt.AlignLeft)
+        layout.addWidget(QtWidgets.QWidget(), 1)
+
+        center = QtCore.Qt.AlignHCenter
+        layout = QtWidgets.QGridLayout(panels["axis"])
+        layout.addWidget(widgets["swingText"], 1, 10, center)
+        layout.addWidget(widgets["twistText"], 1, 20, center)
+        layout.addWidget(widgets["zText"], 1, 30, center)
+        layout.addWidget(widgets["swing"], 2, 10, center)
+        layout.addWidget(widgets["twist"], 2, 20, center)
+        layout.addWidget(widgets["z"], 2, 30, center)
+        layout.addWidget(VerticalLine(), 2, 15, center)
+        layout.addWidget(VerticalLine(), 2, 25, center)
+        layout.addWidget(QtWidgets.QWidget(), 99, 0)
+        layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setRowStretch(99, 1)
+        layout.setHorizontalSpacing(px(7))
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(99, 1)
+
+        layout = QtWidgets.QGridLayout(panels["tune"])
+        layout.addWidget(widgets["mirror"], 0, 1)
+        layout.addWidget(widgets["tuneText"], 0, 2)
+        layout.addWidget(widgets["snap"], 0, 3)
+        layout.addWidget(widgets["tune"], 1, 1, 1, 3)
+        layout.addWidget(QtWidgets.QWidget(), 99, 0)
+        layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setRowStretch(99, 1)
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(99, 1)
+
+        layout = QtWidgets.QGridLayout(panels["flip"])
+        layout.addWidget(widgets["flipSubText"], 0, 10)
+        layout.addWidget(widgets["swapText"], 0, 20)
+        layout.addWidget(widgets["flipAddText"], 0, 30)
+        layout.addWidget(widgets["flipSub"], 1, 10)
+        layout.addWidget(widgets["swap"], 1, 20)
+        layout.addWidget(widgets["flipAdd"], 1, 30)
+        layout.addWidget(VerticalLine(), 1, 15, center)
+        layout.addWidget(VerticalLine(), 1, 25, center)
+        layout.addWidget(QtWidgets.QWidget(), 99, 0)
+        layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setHorizontalSpacing(px(8))
+        layout.setRowStretch(99, 1)
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(99, 1)
+
+        layout = QtWidgets.QGridLayout(panels["history"])
+        layout.addWidget(widgets["undoText"], 0, 10)
+        layout.addWidget(widgets["resetText"], 0, 20)
+        layout.addWidget(widgets["redoText"], 0, 30)
+        layout.addWidget(widgets["undo"], 1, 10)
+        layout.addWidget(widgets["reset"], 1, 20)
+        layout.addWidget(widgets["redo"], 1, 30)
+        layout.addWidget(VerticalLine(), 1, 15, center)
+        layout.addWidget(VerticalLine(), 1, 25, center)
+        layout.addWidget(QtWidgets.QWidget(), 99, 0)
+        layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setRowStretch(99, 1)
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(99, 1)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(panels["header"])
+        layout.addWidget(panels["axis"])
+        layout.addWidget(HorizontalLine())
+        layout.addWidget(panels["tune"])
+        layout.addWidget(HorizontalLine())
+        layout.addWidget(panels["flip"])
+        layout.addWidget(HorizontalLine())
+        layout.addWidget(panels["history"])
+        layout.addWidget(QtWidgets.QWidget(), 1)
+        layout.addWidget(panels["footer"])
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        widgets["flipAdd"].clicked.connect(self.on_flip_add)
+        widgets["flipSub"].clicked.connect(self.on_flip_sub)
+        widgets["swap"].clicked.connect(self.on_swap)
+        widgets["undo"].pressed.connect(self.on_undo_pressed)
+        widgets["reset"].pressed.connect(self.on_reset_pressed)
+        widgets["redo"].pressed.connect(self.on_redo_pressed)
+        widgets["tune"].really_pressed.connect(self.on_tune_pressed)
+        widgets["tune"].dragged.connect(self.on_tune_dragged)
+        widgets["tune"].really_released.connect(self.on_tune_released)
+
+        self._panels = panels
+        self._widgets = widgets
+        self._state = {
+            "in_progress": False,
+            "drag_buffer": 0,
+        }
+
+        timer = QtCore.QTimer(self)
+        timer.setInterval(20)
+        timer.timeout.connect(self.monitor_modifier_keys)
+        timer.timeout.connect(self.monitor_cursor)
+        timer.start()
+
+        self._modifier_timer = timer
+        self._count = 0
+
+        self.sleep()
+        self.setStyleSheet(_scaled_stylesheet(stylesheet))
+
+        PivotEditor.instance = self
+        __.widgets[self.windowTitle()] = self
+
+    def wake(self):
+        self.setEnabled(True)
+
+    def sleep(self):
+        self.setEnabled(False)
+
+    def update_selection(self, selection):
+        count = len(selection)
+
+        self._widgets["mirror"].setEnabled(count > 1 and count % 2 == 0)
+
+        if not count:
+            self.sleep()
+
+        else:
+            self.wake()
+
+        self._count = count
+        self.update_tooltip()
+
+    def update_tooltip(self):
+        count = self._count
+        count = count if count else "No"
+        self._widgets["tooltip"].setText("%s constraints selected" % count)
+
+    def current_axis(self):
+        if self._widgets["swing"].isChecked():
+            return (1, 0, 0)
+
+        elif self._widgets["twist"].isChecked():
+            return (0, 1, 0)
+
+        else:
+            return (0, 0, 1)
+
+    def on_flip_add(self):
+        self.flip_add_pressed.emit(self.current_axis())
+
+    def on_flip_sub(self):
+        self.flip_sub_pressed.emit(self.current_axis())
+
+    def on_swap(self):
+        self.swap_pressed.emit()
+
+    def on_reset_pressed(self):
+        mods = QtWidgets.QApplication.keyboardModifiers()
+        shift = mods & QtCore.Qt.ControlModifier
+
+        if shift:
+            self.hard_reset_pressed.emit()
+        else:
+            self.reset_pressed.emit()
+
+    def on_undo_pressed(self):
+        self.undo_pressed.emit()
+
+    def on_redo_pressed(self):
+        self.undo_pressed.emit()
+
+    def monitor_modifier_keys(self):
+        mods = QtWidgets.QApplication.keyboardModifiers()
+        ctrl = mods & QtCore.Qt.ControlModifier
+
+        snap_state = self._widgets["snap"].checkState()
+
+        if snap_state != QtCore.Qt.PartiallyChecked:
+            self._widgets["snap"].setCheckState(
+                QtCore.Qt.Checked if ctrl else
+                QtCore.Qt.Unchecked
+            )
+
+    def monitor_cursor(self):
+        cursor = QtGui.QCursor.pos()
+        widget = QtWidgets.QApplication.widgetAt(cursor)
+
+        self.update_tooltip()
+
+        if not widget:
+            return
+
+        if not widget.property("pivotEditor"):
+            return
+
+        tooltip = widget.toolTip()
+
+        if not tooltip:
+            return
+
+        self._widgets["tooltip"].setText(tooltip)
+
+    def on_tune_pressed(self):
+        self._state["in_progress"] = True
+        self._widgets["tuneAmountText"].setText("0.00")
+        self._widgets["tuneAmountText"].property("activeStyle")()
+
+        mirror = self._widgets["mirror"].isChecked()
+        self.tune_pressed.emit(mirror)
+        self.tune_total = 0.0
+
+    def on_tune_dragged(self, delta, _):
+        mods = QtWidgets.QApplication.keyboardModifiers()
+        shift = mods & QtCore.Qt.ShiftModifier
+        ctrl = mods & QtCore.Qt.ControlModifier
+        snap = self._widgets["snap"].checkState()
+
+        amount = delta.x() * 0.1
+
+        if shift:
+            amount *= 5
+
+        self.tune_total += amount
+        total = self.tune_total
+
+        if ctrl or snap in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
+            self._state["drag_buffer"] += amount
+
+            if abs(self._state["drag_buffer"]) > 10:
+                amount = self._state["drag_buffer"]
+                self._state["drag_buffer"] = 0
+                self.tune_dragged.emit(amount, self.current_axis())
+
+                total = int(total - (total % 10))
+                self._widgets["tuneAmountText"].setText("%.2f" % total)
+
+        else:
+            self._widgets["tuneAmountText"].setText("%.2f" % total)
+            self.tune_dragged.emit(amount, self.current_axis())
+
+    def on_tune_released(self):
+        self._state["in_progress"] = False
+        self._widgets["tuneAmountText"].setText("Drag me")
+        self._widgets["tuneAmountText"].property("inactiveStyle")()
+
+        self.tune_released.emit()
+
+    def closeEvent(self, event):
+        if self._state["in_progress"]:
+            self.finished.emit()
+
+        self.exited.emit()
+        self.instance = None
+
+        return super(PivotEditor, self).closeEvent(event)
 
 
 def view_to_pixmap(size=None):

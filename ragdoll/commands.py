@@ -1025,17 +1025,67 @@ def reorient(con):
     rotation = cmdx.Quat(cmdx.radians(-90), cmdx.Vector(0, 0, 1))
     rotation *= cmdx.Quat(cmdx.radians(90), cmdx.Vector(1, 0, 0))
 
-    parent_frame = cmdx.Tm(con["parentFrame"].asMatrix())
+    parent_frame = cmdx.Tm(con["parentFrame"].as_matrix())
     parent_frame.rotateBy(rotation, cmdx.sPreTransform)
-    parent_frame = parent_frame.asMatrix()
+    parent_frame = parent_frame.as_matrix()
+
+    child_frame = cmdx.Tm(con["childFrame"].as_matrix())
+    child_frame.rotateBy(rotation, cmdx.sPreTransform)
+    child_frame = child_frame.as_matrix()
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(con["parentFrame"], parent_frame)
+        mod.set_attr(con["childFrame"], child_frame)
+
+
+@i__.with_undo_chunk
+def rotate_constraint(con, degrees=90, axis=(1, 0, 0),
+                      frames=c.Both, _mod=None):
+    """Rotate a `constraint` by `degrees` around `axis`
+
+    Arguments:
+        con (rdConstraint): Constraint whose frames will be rotated
+        degrees (float, optional): The amount to rotate by, default is 90
+        axis (tuple, optional): Axis around which to rotate, default is X
+        frames (int, optional): Which frames to rotate, Both, Parent, Child
+
+    """
+
+    # _mod is meant to facilitate external handling of undo/redo
+    # For example, one could provide a _mod from a function, and manually
+    # commit it to the undo stack, via cmdx.commit(). Or, one could
+    # already be within a modifier context and simply pass whichever
+    # modifier is already active.
+    child_rigid = con["childRigid"].input(type="rdRigid")
+    assert child_rigid is not None, "Unconnected constraint %s" % con
+
+    rotation = cmdx.Quat(cmdx.radians(degrees), cmdx.Vector(*axis))
 
     child_frame = cmdx.Tm(con["childFrame"].asMatrix())
     child_frame.rotateBy(rotation, cmdx.sPreTransform)
     child_frame = child_frame.asMatrix()
 
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], child_frame)
+    # Use child rigid Rotate parent around child
+    parent_frame = con["parentFrame"].asMatrix()
+    parent_frame *= child_rigid["worldInverseMatrix"][0].as_matrix()
+    parent_frame = cmdx.Tm(parent_frame)
+    parent_frame.rotateBy(rotation, cmdx.sPreTransform)
+    parent_frame = parent_frame.asMatrix()
+    parent_frame *= child_rigid["worldMatrix"][0].as_matrix()
+
+    def do_it(mod):
+        if frames in (c.Both, c.Parent):
+            mod.set_attr(con["parentFrame"], parent_frame)
+
+        if frames in (c.Both, c.Child):
+            mod.set_attr(con["childFrame"], child_frame)
+
+    if _mod is not None:
+        do_it(_mod)
+
+    else:
+        with cmdx.DagModifier() as mod:
+            do_it(mod)
 
 
 def _take_ownership(mod, rdnode, node):
@@ -3896,12 +3946,6 @@ def _reset_constraint(mod, con, opts=None):
             return
         mod.reset_attr(attr)
 
-    def get_rest_matrix(rigid):
-        if rigid["kinematic"]:
-            return rigid["inputMatrix"].as_matrix()
-        else:
-            return rigid["cachedRestMatrix"].as_matrix()
-
     reset_attr(con["limitEnabled"])
     reset_attr(con["limitStrength"])
     reset_attr(con["linearLimitX"])
@@ -3914,37 +3958,65 @@ def _reset_constraint(mod, con, opts=None):
     # This is normally what you'd expect
     mod.set_attr(con["disableCollision"], True)
 
-    # Initialise parent frame
+    # Align constraint to whatever the local transformation is
+    if opts["maintainOffset"]:
+
+        # Ensure connection to childRigid is complete
+        mod.do_it()
+
+        reset_constraint_frames(con, _mod=mod)
+
+
+def reset_constraint_frames(con, _mod=None):
+    """Reset constraint frames"""
+
+    assert con and isinstance(con, cmdx.DagNode), (
+        "con was not a rdConstraint node"
+    )
+
     parent_rigid = con["parentRigid"].connection(type="rdRigid")
     child_rigid = con["childRigid"].connection(type="rdRigid")
 
-    # Align constraint to whatever the local transformation is
-    if opts["maintainOffset"] and child_rigid:
+    assert child_rigid is not None, "Unconnected constraint: %s" % con
 
-        if parent_rigid is not None:
-            parent_matrix = get_rest_matrix(parent_rigid)
+    def get_rest_matrix(rigid):
+        if rigid["kinematic"]:
+            return rigid["inputMatrix"].as_matrix()
         else:
-            # It's connected to the world
-            parent_matrix = cmdx.Matrix4()
+            return rigid["cachedRestMatrix"].as_matrix()
 
-        child_rotate_pivot = child_rigid["rotatePivot"].as_vector()
-        child_matrix = get_rest_matrix(child_rigid)
+    if parent_rigid is not None:
+        parent_matrix = get_rest_matrix(parent_rigid)
+    else:
+        # It's connected to the world
+        parent_matrix = cmdx.Matrix4()
 
-        child_frame = cmdx.Tm()
-        child_frame.translateBy(child_rotate_pivot)
-        child_frame = child_frame.as_matrix()
+    child_rotate_pivot = child_rigid["rotatePivot"].as_vector()
+    child_matrix = get_rest_matrix(child_rigid)
 
-        child_tm = cmdx.Tm(child_matrix)
-        child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+    child_frame = cmdx.Tm()
+    child_frame.translateBy(child_rotate_pivot)
+    child_frame = child_frame.as_matrix()
 
-        parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
+    child_tm = cmdx.Tm(child_matrix)
+    child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
 
+    parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
+
+    def do_it(mod):
         # Drive to where you currently are
         if con["driveMatrix"].writable:
             mod.set_attr(con["driveMatrix"], parent_frame)
 
         mod.set_attr(con["parentFrame"], parent_frame)
         mod.set_attr(con["childFrame"], child_frame)
+
+    if _mod is not None:
+        do_it(_mod)
+
+    else:
+        with cmdx.DagModifier() as mod:
+            do_it(mod)
 
 
 def _apply_scale(mat):

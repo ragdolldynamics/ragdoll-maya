@@ -425,6 +425,20 @@
         "summary": "Edit the parent and child pivots using native Maya transforms",
         "description": "Create editable transforms for the parent and child pivots for the selected constraint, or constraint under the selected transform. The parent frame represents the position and orientation the child rigid is connected, and vice versa."
     },
+    "constraintEditor": {
+        "label": "Open Pivot Editor",
+        "icon": "rotate.png",
+        "summary": "Visually manipulate constraint pivots with this UI",
+        "description": "Use this graphical user interface to manipulate constraint pivots interactively."
+    },
+
+    "resetConstraintFrames": {
+        "label": "Reset Constraint Frames",
+        "icon": "reset_constraint.png",
+        "summary": "Reset constraint frames to their defaults",
+        "description": "Set the frames of a constraint such that twist rotates a rigid along its length."
+    },
+
     "editShape": {
         "label": "Edit Shape",
         "icon": "rigid.png",

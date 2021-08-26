@@ -10,6 +10,7 @@ Highlight for this release is **new tutorials!**
 - [**ADDED** Personal UI](#personal-ui) More accurate licence information in the Ragdoll UI
 - [**ADDED** Social Media](#social-media) We're everywhere now!
 - [**ADDED** Rotate Constraint](#rotate-constraint) Faster wheels and knees with this new command
+- [**FIXED** Worldspace Trajectories](#worldspace-trajectories) Now drawn correctly, in worldspace
 - [**FIXED** Sphere Rendering](#sphere-rendering) Minor tweak to the look of the `Sphere` shape type
 
 <br>
@@ -75,7 +76,19 @@ The only question is, who's going to be the *first* to follow? 😱
 
 Tunings the pivots of constraints can be a pain, and yet all-so-common for things like knees and wheels. Now there's a faster way to get things right, with the Rotate Constraint commands!
 
+<br>
 
+### Worldspace Trajectories
+
+Trajectories used to follow the scene wherever it went. Now they'll stay put, where they belong.
+
+**Before**
+
+https://user-images.githubusercontent.com/2152766/130568171-133ad45d-7844-4332-9d4b-1fa2091558c5.mp4
+
+**After**
+
+https://user-images.githubusercontent.com/2152766/130568174-c56d1553-237b-45b6-89e9-cc4d28b23dcd.mp4
 
 <br>
 

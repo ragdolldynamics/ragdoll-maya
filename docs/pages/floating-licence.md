@@ -218,6 +218,15 @@ The procedure is the same on each platform.
 !!! hint "Coming up"
     This will be automated in a later release, for activation/deactivation through a Web UI.
 
+<!-- 
+
+Author note.
+
+1. If an online activation was done before attempting to do it offline, you might need to manually deactivate it before sending an activation response.
+2. The end-user might need to send a request from the same machine/vm as they apply the response to. Actually, probably most definitely this must be the case.
+
+-->
+
 <br>
 
 ### What happens when my server is offline?

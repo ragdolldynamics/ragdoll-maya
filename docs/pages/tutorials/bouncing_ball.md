@@ -46,7 +46,7 @@ Why should an animator *simulate* a ball bouncing, rather than just keyframe it?
 
 If you are new to animation or in a neighbouring field such as modeling or lighting, it might seem silly to consider such a trivial task for simulation. But as the more seasoned animator knows, getting the trajectory of any free-flying object right is *incredibly* hard. It can mean the difference between a believable character, and a character that looks like Earths gravity varies for the duration of a single jump, or one that appears to be on a different planet altogether.
 
-With that in mind, althoguh a single ball bouncing on a flat plane may *seem* trivial, it can be enough to challenge even the most senior of animators.
+With that in mind, although a single ball bouncing on a flat plane may *seem* trivial, it can be enough to challenge even the most senior of animators.
 
 <br>
 
@@ -364,6 +364,14 @@ https://user-images.githubusercontent.com/2152766/130351243-f1776748-f513-4b88-a
 #### Incredible Machine
 
 In the 1990s, there was a game developed called The Incredible Machine. In it, you were tasked with creating an obstacle course for a set of mechanical contraptions and physical objects in order to get some object from one place to another.
+
+> Coming soon
+
+<br>
+
+#### Cached Playback
+
+Tweak an entire trajectory on-the-fly with Maya Cached Playback. Play with gravity and witness how it affects the slopes.
 
 > Coming soon
 

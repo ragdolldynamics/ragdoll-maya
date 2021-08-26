@@ -2981,8 +2981,8 @@ class HorizontalLine(QtWidgets.QLabel):
 
 
 class PivotEditor(QtWidgets.QDialog):
-    flip_add_pressed = QtCore.Signal(tuple)  # Axis
-    flip_sub_pressed = QtCore.Signal(tuple)
+    spin_add_pressed = QtCore.Signal(tuple)  # Axis
+    spin_sub_pressed = QtCore.Signal(tuple)
     swap_pressed = QtCore.Signal()
 
     tune_pressed = QtCore.Signal(bool)  # Mirror
@@ -2991,7 +2991,7 @@ class PivotEditor(QtWidgets.QDialog):
 
     reset_pressed = QtCore.Signal()
     undo_pressed = QtCore.Signal()
-    on_redo_pressed = QtCore.Signal()
+    redo_pressed = QtCore.Signal()
     hard_reset_pressed = QtCore.Signal()
     finished = QtCore.Signal()  # Window closed, cleanup
     exited = QtCore.Signal()
@@ -3004,7 +3004,8 @@ class PivotEditor(QtWidgets.QDialog):
         self.setWindowTitle("Pivot Editor")
 
         flags = QtCore.Qt.WindowFlags()
-        flags |= QtCore.Qt.Window
+        # flags |= QtCore.Qt.Window
+        flags |= QtCore.Qt.Tool
         flags |= QtCore.Qt.WindowTitleHint
         flags |= QtCore.Qt.WindowCloseButtonHint
 
@@ -3020,21 +3021,21 @@ class PivotEditor(QtWidgets.QDialog):
 
             "axis": QtWidgets.QWidget(),
             "tune": QtWidgets.QWidget(),
-            "flip": QtWidgets.QWidget(),
+            "spin": QtWidgets.QWidget(),
             "history": QtWidgets.QWidget(),
         }
 
         widgets = {
-            "swing": QtWidgets.QRadioButton(),
-            "twist": QtWidgets.QRadioButton(),
-            "z": QtWidgets.QRadioButton(),
-            "undo": QtWidgets.QPushButton(),
-            "reset": QtWidgets.QPushButton(),
-            "redo": QtWidgets.QPushButton(),
-            "flipAdd": QtWidgets.QPushButton(),
-            "swap": QtWidgets.QPushButton(),
-            "flipSub": QtWidgets.QPushButton(),
-            "tune": DragButton(),
+            "swing": QtWidgets.QRadioButton("Swing"),
+            "twist": QtWidgets.QRadioButton("Twist"),
+            "z": QtWidgets.QRadioButton("Z"),
+            "undo": QtWidgets.QPushButton("Undo"),
+            "reset": QtWidgets.QPushButton("Reset"),
+            "redo": QtWidgets.QPushButton("Redo"),
+            "spinAdd": QtWidgets.QPushButton("Spin +"),
+            "swap": QtWidgets.QPushButton("Swap"),
+            "spinSub": QtWidgets.QPushButton("Spin -"),
+            "tune": DragButton("Drag me"),
             "mirror": QtWidgets.QCheckBox("Mirror"),
             "snap": QtWidgets.QCheckBox("Snap"),
 
@@ -3047,9 +3048,9 @@ class PivotEditor(QtWidgets.QDialog):
             "undoText": QtWidgets.QLabel("Undo"),
             "resetText": QtWidgets.QLabel("Reset"),
             "redoText": QtWidgets.QLabel("Redo"),
-            "flipAddText": QtWidgets.QLabel("Flip +"),
+            "spinAddText": QtWidgets.QLabel("Spin +"),
             "swapText": QtWidgets.QLabel("Swap"),
-            "flipSubText": QtWidgets.QLabel("Flip -"),
+            "spinSubText": QtWidgets.QLabel("Spin -"),
 
             "tooltip": QtWidgets.QLabel("No constraint selected"),
         }
@@ -3063,36 +3064,35 @@ class PivotEditor(QtWidgets.QDialog):
             obj.setProperty("pivotEditor", True)
 
         tooltips = {
-            "swing": "Swing, a.k.a. the X axis",
-            "twist": "Twist, a.k.a. the Y axis",
-            "z": "Rotate around the Y axis",
+            "swing": "Rotate around <b>Swing</b><br>a.k.a. the X axis",
+            "twist": "Rotate around <b>Twist</b><br>a.k.a. the Y axis",
+            "z": "Rotate around the <b>Y</b> axis",
             "undo": "Undo last action",
             "reset": (
-                "Reset all changes<br>"
-                "Hold 'Ctrl' for 'Hard Reset'"
+                "<b>Reset</b> all changes<br>"
+                "- <b>Ctrl</b> to 'Hard Reset'"
             ),
             "redo": "Redo last action",
-            "flipAdd": (
-                "Flip both parent and child<br>"
+            "spinAdd": (
+                "<b>Spin</b> both parent and child<br>"
                 "frames around current axis"
             ),
-            "swap": "Swap parent and child frames",
-            "flipSub": (
-                "Flip both parent and child<br>"
+            "swap": "<b>Swap</b> parent and child frames",
+            "spinSub": (
+                "<b>Spin</b> both parent and child<br>"
                 "frames around current axis"
             ),
             "tuneAmountText": (
-                "Drag to rotate parent frame<br>"
-                "<b>Shift</b> to rotate faster<br>"
-                "<b>Ctrl</b> to snap"
+                "Drag to <b>rotate parent frame</b><br>"
+                "- <b>Shift</b> to rotate faster<br>"
             ),
             "mirror": (
-                "Apply the opposite amount<br>"
+                "Apply the <b>opposite</b> amount<br>"
                 "to every-other selected constraint"
             ),
             "snap": (
-                "Snap amounts to<br>"
-                "increments of 10"
+                "Snap amount to even increments<br>"
+                "- <b>Ctrl</b> to snap"
             ),
         }
 
@@ -3107,10 +3107,10 @@ class PivotEditor(QtWidgets.QDialog):
         def icon(*path):
             return QtGui.QPixmap(_resource(*path))
 
-        tune_icon = icon("ui", "pivot_editor", "tune.png")
+        # tune_icon = icon("ui", "pivot_editor", "tune.png")
         swap_icon = icon("ui", "pivot_editor", "swap.png")
-        flipsub_icon = icon("ui", "pivot_editor", "flipSub.png")
-        flipadd_icon = icon("ui", "pivot_editor", "flipAdd.png")
+        spinsub_icon = icon("ui", "pivot_editor", "spinSub.png")
+        spinadd_icon = icon("ui", "pivot_editor", "spinAdd.png")
         undo_icon = icon("icons", "back.png")
         redo_icon = icon("icons", "forward.png")
         reset_icon = icon("icons", "reset.png")
@@ -3122,29 +3122,32 @@ class PivotEditor(QtWidgets.QDialog):
         footer_bkg = footer_bkg.scaledToHeight(
             footer_height, QtCore.Qt.SmoothTransformation)
         rect = footer_bkg.rect()
-        rect.setTopLeft(QtCore.QPoint(footer_bkg.width() - px(200), 0))
+        rect.setTopLeft(QtCore.QPoint(
+            footer_bkg.width() - self.width(), px(25)))
         panels["footer"].setPixmap(footer_bkg.copy(rect))
 
         widgets["tune"].setFlat(True)
-        widgets["tune"].setIcon(tune_icon)
-        widgets["tune"].setIconSize(QtCore.QSize(px(150), px(50)))
-        widgets["tune"].setFixedSize(px(160), px(60))
+        # widgets["tune"].setIcon(tune_icon.scaledToWidth(px(250)))
+        # widgets["tune"].setIconSize(QtCore.QSize(px(150), px(50)))
+        # widgets["tune"].setIconSize(tune_icon.size())
+        # widgets["tune"].setFixedSize(px(160), px(60))
+        widgets["tune"].setFixedHeight(px(30))
 
-        widgets["flipSub"].setIcon(flipsub_icon)
-        widgets["flipAdd"].setIcon(flipadd_icon)
+        widgets["spinSub"].setIcon(spinsub_icon)
+        widgets["spinAdd"].setIcon(spinadd_icon)
         widgets["swap"].setIcon(swap_icon)
         widgets["undo"].setIcon(undo_icon)
         widgets["redo"].setIcon(redo_icon)
         widgets["reset"].setIcon(reset_icon)
 
-        for name in ("flipSub", "flipAdd", "swap", "undo", "redo", "reset"):
+        for name in ("spinSub", "spinAdd", "swap", "undo", "redo", "reset"):
             widgets[name].setAttribute(QtCore.Qt.WA_StyledBackground)
-            widgets[name].setIconSize(QtCore.QSize(px(32), px(32)))
+            widgets[name].setIconSize(QtCore.QSize(px(16), px(16)))
 
         widgets["tuneAmountText"].setParent(widgets["tune"])
         widgets["tuneAmountText"].setFixedSize(widgets["tune"].size())
-        widgets["tuneAmountText"].setProperty(
-            "inactiveStyle", lambda: widgets["tuneAmountText"].setStyleSheet(
+        widgets["tune"].setProperty(
+            "inactiveStyle", lambda: widgets["tune"].setStyleSheet(
                 _scaled_stylesheet("""
                     QLabel {
                         color: #888;
@@ -3153,8 +3156,8 @@ class PivotEditor(QtWidgets.QDialog):
                 """)
             )
         )
-        widgets["tuneAmountText"].setProperty(
-            "activeStyle", lambda: widgets["tuneAmountText"].setStyleSheet(
+        widgets["tune"].setProperty(
+            "activeStyle", lambda: widgets["tune"].setStyleSheet(
                 _scaled_stylesheet("""
                 QLabel {
                     color: #ddd;
@@ -3164,7 +3167,7 @@ class PivotEditor(QtWidgets.QDialog):
             """)
             )
         )
-        widgets["tuneAmountText"].property("inactiveStyle")()
+        widgets["tune"].property("inactiveStyle")()
 
         for name, obj in widgets.items():
             if name.endswith("Text"):
@@ -3180,9 +3183,9 @@ class PivotEditor(QtWidgets.QDialog):
 
         center = QtCore.Qt.AlignHCenter
         layout = QtWidgets.QGridLayout(panels["axis"])
-        layout.addWidget(widgets["swingText"], 1, 10, center)
-        layout.addWidget(widgets["twistText"], 1, 20, center)
-        layout.addWidget(widgets["zText"], 1, 30, center)
+        # layout.addWidget(widgets["swingText"], 1, 10, center)
+        # layout.addWidget(widgets["twistText"], 1, 20, center)
+        # layout.addWidget(widgets["zText"], 1, 30, center)
         layout.addWidget(widgets["swing"], 2, 10, center)
         layout.addWidget(widgets["twist"], 2, 20, center)
         layout.addWidget(widgets["z"], 2, 30, center)
@@ -3190,42 +3193,54 @@ class PivotEditor(QtWidgets.QDialog):
         layout.addWidget(VerticalLine(), 2, 25, center)
         layout.addWidget(QtWidgets.QWidget(), 99, 0)
         layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setHorizontalSpacing(px(3))
+        layout.setVerticalSpacing(px(3))
         layout.setRowStretch(99, 1)
-        layout.setHorizontalSpacing(px(7))
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(99, 1)
+        layout.setContentsMargins(0, px(2), 0, 0)
 
         layout = QtWidgets.QGridLayout(panels["tune"])
-        layout.addWidget(widgets["mirror"], 0, 1)
-        layout.addWidget(widgets["tuneText"], 0, 2)
-        layout.addWidget(widgets["snap"], 0, 3)
-        layout.addWidget(widgets["tune"], 1, 1, 1, 3)
+        # layout.addWidget(widgets["swing"], 0, 1, center)
+        # layout.addWidget(widgets["twist"], 0, 2, center)
+        # layout.addWidget(widgets["z"], 0, 3, center)
+        layout.addWidget(widgets["tune"], 1, 1, 1, 4)
+        layout.addWidget(widgets["mirror"], 2, 2)
+        # layout.addWidget(widgets["tuneText"], 2, 2)
+        layout.addWidget(widgets["snap"], 2, 3)
         layout.addWidget(QtWidgets.QWidget(), 99, 0)
         layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setHorizontalSpacing(px(3))
+        layout.setVerticalSpacing(px(3))
         layout.setRowStretch(99, 1)
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(99, 1)
+        # layout.setColumnStretch(10, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(4, 1)
+        # layout.setColumnStretch(2, 1)
+        # layout.setColumnStretch(3, 1)
+        # layout.setColumnStretch(99, 1)
 
-        layout = QtWidgets.QGridLayout(panels["flip"])
-        layout.addWidget(widgets["flipSubText"], 0, 10)
-        layout.addWidget(widgets["swapText"], 0, 20)
-        layout.addWidget(widgets["flipAddText"], 0, 30)
-        layout.addWidget(widgets["flipSub"], 1, 10)
+        layout = QtWidgets.QGridLayout(panels["spin"])
+        # layout.addWidget(widgets["spinSubText"], 0, 10)
+        # layout.addWidget(widgets["swapText"], 0, 20)
+        # layout.addWidget(widgets["spinAddText"], 0, 30)
+        layout.addWidget(widgets["spinSub"], 1, 10)
         layout.addWidget(widgets["swap"], 1, 20)
-        layout.addWidget(widgets["flipAdd"], 1, 30)
+        layout.addWidget(widgets["spinAdd"], 1, 30)
         layout.addWidget(VerticalLine(), 1, 15, center)
         layout.addWidget(VerticalLine(), 1, 25, center)
         layout.addWidget(QtWidgets.QWidget(), 99, 0)
         layout.addWidget(QtWidgets.QWidget(), 99, 99)
-        layout.setHorizontalSpacing(px(8))
+        layout.setHorizontalSpacing(px(3))
+        layout.setVerticalSpacing(px(3))
         layout.setRowStretch(99, 1)
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(99, 1)
 
         layout = QtWidgets.QGridLayout(panels["history"])
-        layout.addWidget(widgets["undoText"], 0, 10)
-        layout.addWidget(widgets["resetText"], 0, 20)
-        layout.addWidget(widgets["redoText"], 0, 30)
+        # layout.addWidget(widgets["undoText"], 0, 10)
+        # layout.addWidget(widgets["resetText"], 0, 20)
+        # layout.addWidget(widgets["redoText"], 0, 30)
         layout.addWidget(widgets["undo"], 1, 10)
         layout.addWidget(widgets["reset"], 1, 20)
         layout.addWidget(widgets["redo"], 1, 30)
@@ -3233,17 +3248,20 @@ class PivotEditor(QtWidgets.QDialog):
         layout.addWidget(VerticalLine(), 1, 25, center)
         layout.addWidget(QtWidgets.QWidget(), 99, 0)
         layout.addWidget(QtWidgets.QWidget(), 99, 99)
+        layout.setHorizontalSpacing(px(3))
+        layout.setVerticalSpacing(px(3))
         layout.setRowStretch(99, 1)
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(99, 1)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(panels["header"])
+        # layout.addWidget(panels["header"])
+        layout.addWidget(HorizontalLine())
         layout.addWidget(panels["axis"])
         layout.addWidget(HorizontalLine())
         layout.addWidget(panels["tune"])
         layout.addWidget(HorizontalLine())
-        layout.addWidget(panels["flip"])
+        layout.addWidget(panels["spin"])
         layout.addWidget(HorizontalLine())
         layout.addWidget(panels["history"])
         layout.addWidget(QtWidgets.QWidget(), 1)
@@ -3251,8 +3269,8 @@ class PivotEditor(QtWidgets.QDialog):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        widgets["flipAdd"].clicked.connect(self.on_flip_add)
-        widgets["flipSub"].clicked.connect(self.on_flip_sub)
+        widgets["spinAdd"].clicked.connect(self.on_spin_add)
+        widgets["spinSub"].clicked.connect(self.on_spin_sub)
         widgets["swap"].clicked.connect(self.on_swap)
         widgets["undo"].pressed.connect(self.on_undo_pressed)
         widgets["reset"].pressed.connect(self.on_reset_pressed)
@@ -3318,11 +3336,11 @@ class PivotEditor(QtWidgets.QDialog):
         else:
             return (0, 0, 1)
 
-    def on_flip_add(self):
-        self.flip_add_pressed.emit(self.current_axis())
+    def on_spin_add(self):
+        self.spin_add_pressed.emit(self.current_axis())
 
-    def on_flip_sub(self):
-        self.flip_sub_pressed.emit(self.current_axis())
+    def on_spin_sub(self):
+        self.spin_sub_pressed.emit(self.current_axis())
 
     def on_swap(self):
         self.swap_pressed.emit()
@@ -3340,7 +3358,7 @@ class PivotEditor(QtWidgets.QDialog):
         self.undo_pressed.emit()
 
     def on_redo_pressed(self):
-        self.undo_pressed.emit()
+        self.redo_pressed.emit()
 
     def monitor_modifier_keys(self):
         mods = QtWidgets.QApplication.keyboardModifiers()
@@ -3375,8 +3393,8 @@ class PivotEditor(QtWidgets.QDialog):
 
     def on_tune_pressed(self):
         self._state["in_progress"] = True
-        self._widgets["tuneAmountText"].setText("0.00")
-        self._widgets["tuneAmountText"].property("activeStyle")()
+        self._widgets["tune"].setText("0.00")
+        self._widgets["tune"].property("activeStyle")()
 
         mirror = self._widgets["mirror"].isChecked()
         self.tune_pressed.emit(mirror)
@@ -3405,16 +3423,16 @@ class PivotEditor(QtWidgets.QDialog):
                 self.tune_dragged.emit(amount, self.current_axis())
 
                 total = int(total - (total % 10))
-                self._widgets["tuneAmountText"].setText("%.2f" % total)
+                self._widgets["tune"].setText("%.2f" % total)
 
         else:
-            self._widgets["tuneAmountText"].setText("%.2f" % total)
+            self._widgets["tune"].setText("%.2f" % total)
             self.tune_dragged.emit(amount, self.current_axis())
 
     def on_tune_released(self):
         self._state["in_progress"] = False
-        self._widgets["tuneAmountText"].setText("Drag me")
-        self._widgets["tuneAmountText"].property("inactiveStyle")()
+        self._widgets["tune"].setText("Drag me")
+        self._widgets["tune"].property("inactiveStyle")()
 
         self.tune_released.emit()
 

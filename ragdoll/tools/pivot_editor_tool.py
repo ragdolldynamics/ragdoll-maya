@@ -3,6 +3,7 @@ import logging
 from .. import commands, constants, internal
 from ..vendor import cmdx
 
+from maya import cmds
 from maya.api import OpenMaya as om
 
 log = logging.getLogger(__name__)
@@ -23,10 +24,10 @@ class PivotEditorTool(object):
 
         PivotEditorTool.instance = self
 
-    def flip_add(self, axis):
+    def spin_add(self, axis):
         self._rotate(-90, axis)
 
-    def flip_sub(self, axis):
+    def spin_sub(self, axis):
         self._rotate(90, axis)
 
     @internal.with_undo_chunk
@@ -95,13 +96,15 @@ class PivotEditorTool(object):
             self._on_selection_changed
         )
 
-        window.flip_add_pressed.connect(self.flip_add)
-        window.flip_sub_pressed.connect(self.flip_sub)
+        window.spin_add_pressed.connect(self.spin_add)
+        window.spin_sub_pressed.connect(self.spin_sub)
         window.swap_pressed.connect(self.swap)
         window.tune_pressed.connect(self.tune_started)
         window.tune_dragged.connect(self.tune)
         window.tune_released.connect(self.tune_finished)
         window.reset_pressed.connect(self.reset)
+        window.undo_pressed.connect(cmds.undo)
+        window.redo_pressed.connect(cmds.redo)
         window.hard_reset_pressed.connect(self.hard_reset)
         window.finished.connect(self.tune_finished)
         window.exited.connect(self.cleanup)

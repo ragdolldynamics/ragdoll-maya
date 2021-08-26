@@ -3962,7 +3962,8 @@ class TransformationMatrix(om.MTransformationMatrix):
             ")"
         ).format(
             t=self.translation(),
-            r=self.rotation(),
+            r="(%.2f, %.2f, %.2f)" % tuple(
+                degrees(v) for v in self.rotation()),
             s=self.scale(),
             rp=self.rotatePivot(),
             rpt=self.rotatePivotTranslation(),

@@ -181,7 +181,6 @@ The most finnicky part of pivots is editing rotations. For example, to make knee
    <source src="https://user-images.githubusercontent.com/2152766/127773089-681c5f9c-3f42-458f-b8ce-5ecedb6a1c84.mp4" type="video/mp4">
 </video>
 
-
 <br>
 
 ### Guide

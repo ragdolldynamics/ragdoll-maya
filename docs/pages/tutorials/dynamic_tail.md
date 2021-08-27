@@ -1,5 +1,7 @@
 ---
+title: Dynamic Tail
 icon: "hair2_black.png"
+order: 10
 ---
 
 <img width=49% src=https://user-images.githubusercontent.com/8775944/104851801-0c328e80-58ef-11eb-862f-8c57b9e409ed.gif> <img width=49% src=https://user-images.githubusercontent.com/8775944/105234661-7f443b00-5b63-11eb-93cf-692ccfb902aa.gif>

@@ -2,6 +2,7 @@
 title: Bouncing Ball
 description: Expore the fundamentals of Ragdoll
 icon: "physics_black.png"
+order: 20
 ---
 
 <video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401392-0d4549ab-3545-46ec-98d2-6b084b2a8465.jpg">

@@ -373,6 +373,53 @@ def documentation(markdown, page):
     return markdown
 
 
+def tutorials(markdown, page):
+    """Convert {{ tutorials }}"""
+
+    rows = []
+    tutorials = []
+
+    for root, dirs, fnames in os.walk(_page("tutorials")):
+        for fname in fnames:
+            if not fname.endswith(".md"):
+                continue
+
+            name = fname.rsplit(".", 1)[0]
+            path = os.path.join(root, fname)
+            meta = get_metadata(path)
+
+            if "hidden" in meta:
+                continue
+
+            if "title" not in meta:
+                print("%s had no title, skipping" % fname)
+                continue
+
+            try:
+                order = meta["order"]
+
+            except KeyError:
+                raise ValueError("%s was missing the `order` attribute" % path)
+            tutorials.append((order, name, meta))
+        break
+
+    for order, name, meta in sorted(tutorials, key=lambda i: i[0]):
+        rows.append(
+            "1. [{title}](/tutorials/{name})".format(
+                title=meta.get("title", ["Untitled"])[0], name=name
+            )
+        )
+
+    replace = os.linesep.join(rows)
+
+    markdown = re.sub(
+        r"\{\{(\s)*tutorials(\s)*\}\}", replace, markdown,
+        flags=re.IGNORECASE
+    )
+
+    return markdown
+
+
 def mp4(markdown, page):
     """Convert any .mp4 links into video players"""
 
@@ -476,6 +523,9 @@ class MenuGeneratorPlugin(BasePlugin):
 
         if page.title == "Documentation":
             markdown = documentation(markdown, page)
+
+        if page.title == "Tutorials":
+            markdown = tutorials(markdown, page)
 
         return markdown
 

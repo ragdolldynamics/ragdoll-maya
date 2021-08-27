@@ -32,6 +32,7 @@ nav:
     - Scene Management: documentation/scene_management.md
     # - Rewind & Resume: documentation/rewind_resume.md
     - Cycle Protection: documentation/cycle_protection.md
+    - Pivot Editor: documentation/pivot_editor.md
     - Debugging Tips: documentation/debugging_tips.md
     - Performance Tips: documentation/performance_tips.md
     # - Workflow Tips: documentation/workflow_tips.md

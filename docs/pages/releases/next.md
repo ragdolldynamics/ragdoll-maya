@@ -6,45 +6,55 @@ description: All new and important information about the basic tools and workflo
 
 Highlight for this release is **new tutorials!**
 
-- [**ADDED** Tutorials](#tutorials) 3 new tutorials covering basics up to anatomical correctness!
+- [**ADDED** Tutorials](#tutorials) Three new tutorials covering basics up to anatomical correctness!
 - [**ADDED** Pivot Editor](#pivot-editor) Faster wheels and knees with this new UI
 - [**ADDED** Personal UI](#personal-ui) More accurate licence information in the Ragdoll UI
 - [**ADDED** Social Media](#social-media) We're everywhere now!
 - [**FIXED** Worldspace Trajectories](#worldspace-trajectories) Now drawn correctly, in worldspace
 - [**FIXED** Sphere Rendering](#sphere-rendering) Minor tweak to the look of the `Sphere` shape type
+- [**FIXED** Floating Server Details](#floating-server-details) Minor bug fix for floating licence users
 
 <br>
 
-### Tutorials
+### New Tutorials
 
 Three new tutorials from basics to intermediate, with more to come!
 
-<table>
-<tr>
-    <th></th>
-    <th class="text-align-center">Bouncing Ball</th>
-    <th class="text-align-center">Rally Car</th>
-    <th class="text-align-center">Manikin</th>
-</tr>
-<tr>
-    <td></td>
-    <td class="no-padding"><video autoplay muted="muted" loop="loop" width=100%>    <source src="https://user-images.githubusercontent.com/2152766/130355602-32378019-c606-449d-9b56-02a8e57ae821.mp4" type="video/mp4"></video></td>
-    <td class="no-padding"><video autoplay muted="muted" loop="loop" width=100%>    <source src="https://user-images.githubusercontent.com/2152766/130355317-1874d90b-c366-43bc-a803-18467b9dc3bf.mp4" type="video/mp4"></video></td>
-    <td class="no-padding"><video autoplay muted="muted" loop="loop" width=100%>    <source src="https://user-images.githubusercontent.com/2152766/130355301-d1e45c50-045c-4f9e-9394-6e665ac770b2.mp4" type="video/mp4"></video></td>
-</tr>
-<tr>
-    <td></td>
-    <td>Learn the fundamentals of Ragdoll in this classic animation tutorial. </td>
-    <td>Build upon the skills learnt with a bouncing ball to combine several rigids into a car (with an engine!)</td>
-    <td>Construct a full ragdoll from any rig, even your own custom one!</td>
-</tr>
-<tr>
-    <td></td>
-    <td class="text-align-center"><a href="/tutorials/bouncing_ball"><u>Go</u></a></td>
-    <td class="text-align-center"><a href="/tutorials/rally_car"><u>Go</u></a></td>
-    <td class="text-align-center"><a href="/tutorials/manikin"><u>Go</u></a></td>
-</tr>
-</table>
+<br>
+
+#### Bouncing Ball
+
+Learn the fundamentals of Ragdoll in this classic animation tutorial. 
+
+https://user-images.githubusercontent.com/2152766/130355317-1874d90b-c366-43bc-a803-18467b9dc3bf.mp4
+
+<div class="hboxlayout">
+<a href="/tutorials/bouncing_ball" class="button blue"><b>View Tutorial</b></a>
+</div>
+
+<br>
+
+#### Rally Car
+
+Build upon the skills learnt with a bouncing ball to combine several rigids into a car (with an engine!)
+
+https://user-images.githubusercontent.com/2152766/130355317-1874d90b-c366-43bc-a803-18467b9dc3bf.mp4
+
+<div class="hboxlayout">
+<a href="/tutorials/rally_car" class="button blue"><b>View Tutorial</b></a>
+</div>
+
+<br>
+
+#### Manikin
+
+Construct a full ragdoll from any rig, even your own custom one!
+
+https://user-images.githubusercontent.com/2152766/130355301-d1e45c50-045c-4f9e-9394-6e665ac770b2.mp4
+
+<div class="hboxlayout">
+<a href="/tutorials/manikin" class="button blue"><b>View Tutorial</b></a>
+</div>
 
 <br>
 
@@ -52,7 +62,7 @@ Three new tutorials from basics to intermediate, with more to come!
 
 The Licence Window at the bottom of the Ragdoll menu now accurately displays your current licence, including Personal, Complete, Unlimited and Batch, along with the licence type - `Floating` or `Node Locked`.
 
-![image](https://user-images.githubusercontent.com/2152766/129899581-cec76be1-9761-40db-add5-bb1a7dfe688e.png)
+<img class="poster no-radius" src=https://user-images.githubusercontent.com/2152766/129899581-cec76be1-9761-40db-add5-bb1a7dfe688e.png>
 
 <br>
 
@@ -137,3 +147,11 @@ https://user-images.githubusercontent.com/2152766/129890945-77f94738-5917-4513-8
 https://user-images.githubusercontent.com/2152766/129890952-19894406-99cf-4d42-88ff-4c1777a40295.mp4
 
 <br>
+
+### Floating Server Details
+
+When you first lease a licence from your licence server, the IP and port details are stored on the local machine for quicker access the next time.
+
+However, if you then later needed to change those details, then any local machine previously leasing a licence would not be able to update their details.
+
+This has now been fixed!

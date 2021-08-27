@@ -2,6 +2,7 @@
 title: Manikin
 description: Make your own motion reference
 icon: "ragdoll_black.png"
+order: 40
 ---
 
 <video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401314-a78576ca-cc51-4976-8b37-d5482d74fc38.jpg">

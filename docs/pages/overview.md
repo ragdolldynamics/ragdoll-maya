@@ -31,7 +31,7 @@ Depending on where you are and what you are looking for, one of these should fit
 | | Search | Top-right on this website there's a field to search for any word or phrase on this domain, including node attribute reference.
 | | [UI Help](/menu#help) | Find help without leaving Maya
 | ![youtube][] | [YouTube Videos](https://www.youtube.com/playlist?list=PLL4XIS5Woc6nVsTdsvs0XLmiKmXVCdwXy) | Long-form walkthroughs and examples.
-| | Tutorials | (Coming soon) Long-form, *written* tutorials are about to appear on this website, watch this space.
+| | [Tutorials](/tutorials/) | Long-form, *written* tutorials for learning Ragdoll from the ground up.
 | | [Examples](/examples) | Download and play around with some example scenes.
 | | [Reference](/menu) | The Reference page lists all menu items, item options and node attributes of Ragdoll along with descriptions and examples.
 | | [Node Reference](/nodes) | Every node is detailed in the "Nodes" section to the right, such as [`rdRigid`](/nodes/rdRigid/).

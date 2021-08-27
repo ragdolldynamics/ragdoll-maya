@@ -21,6 +21,7 @@ blockquote p {
 
 img {
   border-radius: 5px;
+  min-width: 1px;
 }
 
 a.md-nav__link img {
@@ -43,6 +44,12 @@ a[title="Edit this page"] {
   display: inline-block;
   min-width: 50px;
   min-height: 50px;
+}
+
+.small-space {
+  display: inline-block;
+  min-width: 10px;
+  min-height: 10px; 
 }
 
 .spacing {
@@ -356,6 +363,10 @@ Tables
 .poster {
   box-shadow: 0 0 1.2rem rgba(0,0,0,.2), 0 0.2rem 0.4rem rgba(0,0,0,.2);
   border-radius: 10px;
+}
+
+.no-radius {
+  border-radius: 0;
 }
 
 .no-padding {

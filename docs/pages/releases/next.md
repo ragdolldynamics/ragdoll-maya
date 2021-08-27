@@ -7,9 +7,9 @@ description: All new and important information about the basic tools and workflo
 Highlight for this release is **new tutorials!**
 
 - [**ADDED** Tutorials](#tutorials) 3 new tutorials covering basics up to anatomical correctness!
+- [**ADDED** Pivot Editor](#pivot-editor) Faster wheels and knees with this new UI
 - [**ADDED** Personal UI](#personal-ui) More accurate licence information in the Ragdoll UI
 - [**ADDED** Social Media](#social-media) We're everywhere now!
-- [**ADDED** Rotate Constraint](#rotate-constraint) Faster wheels and knees with this new command
 - [**FIXED** Worldspace Trajectories](#worldspace-trajectories) Now drawn correctly, in worldspace
 - [**FIXED** Sphere Rendering](#sphere-rendering) Minor tweak to the look of the `Sphere` shape type
 
@@ -72,9 +72,41 @@ The only question is, who's going to be the *first* to follow? 😱
 
 <br>
 
-### Rotate Constraint
+### Pivot Editor
 
-Tunings the pivots of constraints can be a pain, and yet all-so-common for things like knees and wheels. Now there's a faster way to get things right, with the Rotate Constraint commands!
+In making he tutorials, the main bottleneck in terms of time taken was editing constraints. They are both complex and difficult to manage.
+
+This release addresses this problem with the Pivot Editor GUI.
+
+**Basics**
+
+Here's how to use it to tune a broken knee.
+
+https://user-images.githubusercontent.com/2152766/130945904-77eb1ad2-faa3-40a4-8fb1-e3afe473c7f4.mp4
+
+**Spin & Swap**
+
+One of the main reasons to want to edit constraint pivots is to align the Twist axis with the main rotation of a knee or elbow. 
+
+https://user-images.githubusercontent.com/2152766/130945895-8236baea-7b4e-433c-8884-ce32b9668581.mp4
+
+**Mirror**
+
+If the pivots face in opposite directions, orientations can be un-mirrored with the `Mirror` option.
+
+https://user-images.githubusercontent.com/2152766/130945889-dbf282ec-04fb-4780-8b63-9d7fb67f37d4.mp4
+
+**Channel Box Co-op**
+
+Tuning limits alongside pivots works well too, middle-click drag attributes from the Channel Box like you normally would, whilst dragging in the UI to compensate.
+
+https://user-images.githubusercontent.com/2152766/130945899-62abade5-b96f-4555-bae1-f94c0e351c1c.mp4
+
+**Snap**
+
+Use the snap option to make precise adjustment to specific angles.
+
+https://user-images.githubusercontent.com/2152766/130946210-40fc287f-f773-4df1-86e9-764db9e2d05f.mp4
 
 <br>
 

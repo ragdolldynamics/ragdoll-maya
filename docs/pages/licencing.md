@@ -58,8 +58,6 @@ from ragdoll import licence
 licence.activate(key)
 ```
 
-If internet is unavailable, Ragdoll enters "offline mode" and expires at a fixed date. Each new release is given an updated expiry date.
-
 <br>
 
 #### What happens when my trial expires?
@@ -72,9 +70,7 @@ Scenes will still load just fine and nothing else in your scene is affected. Onc
 
 #### Can I renew my trial licence?
 
-Possibly.
-
-Reach out to us if this is relevant to you. We're contemplating a permanently active "Apprentice Edition" with limitations on what you can do commercially, similar to SideFX Houdini Apprentice.
+Possibly. Reach out to us if this is relevant to you.
 
 <br>
 
@@ -88,9 +84,10 @@ Files made with Ragdoll Apprentice will appear scrambled with a commercial versi
 
 #### Can I use my licence on more than one machine?
 
-Yes.
+- Yes, for Ragdoll Personal
+- No, for Ragdoll Complete, Unlimited and Batch
 
-You can activate and use each Ragdoll licence on up to 3 machines. You just can't run a simulation on more than 1 machine per 1 licence at any given time, that could lead to suspension of the licence.
+With Ragdoll Personal, you can activate and use each Ragdoll licence on up to 3 machines. You just can't run a simulation on more than 1 machine per 1 licence at any given time, that could lead to suspension of the licence.
 
 <br>
 
@@ -98,7 +95,7 @@ You can activate and use each Ragdoll licence on up to 3 machines. You just can'
 
 Yes.
 
-If you've activated 3 licences, you can hit the `Deactivate` button (which is same as the `Activate` button once you've activated) and the activation will be released.
+You can hit the `Deactivate` button (which is same as the `Activate` button once you've activated) and the activation will be released.
 
 <br>
 

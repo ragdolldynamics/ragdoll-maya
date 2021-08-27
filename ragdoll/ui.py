@@ -1341,6 +1341,7 @@ def product_to_marketingname(product):
         "headless": "Batch",
         "personal": "Personal",
         "complete": "Complete",
+        "trial": "Trial",
     }[product]
 
 
@@ -1756,12 +1757,12 @@ class SplashScreen(QtWidgets.QDialog):
         if data["hasLease"]:
             icon = "mode_green.png"
             name = product_to_marketingname(data["product"])
-            tooltip = "{product} is active".format(name)
+            tooltip = "{} is active".format(name)
             self._widgets["drop"].show()
         else:
             icon = "mode_red.png"
             name = product_to_marketingname(data["product"])
-            tooltip = "{product} is inactive".format(name)
+            tooltip = "{} is inactive".format(name)
             self._widgets["lease"].show()
 
         status = _resource("ui", icon)

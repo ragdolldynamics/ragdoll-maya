@@ -31,6 +31,11 @@ global proc AErdConstraintTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse false;
+            editorTemplate -label "Minimum Translate Limit" -addControl "linearLimitMin";
+            editorTemplate -label "Maximum Translate Limit" -addControl "linearLimitMax";
+            editorTemplate -label "Minimum Rotate Limit" -addControl "angularLimitMin";
+            editorTemplate -label "Maximum Rotate Limit" -addControl "angularLimitMax";
+
             // These should show up like clickable message links,
             // but currently show up as integer values. :(
             editorTemplate -addControl "parentRigid";

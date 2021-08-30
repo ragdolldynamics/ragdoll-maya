@@ -554,3 +554,57 @@ def is_dynamic(transform, scene):
     transform["worldMatrix"].pull()
 
     return not scene["clean"].read()
+
+
+def write_graph(scheduling=False, open=True):
+    import os
+    import tempfile
+    import webbrowser
+    from maya.debug import (
+        GraphVizManager,
+        em_debug_utilities
+    )
+
+    tmp = tempfile.gettempdir()
+    dot = os.path.join(tmp, "graph.dot")
+    svg = os.path.join(tmp, "graph.svg")
+
+    def write_svg():
+        gv = GraphVizManager.GraphVizManager(False)
+        gv.convert_dot_to(
+            input_file_name=dot,
+            output_file_name=svg,
+            transitive_reduction=True
+        )
+
+        if open:
+            webbrowser.open(svg)
+
+        print("Graph written to %s" % svg)
+
+    def write_graph():
+        em_debug_utilities.dbg_graph_to_dot(
+            include_plugs=True,
+            use_selection=False,
+            selection_depth=1,
+            out_dot=dot
+        )
+
+        write_svg()
+
+    def write_scheduling_graph():
+        em_debug_utilities.dbg_scheduling_graph_to_dot(
+            include_clusters=True,
+            use_selection=False,
+            selection_depth=1,
+            out_dot=dot
+        )
+
+        write_svg()
+
+    if scheduling:
+        write_scheduling_graph()
+    else:
+        write_graph()
+
+    return svg

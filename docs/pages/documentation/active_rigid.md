@@ -207,6 +207,26 @@ Manipulate shapes with a native Maya transform, as an alternative to fiddling wi
 
 <br>
 
+### Sleep
+
+It is possible to reap additional performance benefits in situations where one or more rigids remain *immobile* for a given amount of time.
+
+The behavior can be tuned via two attributes on each `rdRigid` node.
+
+| Attribute | Description
+|:----------|:----------
+| `Wake Counter` | How many frames of inactivity before I fall asleep?
+| `Sleep Threshold` | How low of a force should be applied before I start counting?
+
+In practice, you'll likely only want to tweak the Wake Counter to some reasonable value like 5 or 20 frames of immobility. The default value of 0 means they'll never fall asleep. Like a proper insomniac or new parent.
+
+!!! hint "Caveat"
+    Currently, the wake counter is not reset when you *rewind*, so it's possible to have them fall asleep on frame 20, rewind to frame 19 and have the counter reset and keep them awake past frame 20. It's unlikely to affect you, and will be addressed in a later release.
+
+![sleep](https://user-images.githubusercontent.com/2152766/117123291-c19a2c80-ad8e-11eb-89d8-d0c1e2418ed1.gif)
+
+<br>
+
 ### API
 
 Here's how to use the Active Rigid from the Ragdoll API.

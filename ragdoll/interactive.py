@@ -607,6 +607,10 @@ def install_menu():
         item("momentOfInertia")
         item("centerOfMass")
 
+    with submenu("Markers", icon="control.png"):
+        item("assignMarkers", assign_markers, label="Assign")
+        item("captureMarkers", capture_markers, label="Capture")
+
     divider("Manipulate")
 
     with submenu("Constraints", icon="constraint.png"):
@@ -812,12 +816,19 @@ def update_menu():
         "edit": True,
     }
 
+    try:
+        menu_item_path = menu_item["path"]
+    except KeyError:
+        # The module has been abused in some way, possibly using `reload()`
+        # This shouldn't break the plug-in though.
+        return
+
     change_visibility = ui.show_menuitem if count else ui.hide_menuitem
-    change_visibility(menu_item["path"])
+    change_visibility(menu_item_path)
 
     # Help the user understand there's a problem somewhere
     cmds.menu(__.menu, edit=True, label=label)
-    cmds.menuItem(menu_item["path"], **menu_kwargs)
+    cmds.menuItem(menu_item_path, **menu_kwargs)
 
 
 """
@@ -2019,6 +2030,43 @@ def create_mimic(selection=None, **opts):
     cmds.select(str(mimic))
 
     return kSuccess
+
+
+@i__.with_undo_chunk
+def assign_markers(selection=None, **opts):
+    transforms = cmdx.selection(type=("transform", "joint"))
+    tools.assign_markers(transforms)
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def capture_markers(selection=None, **opts):
+    suits = _filtered_selection("rdSuit")
+
+    if len(suits) < 1:
+        suits = cmdx.ls(type="rdSuit")
+
+    if len(suits) < 1:
+        raise i__.UserWarning(
+            "No Suits",
+            "No suits found"
+        )
+
+    end_time = int(cmdx.animation_end_time().value)
+    total_frames = 0
+
+    with i__.Timer("bake") as duration:
+        for suit in suits:
+            start_time = int(suit["startTime"].as_time().value)
+            tools.capture_markers(suit)
+            total_frames += end_time - start_time
+
+    cmds.inViewMessage(
+        amg="Captured markers in <hl>%.2fs</hl> (%d fps)" % (
+            duration.s, total_frames / max(0.00001, duration.s)),
+        pos="topCenter",
+        fade=True
+    )
 
 
 @contextlib.contextmanager

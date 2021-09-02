@@ -3063,7 +3063,7 @@ class Plug(object):
     def asQuaternion(self, time=None):
         value = self.read(time=time)
         value = Euler(value).asQuaternion()
-        return value
+        return Quaternion(value)
 
     def asVector(self, time=None):
         assert self.isArray or self.isCompound, "'%s' not an array" % self
@@ -3710,9 +3710,14 @@ class Plug(object):
             """
 
             times, values = list(map(UiUnit(), values.keys())), values.values()
-            anim = createNode(_find_curve_type(self))
+            typ = _find_curve_type(self)
+            anim = self.input(type=typ)
+
+            if not anim:
+                anim = createNode(typ)
+                anim["output"] >> self
+
             anim.keys(times, values, interpolation=Linear)
-            anim["output"] >> self
 
     def write(self, value):
         if isinstance(value, dict) and __maya_version__ > 2015:
@@ -4358,7 +4363,7 @@ class Quaternion(om.MQuaternion):
             return Vector(other.rotateBy(self))
 
         else:
-            return super(Quaternion, self).__mul__(other)
+            return Quaternion(super(Quaternion, self).__mul__(other))
 
     def lengthSquared(self):
         return (
@@ -4376,6 +4381,9 @@ class Quaternion(om.MQuaternion):
 
     def asEulerRotation(self):
         return Euler(super(Quaternion, self).asEulerRotation())
+
+    def inverse(self):
+        return Quaternion(super(Quaternion, self).inverse())
 
     def asMatrix(self):
         return Matrix4(super(Quaternion, self).asMatrix())
@@ -4902,17 +4910,19 @@ def _python_to_mod(value, plug, mod):
     if isinstance(value, dict) and __maya_version__ > 2015:
         times, values = map(UiUnit(), value.keys()), value.values()
         curve_typ = _find_curve_type(plug)
+        anim = plug.input(type=curve_typ)
 
-        if isinstance(mod, DGModifier):
-            anim = mod.createNode(curve_typ)
+        if not anim:
+            if isinstance(mod, DGModifier):
+                anim = mod.createNode(curve_typ)
+            else:
+                # The DagModifier can't create DG nodes
+                with DGModifier() as dgmod:
+                    anim = dgmod.createNode(curve_typ)
 
-        else:
-            # The DagModifier can't create DG nodes
-            with DGModifier() as dgmod:
-                anim = dgmod.createNode(curve_typ)
+            mod.connect(anim["output"]._mplug, plug._mplug)
 
         anim.keys(times, values)
-        mod.connect(anim["output"]._mplug, plug._mplug)
 
         return True
 
@@ -6371,6 +6381,34 @@ def currentTime(time=None):
         return oma.MAnimControl.setCurrentTime(time)
 
 
+def animationStartTime(time=None):
+    if time is None:
+        return oma.MAnimControl.animationStartTime()
+    else:
+        return oma.MAnimControl.setAnimationStartTime(time)
+
+
+def animationEndTime(time=None):
+    if time is None:
+        return oma.MAnimControl.animationEndTime()
+    else:
+        return oma.MAnimControl.setAnimationEndTime(time)
+
+
+def minTime(time=None):
+    if time is None:
+        return oma.MAnimControl.minTime()
+    else:
+        return oma.MAnimControl.setMinTime(time)
+
+
+def maxTime(time=None):
+    if time is None:
+        return oma.MAnimControl.maxTime()
+    else:
+        return oma.MAnimControl.setMaxTime(time)
+
+
 class DGContext(om.MDGContext):
     """Context for evaluating the Maya DG
 
@@ -6796,6 +6834,10 @@ if ENABLE_PEP8:
     connect_attr = connectAttr
     obj_exists = objExists
     current_time = currentTime
+    min_time = minTime
+    max_time = maxTime
+    animation_start_time = animationStartTime
+    animation_end_time = animationEndTime
     up_axis = upAxis
     set_up_axis = setUpAxis
 

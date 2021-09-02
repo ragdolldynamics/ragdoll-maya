@@ -585,6 +585,29 @@
     },
 
 
+
+    "#": "---------",
+    "#": " Markers ",
+    "#": "---------",
+
+    "assignMarkers": {
+        "label": "Assign Markers",
+        "icon": "control.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "captureMarkers": {
+        "label": "Capture Markers",
+        "icon": "control.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
     "#": "---------",
     "#": " Logging ",
     "#": "---------",

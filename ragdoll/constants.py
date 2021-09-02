@@ -40,6 +40,12 @@ HingeConstraint = 3
 SocketConstraint = 4
 IgnoreContactsConstraint = 5
 
+# Constraint presets
+CustomPreset = 0
+HingePreset = 1
+SocketPreset = 2
+SuspensionPreset = 3
+
 # cacheMedia enum indices
 Off = 0
 On = 1

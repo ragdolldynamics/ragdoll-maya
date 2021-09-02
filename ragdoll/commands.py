@@ -14,7 +14,6 @@ import logging
 import functools
 
 from maya import cmds
-from maya.api import OpenMayaAnim as oma
 from .vendor import cmdx
 from . import (
     internal as i__,
@@ -59,7 +58,7 @@ def create_scene(name=None, parent=None, opts=None):
         scene = _rdscene(mod, i__.shape_name(name), parent=parent)
         mod.connect(parent["worldMatrix"][0], scene["inputMatrix"])
         mod.connect(time["outTime"], scene["currentTime"])
-        mod.set_attr(scene["startTime"], oma.MAnimControl.minTime())
+        mod.set_attr(scene["startTime"], cmdx.min_time())
         mod.set_attr(scene["gravity"], up * -982)
         mod.set_attr(scene["spaceMultiplier"], 0.1)
 
@@ -2637,6 +2636,9 @@ def delete_physics(nodes, dry_run=False):
 
         # Don't bother with underworld shapes
         if node.isA(cmdx.kShape):
+            continue
+
+        if not node.isA(cmdx.kDagNode):
             continue
 
         shapes += node.shapes()

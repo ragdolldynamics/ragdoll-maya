@@ -9,6 +9,7 @@ import functools
 
 from maya import cmds
 from .vendor import cmdx
+from . import constants
 
 log = logging.getLogger("ragdoll")
 
@@ -275,6 +276,7 @@ Geometry = struct(
     extents=cmdx.Vector(1, 1, 1),
     length=0.0,
     radius=0.0,
+    shape_type=constants.SphereShape,
     shape_offset=cmdx.Vector(),
     shape_rotation=cmdx.Vector(),
     compute_mass=lambda self: (

@@ -3544,6 +3544,107 @@ def _interpret_transform(mod, rigid, transform):
         mod.set_attr(rigid["shapeExtents"], geometry.extents)
 
 
+def _interpret_shape2(shape):
+    """Translate `shape` into rigid shape attributes
+
+    For example, if the shape is a `mesh`, we'll plug that in as
+    a mesh for convex hull generation.
+
+    """
+
+    assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
+    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
+
+    bbox = shape.bounding_box
+    extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+    center = cmdx.Vector(bbox.center)
+
+    # Account for flat shapes, like a circle
+    radius = extents.x
+    length = max(extents.y, extents.x)
+
+    # Account for X not necessarily being
+    # represented by the width of the bounding box.
+    if radius < i__.tolerance:
+        radius = length * 0.5
+
+    geo = i__.Geometry()
+    geo.shape_offset = center
+    geo.extents = extents
+    geo.radius = radius * 0.5
+    geo.length = length
+
+    gen = None
+
+    if "inMesh" in shape and shape["inMesh"].connected:
+        gen = shape["inMesh"].connection()
+
+    elif "create" in shape and shape["create"].connected:
+        gen = shape["create"].connection()
+
+    if gen:
+        # In case the shape is connected to a common
+        # generator, like polyCube or polyCylinder
+
+        if gen.type() == "polyCube":
+            geo.shape_type = c.BoxShape
+            geo.extents.x = gen["width"]
+            geo.extents.y = gen["height"]
+            geo.extents.z = gen["depth"]
+
+        elif gen.type() == "polySphere":
+            geo.shape_type = c.SphereShape
+            geo.radius = gen["radius"]
+
+        elif gen.type() == "polyCylinder" and gen["roundCap"]:
+            geo.shape_type = c.CylinderShape
+            geo.radius = gen["radius"]
+            geo.length = gen["height"]
+
+            # Align with Maya's cylinder/capsule axis
+            # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
+            geo.shape_rotation = list(map(cmdx.radians, (
+                (0, 0, 90) if gen["axisY"] else
+                (0, 90, 0) if gen["axisZ"] else
+                (0, 0, 0)
+            )))
+
+        elif gen.type() == "makeNurbCircle":
+            geo.radius = gen["radius"]
+
+        elif gen.type() == "makeNurbSphere":
+            geo.shape_type = c.SphereShape
+            geo.radius = gen["radius"]
+
+        elif gen.type() == "makeNurbCone":
+            geo.radius = gen["radius"]
+            geo.length = gen["heightRatio"]
+
+        elif gen.type() == "makeNurbCylinder":
+            geo.shape_type = c.CylinderShape
+            geo.radius = gen["radius"]
+            geo.length = gen["heightRatio"]
+            geo.shape_rotation = list(map(cmdx.radians, (
+                (0, 0, 90) if gen["axisY"] else
+                (0, 90, 0) if gen["axisZ"] else
+                (0, 0, 0)
+            )))
+
+    return geo
+
+
+def _interpret_transform2(mod, transform):
+    """Translate `transform` into rigid shape attributes
+
+    Primarily joints, that have a radius and length.
+
+    """
+
+    geo = infer_geometry(transform)
+
+    return geo
+
+
 def _to_cmds(name):
     """Convert cmdx instances to maya.cmds-compatible strings
 

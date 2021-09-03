@@ -16,6 +16,11 @@ def assign(transforms):
         transforms.pop(0)
 
     if not suit:
+        # Just pick the first one
+        suit = cmdx.ls(type="rdSuit")
+        suit = suit[0] if suit else None
+
+    if not suit:
         with cmdx.DagModifier() as mod:
             suit_parent = mod.create_node("transform", name="rSuit")
             suit = mod.create_node("rdSuit",
@@ -42,10 +47,29 @@ def assign(transforms):
             else:
                 parent_transform = None
 
-            geo = commands.infer_geometry(transform,
-                                          parent_transform, children)
+            # It's a limb
+            if parent or len(transforms) > 1:
+                geo = commands.infer_geometry(transform,
+                                              parent_transform,
+                                              children)
+                geo.shape_type = constants.CapsuleShape
 
-            dgmod.set_attr(marker["shapeType"], constants.CapsuleShape)
+            # It's a lone object
+            else:
+                shape = transform.shape(type=("mesh",
+                                              "nurbsCurve",
+                                              "nurbsSurface"))
+                if shape:
+                    geo = commands._interpret_shape2(shape)
+                else:
+                    geo = commands.infer_geometry(transform)
+                    geo.shape_type = constants.CapsuleShape
+
+            # Make the root passive
+            if len(transforms) > 1 and not parent:
+                dgmod.set_attr(marker["kinematic"], True)
+
+            dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
             dgmod.set_attr(marker["shapeLength"], geo.length)
             dgmod.set_attr(marker["shapeRadius"], geo.radius)

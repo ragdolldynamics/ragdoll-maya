@@ -57,6 +57,7 @@ from . import (
     internal as i__,
     __
 )
+from .tools import markers_tool as markers
 
 log = logging.getLogger("ragdoll")
 
@@ -608,8 +609,21 @@ def install_menu():
         item("centerOfMass")
 
     with submenu("Markers", icon="control.png"):
+        divider("Create")
+
         item("assignMarkers", assign_markers, label="Assign")
         item("captureMarkers", capture_markers, label="Capture")
+
+        divider("Edit")
+
+        item("retargetMarker", retarget_marker, label="Re-target")
+        item("reassignMarker", reassign_marker, label="Re-assign")
+        item("reparentMarker", reassign_marker, label="Re-parent")
+
+        divider("Select")
+
+        item("parentMarker", retarget_marker, label="Parent")
+        item("childMarker", retarget_marker, label="Child")
 
     divider("Manipulate")
 
@@ -1621,6 +1635,21 @@ def create_constraint(selection=None, **opts):
     constraint_type = _opt("constraintType", opts)
     selection = selection or cmdx.selection()
 
+    # Is it a marker?
+    if any(node.type() == "rdMarker" for node in selection):
+        a, b = selection
+        return markers.create_constraint(a, b, opts)
+
+    selected_markers = []
+    for node in selection:
+        marker = node["message"].output(type="rdMarker")
+        selected_markers += [marker] if marker else []
+
+    if selected_markers:
+        assert len(selected_markers) == 2, selected_markers
+        a, b = selected_markers
+        return markers.create_constraint(a, b, opts)
+
     if selection and selection[0].type() == "rdConstraint":
         # The user meant to convert/restore a constraint
         return convert_constraint(selection, **opts)
@@ -2038,10 +2067,31 @@ def assign_markers(selection=None, **opts):
     tools.assign_markers(transforms)
 
 
+@contextlib.contextmanager
+def progressbar(status="Progress.. ", max_value=100):
+
+    import maya.mel
+    progress_bar = maya.mel.eval('$tmp = $gMainProgressBar')
+
+    cmds.progressBar(progress_bar,
+                     edit=True,
+                     beginProgress=True,
+                     isInterruptable=True,
+                     status=status,
+                     maxValue=max_value)
+
+    try:
+        yield progress_bar
+
+    finally:
+        cmds.progressBar(progress_bar, edit=True, endProgress=True)
+
+
 @i__.with_undo_chunk
 @with_exception_handling
 def capture_markers(selection=None, **opts):
     suits = _filtered_selection("rdSuit")
+    transforms = _filtered_selection("transform")
 
     if len(suits) < 1:
         suits = cmdx.ls(type="rdSuit")
@@ -2055,18 +2105,36 @@ def capture_markers(selection=None, **opts):
     end_time = int(cmdx.animation_end_time().value)
     total_frames = 0
 
-    with i__.Timer("bake") as duration:
+    with i__.Timer("bake") as duration, progressbar() as p:
         for suit in suits:
             start_time = int(suit["startTime"].as_time().value)
-            tools.capture_markers(suit)
+
+            it = tools.capture_markers(suit, transforms=transforms)
+            for step, progress in it:
+                print("%s: %.1f%%" % (step, progress))
+
+                if cmds.progressBar(p, query=True, isCancelled=True):
+                    break
+
+                cmds.progressBar(p, edit=True, step=1)
+
             total_frames += end_time - start_time
 
+    stats = (duration.s, total_frames / max(0.00001, duration.s))
+    log.info("Captured markers in %.2fs (%d fps)" % stats)
     cmds.inViewMessage(
-        amg="Captured markers in <hl>%.2fs</hl> (%d fps)" % (
-            duration.s, total_frames / max(0.00001, duration.s)),
+        amg="Captured markers in <hl>%.2fs</hl> (%d fps)" % stats,
         pos="topCenter",
         fade=True
     )
+
+
+def retarget_marker(selection=None, **opts):
+    pass
+
+
+def reassign_marker(selection=None, **opts):
+    pass
 
 
 @contextlib.contextmanager

@@ -592,7 +592,7 @@
 
     "assignMarkers": {
         "label": "Assign Markers",
-        "icon": "control.png",
+        "icon": "assign.png",
         "summary": "",
         "description": "",
         "options": [
@@ -601,8 +601,53 @@
 
     "captureMarkers": {
         "label": "Capture Markers",
-        "icon": "control.png",
+        "icon": "capture2.png",
         "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "retargetMarker": {
+        "label": "Retarget Marker",
+        "icon": "retarget.png",
+        "summary": "Change where to output this marker",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "reassignMarker": {
+        "label": "Reassign Marker",
+        "icon": "reassign.png",
+        "summary": "Change the input to this marker",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "reparentMarker": {
+        "label": "Reparent Marker",
+        "icon": "reparent.png",
+        "summary": "Change the parent of this marker",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "childMarker": {
+        "label": "Child Marker",
+        "icon": "child.png",
+        "summary": "Select the first child of this marker",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "parentMarker": {
+        "label": "Parent Marker",
+        "icon": "parent.png",
+        "summary": "Select the parent of this marker",
         "description": "",
         "options": [
         ]

@@ -835,6 +835,8 @@ class Node(object):
             True
             >>> node.isA(kShape)
             False
+            >>> node.isA((kShape, kTransform))
+            True
 
         """
         if isinstance(type, om.MTypeId):
@@ -842,7 +844,7 @@ class Node(object):
         elif isinstance(type, string_types):
             return type == self._fn.typeName
         elif isinstance(type, (tuple, list)):
-            return self._fn.typeName in type or self._fn.typeId in type
+            return any(self.isA(t) for t in type)
         elif isinstance(type, int):
             return self._mobject.hasFn(type)
         cmds.warning("Unsupported argument passed to isA('%s')" % type)
@@ -5064,6 +5066,14 @@ def encode(path):  # type: (str) -> Node
     # they are also destroyed. But we don't care for
     # removed-but-not-destroyed nodes
     return Node(mobj)
+
+
+def find(path, default=None):
+    """Find node at `path` or return `default`"""
+    try:
+        return encode(path)
+    except ExistError:
+        return default
 
 
 def fromHash(code, default=None):

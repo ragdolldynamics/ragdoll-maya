@@ -4045,9 +4045,8 @@ def _reset_constraint(mod, con, opts=None):
     }, **opts)
 
     def reset_attr(attr):
-        if not attr.editable:
-            return
-        mod.reset_attr(attr)
+        if attr.editable:
+            mod.reset_attr(attr)
 
     reset_attr(con["limitEnabled"])
     reset_attr(con["limitStrength"])

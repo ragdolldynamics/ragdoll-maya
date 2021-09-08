@@ -2,20 +2,33 @@ from .. import commands, internal, constants
 from ..vendor import cmdx
 
 
-def assign(transforms, suit=None):
+def assign(transforms, suit=None, solver=None):
     assert len(transforms) > 0, "Nothing to assign to"
 
+    solver = solver or None
     suit = suit or None
     time1 = cmdx.encode("time1")
-    parent = transforms[0]["worldMatrix"][0].output(type="rdMarker")
+    parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
     objset = cmdx.find("rMarkers")
+
+    if not solver:
+        with cmdx.DagModifier() as mod:
+            solver_parent = mod.create_node("transform", name="rSolver")
+            solver = mod.create_node("rdSolver",
+                                     name="rSolverShape",
+                                     parent=solver_parent)
+
+            mod.set_attr(solver["version"], internal.version())
+            mod.set_attr(solver["startTime"], cmdx.min_time())
+            mod.connect(time1["outTime"], solver["currentTime"])
+            mod.connect(solver_parent["message"], solver["exclusiveNodes"][0])
 
     if not objset:
         with cmdx.DGModifier() as mod:
             objset = mod.create_node("objectSet", name="rMarkers")
 
-    if parent:
-        suit = parent["startState"].output(type="rdSuit")
+    if parent_marker:
+        suit = parent_marker["startState"].output(type="rdSuit")
 
         # Already got a marker
         transforms.pop(0)
@@ -32,8 +45,11 @@ def assign(transforms, suit=None):
                                    name="rSuitShape",
                                    parent=suit_parent)
 
-            mod.set_attr(suit["startTime"], cmdx.min_time())
+            index = solver["inputSuitStart"].next_available_index()
             mod.set_attr(suit["version"], internal.version())
+            mod.connect(suit["currentState"], solver["inputSuit"][index])
+            mod.connect(suit["startState"], solver["inputSuitStart"][index])
+            mod.connect(solver["startTime"], suit["startTime"])
             mod.connect(time1["outTime"], suit["currentTime"])
             mod.connect(suit_parent["message"], suit["exclusiveNodes"][0])
 
@@ -47,13 +63,13 @@ def assign(transforms, suit=None):
             except IndexError:
                 children = None
 
-            if parent:
-                parent_transform = parent["inputMatrix"].input()
+            if parent_marker:
+                parent_transform = parent_marker["inputMatrix"].input()
             else:
                 parent_transform = None
 
             # It's a limb
-            if parent or len(transforms) > 1:
+            if parent_marker or len(transforms) > 1:
                 geo = commands.infer_geometry(transform,
                                               parent_transform,
                                               children)
@@ -71,7 +87,7 @@ def assign(transforms, suit=None):
                     geo.shape_type = constants.CapsuleShape
 
             # Make the root passive
-            if len(transforms) > 1 and not parent:
+            if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["kinematic"], True)
 
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
@@ -98,10 +114,11 @@ def assign(transforms, suit=None):
 
             dgmod.set_attr(marker["constraintType"], constants.SocketPreset)
 
-            if parent is not None:
-                dgmod.connect(parent["ragdollId"], marker["parentMarker"])
+            if parent_marker is not None:
+                dgmod.connect(parent_marker["ragdollId"],
+                              marker["parentMarker"])
 
-            parent = marker
+            parent_marker = marker
 
             index = objset["dnSetMembers"].next_available_index()
             dgmod.connect(marker["message"], objset["dnSetMembers"][index])

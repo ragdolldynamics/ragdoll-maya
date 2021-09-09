@@ -2638,14 +2638,11 @@ def delete_physics(nodes, dry_run=False):
         if node.isA(cmdx.kShape):
             continue
 
-        if not node.isA(cmdx.kDagNode):
-            continue
-
-        shapes += node.shapes()
+        if node.isA(cmdx.kDagNode):
+            shapes += node.shapes()
 
     shapes = filter(None, shapes)
     shapes = list(shapes) + nodes
-    shapes = filter(lambda shape: shape.isA(cmdx.kShape), shapes)
     nodes = shapes
 
     # Filter by our types
@@ -3595,6 +3592,15 @@ def _interpret_shape2(shape):
         elif gen.type() == "polySphere":
             geo.shape_type = c.SphereShape
             geo.radius = gen["radius"]
+
+        elif gen.type() == "polyPlane":
+            geo.shape_type = c.BoxShape
+            geo.extents.x = gen["width"]
+            geo.extents.z = gen["height"]
+
+            # Align top of box with plane
+            geo.extents.y = 0.01
+            geo.shape_offset.y = -0.005
 
         elif gen.type() == "polyCylinder" and gen["roundCap"]:
             geo.shape_type = c.CylinderShape

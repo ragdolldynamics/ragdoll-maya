@@ -40,10 +40,11 @@ HingeConstraint = 3
 SocketConstraint = 4
 IgnoreContactsConstraint = 5
 
-# Constraint presets
+# Limit presets
+NoLimit = -1
 CustomPreset = 0
 HingePreset = 1
-SocketPreset = 2
+RagdollPreset = 2
 SuspensionPreset = 3
 
 # cacheMedia enum indices
@@ -112,3 +113,8 @@ AirDensity = 4
 Both = 0
 Parent = 1
 Child = 2
+
+# Markers
+NoPin = 0
+SoftPin = 1
+HardPin = 2

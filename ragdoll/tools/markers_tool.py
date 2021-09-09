@@ -2,35 +2,23 @@ from .. import commands, internal, constants
 from ..vendor import cmdx
 
 
-def assign(transforms, suit=None, solver=None):
+def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
 
-    solver = solver or None
-    suit = suit or None
     time1 = cmdx.encode("time1")
-    parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
     objset = cmdx.find("rMarkers")
-
-    if not solver:
-        with cmdx.DagModifier() as mod:
-            solver_parent = mod.create_node("transform", name="rSolver")
-            solver = mod.create_node("rdSolver",
-                                     name="rSolverShape",
-                                     parent=solver_parent)
-
-            mod.set_attr(solver["version"], internal.version())
-            mod.set_attr(solver["startTime"], cmdx.min_time())
-            mod.connect(time1["outTime"], solver["currentTime"])
-            mod.connect(solver_parent["message"], solver["exclusiveNodes"][0])
+    parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
 
     if not objset:
         with cmdx.DGModifier() as mod:
             objset = mod.create_node("objectSet", name="rMarkers")
 
+    suit = None
     if parent_marker:
         suit = parent_marker["startState"].output(type="rdSuit")
 
         # Already got a marker
+        print("Popping %s" % transforms[0])
         transforms.pop(0)
 
     if not suit:
@@ -55,7 +43,7 @@ def assign(transforms, suit=None, solver=None):
 
     with cmdx.DGModifier() as dgmod:
         for index, transform in enumerate(transforms):
-            name = internal.unique_name("rMarker_%s" % transform.name())
+            name = "rMarker_%s" % transform.name()
             marker = dgmod.create_node("rdMarker", name=name)
 
             try:
@@ -77,6 +65,8 @@ def assign(transforms, suit=None, solver=None):
 
             # It's a lone object
             else:
+                dgmod.set_attr(marker["kinematic"], True)
+
                 shape = transform.shape(type=("mesh",
                                               "nurbsCurve",
                                               "nurbsSurface"))
@@ -89,6 +79,9 @@ def assign(transforms, suit=None, solver=None):
             # Make the root passive
             if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["kinematic"], True)
+
+            dgmod.set_attr(marker["limit"], 0)
+            dgmod.set_attr(marker["drive"], 1)
 
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
@@ -111,8 +104,6 @@ def assign(transforms, suit=None, solver=None):
             dgmod.connect(marker["currentState"], suit["inputMarker"][index])
             dgmod.connect(marker["startState"],
                           suit["inputMarkerStart"][index])
-
-            dgmod.set_attr(marker["constraintType"], constants.SocketPreset)
 
             if parent_marker is not None:
                 dgmod.connect(parent_marker["ragdollId"],

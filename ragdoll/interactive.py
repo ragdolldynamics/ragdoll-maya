@@ -2063,8 +2063,41 @@ def create_mimic(selection=None, **opts):
 
 @i__.with_undo_chunk
 def assign_markers(selection=None, **opts):
+    solver = cmdx.ls(type="rdSolver")
+
+    if solver:
+        solver = solver[0]
+
+    else:
+        time1 = cmdx.encode("time1")
+        up = cmdx.up_axis()
+
+        with cmdx.DagModifier() as mod:
+            solver_parent = mod.create_node("transform", name="rSolver")
+            solver = mod.create_node("rdSolver",
+                                     name="rSolverShape",
+                                     parent=solver_parent)
+
+            mod.set_attr(solver["version"], i__.version())
+            mod.set_attr(solver["startTime"], cmdx.min_time())
+            mod.connect(time1["outTime"], solver["currentTime"])
+            mod.connect(solver_parent["message"], solver["exclusiveNodes"][0])
+
+            # Default values
+            mod.set_attr(solver["positionIterations"], 4)
+            mod.set_attr(solver["gravity"], up * -982)
+            mod.set_attr(solver["spaceMultiplier"], 0.1)
+
+            if up.y:
+                mod.set_keyable(solver["gravityY"])
+                mod.set_nice_name(solver["gravityY"], "Gravity")
+            else:
+                mod.set_keyable(solver["gravityZ"])
+                mod.set_nice_name(solver["gravityZ"], "Gravity")
+                mod.set_attr(solver_parent["rotateX"], cmdx.radians(90))
+
     transforms = cmdx.selection(type=("transform", "joint"))
-    tools.assign_markers(transforms)
+    tools.assign_markers(transforms, solver)
 
 
 @contextlib.contextmanager
@@ -2588,7 +2621,7 @@ def delete_physics(selection=None, **opts):
     delete = commands.delete_all_physics
 
     if _opt("deleteFromSelection", opts):
-        selection = selection or cmdx.selection(type="dagNode")
+        selection = selection or cmdx.selection()
 
         if selection:
             def delete():

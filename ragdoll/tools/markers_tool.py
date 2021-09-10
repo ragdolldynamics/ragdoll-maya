@@ -1,6 +1,11 @@
 from .. import commands, internal, constants
 from ..vendor import cmdx
 
+InputInherit = 0
+InputOff = 1
+InputKinematic = 2
+InputGuide = 3
+
 
 def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
@@ -56,6 +61,8 @@ def assign(transforms, solver):
             else:
                 parent_transform = None
 
+            dgmod.set_attr(marker["inputType"], InputGuide)
+
             # It's a limb
             if parent_marker or len(transforms) > 1:
                 geo = commands.infer_geometry(transform,
@@ -65,7 +72,7 @@ def assign(transforms, solver):
 
             # It's a lone object
             else:
-                dgmod.set_attr(marker["kinematic"], True)
+                dgmod.set_attr(marker["inputType"], InputKinematic)
 
                 shape = transform.shape(type=("mesh",
                                               "nurbsCurve",
@@ -78,10 +85,9 @@ def assign(transforms, solver):
 
             # Make the root passive
             if len(transforms) > 1 and not parent_marker:
-                dgmod.set_attr(marker["kinematic"], True)
+                dgmod.set_attr(marker["inputType"], InputKinematic)
 
-            dgmod.set_attr(marker["limit"], 0)
-            dgmod.set_attr(marker["drive"], 1)
+            dgmod.set_attr(marker["limitType"], 0)
 
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)

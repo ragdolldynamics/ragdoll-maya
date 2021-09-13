@@ -33,10 +33,10 @@ def assign(transforms, solver):
                                     name="rSuitShape",
                                     parent=group_parent)
 
-            index = solver["inputGroupStart"].next_available_index()
+            index = solver["inputStart"].next_available_index()
             mod.set_attr(group["version"], internal.version())
-            mod.connect(group["currentState"], solver["inputGroup"][index])
-            mod.connect(group["startState"], solver["inputGroupStart"][index])
+            mod.connect(group["startState"], solver["inputStart"][index])
+            mod.connect(group["currentState"], solver["inputCurrent"][index])
             mod.connect(solver["startTime"], group["startTime"])
             mod.connect(time1["outTime"], group["currentTime"])
             mod.connect(group_parent["message"], group["exclusiveNodes"][0])
@@ -136,7 +136,7 @@ def capture(solver,
     end_frame = int(end_time.value)
 
     # Allocate data
-    groups = [el.input() for el in solver["inputGroupStart"]]
+    groups = [el.input() for el in solver["inputStart"]]
 
     markers = []
     for group in groups:

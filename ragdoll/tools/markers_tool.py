@@ -1,5 +1,6 @@
 from .. import commands, internal, constants
 from ..vendor import cmdx
+from maya import cmds
 
 InputInherit = 0
 InputOff = 1
@@ -23,13 +24,7 @@ def assign(transforms, solver):
         suit = parent_marker["startState"].output(type="rdSuit")
 
         # Already got a marker
-        print("Popping %s" % transforms[0])
         transforms.pop(0)
-
-    if not suit:
-        # Just pick the first one
-        suit = cmdx.ls(type="rdSuit")
-        suit = suit[0] if suit else None
 
     if not suit:
         with cmdx.DagModifier() as mod:
@@ -58,6 +53,7 @@ def assign(transforms, solver):
 
             if parent_marker:
                 parent_transform = parent_marker["inputMatrix"].input()
+                dgmod.set_attr(marker["captureTranslation"], False)
             else:
                 parent_transform = None
 
@@ -124,13 +120,11 @@ def assign(transforms, solver):
             dgmod.do_it()
 
 
-def capture(suit,
+def capture(solver,
             transforms=None,
             start_time=None,
-            end_time=None,
-            _cache=None,
-            _anim=None):
-    start_time = start_time or suit["startTime"].as_time()
+            end_time=None):
+    start_time = start_time or solver["startTime"].as_time()
     end_time = end_time or cmdx.animation_end_time()
     transforms = {t: True for t in transforms} if transforms else {}
 
@@ -138,87 +132,151 @@ def capture(suit,
         end_time, start_time
     )
 
+    start_frame = int(start_time.value)
+    end_frame = int(end_time.value)
+
     # Allocate data
-    markers = [el.input() for el in suit["inputMarkerStart"]]
+    suits = [el.input() for el in solver["inputSuitStart"]]
+
+    markers = []
+    for suit in suits:
+        markers.extend([el.input() for el in suit["inputMarkerStart"]])
+
     markers = {m.shortest_path(): m for m in markers}
-    cache = _cache or {marker: {} for marker in markers}
-    anim = _anim or {marker: {
+    cache = {marker: {} for marker in markers}
+    anim = {marker: {
         "tx": {}, "ty": {}, "tz": {},
         "rx": {}, "ry": {}, "rz": {},
     } for marker in markers}
 
     def simulate():
-        total = int((end_time - start_time).value)
-        for frame in range(int(start_time.value), int(end_time.value)):
-            time = cmdx.om.MTime(frame, cmdx.TimeUiUnit())
-            suit["output"].read(time=time)
+        total = end_frame - start_frame
+        for frame in range(start_frame, end_frame):
+            with cmdx.Context(frame, cmdx.TimeUiUnit()):
+                solver["output"].read()
 
-            # Room for optimisation: We could easily query
-            # the registry directly, there's no need to go through the node.
-            # It isn't doing anything other than passing the component data
-            for marker, node in markers.items():
-                matrix = node["outputMatrix"].as_matrix()
-                cache[marker][frame] = matrix
+                for key, marker in markers.items():
+                    # Find difference between parent of rigid
+                    # and parent of destination control.
+                    #
+                    # It's possible, and quite likely, that the parent
+                    # of a control is different from the parent rigid.
+                    # For example, in a double-jointed elbow, there may
+                    # be 1 control for both joints which but 2 rigids.
+                    #
+                    # Or, a tail may have 10 segments, only 4 of which
+                    # were given markers. In that case, an uneven amount
+                    # of rigids have parents that differ from their
+                    # destination kinematic parents.
+                    #  _
+                    # |o|-------o kinematic parent
+                    #    .       \
+                    #      ` .    \
+                    # simulated.   \
+                    # parent     `..o kinematic child
+                    #               .\
+                    #                .\
+                    #       simulated .\
+                    #       child      .o
+                    #
+                    # spm = Simulated Parent Matrix
+                    # kpm = Kinematic Parent Matrix
+                    #
+                    spm = cmdx.Mat4()
+                    kpm = cmdx.Mat4()
 
-            yield ("simulating", 100 * float(frame) / total)
+                    kpt = marker["dst"][0].input().parent()
+                    spt = marker["parentMarker"].input()
+
+                    if kpt:
+                        kpm = kpt["worldMatrix"][0].as_matrix()
+
+                    if spt:
+                        spt = spt["dst"][0].input()
+                        spm = spt["worldMatrix"][0].as_matrix()
+
+                    cache[key][frame] = {
+                        "captureTranslation": marker["catr"].read(),
+                        "captureRotation": marker["caro"].read(),
+                        "outputMatrix": marker["ouma"].as_matrix(),
+                        "offsetMatrix": kpm * spm.inverse(),
+                    }
+
+                    if marker["inputType"] == InputKinematic:
+                        cache[key][frame]["captureTranslation"] = False
+                        cache[key][frame]["captureRotation"] = False
+
+                percentage = 100 * float(frame - start_frame) / total
+                yield ("simulating", percentage)
 
     def reformat():
-        rotate_orders = {
-            0: cmdx.om.MEulerRotation.kXYZ,
-            1: cmdx.om.MEulerRotation.kYZX,
-            2: cmdx.om.MEulerRotation.kZXY,
-            3: cmdx.om.MEulerRotation.kXZY,
-            4: cmdx.om.MEulerRotation.kYXZ,
-            5: cmdx.om.MEulerRotation.kZYX
-        }
-
         total = len(cache)
         current = 0
         for marker, frames in cache.items():
-            for frame, matrix in frames.items():
-                node = markers[marker]
-                transform = node["dst"][0].input()
+            marker = markers[marker]
+            dst = marker["dst"][0].input()
 
-                # No destination transforms here, carry on
-                if transform is None:
+            # No destination transforms here, carry on
+            if dst is None:
+                continue
+
+            parent_marker = marker["parentMarker"].input()
+            parent_marker = (
+                parent_marker.shortest_path()
+                if parent_marker else None
+            )
+
+            for frame, data in frames.items():
+
+                # Nothing to do.
+                if not any([data["captureTranslation"],
+                            data["captureRotation"]]):
                     continue
 
-                parent = node["parentMarker"].input()
-                parent = parent.shortest_path() if parent else None
+                offset_mtx = data["offsetMatrix"]
+                output_mtx = data["outputMatrix"]
+                spm = cmdx.Mat4()
 
-                if parent in cache:
-                    matrix = matrix * cache[parent][frame].inverse()
+                if parent_marker in cache:
+                    spm = cache[parent_marker][frame]["outputMatrix"]
 
-                tm = cmdx.Tm(matrix)
+                local_matrix = output_mtx * (offset_mtx * spm).inverse()
+
+                tm = cmdx.Tm(local_matrix)
                 t = tm.translation()
 
+                # Account for rotation offsets
                 try:
-                    rotate_axis = transform["rotateAxis"].as_quaternion()
+                    rotate_axis = dst["rotateAxis"].as_quaternion()
                 except cmdx.ExistError:
                     rotate_axis = cmdx.Quaternion()
 
                 try:
-                    joint_orient = transform["jointOrient"].as_quaternion()
+                    joint_orient = dst["jointOrient"].as_quaternion()
                 except cmdx.ExistError:
                     joint_orient = cmdx.Quaternion()
 
-                quat = (cmdx.Quaternion(rotate_axis.inverse()) *
-                        tm.rotation(asQuaternion=True) *
-                        cmdx.Quaternion(joint_orient.inverse()))
+                # Rotate Axis is an added rotation post-transform
+                # Joint Orient is an added rotation pre-transform
+                quat = (
+                    cmdx.Quaternion(rotate_axis.inverse()) *
+                    tm.rotation(asQuaternion=True) *
+                    cmdx.Quaternion(joint_orient.inverse())
+                )
 
-                rotate_order = transform["rotateOrder"].read()
-                rotate_order = rotate_orders[rotate_order]
-
+                rotate_order = dst["rotateOrder"].read()
+                rotate_order = cmdx.Euler.enumToOrder[rotate_order]
                 euler = cmdx.Euler.decompose(quat.as_matrix(), rotate_order)
 
-                anim[marker]["rx"][frame] = euler.x
-                anim[marker]["ry"][frame] = euler.y
-                anim[marker]["rz"][frame] = euler.z
-
-                if parent is None:
+                if data["captureTranslation"]:
                     anim[marker]["tx"][frame] = t.x
                     anim[marker]["ty"][frame] = t.y
                     anim[marker]["tz"][frame] = t.z
+
+                if data["captureRotation"]:
+                    anim[marker]["rx"][frame] = euler.x
+                    anim[marker]["ry"][frame] = euler.y
+                    anim[marker]["rz"][frame] = euler.z
 
             current += 1
             yield ("reformatting", 100 * float(current) / total)
@@ -241,19 +299,57 @@ def capture(suit,
                     mod.set_attr(transform[channel], values)
                     mod.do_it()
 
-                mod.set_attr(node["kinematic"], True)
+                curve = node["inputType"].input(type="animCurveTU")
+
+                if curve is not None:
+                    mod.delete(curve)
+                    mod.do_it()
+
+                if not node["inputType"].connected:
+                    mod.set_attr(node["inputType"], InputKinematic)
 
                 current += 1
                 yield ("transferring", 100 * float(current) / total)
 
+    @internal.with_undo_chunk
+    def unroll():
+        rotate_channels = []
+        channels = ("rx", "ry", "rz")
+
+        def is_keyed(plug):
+            return plug.input(type="animCurveTA") is not None
+
+        for marker, channels in anim.items():
+            marker = markers[marker]
+            dst = marker["dst"][0].input()
+
+            # No destination transforms here, carry on
+            if dst is None:
+                continue
+
+            # Can only unroll transforms with all axes keyed
+            if all(is_keyed(dst[ch]) for ch in channels):
+
+                # Should only unrol any that was actually
+                # part of our simulation output.
+                if any(anim[marker][channel] for channel in channels):
+                    rotate_channels += ["%s.rx" % dst]
+                    rotate_channels += ["%s.ry" % dst]
+                    rotate_channels += ["%s.rz" % dst]
+
+        cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
+        cmds.rotationInterpolation(rotate_channels, c="none")
+
     for status in simulate():
-        yield status
+        yield (status[0], status[1] * 0.85)
 
     for status in reformat():
-        yield status
+        yield (status[0], 85 + status[1] * 0.05)
 
     for status in transfer():
-        yield status
+        yield (status[0], 90 + status[1] * 0.10)
+
+    unroll()
 
 
 @internal.with_undo_chunk

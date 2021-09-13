@@ -616,9 +616,9 @@ def install_menu():
 
         divider("Edit")
 
-        item("retargetMarker", retarget_marker, label="Re-target")
-        item("reassignMarker", reassign_marker, label="Re-assign")
-        item("reparentMarker", reassign_marker, label="Re-parent")
+        item("reassignMarker", reassign_marker, label="Reassign")
+        item("retargetMarker", retarget_marker, label="Retarget")
+        item("reparentMarker", reassign_marker, label="Reparent")
 
         divider("Select")
 
@@ -1105,7 +1105,8 @@ def _filtered_selection(node_type, selection=None):
 
     shapes = []
     for node in selection:
-        shapes += node.shapes(node_type)
+        if node.isA(cmdx.kDagNode):
+            shapes += node.shapes(node_type)
 
     shapes = filter(None, shapes)
     shapes = list(shapes) + selection
@@ -2123,28 +2124,28 @@ def progressbar(status="Progress.. ", max_value=100):
 @i__.with_undo_chunk
 @with_exception_handling
 def capture_markers(selection=None, **opts):
-    suits = _filtered_selection("rdSuit")
+    solvers = _filtered_selection("rdSolver")
     transforms = _filtered_selection("transform")
 
-    if len(suits) < 1:
-        suits = cmdx.ls(type="rdSuit")
+    if len(solvers) < 1:
+        solvers = cmdx.ls(type="rdSolver")
 
-    if len(suits) < 1:
+    if len(solvers) < 1:
         raise i__.UserWarning(
-            "No Suits",
-            "No suits found"
+            "No Solver",
+            "No solvers found"
         )
 
     end_time = int(cmdx.animation_end_time().value)
     total_frames = 0
 
     with i__.Timer("bake") as duration, progressbar() as p:
-        for suit in suits:
-            start_time = int(suit["startTime"].as_time().value)
+        for solver in solvers:
+            start_time = int(solver["startTime"].as_time().value)
 
-            it = tools.capture_markers(suit, transforms=transforms)
+            it = tools.capture_markers(solver, transforms=transforms)
             for step, progress in it:
-                print("%s: %.1f%%" % (step, progress))
+                print("%.1f%% (%s)" % (progress, step))
 
                 if cmds.progressBar(p, query=True, isCancelled=True):
                     break

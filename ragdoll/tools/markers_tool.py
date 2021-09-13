@@ -57,8 +57,6 @@ def assign(transforms, solver):
             else:
                 parent_transform = None
 
-            dgmod.set_attr(marker["inputType"], InputGuide)
-
             # It's a limb
             if parent_marker or len(transforms) > 1:
                 geo = commands.infer_geometry(transform,

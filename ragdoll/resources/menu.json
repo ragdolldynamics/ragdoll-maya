@@ -132,7 +132,7 @@
         "label": "Hinge",
         "icon": "hinge_constraint.png",
         "summary": "A special kind of Socket Constraint",
-        "description": "A special kind of Socket Constraint where the X-axis (a.k.a. 'twist') is rotated 90 degrees. This constraint is especially well suited for hinge-like appendages, like elbows and knees."
+        "description": "A special kind of Socket Constraint where the X-axis (a.k.a. 'twist') is rotated 90 degrees. This constraint is especially well grouped for hinge-like appendages, like elbows and knees."
     },
     "socket": {
         "label": "Socket",

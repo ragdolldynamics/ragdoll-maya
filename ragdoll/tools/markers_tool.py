@@ -19,27 +19,27 @@ def assign(transforms, solver):
         with cmdx.DGModifier() as mod:
             objset = mod.create_node("objectSet", name="rMarkers")
 
-    suit = None
+    group = None
     if parent_marker:
-        suit = parent_marker["startState"].output(type="rdSuit")
+        group = parent_marker["startState"].output(type="rdGroup")
 
         # Already got a marker
         transforms.pop(0)
 
-    if not suit:
+    if not group:
         with cmdx.DagModifier() as mod:
-            suit_parent = mod.create_node("transform", name="rSuit")
-            suit = mod.create_node("rdSuit",
-                                   name="rSuitShape",
-                                   parent=suit_parent)
+            group_parent = mod.create_node("transform", name="rSuit")
+            group = mod.create_node("rdGroup",
+                                    name="rSuitShape",
+                                    parent=group_parent)
 
-            index = solver["inputSuitStart"].next_available_index()
-            mod.set_attr(suit["version"], internal.version())
-            mod.connect(suit["currentState"], solver["inputSuit"][index])
-            mod.connect(suit["startState"], solver["inputSuitStart"][index])
-            mod.connect(solver["startTime"], suit["startTime"])
-            mod.connect(time1["outTime"], suit["currentTime"])
-            mod.connect(suit_parent["message"], suit["exclusiveNodes"][0])
+            index = solver["inputGroupStart"].next_available_index()
+            mod.set_attr(group["version"], internal.version())
+            mod.connect(group["currentState"], solver["inputGroup"][index])
+            mod.connect(group["startState"], solver["inputGroupStart"][index])
+            mod.connect(solver["startTime"], group["startTime"])
+            mod.connect(time1["outTime"], group["currentTime"])
+            mod.connect(group_parent["message"], group["exclusiveNodes"][0])
 
     with cmdx.DGModifier() as dgmod:
         for index, transform in enumerate(transforms):
@@ -100,12 +100,12 @@ def assign(transforms, solver):
             dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
             dgmod.connect(time1["outTime"], marker["currentTime"])
-            dgmod.connect(suit["startTime"], marker["startTime"])
+            dgmod.connect(group["startTime"], marker["startTime"])
 
-            index = suit["inputMarker"].next_available_index()
-            dgmod.connect(marker["currentState"], suit["inputMarker"][index])
+            index = group["inputMarker"].next_available_index()
+            dgmod.connect(marker["currentState"], group["inputMarker"][index])
             dgmod.connect(marker["startState"],
-                          suit["inputMarkerStart"][index])
+                          group["inputMarkerStart"][index])
 
             if parent_marker is not None:
                 dgmod.connect(parent_marker["ragdollId"],
@@ -136,11 +136,11 @@ def capture(solver,
     end_frame = int(end_time.value)
 
     # Allocate data
-    suits = [el.input() for el in solver["inputSuitStart"]]
+    groups = [el.input() for el in solver["inputGroupStart"]]
 
     markers = []
-    for suit in suits:
-        markers.extend([el.input() for el in suit["inputMarkerStart"]])
+    for group in groups:
+        markers.extend([el.input() for el in group["inputMarkerStart"]])
 
     markers = {m.shortest_path(): m for m in markers}
     cache = {marker: {} for marker in markers}
@@ -355,8 +355,8 @@ def capture(solver,
 @internal.with_undo_chunk
 def create_constraint(parent, child, opts=None):
     assert child.type() in ("rdMarker",), child.type()
-    assert parent.type() in ("rdMarker", "rdSuit"), (
-        "%s must be a rigid or suit" % parent.type()
+    assert parent.type() in ("rdMarker", "rdGroup"), (
+        "%s must be a rigid or group" % parent.type()
     )
 
     opts = dict({
@@ -364,16 +364,16 @@ def create_constraint(parent, child, opts=None):
         "outlinerStyle": constants.RagdollStyle,
     }, **(opts or {}))
 
-    if parent.type() == "rdSuit":
-        suit = parent
+    if parent.type() == "rdGroup":
+        group = parent
     else:
-        suit = parent["startState"].output(type="rdSuit")
-        assert suit and suit.type() in ("rdSuit",), (
-            "%s was not part of a suit" % parent
+        group = parent["startState"].output(type="rdGroup")
+        assert group and group.type() in ("rdGroup",), (
+            "%s was not part of a group" % parent
         )
 
-    assert child["startState"].output(type="rdSuit") == suit, (
-        "%s and %s was not part of the same suit" % (parent, child)
+    assert child["startState"].output(type="rdGroup") == group, (
+        "%s and %s was not part of the same group" % (parent, child)
     )
 
     name = internal.unique_name(opts["name"])
@@ -392,24 +392,24 @@ def create_constraint(parent, child, opts=None):
         mod.connect(child["ragdollId"], con["childRigid"])
 
         reset_constraint(mod, con)
-        add_constraint(mod, con, suit)
+        add_constraint(mod, con, group)
 
         mod.set_attr(con["limitEnabled"], True)
 
     return con
 
 
-def add_constraint(mod, con, suit):
-    assert con["startState"].connection() != suit, (
-        "%s already a member of %s" % (con, suit)
+def add_constraint(mod, con, group):
+    assert con["startState"].connection() != group, (
+        "%s already a member of %s" % (con, group)
     )
 
     time = cmdx.encode("time1")
-    index = suit["inputConstraintStart"].next_available_index()
+    index = group["inputConstraintStart"].next_available_index()
 
     mod.set_attr(con["version"], internal.version())
-    mod.connect(con["startState"], suit["inputConstraintStart"][index])
-    mod.connect(con["currentState"], suit["inputConstraint"][index])
+    mod.connect(con["startState"], group["inputConstraintStart"][index])
+    mod.connect(con["currentState"], group["inputConstraint"][index])
     mod.connect(time["outTime"], con["currentTime"])
 
     # Ensure `next_available_index` is up-to-date

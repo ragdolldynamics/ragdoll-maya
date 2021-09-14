@@ -204,7 +204,7 @@ def capture(solver,
 
                     # Capture dynamic frames only, since kinematic
                     # values are identical to the original values.
-                    if marker["inputType"] == InputKinematic:
+                    if marker["_kinematic"]:
                         cache[key][frame]["captureTranslation"] = False
                         cache[key][frame]["captureRotation"] = False
 
@@ -213,7 +213,7 @@ def capture(solver,
                             data0 = cache[key][frame]
                             data1 = cache[key][frame - 1]
                             data1.update({
-                                key: data0[0][key] for key in (
+                                attr: data0[attr] for attr in (
                                     "captureTranslation",
                                     "captureRotation"
                                 )

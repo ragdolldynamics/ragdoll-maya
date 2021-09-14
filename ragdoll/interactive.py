@@ -613,6 +613,9 @@ def install_menu():
 
         item("assignMarkers", assign_markers, label="Assign")
         item("assignMarkers", assign_markers, label="Assign Chain")
+
+        divider("Capture")
+
         item("captureMarkers", capture_markers, label="Capture")
 
         divider("Edit")

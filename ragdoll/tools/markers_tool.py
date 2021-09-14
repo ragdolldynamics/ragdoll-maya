@@ -149,6 +149,8 @@ def capture(solver,
 
     def simulate():
         total = end_frame - start_frame
+        captured = set()
+
         for frame in range(start_frame, end_frame):
             with cmdx.Context(frame, cmdx.TimeUiUnit()):
                 solver["output"].read()
@@ -200,9 +202,24 @@ def capture(solver,
                         "offsetMatrix": kpm * spm.inverse(),
                     }
 
+                    # Capture dynamic frames only, since kinematic
+                    # values are identical to the original values.
                     if marker["inputType"] == InputKinematic:
                         cache[key][frame]["captureTranslation"] = False
                         cache[key][frame]["captureRotation"] = False
+
+                    else:
+                        if key not in captured and frame > start_frame:
+                            data0 = cache[key][frame]
+                            data1 = cache[key][frame - 1]
+                            data1.update({
+                                key: data0[0][key] for key in (
+                                    "captureTranslation",
+                                    "captureRotation"
+                                )
+                            })
+
+                            captured.add(key)
 
                 percentage = 100 * float(frame - start_frame) / total
                 yield ("simulating", percentage)
@@ -279,6 +296,30 @@ def capture(solver,
             current += 1
             yield ("reformatting", 100 * float(current) / total)
 
+    def initial_keyframe():
+        unkeyed = []
+
+        for marker, channels in anim.items():
+            node = markers[marker]
+            transform = node["dst"][0].input()
+
+            for channel in "tr":
+                for axis in "xyz":
+                    if not channels[channel + axis]:
+                        # This marker was entirely kinematic
+                        continue
+
+                    plug = transform[channel + axis]
+                    start_frame = min(channels[channel + axis].keys())
+
+                    # Not keyframed
+                    if not plug.input(type=("animCurveTL", "animCurveTA")):
+                        unkeyed.append((start_frame, plug))
+
+        for start_frame, plug in unkeyed:
+            node = plug.node().shortest_path()
+            cmds.setKeyframe(node, time=start_frame, attribute=plug.name())
+
     def transfer():
         total = len(anim)
         current = 0
@@ -287,16 +328,25 @@ def capture(solver,
                 node = markers[marker]
                 transform = node["dst"][0].input()
 
+                # Exclude anything that wasn't passed, if anything
                 if transforms and transform not in transforms:
                     continue
 
                 for channel, values in channels.items():
                     if not values:
+                        # May have been kinematic this whole time
                         continue
+
+                    if not transform[channel].input():
+                        # The first
+                        pass
 
                     mod.set_attr(transform[channel], values)
                     mod.do_it()
 
+                #
+                # Turn everything kinematic
+                #
                 curve = node["inputType"].input(type="animCurveTU")
 
                 if curve is not None:
@@ -343,6 +393,8 @@ def capture(solver,
 
     for status in reformat():
         yield (status[0], 85 + status[1] * 0.05)
+
+    initial_keyframe()
 
     for status in transfer():
         yield (status[0], 90 + status[1] * 0.10)

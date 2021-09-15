@@ -124,7 +124,7 @@ GlobalDependencyNode = om.MFnDependencyNode()
 First = 0
 Last = -1
 
-# Animation curve interpolation, from MFnAnimCurve::TangentType
+# Animation curve tangents, from MFnAnimCurve::TangentType
 Stepped = 5
 Linear = 2
 Smooth = 4
@@ -2284,7 +2284,7 @@ class AnimCurve(Node):
             super(AnimCurve, self).__init__(mobj, exists)
             self._fna = oma.MFnAnimCurve(mobj)
 
-        def key(self, time, value, interpolation=Linear):
+        def key(self, time, value, tangents=Linear):
             if isinstance(time, (float, int)):
                 time = Seconds(time)
 
@@ -2293,21 +2293,24 @@ class AnimCurve(Node):
             if index:
                 self._fna.setValue(index, value)
             else:
-                self._fna.addKey(time, value, interpolation, interpolation)
+                self._fna.addKey(time, value, tangents, tangents)
 
-        def keys(self, times, values, interpolation=Linear, change=None):
+        def keys(self, times, values, tangents=None, change=None):
             times = list(map(
                 lambda t: Seconds(t) if isinstance(t, (float, int)) else t,
                 times
             ))
+
+            if tangents is None:
+                tangents = oma.MFnAnimCurve.kTangentGlobal
 
             try:
                 keepExistingKeys = False  # Default
                 args = [
                     times,
                     values,
-                    oma.MFnAnimCurve.kTangentGlobal,
-                    oma.MFnAnimCurve.kTangentGlobal,
+                    tangents,
+                    tangents,
                     keepExistingKeys,
                 ]
 
@@ -3704,7 +3707,7 @@ class Plug(object):
             raise
 
     if __maya_version__ > 2015:
-        def animate(self, values, interpolation=None):
+        def animate(self, values, tangents=None):
             """Treat values as time:value pairs and animate this attribute
 
             Example:
@@ -3731,7 +3734,7 @@ class Plug(object):
                 anim = createNode(typ)
                 anim["output"] >> self
 
-            anim.keys(times, values, interpolation=Linear)
+            anim.keys(times, values, tangents=Linear)
 
     def write(self, value):
         if isinstance(value, dict) and __maya_version__ > 2015:
@@ -4930,6 +4933,8 @@ def _python_to_mod(value, plug, mod):
 
     """
 
+    assert isinstance(plug, Plug), "plug must be of type cmdx.Plug"
+
     if isinstance(value, dict) and __maya_version__ > 2015:
         times, values = map(UiUnit(), value.keys()), value.values()
         curve_typ = _find_curve_type(plug)
@@ -4945,8 +4950,16 @@ def _python_to_mod(value, plug, mod):
 
             mod.connect(curve["output"]._mplug, plug._mplug)
 
+        tangents = None
+
+        # Unit can also be Time and other unrelated types
+        if plug._unit in (Stepped, Linear, Smooth):
+            tangents = plug._unit
+
         change = oma.MAnimCurveChange()
-        curve.keys(times, values, change=change)
+        curve.keys(times, values,
+                   tangents=tangents,
+                   change=change)
 
         return change
 

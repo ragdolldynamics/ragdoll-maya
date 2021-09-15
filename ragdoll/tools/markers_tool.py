@@ -20,26 +20,30 @@ def assign(transforms, solver):
             objset = mod.create_node("objectSet", name="rMarkers")
 
     group = None
-    if parent_marker:
-        group = parent_marker["startState"].output(type="rdGroup")
 
-        # Already got a marker
-        transforms.pop(0)
+    if len(transforms) > 1:
+        if parent_marker:
+            group = parent_marker["startState"].output(type="rdGroup")
 
-    if not group:
-        with cmdx.DagModifier() as mod:
-            group_parent = mod.create_node("transform", name="rSuit")
-            group = mod.create_node("rdGroup",
-                                    name="rSuitShape",
-                                    parent=group_parent)
+            # Already got a marker
+            transforms.pop(0)
 
-            index = solver["inputStart"].next_available_index()
-            mod.set_attr(group["version"], internal.version())
-            mod.connect(group["startState"], solver["inputStart"][index])
-            mod.connect(group["currentState"], solver["inputCurrent"][index])
-            mod.connect(solver["startTime"], group["startTime"])
-            mod.connect(time1["outTime"], group["currentTime"])
-            mod.connect(group_parent["message"], group["exclusiveNodes"][0])
+        if not group:
+            with cmdx.DagModifier() as mod:
+                group_parent = mod.create_node("transform", name="rSuit")
+                group = mod.create_node("rdGroup",
+                                        name="rSuitShape",
+                                        parent=group_parent)
+
+                index = solver["inputStart"].next_available_index()
+                mod.set_attr(group["version"], internal.version())
+                mod.connect(group["startState"], solver["inputStart"][index])
+                mod.connect(solver["startTime"], group["startTime"])
+                mod.connect(time1["outTime"], group["currentTime"])
+                mod.connect(group["currentState"],
+                            solver["inputCurrent"][index])
+                mod.connect(group_parent["message"],
+                            group["exclusiveNodes"][0])
 
     with cmdx.DGModifier() as dgmod:
         for index, transform in enumerate(transforms):
@@ -62,6 +66,7 @@ def assign(transforms, solver):
                 geo = commands.infer_geometry(transform,
                                               parent_transform,
                                               children)
+
                 geo.shape_type = constants.CapsuleShape
 
             # It's a lone object
@@ -98,18 +103,30 @@ def assign(transforms, solver):
             dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
             dgmod.connect(time1["outTime"], marker["currentTime"])
-            dgmod.connect(group["startTime"], marker["startTime"])
 
-            index = group["inputMarker"].next_available_index()
-            dgmod.connect(marker["currentState"], group["inputMarker"][index])
-            dgmod.connect(marker["startState"],
-                          group["inputMarkerStart"][index])
+            if group:
+                dgmod.connect(group["startTime"], marker["startTime"])
 
-            if parent_marker is not None:
-                dgmod.connect(parent_marker["ragdollId"],
-                              marker["parentMarker"])
+                index = group["inputMarker"].next_available_index()
+                dgmod.connect(marker["currentState"],
+                              group["inputMarker"][index])
+                dgmod.connect(marker["startState"],
+                              group["inputMarkerStart"][index])
 
-            parent_marker = marker
+                if parent_marker is not None:
+                    dgmod.connect(parent_marker["ragdollId"],
+                                  marker["parentMarker"])
+
+                parent_marker = marker
+
+            else:
+                dgmod.connect(solver["startTime"], marker["startTime"])
+                index = solver["inputStart"].next_available_index()
+
+                dgmod.connect(marker["startState"],
+                              solver["inputStart"][index])
+                dgmod.connect(marker["currentState"],
+                              solver["inputCurrent"][index])
 
             index = objset["dnSetMembers"].next_available_index()
             dgmod.connect(marker["message"], objset["dnSetMembers"][index])
@@ -122,6 +139,15 @@ def capture(solver,
             transforms=None,
             start_time=None,
             end_time=None):
+    """Transfer simulation into animation
+
+    Arguments:
+        transforms (list, optional): Transfer to these transforms only
+        start_time (MTime, optional): Capture from this time
+        end_time (MTime, optional): Capture to this time
+
+    """
+
     start_time = start_time or solver["startTime"].as_time()
     end_time = end_time or cmdx.animation_end_time()
     transforms = {t: True for t in transforms} if transforms else {}
@@ -148,6 +174,8 @@ def capture(solver,
     } for marker in markers}
 
     def simulate():
+        """Evaluate every frame between `start_frame` and `end_frame`"""
+
         total = end_frame - start_frame
         captured = set()
 
@@ -225,6 +253,8 @@ def capture(solver,
                 yield ("simulating", percentage)
 
     def reformat():
+        """Translate simulated data into `animCurveTL` format"""
+
         total = len(cache)
         current = 0
         for marker, frames in cache.items():
@@ -322,6 +352,7 @@ def capture(solver,
 
     def transfer():
         total = len(anim)
+        groups = set()
         current = 0
         with cmdx.DagModifier() as mod:
             for marker, channels in anim.items():
@@ -353,11 +384,29 @@ def capture(solver,
                     mod.delete(curve)
                     mod.do_it()
 
+                # It may have a different kind of connection, like a proxy
                 if not node["inputType"].connected:
-                    mod.set_attr(node["inputType"], InputKinematic)
+                    mod.set_attr(node["inputType"], InputInherit)
+
+                group = node["startState"].output(type="rdGroup")
+                groups.add(group) if group else None
 
                 current += 1
                 yield ("transferring", 100 * float(current) / total)
+
+            #
+            # Turn all groups to kinematic
+            #
+            for group in groups:
+                curve = group["inputType"].input(type="animCurveTU")
+
+                if curve is not None:
+                    mod.delete(curve)
+                    mod.do_it()
+
+                # It may have a different kind of connection, like a proxy
+                if not group["inputType"].connected:
+                    mod.set_attr(group["inputType"], InputKinematic)
 
     @internal.with_undo_chunk
     def unroll():
@@ -411,7 +460,6 @@ def create_constraint(parent, child, opts=None):
 
     opts = dict({
         "name": "rConstraint",
-        "outlinerStyle": constants.RagdollStyle,
     }, **(opts or {}))
 
     if parent.type() == "rdGroup":

@@ -2413,9 +2413,38 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
     geometry = geometry or i__.Geometry()
 
-    if children is None:
-        # Better this than nothing
-        children = list(root.children(type=root.type()))
+    # Better this than nothing
+    if not children:
+        children = []
+
+        # Consider cases where children have no distance from their parent,
+        # common in offset groups without an actual offset in them. Such as
+        # for organisational purposes
+        #
+        # | hip_grp
+        # .-o offset_grp      <-- Some translation
+        #   .-o hip_ctl
+        #     .-o hip_loc   <-- Identity matrix
+        #
+        root_pos = root.translation(cmdx.sWorld)
+        for child in root.children(type=root.type()):
+            child_pos = child.translation(cmdx.sWorld)
+
+            if not root_pos.is_equivalent(child_pos):
+                children += [child]
+
+    # Special case of a tip without children
+    #
+    # o        How long are you?
+    #  \              |
+    #   \             v
+    #    o------------o
+    #
+    # In this case, reuse however long the parent is
+    if not children and parent:
+        children = [root]
+        root = parent
+        parent = None
 
     def position_incl_pivot(node, debug=False):
         """Return the final position of the translate and rotate handles

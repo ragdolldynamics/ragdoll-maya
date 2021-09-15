@@ -611,8 +611,8 @@ def install_menu():
     with submenu("Markers", icon="control.png"):
         divider("Create")
 
-        item("assignMarkers", assign_markers, label="Assign")
-        item("assignMarkers", assign_markers, label="Assign Chain")
+        item("assignMarkers", assign_marker, label="Assign")
+        item("assignMarkers", assign_markers, label="Assign Group")
 
         divider("Capture")
 
@@ -2066,8 +2066,7 @@ def create_mimic(selection=None, **opts):
     return kSuccess
 
 
-@i__.with_undo_chunk
-def assign_markers(selection=None, **opts):
+def _find_current_solver():
     solver = cmdx.ls(type="rdSolver")
 
     if solver:
@@ -2101,8 +2100,23 @@ def assign_markers(selection=None, **opts):
                 mod.set_nice_name(solver["gravityZ"], "Gravity")
                 mod.set_attr(solver_parent["rotateX"], cmdx.radians(90))
 
+    return solver
+
+
+@i__.with_undo_chunk
+def assign_markers(selection=None, **opts):
+    solver = _find_current_solver()
+
     transforms = cmdx.selection(type=("transform", "joint"))
     tools.assign_markers(transforms, solver)
+
+
+@i__.with_undo_chunk
+def assign_marker(selection=None, **opts):
+    solver = _find_current_solver()
+
+    for transform in cmdx.selection(type=("transform", "joint")):
+        tools.assign_markers([transform], solver)
 
 
 @contextlib.contextmanager

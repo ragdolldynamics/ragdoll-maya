@@ -590,18 +590,27 @@
     "#": " Markers ",
     "#": "---------",
 
-    "assignMarkers": {
-        "label": "Assign Markers",
-        "icon": "assign.png",
+    "assignMarker": {
+        "label": "Assign Marker",
+        "icon": "marker.png",
         "summary": "",
         "description": "",
         "options": [
         ]
     },
 
-    "captureMarkers": {
-        "label": "Capture Markers",
-        "icon": "capture2.png",
+    "assignGroup": {
+        "label": "Assign Group",
+        "icon": "marker_group.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "recordMarkers": {
+        "label": "Record Markers",
+        "icon": "record.png",
         "summary": "",
         "description": "",
         "options": [
@@ -644,19 +653,19 @@
         ]
     },
 
-    "childMarker": {
-        "label": "Child Marker",
-        "icon": "child.png",
-        "summary": "Select the first child of this marker",
+    "parentMarker": {
+        "label": "Parent Marker",
+        "icon": "parent.png",
+        "summary": "Select the parent of this marker",
         "description": "",
         "options": [
         ]
     },
 
-    "parentMarker": {
-        "label": "Parent Marker",
-        "icon": "parent.png",
-        "summary": "Select the parent of this marker",
+    "childMarker": {
+        "label": "Child Markers",
+        "icon": "children.png",
+        "summary": "Select the first child of this marker",
         "description": "",
         "options": [
         ]

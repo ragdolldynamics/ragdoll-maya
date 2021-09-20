@@ -611,12 +611,12 @@ def install_menu():
     with submenu("Markers", icon="control.png"):
         divider("Create")
 
-        item("assignMarkers", assign_marker, label="Assign")
-        item("assignMarkers", assign_markers, label="Assign Group")
+        item("assignMarker", assign_marker, label="Assign Single")
+        item("assignGroup", assign_group, label="Assign Group")
 
-        divider("Capture")
+        divider("Record")
 
-        item("captureMarkers", capture_markers, label="Capture")
+        item("recordMarkers", record_markers, label="Record")
 
         divider("Edit")
 
@@ -627,8 +627,8 @@ def install_menu():
 
         divider("Select")
 
-        item("parentMarker", retarget_marker, label="Parent")
-        item("childMarker", retarget_marker, label="Child")
+        item("parentMarker", select_parent_marker, label="Parent")
+        item("childMarker", select_child_marker, label="Child")
 
     divider("Manipulate")
 
@@ -2105,7 +2105,7 @@ def _find_current_solver():
 
 
 @i__.with_undo_chunk
-def assign_markers(selection=None, **opts):
+def assign_group(selection=None, **opts):
     solver = _find_current_solver()
 
     transforms = cmdx.selection(type=("transform", "joint"))
@@ -2142,7 +2142,7 @@ def progressbar(status="Progress.. ", max_value=100):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def capture_markers(selection=None, **opts):
+def record_markers(selection=None, **opts):
     solvers = _filtered_selection("rdSolver")
     transforms = _filtered_selection("transform")
 
@@ -2162,10 +2162,11 @@ def capture_markers(selection=None, **opts):
         for solver in solvers:
             start_time = int(solver["startTime"].as_time().value)
 
-            it = tools.capture_markers(solver, transforms=transforms)
+            it = tools.record_markers(solver, transforms=transforms)
             for step, progress in it:
-                print("%.1f%% (%s)" % (progress, step))
+                print("%.1f%% (%s)" % (progress, step.title()))
 
+                # Allow the user to cancel with the ESC key
                 if cmds.progressBar(p, query=True, isCancelled=True):
                     break
 
@@ -2174,9 +2175,9 @@ def capture_markers(selection=None, **opts):
             total_frames += end_time - start_time
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
-    log.info("Captured markers in %.2fs (%d fps)" % stats)
+    log.info("Recorded markers in %.2fs (%d fps)" % stats)
     cmds.inViewMessage(
-        amg="Captured markers in <hl>%.2fs</hl> (%d fps)" % stats,
+        amg="Recorded markers in <hl>%.2fs</hl> (%d fps)" % stats,
         pos="topCenter",
         fade=True
     )
@@ -2217,6 +2218,54 @@ def reassign_marker(selection=None, **opts):
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["src"])
         mod.connect(b["worldMatrix"][0], a["inputMatrix"])
+
+
+def select_parent_marker(selection=None, **opts):
+    parent = None
+
+    for marker in selection or cmdx.sl():
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+
+        if not marker or marker.type() != "rdMarker":
+            continue
+
+        marker = marker["parentMarker"].input(type="rdMarker")
+        if not marker:
+            continue
+
+        parent = marker["sourceTransform"].input()
+
+    if not parent:
+        cmds.warning("No parent found")
+    else:
+        cmds.select(parent.shortest_path())
+
+
+def select_child_marker(selection=None, **opts):
+    children = list()
+
+    for marker in selection or cmdx.sl():
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+
+        if not marker or marker.type() != "rdMarker":
+            continue
+
+        plug = marker["ragdollId"].output(type="rdMarker", plug=True)
+        if not plug or plug.name() != "parentMarker":
+            continue
+
+        child = plug.node()
+        child = child["sourceTransform"].input()
+
+        if child:
+            children += [child]
+
+    if not children:
+        cmds.warning("No markers selected")
+    else:
+        cmds.select([c.shortest_path() for c in children])
 
 
 @contextlib.contextmanager

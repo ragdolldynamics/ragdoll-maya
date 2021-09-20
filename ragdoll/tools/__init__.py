@@ -13,4 +13,4 @@ create_character = character_tool.create
 create_dynamic_control = chain_tool.create
 show_pivot_editor = pivot_editor_tool.show
 assign_markers = markers_tool.assign
-capture_markers = markers_tool.capture
+record_markers = markers_tool.record

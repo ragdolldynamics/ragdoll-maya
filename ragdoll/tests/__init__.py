@@ -36,10 +36,10 @@ def _step(node, steps=1):
     else:
         raise TypeError("How do I evaluate %s?" % node)
 
-    for step in range(steps):
-        ct = cmds.currentTime(query=True)
+    ct = int(cmds.currentTime(query=True))
+    for time in range(ct, ct + steps + 1):
+        cmds.currentTime(time, update=True)
         node[attr].read()  # Trigger evaluation
-        cmds.currentTime(ct + 1, update=True)
 
 
 def _rewind(scene):

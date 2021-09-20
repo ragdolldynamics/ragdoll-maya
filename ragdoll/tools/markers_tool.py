@@ -58,7 +58,7 @@ def assign(transforms, solver, lollipop=False):
 
             if parent_marker:
                 parent_transform = parent_marker["inputMatrix"].input()
-                dgmod.set_attr(marker["captureTranslation"], False)
+                dgmod.set_attr(marker["recordTranslation"], False)
             else:
                 parent_transform = None
 
@@ -194,17 +194,19 @@ def assign(transforms, solver, lollipop=False):
                 mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
-def capture(solver,
-            transforms=None,
-            start_time=None,
-            end_time=None,
-            maintain_offset=True):
+def record(solver,
+           transforms=None,
+           start_time=None,
+           end_time=None,
+           maintain_offset=True):
     """Transfer simulation into animation
 
     Arguments:
         transforms (list, optional): Transfer to these transforms only
         start_time (MTime, optional): Capture from this time
         end_time (MTime, optional): Capture to this time
+        maintain_offset (bool, optional): Maintain whatever offset is
+            between the source and destination transforms, default True
 
     """
 
@@ -273,16 +275,16 @@ def capture(solver,
                     kinematic = marker["_kinematic"].read()
 
                     cache[key][frame] = {
-                        "captureTranslation": marker["catr"].read(),
-                        "captureRotation": marker["caro"].read(),
+                        "recordTranslation": marker["catr"].read(),
+                        "recordRotation": marker["caro"].read(),
                         "outputMatrix": marker["ouma"].as_matrix(),
                         "kinematic": kinematic,
                         "transition": False,
                     }
 
                     if kinematic:
-                        cache[key][frame]["captureTranslation"] = False
-                        cache[key][frame]["captureRotation"] = False
+                        cache[key][frame]["recordTranslation"] = False
+                        cache[key][frame]["recordRotation"] = False
 
             percentage = 100 * float(frame - start_frame) / total
             yield ("simulating", percentage)
@@ -313,16 +315,16 @@ def capture(solver,
                 # Transition <- kinematic
                 if was_kinematic and not is_kinematic:
                     cache[key][frame - 1].update({
-                        "captureTranslation": True,
-                        "captureRotation": True,
+                        "recordTranslation": True,
+                        "recordRotation": True,
                         "transition": True,
                     })
 
                 # Transition -> kinematic
                 if not was_kinematic and is_kinematic:
                     cache[key][frame + 1].update({
-                        "captureTranslation": True,
-                        "captureRotation": True,
+                        "recordTranslation": True,
+                        "recordRotation": True,
                         "transition": True,
                     })
 
@@ -465,8 +467,8 @@ def capture(solver,
                     output_matrix = data["outputMatrix"]
 
                     # Nothing to do.
-                    if not any([data["captureTranslation"],
-                                data["captureRotation"]]):
+                    if not any([data["recordTranslation"],
+                                data["recordRotation"]]):
                         continue
 
                     for el in marker["dst"]:
@@ -498,12 +500,12 @@ def capture(solver,
                                              value=value,
                                              dirtyDG=True)
 
-                        if data["captureTranslation"]:
+                        if data["recordTranslation"]:
                             set_keyframe("tx", t.x)
                             set_keyframe("ty", t.y)
                             set_keyframe("tz", t.z)
 
-                        if data["captureRotation"]:
+                        if data["recordRotation"]:
                             set_keyframe("rx", cmdx.degrees(r.x))
                             set_keyframe("ry", cmdx.degrees(r.y))
                             set_keyframe("rz", cmdx.degrees(r.z))

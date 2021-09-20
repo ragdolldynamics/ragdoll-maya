@@ -3602,6 +3602,9 @@ def _interpret_shape2(shape):
 
     gen = None
 
+    # Guilty until proven innocent
+    geo.shape_type = c.MeshShape
+
     if "inMesh" in shape and shape["inMesh"].connected:
         gen = shape["inMesh"].connection()
 

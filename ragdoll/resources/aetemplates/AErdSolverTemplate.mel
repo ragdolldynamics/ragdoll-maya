@@ -8,8 +8,8 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "substeps";
             editorTemplate -addControl "positionIterations";
-            editorTemplate -addControl "gravity";
             editorTemplate -addControl "airDensity";
+            editorTemplate -addControl "gravity";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Scale" -collapse true;
@@ -31,17 +31,8 @@ global proc AErdSolverTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
-            editorTemplate -label "Mode" -addControl "drawMode";
-            editorTemplate -label "Shapes" -addControl "drawShapes";
-            editorTemplate -label "Constraints" -addControl "drawConstraints";
-            editorTemplate -label "Drives" -addControl "drawDrives";
-            editorTemplate -label "Velocities" -addControl "drawVelocities";
-            editorTemplate -label "Trajectories" -addControl "drawTrajectories";
-            editorTemplate -label "Center of Masses" -addControl "drawComs";
-            editorTemplate -label "Velocity Scale" -addControl "drawVelocityScale";
-            editorTemplate -label "Limit Scale" -addControl "drawLimitScale";
-            editorTemplate -label "Line Width" -addControl "drawLineWidth";
-            editorTemplate -addControl "visibility";
+            editorTemplate -addControl "displayType";
+            editorTemplate -addControl "drawDepth";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

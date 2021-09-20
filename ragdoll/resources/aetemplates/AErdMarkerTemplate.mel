@@ -1,0 +1,79 @@
+//AErdMarkerTemplate.mel
+
+global proc AErdMarkerTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "Input" -collapse false;
+            editorTemplate -label "Type" -addControl "inputType";
+            editorTemplate -addControl "driveStiffness";
+            editorTemplate -addControl "driveDampingRatio";
+            editorTemplate -addControl "driveBalance";
+            editorTemplate -addControl "driveLinearAngularBalance";
+            editorTemplate -beginLayout "Input Matrix" -collapse true;
+                editorTemplate -addControl "inputMatrix";
+            editorTemplate -endLayout;
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Capture" -collapse true;
+            editorTemplate -addControl "captureTranslation";
+            editorTemplate -addControl "captureRotation";
+            editorTemplate -addControl "sourceTransform";
+            editorTemplate -addControl "destinationTransform";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Default Shape" -collapse false;
+            editorTemplate -addControl "collide";
+            editorTemplate -addControl "shapeType";
+            editorTemplate -addControl "mass";
+            editorTemplate -addControl "friction";
+            editorTemplate -addControl "restitution";
+            editorTemplate -addControl "thickness";
+            editorTemplate -addControl "shapeExtents";
+            editorTemplate -addControl "shapeLength";
+            editorTemplate -addControl "shapeRadius";
+            editorTemplate -addControl "shapeOffset";
+            editorTemplate -addControl "shapeRotation";
+            editorTemplate -addControl "angularMass";
+            editorTemplate -addControl "centerOfMass";
+            editorTemplate -addControl "shapeVertexLimit";
+            editorTemplate -addControl "color";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Default Limit" -collapse false;
+            editorTemplate -addControl "limitType";
+            editorTemplate -addControl "limitAxis";
+            editorTemplate -addControl "limitOffset";
+            editorTemplate -addControl "limitRange";
+            editorTemplate -addControl "limitStiffness";
+            editorTemplate -addControl "limitDampingRatio";
+            editorTemplate -beginLayout "Frames" -collapse true;
+                editorTemplate -addControl "parentFrame";
+                editorTemplate -addControl "childFrame";
+            editorTemplate -endLayout;
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Advanced" -collapse true;
+            editorTemplate -addControl "enableCCD";
+            editorTemplate -addControl "airDensity";
+            editorTemplate -addControl "linearDamping";
+            editorTemplate -addControl "angularDamping";
+            editorTemplate -addControl "positionIterations";
+            editorTemplate -addControl "velocityIterations";
+            editorTemplate -addControl "sleepThreshold";
+            editorTemplate -addControl "wakeCounter";
+            editorTemplate -addControl "maxContactImpulse";
+            editorTemplate -addControl "maxDepenetrationVelocity";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+    editorTemplate -suppress "frozen";
+}

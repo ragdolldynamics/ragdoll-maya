@@ -8,7 +8,7 @@ InputKinematic = 2
 InputGuide = 3
 
 
-def assign(transforms, solver, lollipop=True):
+def assign(transforms, solver, lollipop=False):
     assert len(transforms) > 0, "Nothing to assign to"
 
     time1 = cmdx.encode("time1")
@@ -79,6 +79,15 @@ def assign(transforms, solver, lollipop=True):
                                               "nurbsSurface"))
                 if shape:
                     geo = commands._interpret_shape2(shape)
+
+                    if shape.type() == "mesh":
+                        dgmod.connect(shape["outMesh"],
+                                      marker["inputGeometry"])
+
+                    if shape.type() in ("nurbsCurve", "nurbsSurface"):
+                        dgmod.connect(shape["local"],
+                                      marker["inputGeometry"])
+
                 else:
                     geo = commands.infer_geometry(transform)
                     geo.shape_type = constants.CapsuleShape

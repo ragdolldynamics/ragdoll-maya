@@ -4082,29 +4082,41 @@ class TransformationMatrix(om.MTransformationMatrix):
         space = space or sTransform
         return Vector(super(TransformationMatrix, self).rotatePivot(space))
 
+    def rotatePivotTranslation(self, space=sTransform):
+        """This method does not typically support optional arguments"""
+        return Vector(
+            super(TransformationMatrix, self).rotatePivotTranslation(space)
+        )
+
+    def scalePivot(self, space=sTransform):
+        """This method does not typically support optional arguments"""
+        return Vector(super(TransformationMatrix, self).scalePivot(space))
+
+    def scalePivotTranslation(self, space=sTransform):
+        """This method does not typically support optional arguments"""
+        return Vector(
+            super(TransformationMatrix, self).scalePivotTranslation(space)
+        )
+
     def setRotatePivot(self, pivot, space=sTransform, balance=False):
         pivot = pivot if isinstance(pivot, om.MPoint) else om.MPoint(pivot)
         return super(TransformationMatrix, self).setRotatePivot(
             pivot, space, balance)
 
-    def rotatePivotTranslation(self, space=None):
-        """This method does not typically support optional arguments"""
-        space = space or sTransform
-        return Vector(
-            super(TransformationMatrix, self).rotatePivotTranslation(space)
-        )
+    def setRotatePivotTranslation(self, pivot, space=sTransform):
+        pivot = pivot if isinstance(pivot, om.MVector) else om.MVector(pivot)
+        return super(TransformationMatrix, self).setRotatePivotTranslation(
+            pivot, space)
 
-    def scalePivot(self, space=None):
-        """This method does not typically support optional arguments"""
-        space = space or sTransform
-        return Vector(super(TransformationMatrix, self).scalePivot(space))
+    def setScalePivot(self, pivot, space=sTransform, balance=False):
+        pivot = pivot if isinstance(pivot, om.MPoint) else om.MPoint(pivot)
+        return super(TransformationMatrix, self).setScalePivot(
+            pivot, space, balance)
 
-    def scalePivotTranslation(self, space=None):
-        """This method does not typically support optional arguments"""
-        space = space or sTransform
-        return Vector(
-            super(TransformationMatrix, self).scalePivotTranslation(space)
-        )
+    def setScalePivotTranslation(self, pivot, space=sTransform):
+        pivot = pivot if isinstance(pivot, om.MVector) else om.MVector(pivot)
+        return super(TransformationMatrix, self).setScalePivotTranslation(
+            pivot, space)
 
     def translation(self, space=None):  # type: (om.MSpace) -> om.MVector
         """This method does not typically support optional arguments"""
@@ -5673,10 +5685,17 @@ class _BaseModifier(object):
 
         """
 
+        mobj = node
+        if isinstance(node, Node):
+            mobj = node._mobject
+
+        assert isinstance(mobj, om.MObject), (
+            "%s was not an MObject" % node
+        )
+
         # This is one picky s-o-b, let's not give it the
         # satisfaction of ever erroring out on us. Performance
         # is of less importance here, as deletion is not time-cricital
-        mobj = node._mobject
         if not _isalive(mobj):
             raise ExistError
 
@@ -5688,10 +5707,13 @@ class _BaseModifier(object):
 
     @record_history
     def renameNode(self, node, name):
-        if SAFE_MODE:
-            assert _isalive(node._mobject)
+        if isinstance(node, Node):
+            node = node._mobject
 
-        return self._modifier.renameNode(node._mobject, name)
+        if SAFE_MODE:
+            assert _isalive(node)
+
+        return self._modifier.renameNode(node, name)
 
     @record_history
     def addAttr(self, node, attr):
@@ -6439,6 +6461,9 @@ def currentTime(time=None):
     if time is None:
         return oma.MAnimControl.currentTime()
     else:
+        if not isinstance(time, om.MTime):
+            time = om.MTime(time, TimeUiUnit())
+
         return oma.MAnimControl.setCurrentTime(time)
 
 
@@ -6446,6 +6471,9 @@ def animationStartTime(time=None):
     if time is None:
         return oma.MAnimControl.animationStartTime()
     else:
+        if not isinstance(time, om.MTime):
+            time = om.MTime(time, TimeUiUnit())
+
         return oma.MAnimControl.setAnimationStartTime(time)
 
 
@@ -6467,6 +6495,9 @@ def maxTime(time=None):
     if time is None:
         return oma.MAnimControl.maxTime()
     else:
+        if not isinstance(time, om.MTime):
+            time = om.MTime(time, TimeUiUnit())
+
         return oma.MAnimControl.setMaxTime(time)
 
 
@@ -6948,7 +6979,7 @@ def editCurve(parent, points, degree=1, form=kOpen):
     return encode(shapeFn.fullPathName())
 
 
-def curve(parent, points, degree=1, form=kOpen):
+def curve(parent, points, degree=1, form=kOpen, mod=None):
     """Create a NURBS curve from a series of points
 
     Arguments:
@@ -6956,6 +6987,7 @@ def curve(parent, points, degree=1, form=kOpen):
         points (list): One tuples per point, with 3 floats each
         degree (int, optional): Degree of curve, 1 is linear
         form (int, optional): Whether to close the curve or not
+        mod (DagModifier, optional): Use this for undo/redo
 
     Example:
         >>> parent = createNode("transform")
@@ -6972,47 +7004,40 @@ def curve(parent, points, degree=1, form=kOpen):
         "parent must be of type cmdx.DagNode"
     )
 
-    # Superimpose end knots
-    # startpoints = [points[0]] * (degree - 1)
-    # endpoints = [points[-1]] * (degree - 1)
-    # points = startpoints + list(points) + endpoints
-
     degree = min(3, max(1, degree))
-
-    cvs = om1.MPointArray()
-    knots = om1.MDoubleArray()
-    curveFn = om1.MFnNurbsCurve()
 
     knotcount = len(points) - degree + 2 * degree - 1
 
-    for point in points:
-        cvs.append(om1.MPoint(*point))
+    cvs = [p for p in points]
+    knots = [i for i in range(knotcount)]
 
-    for index in range(knotcount):
-        knots.append(index)
-
+    curveFn = om.MFnNurbsCurve()
     mobj = curveFn.create(cvs,
                           knots,
                           degree,
                           form,
                           False,
                           True,
-                          _encode1(parent.path()))
+                          parent.object())
 
-    mod = om1.MDagModifier()
-    mod.renameNode(mobj, parent.name(namespace=True) + "Shape")
-    mod.doIt()
+    if mod:
+        mod.rename(mobj, parent.name(namespace=True) + "Shape")
 
-    def undo():
-        mod.deleteNode(mobj)
+    else:
+        mod = DagModifier()
+        mod.rename(mobj, parent.name(namespace=True) + "Shape")
         mod.doIt()
 
-    def redo():
-        mod.undoIt()
+        def undo():
+            mod.deleteNode(mobj)
+            mod.doIt()
 
-    commit(undo, redo)
+        def redo():
+            mod.undoIt()
 
-    shapeFn = om1.MFnDagNode(mobj)
+        commit(undo, redo)
+
+    shapeFn = om.MFnDagNode(mobj)
     return encode(shapeFn.fullPathName())
 
 
@@ -7021,12 +7046,12 @@ def lookAt(origin, center, up=None):
 
     See glm::glc::matrix_transform::lookAt for reference
 
-             + Z (up)
-            /
-           /
+                + Z (up)
+               /
+              /
     (origin) o------ + X (center)
-           \
-            + Y
+              \
+               + Y
 
     Arguments:
         origin (Vector): Starting position
@@ -7061,10 +7086,10 @@ def lookAt(origin, center, up=None):
     z = x ^ y
 
     return MatrixType((
-        x[0], x[1], x[2], 0,
-        y[0], y[1], y[2], 0,
-        z[0], z[1], z[2], 0,
-        0, 0, 0, 0
+        x[0], x[1], x[2], 1,
+        y[0], y[1], y[2], 1,
+        z[0], z[1], z[2], 1,
+        0, 0, 0, 1
     ))
 
 

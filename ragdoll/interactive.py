@@ -623,6 +623,7 @@ def install_menu():
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, label="Retarget")
         item("reparentMarker", reassign_marker, label="Reparent")
+        item("untargetMarker", untarget_marker, label="Untarget")
 
         divider("Select")
 
@@ -2182,11 +2183,40 @@ def capture_markers(selection=None, **opts):
 
 
 def retarget_marker(selection=None, **opts):
-    pass
+    a, b = cmdx.sl()
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    assert a and a.type() == "rdMarker", "No marker found"
+    assert b and b.isA(cmdx.kDagNode), "%s not a DAG node" % b
+
+    with cmdx.DGModifier() as mod:
+        mod.connect(b["message"], a["dst"][0])
+
+
+def untarget_marker(selection=None, **opts):
+    with cmdx.DGModifier() as mod:
+        for marker in cmdx.sl():
+            if marker.isA(cmdx.kDagNode):
+                marker = marker["message"].output(type="rdMarker")
+            assert marker and marker.type() == "rdMarker", "No marker found"
+
+            mod.disconnect(marker["dst"][0])
 
 
 def reassign_marker(selection=None, **opts):
-    pass
+    a, b = cmdx.sl()
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    assert a and a.type() == "rdMarker", "No marker found"
+    assert b and b.isA(cmdx.kDagNode), "%s not a DAG node" % b
+
+    with cmdx.DGModifier() as mod:
+        mod.connect(b["message"], a["src"])
+        mod.connect(b["worldMatrix"][0], a["inputMatrix"])
 
 
 @contextlib.contextmanager

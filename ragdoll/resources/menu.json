@@ -617,6 +617,15 @@
         ]
     },
 
+    "untargetMarker": {
+        "label": "Untarget Marker",
+        "icon": "retarget.png",
+        "summary": "Remove all output from this marker",
+        "description": "",
+        "options": [
+        ]
+    },
+
     "reassignMarker": {
         "label": "Reassign Marker",
         "icon": "reassign.png",

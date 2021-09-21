@@ -2080,6 +2080,10 @@ def _make_ground(solver):
         mod.set_attr(marker["inputType"], c.InputKinematic)
         mod.set_attr(marker["displayType"], c.DisplayWire)
 
+        mod.set_attr(plane["overrideEnabled"], True)
+        mod.set_attr(plane["overrideShading"], False)
+        mod.set_attr(plane["overrideColor"], 16)
+
         commands._take_ownership(mod, solver, plane)
         commands._take_ownership(mod, solver, gen)
 
@@ -2101,7 +2105,7 @@ def _fit_ground(ground, markers):
         mod.set_attr(transform["scale"], scale * 2 + 1)
 
 
-def _find_current_solver(make_ground=True):
+def _find_current_solver(create_ground=True):
     solver = cmdx.ls(type="rdSolver")
     ground = None
 
@@ -2136,33 +2140,42 @@ def _find_current_solver(make_ground=True):
                 mod.set_nice_name(solver["gravityZ"], "Gravity")
                 mod.set_attr(solver_parent["rotateX"], cmdx.radians(90))
 
-    if make_ground:
+    if create_ground:
         ground = _make_ground(solver)
 
     return solver, ground
 
 
+def _add_to_objset(markers):
+    objset = cmdx.find("rMarkers")
+
+    if not objset:
+        with cmdx.DGModifier() as mod:
+            objset = mod.create_node("objectSet", name="rMarkers")
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            index = objset["dnSetMembers"].next_available_index()
+            mod.connect(marker["message"], objset["dnSetMembers"][index])
+            mod.do_it()
+
+
 @i__.with_undo_chunk
 def assign_group(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
+    opts = dict({
+        "createGround": _opt("createGround", opts),
+        "createObjectSet": _opt("freezeEvaluationHierarchy", opts),
+    }, **(opts or {}))
 
-    solver, ground = _find_current_solver(make_ground=opts.get("makeGround"))
+    solver, ground = _find_current_solver(opts.get("createGround"))
     markers = tools.assign_markers(selection, solver)
 
     if ground:
         _fit_ground(ground, markers)
 
     if opts.get("createObjectSet"):
-        objset = cmdx.find("rMarkers")
-
-        if not objset:
-            with cmdx.DGModifier() as mod:
-                objset = mod.create_node("objectSet", name="rMarkers")
-
-        with cmdx.DGModifier() as mod:
-            for marker in markers:
-                index = objset["dnSetMembers"].next_available_index()
-                mod.connect(marker["message"], objset["dnSetMembers"][index])
+        _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
 
@@ -2170,7 +2183,12 @@ def assign_group(selection=None, **opts):
 @i__.with_undo_chunk
 def assign_marker(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
-    solver, ground = _find_current_solver(make_ground=opts.get("makeGround"))
+    opts = dict({
+        "createGround": _opt("createGround", opts),
+        "createObjectSet": _opt("freezeEvaluationHierarchy", opts),
+    }, **(opts or {}))
+
+    solver, ground = _find_current_solver(opts.get("createGround"))
     markers = []
 
     for transform in selection:
@@ -2178,6 +2196,9 @@ def assign_marker(selection=None, **opts):
 
     if ground:
         _fit_ground(ground, markers)
+
+    if opts.get("createObjectSet"):
+        _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
 

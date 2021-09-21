@@ -671,6 +671,26 @@
 
 
     "#": "----------------",
+    "#": " Markers ",
+    "#": "----------------",
+
+    "createGround": {
+        "name": "createGround",
+        "label": "Create Ground",
+        "type": "Boolean",
+        "default": true,
+        "help": "Whether or not to automatically create a ground with a new solver."
+    },
+
+    "createObjectSet": {
+        "name": "createObjectSet",
+        "label": "Create Object Set",
+        "type": "Boolean",
+        "default": false,
+        "help": "Gather all newly created markers into an object set."
+    },
+
+    "#": "----------------",
     "#": " Global options ",
     "#": "----------------",
 

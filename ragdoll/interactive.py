@@ -963,9 +963,6 @@ def validate_evaluation_mode():
     if mode[0] != "off":  # Both Serial and Parallel are OK
         return True
 
-    def ignore():
-        return True
-
     def enable_parallel():
         cmds.evaluationManager(mode="parallel")
         log.info("Enabled Parallel Evaluation")
@@ -982,7 +979,7 @@ def validate_evaluation_mode():
         ),
         call_to_action="What would you like to do?",
         actions=[
-            ("Ignore", ignore),
+            ("Ignore", lambda: True),
             ("Enable Parallel Evaluation", enable_parallel),
             ("Cancel", lambda: False)
         ]
@@ -995,9 +992,6 @@ def validate_cached_playback():
         return True
 
     if not options.read("validateCachingMode"):
-        return True
-
-    def ignore():
         return True
 
     def disable_cached_playback():
@@ -1013,7 +1007,7 @@ def validate_cached_playback():
         ),
         call_to_action="What would you like to do?",
         actions=[
-            ("Ignore", ignore),
+            ("Ignore", lambda: True),
             ("Disable Cached Playback", disable_cached_playback),
             ("Cancel", lambda: False)
         ]
@@ -2245,11 +2239,16 @@ def record_markers(selection=None, **opts):
     end_time = int(cmdx.animation_end_time().value)
     total_frames = 0
 
+    start_frame, end_frame = cmdx.selectedTime()
+
     with i__.Timer("bake") as duration, progressbar() as p:
         for solver in solvers:
             start_time = int(solver["startTime"].as_time().value)
 
-            it = tools.record_markers(solver, transforms=transforms)
+            it = tools.record_markers(solver,
+                                      transforms=transforms,
+                                      start_time=start_frame,
+                                      end_time=end_frame)
             for step, progress in it:
                 print("%.1f%% (%s)" % (progress, step.title()))
 

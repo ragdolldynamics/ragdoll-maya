@@ -208,8 +208,10 @@ def record(solver,
 
     """
 
+    solver_start_time = solver["startTime"].as_time()
+
     if start_time is None:
-        start_time = solver["startTime"].as_time()
+        start_time = solver_start_time
 
     if end_time is None:
         end_time = cmdx.max_time()
@@ -220,6 +222,7 @@ def record(solver,
         end_time, start_time
     )
 
+    solver_start_frame = int(solver_start_time.value)
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
     total = end_frame - start_frame
@@ -262,7 +265,7 @@ def record(solver,
 
         """
 
-        for frame in range(start_frame, end_frame):
+        for frame in range(solver_start_frame, end_frame):
             with cmdx.Context(frame, cmdx.TimeUiUnit()):
 
                 # Trigger simulation
@@ -279,6 +282,10 @@ def record(solver,
                         "kinematic": kinematic,
                         "transition": False,
                     }
+
+                    if frame < start_frame:
+                        cache[key][frame]["recordTranslation"] = False
+                        cache[key][frame]["recordRotation"] = False
 
                     if kinematic:
                         cache[key][frame]["recordTranslation"] = False

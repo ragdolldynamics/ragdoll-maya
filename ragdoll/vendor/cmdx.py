@@ -6467,6 +6467,15 @@ def currentTime(time=None):
         return oma.MAnimControl.setCurrentTime(time)
 
 
+def selectedTime():
+    """Return currently selected time range in MTime format"""
+    from maya import mel
+    control = mel.eval('$tmpVar=$gPlayBackSlider')
+    time_range = cmds.timeControl(control, q=True, rangeArray=True)
+    time_range = list(om.MTime(t, TimeUiUnit()) for t in time_range)
+    return time_range
+
+
 def animationStartTime(time=None):
     if time is None:
         return oma.MAnimControl.animationStartTime()

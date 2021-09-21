@@ -10,6 +10,8 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "gravity";
+            editorTemplate -addControl "driveStiffness";
+            editorTemplate -addControl "driveDampingRatio";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Scale" -collapse true;

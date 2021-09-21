@@ -35,6 +35,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "shapeRotation";
             editorTemplate -addControl "angularMass";
             editorTemplate -addControl "centerOfMass";
+            editorTemplate -addControl "collisionGroup";
             editorTemplate -addControl "shapeVertexLimit";
             editorTemplate -addControl "color";
         editorTemplate -endLayout;

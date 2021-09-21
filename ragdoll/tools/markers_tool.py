@@ -51,6 +51,10 @@ def assign(transforms, solver, lollipop=False):
             name = "rMarker_%s" % transform.name()
             marker = dgmod.create_node("rdMarker", name=name)
 
+            # Single marker
+            if len(transforms) < 2:
+                dgmod.set_attr(marker["driveStiffness"], 10000)
+
             try:
                 children = [transforms[index + 1]]
             except IndexError:

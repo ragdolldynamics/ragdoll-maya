@@ -2067,11 +2067,46 @@ def create_mimic(selection=None, **opts):
     return kSuccess
 
 
-def _find_current_solver():
+def _make_ground(solver):
+    plane, gen = map(cmdx.encode, cmds.polyPlane(
+        name="rGround",
+        subdivisionsHeight=1,
+        subdivisionsWidth=1,
+    ))
+
+    marker = tools.assign_markers([plane], solver)[0]
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["inputType"], c.InputKinematic)
+        mod.set_attr(marker["displayType"], c.DisplayWire)
+
+        commands._take_ownership(mod, solver, plane)
+        commands._take_ownership(mod, solver, gen)
+
+    return marker
+
+
+def _fit_ground(ground, markers):
+    # Get a sense of scale
+    scale = 1.0
+
+    for marker in markers:
+        transform = marker["sourceTransform"].input()
+        other = sum(marker["shapeExtents"].read()) / 3.0
+        other *= max(transform.scale(cmdx.sWorld))
+        scale = max(scale, other)
+
+    with cmdx.DagModifier() as mod:
+        transform = ground["sourceTransform"].input()
+        mod.set_attr(transform["scale"], scale * 2 + 1)
+
+
+def _find_current_solver(make_ground=True):
     solver = cmdx.ls(type="rdSolver")
+    ground = None
 
     if solver:
-        solver = solver[0]
+        return solver[0], ground
 
     else:
         time1 = cmdx.encode("time1")
@@ -2101,23 +2136,50 @@ def _find_current_solver():
                 mod.set_nice_name(solver["gravityZ"], "Gravity")
                 mod.set_attr(solver_parent["rotateX"], cmdx.radians(90))
 
-    return solver
+    if make_ground:
+        ground = _make_ground(solver)
+
+    return solver, ground
 
 
 @i__.with_undo_chunk
 def assign_group(selection=None, **opts):
-    solver = _find_current_solver()
+    selection = selection or cmdx.selection(type=("transform", "joint"))
 
-    transforms = cmdx.selection(type=("transform", "joint"))
-    tools.assign_markers(transforms, solver)
+    solver, ground = _find_current_solver(make_ground=opts.get("makeGround"))
+    markers = tools.assign_markers(selection, solver)
+
+    if ground:
+        _fit_ground(ground, markers)
+
+    if opts.get("createObjectSet"):
+        objset = cmdx.find("rMarkers")
+
+        if not objset:
+            with cmdx.DGModifier() as mod:
+                objset = mod.create_node("objectSet", name="rMarkers")
+
+        with cmdx.DGModifier() as mod:
+            for marker in markers:
+                index = objset["dnSetMembers"].next_available_index()
+                mod.connect(marker["message"], objset["dnSetMembers"][index])
+
+    cmds.select(t.shortest_path() for t in selection)
 
 
 @i__.with_undo_chunk
 def assign_marker(selection=None, **opts):
-    solver = _find_current_solver()
+    selection = selection or cmdx.selection(type=("transform", "joint"))
+    solver, ground = _find_current_solver(make_ground=opts.get("makeGround"))
+    markers = []
 
-    for transform in cmdx.selection(type=("transform", "joint")):
-        tools.assign_markers([transform], solver)
+    for transform in selection:
+        markers.extend(tools.assign_markers([transform], solver))
+
+    if ground:
+        _fit_ground(ground, markers)
+
+    cmds.select(t.shortest_path() for t in selection)
 
 
 @contextlib.contextmanager

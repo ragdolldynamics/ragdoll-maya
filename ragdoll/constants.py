@@ -115,6 +115,17 @@ Parent = 1
 Child = 2
 
 # Markers
-NoPin = 0
-SoftPin = 1
-HardPin = 2
+InputInherit = 0
+InputOff = 1
+InputKinematic = 2
+InputGuide = 3
+
+DisplayDefault = 0
+DisplayWire = 1
+DisplayConstant = 2
+DisplayShaded = 3
+DisplayMass = 4
+DisplayFriction = 5
+DisplayRestitution = 6
+DisplayVelocity = 7
+DisplayContacts = 8

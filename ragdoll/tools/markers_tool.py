@@ -2,22 +2,12 @@ from .. import commands, internal, constants
 from ..vendor import cmdx
 from maya import cmds
 
-InputInherit = 0
-InputOff = 1
-InputKinematic = 2
-InputGuide = 3
-
 
 def assign(transforms, solver, lollipop=False):
     assert len(transforms) > 0, "Nothing to assign to"
 
     time1 = cmdx.encode("time1")
-    objset = cmdx.find("rMarkers")
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
-
-    if not objset:
-        with cmdx.DGModifier() as mod:
-            objset = mod.create_node("objectSet", name="rMarkers")
 
     group = None
 
@@ -51,9 +41,8 @@ def assign(transforms, solver, lollipop=False):
             name = "rMarker_%s" % transform.name()
             marker = dgmod.create_node("rdMarker", name=name)
 
-            # Single marker
-            if len(transforms) < 2:
-                dgmod.set_attr(marker["driveStiffness"], 10000)
+            # Avoid markers getting too excited
+            dgmod.set_attr(marker["maxDepenetrationVelocity"], 20.0)
 
             try:
                 children = [transforms[index + 1]]
@@ -76,7 +65,7 @@ def assign(transforms, solver, lollipop=False):
 
             # It's a lone object
             else:
-                dgmod.set_attr(marker["inputType"], InputKinematic)
+                dgmod.set_attr(marker["inputType"], constants.InputOff)
 
                 shape = transform.shape(type=("mesh",
                                               "nurbsCurve",
@@ -98,7 +87,7 @@ def assign(transforms, solver, lollipop=False):
 
             # Make the root passive
             if len(transforms) > 1 and not parent_marker:
-                dgmod.set_attr(marker["inputType"], InputKinematic)
+                dgmod.set_attr(marker["inputType"], constants.InputKinematic)
 
             dgmod.set_attr(marker["limitType"], 0)
 
@@ -142,16 +131,12 @@ def assign(transforms, solver, lollipop=False):
                 dgmod.connect(marker["currentState"],
                               solver["inputCurrent"][index])
 
-            index = objset["dnSetMembers"].next_available_index()
-            dgmod.connect(marker["message"], objset["dnSetMembers"][index])
-
             # Keep next_available_index() up-to-date
             dgmod.do_it()
 
             markers[transform] = marker
 
     if lollipop:
-
         with cmdx.DagModifier() as mod:
             for index, transform in enumerate(transforms[:]):
                 name = transform.name(namespace=False)
@@ -196,6 +181,8 @@ def assign(transforms, solver, lollipop=False):
 
                 # Hide from channelbox
                 mod.set_attr(curve["isHistoricallyInteresting"], False)
+
+    return list(markers.values())
 
 
 def record(solver,
@@ -373,8 +360,10 @@ def record(solver,
 
                 # It may have a different kind of connection, like a proxy
                 if not marker["inputType"].connected:
-                    input_type = InputInherit if group else InputKinematic
-                    mod.set_attr(marker["inputType"], input_type)
+                    mod.set_attr(marker["inputType"], (
+                        constants.InputInherit if group else
+                        constants.InputKinematic
+                    ))
 
                 groups.add(group) if group else None
 

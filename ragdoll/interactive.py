@@ -997,28 +997,24 @@ def validate_cached_playback():
     if not options.read("validateCachingMode"):
         return True
 
-    if cmds.optionVar(query="cachePreferenceDynamicsSupportEnabled"):
-        return True
-
     def ignore():
         return True
 
-    def enable_caching():
-        cmds.optionVar(intValue=("cachePreferenceDynamicsSupportEnabled", 1))
-        log.info("Cached Playback Enabled")
+    def disable_cached_playback():
+        cmds.optionVar(intValue=("cachedPlaybackEnable", 0))
+        log.info("Cached Playback Disabled")
         return True
 
     return ui.warn(
         option="validateCachingMode",
-        title="Cached Playback Detected",
+        title="Cached Playback Warning",
         message=(
-            "Ragdoll works with Cached Playback, but needs Maya to allow "
-            "for dynamics to be cached also."
+            "Ragdoll does not work well with Cached Playback."
         ),
         call_to_action="What would you like to do?",
         actions=[
             ("Ignore", ignore),
-            ("Enable Cached Dynamics", enable_caching),
+            ("Disable Cached Playback", disable_cached_playback),
             ("Cancel", lambda: False)
         ]
     )

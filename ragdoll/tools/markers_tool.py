@@ -273,8 +273,8 @@ def record(solver,
                     kinematic = marker["_kinematic"].read()
 
                     cache[key][frame] = {
-                        "recordTranslation": marker["catr"].read(),
-                        "recordRotation": marker["caro"].read(),
+                        "recordTranslation": marker["retr"].read(),
+                        "recordRotation": marker["rero"].read(),
                         "outputMatrix": marker["ouma"].as_matrix(),
                         "kinematic": kinematic,
                         "transition": False,

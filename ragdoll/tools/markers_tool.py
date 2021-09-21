@@ -158,8 +158,12 @@ def assign(transforms, solver, lollipop=False):
                 mod.set_keyable(lol["scaleY"], False)
                 mod.set_keyable(lol["scaleZ"], False)
 
+                mod.set_attr(lol["overrideEnabled"], True)
+                mod.set_attr(lol["overrideShading"], False)
+                mod.set_attr(lol["overrideColor"], constants.YellowIndex)
+
                 # Find a suitable scale
-                scale = sum(marker["shapeExtents"].read()) / 3.0
+                scale = list(sorted(marker["shapeExtents"].read()))[1]
                 mod.set_attr(lol["scale"], scale * 0.25)
 
                 # Take over from here
@@ -170,14 +174,17 @@ def assign(transforms, solver, lollipop=False):
                 mod.do_it()
                 curve = cmdx.curve(
                     lol, points=(
-                        (0, 0, 0),
-                        (4, 0, 0),
-                        (5, 0, -1),
-                        (6, 0, 0),
-                        (5, 0, 1),
-                        (4, 0, 0)),
-                    mod=mod
+                        (-0, +0, +0),
+                        (-0, +4, +0),
+                        (-1, +5, +0),
+                        (-0, +6, +0),
+                        (+1, +5, +0),
+                        (-0, +4, +0),
+                    ), mod=mod
                 )
+
+                # Delete this alongside physics
+                commands._take_ownership(mod, marker, lol)
 
                 # Hide from channelbox
                 mod.set_attr(curve["isHistoricallyInteresting"], False)

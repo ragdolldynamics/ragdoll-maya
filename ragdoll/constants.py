@@ -67,6 +67,9 @@ TGSSolverType = 1
 
 ControlColor = (0.443, 0.705, 0.952)  # Blue
 
+WhiteIndex = 17
+YellowIndex = 17
+
 # Enums
 InitialShapeAuto = 0
 InitialShapeBox = 1

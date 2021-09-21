@@ -611,8 +611,10 @@ def install_menu():
     with submenu("Markers", icon="control.png"):
         divider("Create")
 
-        item("assignMarker", assign_marker, label="Assign Single")
-        item("assignGroup", assign_group, label="Assign Group")
+        item("assignMarker", assign_marker, assign_marker_options,
+             label="Assign Single")
+        item("assignGroup", assign_group, assign_group_options,
+             label="Assign Group")
 
         divider("Record")
 
@@ -2082,7 +2084,7 @@ def _make_ground(solver):
 
         mod.set_attr(plane["overrideEnabled"], True)
         mod.set_attr(plane["overrideShading"], False)
-        mod.set_attr(plane["overrideColor"], 16)
+        mod.set_attr(plane["overrideColor"], c.WhiteIndex)
 
         commands._take_ownership(mod, solver, plane)
         commands._take_ownership(mod, solver, gen)
@@ -2165,16 +2167,19 @@ def assign_group(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
     opts = dict({
         "createGround": _opt("createGround", opts),
-        "createObjectSet": _opt("freezeEvaluationHierarchy", opts),
+        "createObjectSet": _opt("createObjectSet", opts),
+        "createLollipop": _opt("createLollipop", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts.get("createGround"))
-    markers = tools.assign_markers(selection, solver)
+    solver, ground = _find_current_solver(opts["createGround"])
+    markers = tools.assign_markers(
+        selection, solver, lollipop=opts["createLollipop"]
+    )
 
     if ground:
         _fit_ground(ground, markers)
 
-    if opts.get("createObjectSet"):
+    if opts["createObjectSet"]:
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
@@ -2185,19 +2190,22 @@ def assign_marker(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
     opts = dict({
         "createGround": _opt("createGround", opts),
-        "createObjectSet": _opt("freezeEvaluationHierarchy", opts),
+        "createObjectSet": _opt("createObjectSet", opts),
+        "createLollipop": _opt("createLollipop", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts.get("createGround"))
+    solver, ground = _find_current_solver(opts["createGround"])
     markers = []
 
     for transform in selection:
-        markers.extend(tools.assign_markers([transform], solver))
+        markers.extend(tools.assign_markers(
+            [transform], solver, lollipop=opts["createLollipop"]
+        ))
 
     if ground:
         _fit_ground(ground, markers)
 
-    if opts.get("createObjectSet"):
+    if opts["createObjectSet"]:
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
@@ -3484,6 +3492,14 @@ def create_muscle_options(*args):
 
 def create_dynamic_control_options(*args):
     return create_chain_options()
+
+
+def assign_marker_options(*args):
+    return _Window("assignMarker", assign_marker)
+
+
+def assign_group_options(*args):
+    return _Window("assignGroup", assign_group)
 
 
 def set_initial_state_options(*args):

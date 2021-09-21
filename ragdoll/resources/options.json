@@ -690,6 +690,14 @@
         "help": "Gather all newly created markers into an object set."
     },
 
+    "createLollipop": {
+        "name": "createLollipop",
+        "label": "Create Lollipop",
+        "type": "Boolean",
+        "default": false,
+        "help": "Add an extra 'lollipop' control to marked nodes, to more easily find relevant marker attributes."
+    },
+
     "#": "----------------",
     "#": " Global options ",
     "#": "----------------",

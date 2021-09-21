@@ -593,26 +593,32 @@
     "assignMarker": {
         "label": "Assign Marker",
         "icon": "marker.png",
-        "summary": "",
-        "description": "",
+        "summary": "Capture this node",
+        "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
+            "createGround",
+            "createObjectSet",
+            "createLollipop"
         ]
     },
 
     "assignGroup": {
         "label": "Assign Group",
         "icon": "marker_group.png",
-        "summary": "",
-        "description": "",
+        "summary": "Capture this group of nodes",
+        "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
+            "createGround",
+            "createObjectSet",
+            "createLollipop"
         ]
     },
 
     "recordMarkers": {
         "label": "Record Markers",
         "icon": "record.png",
-        "summary": "",
-        "description": "",
+        "summary": "Transfer simulation into animation",
+        "description": "Bake the simulation of the selected nodes or markers, to their destination transforms.",
         "options": [
         ]
     },

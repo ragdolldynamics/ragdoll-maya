@@ -200,9 +200,9 @@ def record(solver,
     """Transfer simulation into animation
 
     Arguments:
-        transforms (list, optional): Transfer to these transforms only
-        start_time (MTime, optional): Capture from this time
-        end_time (MTime, optional): Capture to this time
+        transforms (list, optional): Record these transforms only
+        start_time (MTime, optional): Record from this time
+        end_time (MTime, optional): Record to this time
         maintain_offset (bool, optional): Maintain whatever offset is
             between the source and destination transforms, default True
 
@@ -482,6 +482,10 @@ def record(solver,
                         dst = el.input()
 
                         if not dst:
+                            continue
+
+                        # Filter out unwanted transforms
+                        if transforms and dst not in transforms:
                             continue
 
                         matrix = output_matrix

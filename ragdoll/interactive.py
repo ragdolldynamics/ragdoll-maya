@@ -624,7 +624,7 @@ def install_menu():
 
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, label="Retarget")
-        item("reparentMarker", reassign_marker, label="Reparent")
+        item("reparentMarker", reparent_marker, label="Reparent")
         item("untargetMarker", untarget_marker, label="Untarget")
 
         divider("Select")
@@ -2280,6 +2280,22 @@ def retarget_marker(selection=None, **opts):
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["dst"][0])
+
+
+def reparent_marker(selection=None, **opts):
+    a, b = cmdx.sl()
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    if b.isA(cmdx.kDagNode):
+        b = b["message"].output(type="rdMarker")
+
+    assert a and a.type() == "rdMarker", "No child marker found"
+    assert b and b.type() == "rdMarker", "No parent marker found"
+
+    with cmdx.DGModifier() as mod:
+        mod.connect(b["ragdollId"], a["parentMarker"])
 
 
 def untarget_marker(selection=None, **opts):

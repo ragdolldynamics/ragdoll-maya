@@ -634,7 +634,7 @@
 
     "untargetMarker": {
         "label": "Untarget Marker",
-        "icon": "retarget.png",
+        "icon": "untarget.png",
         "summary": "Remove all output from this marker",
         "description": "",
         "options": [

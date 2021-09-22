@@ -839,6 +839,7 @@ class Node(object):
             True
 
         """
+
         if isinstance(type, om.MTypeId):
             return type == self._fn.typeId
         elif isinstance(type, string_types):
@@ -847,7 +848,9 @@ class Node(object):
             return any(self.isA(t) for t in type)
         elif isinstance(type, int):
             return self._mobject.hasFn(type)
+
         cmds.warning("Unsupported argument passed to isA('%s')" % type)
+
         return False
 
     def lock(self, value=True):
@@ -6939,6 +6942,7 @@ if ENABLE_PEP8:
     max_time = maxTime
     animation_start_time = animationStartTime
     animation_end_time = animationEndTime
+    selected_time = selectedTime
     up_axis = upAxis
     set_up_axis = setUpAxis
 

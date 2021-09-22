@@ -4,7 +4,7 @@ title: Animation Capture pt. 1/4
 description: Reverse motion capture, i.e. "Animation Capture" is introduced, for a superior animator-friendly workflow for physics!
 ---
 
-Highlight for this release is **Animation Capture.**
+Highlight for this release is **Animation Capture**.
 
 - [**ADDED** Animation Capture](#animation-capture) A.k.a. Reverse Motion Capture
 - [**ADDED** Groups](#capture-suit) Centralised character controls
@@ -20,27 +20,29 @@ Highlight for this release is **Animation Capture.**
 
 ### Introduction
 
-This release introduces a new way of thinking about physics, and is part **1** out of **4**.
+Lighter, *faster*, **stronger**. This release introduces a new way of thinking about physics, and is part **1/4**.
 
 - [Skip Intro](#animation-capture)
 
-| Release               | Date           | Description
-|:----------------------|:---------------|:----------
-| Workflow              | Today          | At least 100% faster, but primarily much easier to work with
-| Render Performance    | <nobr>2 weeks later</nobr>  | The current bottleneck, expect a 50-100x boost
-| Recording Performance   | <nobr>1 week later</nobr>   | Currently written in Python, to be written in optimised C++
-| Interactive Tools     | <nobr>2 weeks later</nobr>   | No more fiddling with offsets in the channel box, viewport manipulators galore!
+|#| Release               | Date           | Description
+|:|:----------------------|:---------------|:----------
+|1| Workflow              | Today          | At least 100% faster, but primarily much easier to work with
+|2| Render Performance    | <nobr>2 weeks later</nobr>  | The current bottleneck, expect a 50-100x boost
+|3| Recording Performance   | <nobr>1 week later</nobr>   | Currently written in Python, to be written in optimised C++
+|4| Interactive Tools     | <nobr>2 weeks later</nobr>   | No more fiddling with offsets in the channel box, viewport manipulators galore!
 
 Something **amazing** has happened.
 
+![image](https://user-images.githubusercontent.com/2152766/134300628-565e7da1-c669-47ef-9fe2-f3b2023de875.png)
+
 Since release only a few weeks ago, Ragdoll is now used in production across the globe in over a dozen countries at the most major of studios, several dozens of mid-sized studios wanting to gain an advantage and hundreds of independent animators and riggers alike.
 
-And that is amazing, it is. But something even more amazing has happened and will be what this next 4-part release is all about.
+And that is amazing, it is. But something even more amazing has happened; Ragdoll has **leaped forward**. And that will be what the next 4-part release is about.
 
-See, since launch I've had conversations with animators using Ragdoll for the very first time. One of those animators made a request that at first glance doesn't look like much.
+See, since launch I've had conversations with animators using Ragdoll for the very first time. One of those animators made a request that at first glance didn't look like much.
 
 !!! quote "The request"
-    "I don't like working with green channels, can I get rid of them?"
+    "I don't like working with green channels, can I get rid of them?" - [Christopher Page](https://www.linkedin.com/in/3dsketchbook/)
 
 Here's what he was referring to.
 
@@ -50,7 +52,7 @@ Notice how the nodes with physics applied got green channels? The reason they ar
 
 Can we get rid of that connection? Well.. No? This is Ragdoll's connection to your controls. Without those.. there *is* no physics.
 
-I quickly dismissed the idea and carried on with my day. But then something *clicked*.. What if..?
+I quickly dismissed that ludicrous idea and carried on with my day.. But then something *clicked*.. What if..?
 
 https://user-images.githubusercontent.com/2152766/134046287-5b84322b-3da7-49d6-987e-67a463b33c56.mp4
 
@@ -59,7 +61,6 @@ In the next section, I'll dive into how this works and why this change goes far 
 **Benefits at a glance**
 
 - ✔️ 10,000% greater performance (or more!)
-- ✔️ No more green channels
 - ✔️ No more graph editor mess
 - ✔️ No more initial state
 - ✔️ No more cycles
@@ -75,7 +76,7 @@ In the next section, I'll dive into how this works and why this change goes far 
 
 From here, this list has no end, because *anything* capable of affecting the worldspace position and orientation of your controls is natively supported with this workflow. *Anything*.
 
-??? info "I'm a techy, give me the deets"
+??? info "I'm a techy, gimme the deets"
     The reason this works is because Ragdoll will consider the `.worldMatrix` attribute of any control and this is the same attribute Maya itself uses for just about anything.
 
 <br>
@@ -97,7 +98,7 @@ Here is a typical data pipeline for motion capture, from real-life actor to fina
 | **5**  | Joints drive a typical character rig
 | **6**  | Rig drives final geometry for render
 
-Each "marker" is a dud. Nothing of any complexity. Something for the camera to recognise and track as it moves through space. Once tracked, it's able to translate this marker from a 2D image into a 3D position, and continues to do so for each marker, for the real processing to take place inside software.
+Each "marker" is a dud. Nothing of any complexity. Something for the camera(s) to recognise and track as it moves through space. Once tracked, it's able to translate this marker from a 2D image into a 3D position, and continues to do so for each marker, for the real processing to take place inside software.
 
 Once the capture is complete, the human actor can remove the markers and go enjoy the rest of their day. The rest is up to the computer.
 
@@ -121,7 +122,7 @@ Unlike motion capture, we'd like the result mapped back onto our character rig a
 
 #### Demo 1 - Basics
 
-Enough talk, let's dive in.
+Ok, enough prelude, let's dive in.
 
 **Before**
 
@@ -139,11 +140,11 @@ Notice how the channels are left alone?
 
 This is the key difference between `Marker` and `Rigid`. Although you still provide Ragdoll with controls, Ragdoll no longer *drives* your controls directly. Instead, it *shows* you what they would look like *if* they were driven with physics.
 
-Once you're happy with what you see, you `Record` it.
+Once you're happy with what you see, you `Record`.
 
 https://user-images.githubusercontent.com/2152766/134164217-883c0635-6103-42da-87a1-0e9cd145aa1f.mp4 controls
 
-Makes sense? Ok,let's look at a more interesting example.
+Makes sense? Ok, let's look at a more interesting example.
 
 <br>
 
@@ -171,7 +172,7 @@ https://user-images.githubusercontent.com/2152766/134213470-fa51e083-cfb9-494d-8
 
 **3. Animate**
 
-Now things are getting interesting. To keep our viewport clean, we can offset the simulation slightly.
+Now things are getting interesting. To keep our viewport clean, we can offset the simulation slightly. The offset is purely visual and won't affect the simulation or subsequent recording.
 
 https://user-images.githubusercontent.com/2152766/134213467-b0b9bae6-6778-409d-ad1a-4277e89961f9.mp4 controls
 
@@ -187,11 +188,139 @@ https://user-images.githubusercontent.com/2152766/134213465-5739f9b5-a391-474d-b
 
 That last example was contrived. No rig is without IK, so how does `Markers` work here?
 
+**1. No IK**
+
+Since we put markers on the FK controls, Ragdoll doesn't know about what the IK controls are doing.
+
+https://user-images.githubusercontent.com/2152766/134312071-0eeb5ced-6bab-4793-9edd-6f5747ceb3ed.mp4 controls
+
+**2. Reassign**
+
+So let's put markers on the *joints* driven by both IK and FK, such that when you switch between the two, Ragdoll knows how to follow along. So let's `Reassign`.
+
+https://user-images.githubusercontent.com/2152766/134312058-20f64011-954c-4d7b-b201-3950655449c0.mp4 controls
+
+**3. Retarget**
+
+But recording still targets our original FK controls, and what we want is to record our IK controls. So we can `Retarget`.
+
+https://user-images.githubusercontent.com/2152766/134312048-5e9100d8-ce55-4fa1-b704-2201182733db.mp4 controls
+
+**4. Record Translation**
+
+Unlike FK, IK isn't just rotation, but translation too. So let's tell Ragdoll to record the translation from these markers too.
+
+https://user-images.githubusercontent.com/2152766/134312041-fdaaad31-5273-44f4-891c-d1a80739de20.mp4 controls
+
+And there you have it! This works with IK, SpineIK, Follicles, Geometry Constraints; *anything* you can throw at it.
+
+<br>
+
+#### Demo 4 - Real World Example
+
+Here's an animation whereby the elbow should be resting on the table, but intersects it slightly as the torso moves about. Let's see how Ragdoll can sort this out.
+
+**1. The Problem**
+
+This animation looks great (thanks [Christopher Page](https://www.linkedin.com/in/3dsketchbook/) for lending it to me!) but has a problem with the elbow. Notice how it intersects the table as he moves his torso around? A difficult problem and moving target as you need to keep tweaking both the torso and hand IK handle to tune your animation.
+
+https://user-images.githubusercontent.com/2152766/134319921-6e96ef8c-1226-47b4-b3db-7f076047c62a.mp4 controls
+
+**2. Isolate Timeline**
+
+Since this animation is over 600 frames, we'll isolate our work to a small portion of it. For both performance and cleanliness; Ragdoll will only record onto the current timeline (or selected portion of it).
+
+https://user-images.githubusercontent.com/2152766/134319912-57c3a8c6-3488-4129-9b1e-9567f77a0752.mp4 controls
+
+**3. Assign Markers**
+
+Like before, we'll assign markers to the underlying skeleton to respect what the IK solver does. We'll also make the hand `Kinematic` to respect the original animation exactly. The clavicle is also `Kinematic` per default, as it was the first assigned control - and is thus the "root" of our dynamic hierarchy.
+
+https://user-images.githubusercontent.com/2152766/134319902-dc446cae-37c4-4c86-a746-2fd19364160c.mp4 controls
+
+**4. Include Table**
+
+Since we're interacting with the table, we'll include this too. Also `Kinematic`, no dynamics will be affecting it, and also as a `Box` shape to speed up and improve the stability of the simulation.
+
+https://user-images.githubusercontent.com/2152766/134319896-0ddd0f5b-8e64-4f59-a93a-2fafc58b9994.mp4 controls
+
+**5. Tune Shapes**
+
+Next we'll isolate contacts with just the elbow area, to respect the hand and lower arm animation.
+
+https://user-images.githubusercontent.com/2152766/134319889-6f7403cd-fec2-4fae-8b78-0efabf5afb04.mp4 controls
+
+**6. Tune Material**
+
+In this case, we'd like for the elbow to slide across the table, no friction.
+
+??? info "More Realism?"
+    In the real world, there would be friction and it could come in handy here too. But what should we expect from the elbow rubbing against the table? We should include the torso for this as well, which you absolutely can (and maybe should!). But to keep things simple, we'll let the clavicle preserve it's original animation exactly.
+
+https://user-images.githubusercontent.com/2152766/134319878-d57ce899-bd03-4eb3-b97f-2e4dd5761f74.mp4 controls
+
+**7. Retargeting**
+
+Ragdoll will record onto the nodes you originally assign, but like before we want recording to go elsewhere; from joints to IK controls.
+
+https://user-images.githubusercontent.com/2152766/134319871-2c804a4d-26b1-4a8f-932c-722aeb98189f.mp4 controls
+
+**8. Record Translation**
+
+Likewise, we'd also like translation included. And we don't care for the shoulder and clavicle animation; all we want is the IK handle and Pole Vector.
+
+https://user-images.githubusercontent.com/2152766/134319865-dc88b9a9-bb8d-48df-9ec0-f3f5fe760903.mp4 controls
+
+**9. Record Simulation**
+
+We're all set! Let's hit `Record`!
+
+https://user-images.githubusercontent.com/2152766/134319858-e82de1cc-4ed7-4dea-be07-8e59acc078af.mp4 controls
+
+**10. Before And After**
+
+And there we go! 2 minutes or less, and you've got a reusable setup for correcting the elbow whenever the animation changes. IK is intact and you can keep working with keyframes. Keeping Ragdoll attached to your rig has *zero* impact on performance (as you can see by looking at the fps counter near the bottom of the two comparisons), and once hidden it has no impact on your Outliner either. All clean!
+
+https://user-images.githubusercontent.com/2152766/134319855-66c960d7-9d74-4bbf-bde4-5e813c7123cd.mp4 controls
+
+> Rig and Model courtesy of Ramon Arango - [Apollo Rig](https://ramonarango.gumroad.com/l/ArtemisApolloRig)
+
+<br>
+
+#### Retargeting
+
+We've talked a lot about "retargeting". But what *is* that?
+
+Per default, markers are recorded onto the controls you assigned, this is called `Rig to Rig`.
+
+![image](https://user-images.githubusercontent.com/2152766/134169658-39590bbf-bbca-41dc-af3b-de20e69e9aed.png)
+
+But often times, rigs are more complicated and what you want is for the simulation to look at one set of nodes, but record onto another. This is called `Joint to Rig`, but can be from any source. Even other controls (like FK to IK).
+
+![image](https://user-images.githubusercontent.com/2152766/134169635-e0a751c8-f06b-4dac-a459-50118d04821f.png)
+
+!!! info "The Old Days"
+    Think about how you would accomplish this using the `Active Rigid` or `Active Chain` commands. That would be a *huge* pain, but not with markers!
+
+<br>
+
+#### Reassigning
+
+Over in [Demo 2 - Ragdoll](#demo-2---ragdoll) we "reassigned" already marked controls. What does that mean?
+
+In that example, we've assigned our FK controls directly, which means Ragdoll would grab the translation and rotation from those controls during simulation. But what we really wanted was the IK controls.
+
+But! We couldn't just assign to the IK controls directly, since they are *indirectly* rotating a characters limbs. So instead, we `Reassign` the markers previously made onto the underlying joints that follow IK around.
+
+We then also `Retarget` them, since they would have otherwise been recorded onto the original FK controls.
+
 <br>
 
 #### Input Type
 
-How should Ragdoll interpret the original controls?
+In the above examples, I mentioned `Kinematic` and you probably spotted a few other options too, like `Inherit` and `Guide`. What are those?
+
+The `Input Type` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Guide`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Off`?
 
 | Type | Description
 |:-----|:-----------
@@ -199,6 +328,8 @@ How should Ragdoll interpret the original controls?
 | Off  | Do nothing, just fall under gravity
 | Kinematic | Follow the input *exactly*, physics need not apply
 | Guide | Follow the input approximately, with some `Stiffness` and `Damping`
+
+This attribute can be animated too, to *transition* from simulation to animation (or vice versa).
 
 <br>
 
@@ -208,23 +339,126 @@ Markers can be recorded all together, or independently. For example, say you wan
 
 Furthermore, say you liked what the simulation was doing, but only on one half of the body. Or only on the hip, driving the main trajectory in a physically-plausible way. Keeping the rest of your animation intact.
 
+**Record All**
+
+With nothing selected, Ragdoll will record all marked controls to the current Maya playback range.
+
+https://user-images.githubusercontent.com/2152766/134327104-f3d54cda-4d88-480a-b263-faceb211e87a.mp4
+
+**Record Selected Markers**
+
+Select a few controls to control what gets recorded.
+
+https://user-images.githubusercontent.com/2152766/134327103-5ad36b6b-177d-40a9-8666-cbaaab281527.mp4
+
+**Record Range**
+
+Limit the Maya playback range for control over *when* recording takes place.
+
+https://user-images.githubusercontent.com/2152766/134327097-db0af345-bf15-45f5-9bc0-6ef50d3184f4.mp4
+
+**Record Selected Range**
+
+Or, select an explicit range interactively.
+
+https://user-images.githubusercontent.com/2152766/134327093-ba62588e-d14f-4ff9-9b75-05d4230dbdb6.mp4
+
 <br>
 
-#### Transitions
+#### Guide Balance
+
+Now let's talk about a few things you *haven't* seen yet.
+
+https://user-images.githubusercontent.com/2152766/134329974-7beb86d9-5660-44ba-b3f8-036ccc3aec28.mp4
+
+> Look, it's Ragdoll Blaine!
+
+So what's happening here? Well, it *looks* like a [Soft Pin](/documentation/soft_pin/) to his head, along with a slight `Guide Strength` on the rest of his body. But unlike the `Rigid`, another significant advantage to `Markers` is their ability to capture both local *and worldspace* position and orientation of your controls. And because of this, you are able to interactively choose whether a marker should look at the *Worldspace* or *Localspace* position of your controls.
+
+https://user-images.githubusercontent.com/2152766/134331199-c381ab43-4055-4e7a-a190-68d2acd0668f.mp4 controls
+
+Notice how with a `Guide Balance = -1` the controls arms remain relative the torso. And with `Guide Balance = 1` they instead follow the *worldspace* orientation of the controls. Just like a Soft Pin.
+
+This attribute is also **animatable**, and is how you can transition from animation into simulation and back again.
+
+https://user-images.githubusercontent.com/2152766/134342444-2c2807ff-0be7-43f9-b106-73f231d55adb.mp4
+
+Here's a more complete example:
+
+https://user-images.githubusercontent.com/2152766/134332515-e7879b82-4a84-4881-90cf-25f66a6d3ac8.mp4 controls
+
+| Frame | Transition
+|:------|:----
+| 100 | Starts as a regular animated character
+| 125 | Transitions into physics as he jumps, for a physically-correct trajectory
+| 155 | Transitions back to animation once he rolls over on that cabinet
+| 160 | Transitions back to physics until he stands up
+| 170 | Transitions back into animation to match an exact pose
+| 200 | Partially transitions into physics, for secondary motion in the upper body as his arm is raised.
+
+<br>
+
+### Self Collision
+
+Previously, it was very important that your shapes did not overlap any shape other than it's immediate neighbour. If they did, chaos ensued.
+
+**Before**
+
+Clavicles intersect their parent spine, but also each other!
+
+https://user-images.githubusercontent.com/2152766/134362062-4197b3d6-2694-4011-9a8e-69adec92927f.mp4
+
+**After**
+
+With the new `Self Collision = Off`, this is no longer a problem.
+
+https://user-images.githubusercontent.com/2152766/134362067-a2d33df3-c9d1-4aa8-b8af-956d80aeba7e.mp4 controls
+
+This can be taken into the extreme!
+
+https://user-images.githubusercontent.com/2152766/134362070-325aa8dc-3367-4765-a4a9-56670cc77b83.mp4 controls
+
+For which a practical example is this.
+
+https://user-images.githubusercontent.com/2152766/134368633-ed4f69f4-1eba-4702-a3f6-bdddd2f0a98d.mp4 controls
+
+https://user-images.githubusercontent.com/2152766/134368636-37cfd588-184e-46e9-b03a-6d8cacb80b76.mp4 controls
+
+
+
+<br>
+
+### No Graph Editor Mess
+
+Because `Rigids` were children of your controls, Maya had a funny way of including them in the Graph Editor that rightly drove animators, myself included, *absolutely mad*.
+
+**Before**
+
+Just look at this; why-oh-why would I want channels from a completely unrelated node when working with the hip?
+
+https://user-images.githubusercontent.com/2152766/134341270-72843d85-70c9-43af-86cc-c981e87fe297.mp4
+
+**After**
+
+Contrast that to this, whereby only the nodes you actually select are made visible. You can even select `Markers` via the Channel Box and *deselect* your controls to get up real close.
+
+https://user-images.githubusercontent.com/2152766/134341497-cb64e666-75e6-4bfd-a3bd-aee27a61791b.mp4
+
+<br>
+
+### Hidden Solver
+
+Hiding the solver completely removes all overhead of having Ragdoll in your scene. Previously, with `rdScene` and `rdRigid`, because they were directly connected to your controls, hiding things made little difference. But now, because we no longer have this direct connection, all computations come from explicitly seeing the `rdSolver` node.
+
+No visible `rdSolver` node, no computations. Period.
+
+<br>
+
+### Transitions
 
 Let's have a look at how you would use markers to transition between simulation and animation.
 
 <br>
-
-#### Retargeting
-
-Per default, markers are recorded onto the controls they read from.
-
-![image](https://user-images.githubusercontent.com/2152766/134169658-39590bbf-bbca-41dc-af3b-de20e69e9aed.png)
-
-But sometimes, rigs are more complicated and
-
-![image](https://user-images.githubusercontent.com/2152766/134169635-e0a751c8-f06b-4dac-a459-50118d04821f.png)
 
 **Workflow**
 

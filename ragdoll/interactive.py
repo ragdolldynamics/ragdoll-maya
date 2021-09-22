@@ -1107,7 +1107,7 @@ def _filtered_selection(node_type, selection=None):
 
     shapes = filter(None, shapes)
     shapes = list(shapes) + selection
-    shapes = filter(lambda shape: shape.type() == node_type, shapes)
+    shapes = filter(lambda shape: shape.isA(node_type), shapes)
 
     return list(shapes)
 
@@ -2225,7 +2225,7 @@ def progressbar(status="Progress.. ", max_value=100):
 @with_exception_handling
 def record_markers(selection=None, **opts):
     solvers = _filtered_selection("rdSolver")
-    transforms = _filtered_selection("transform")
+    transforms = _filtered_selection(cmdx.kDagNode)
 
     if len(solvers) < 1:
         solvers = cmdx.ls(type="rdSolver")
@@ -2236,19 +2236,22 @@ def record_markers(selection=None, **opts):
             "No solvers found"
         )
 
-    end_time = int(cmdx.animation_end_time().value)
+    start_time, end_time = cmdx.selected_time()
+
+    if end_time.value - start_time.value < 2:
+        start_time = cmdx.min_time()
+        end_time = cmdx.max_time()
+
+    start_frame = int(start_time.value)
+    end_frame = int(end_time.value)
+
     total_frames = 0
-
-    start_frame, end_frame = cmdx.selectedTime()
-
     with i__.Timer("bake") as duration, progressbar() as p:
         for solver in solvers:
-            start_time = int(solver["startTime"].as_time().value)
-
             it = tools.record_markers(solver,
                                       transforms=transforms,
-                                      start_time=start_frame,
-                                      end_time=end_frame)
+                                      start_time=start_time,
+                                      end_time=end_time)
             for step, progress in it:
                 print("%.1f%% (%s)" % (progress, step.title()))
 
@@ -2258,7 +2261,7 @@ def record_markers(selection=None, **opts):
 
                 cmds.progressBar(p, edit=True, step=1)
 
-            total_frames += end_time - start_time
+            total_frames += end_frame - start_frame
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Recorded markers in %.2fs (%d fps)" % stats)

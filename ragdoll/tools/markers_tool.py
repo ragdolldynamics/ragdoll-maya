@@ -338,20 +338,50 @@ def record(solver,
                 was_kinematic = is_kinematic
 
     def initial_keyframe():
+        """Include the starting position of any marker
+
+        Otherwise, we'll key the first simulated frame which will be
+        one frame after the initial state. Thus, changing the initial state!
+
+        """
+
         unkeyed = []
 
-        for marker, channels in anim.items():
-            node = markers[marker]
-            transform = node["dst"][0].input()
+        # for marker, channels in anim.items():
+        for marker, frames in cache.items():
 
+            # Cull entirely kinematic markers
+            kinematic_translation = True
+            kinematic_rotation = True
+
+            for frame, data in frames.items():
+                if data["recordTranslation"]:
+                    kinematic_translation = False
+                    break
+
+            for frame, data in frames.items():
+                if data["recordRotation"]:
+                    kinematic_rotation = False
+                    break
+
+            if kinematic_translation and kinematic_rotation:
+                # This marker was entirely kinematic
+                continue
+
+            # It'd be whichever frame got hit above, before `break`
+            start_frame = frame
+
+            marker = markers[marker]
+            transform = marker["dst"][0].input()
             for channel in "tr":
-                for axis in "xyz":
-                    if not channels[channel + axis]:
-                        # This marker was entirely kinematic
-                        continue
+                if channel == "t" and kinematic_translation:
+                    continue
 
+                if channel == "r" and kinematic_rotation:
+                    continue
+
+                for axis in "xyz":
                     plug = transform[channel + axis]
-                    start_frame = min(channels[channel + axis].keys())
 
                     # Not keyframed
                     if not plug.input(type=("animCurveTL", "animCurveTA")):
@@ -441,12 +471,13 @@ def record(solver,
             orders[key] = order
 
         # Loop over each marker, in kinematic order
+        #
+        # NOTE: What we want is for Maya to finish computing anything
+        # our marker depends on, like the Maya parent hierarchy. This
+        # will *normally* align with the marker hierarchy, but not always.
+        # It's possible for the user to create a marker hierarchy in
+        # the opposite order of Maya's hierarchy.
         ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
-
-        def unscaled(mat):
-            tm = cmdx.Tm(mat)
-            tm.setScale(cmdx.Vector(1, 1, 1))
-            return tm.as_matrix()
 
         offsets = {}
         if maintain_offset:
@@ -510,10 +541,17 @@ def record(solver,
 
                         def set_keyframe(at, value):
                             path = dst.shortest_path()
+                            tangent = (
+                                "stepnext"
+                                if data["transition"]
+                                else "linear"
+                            )
                             cmds.setKeyframe(path,
                                              attribute=at,
                                              time=frame,
                                              value=value,
+                                             inTangentType=tangent,
+                                             outTangentType=tangent,
                                              dirtyDG=True)
 
                         if data["recordTranslation"]:
@@ -532,8 +570,8 @@ def record(solver,
     for status in simulate():
         yield (status[0], status[1] * 0.50)
 
-    # compute_transitions()
-    # initial_keyframe()
+    initial_keyframe()
+    compute_transitions()
 
     for status in write():
         yield (status[0], 50 + status[1] * 0.50)

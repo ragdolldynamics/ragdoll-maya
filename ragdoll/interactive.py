@@ -2086,18 +2086,48 @@ def _make_ground(solver):
 
 
 def _fit_ground(ground, markers):
-    # Get a sense of scale
-    scale = 1.0
+    positions = []
+    maximum = cmdx.Vector()
 
     for marker in markers:
-        transform = marker["sourceTransform"].input()
-        other = sum(marker["shapeExtents"].read()) / 3.0
-        other *= max(transform.scale(cmdx.sWorld))
-        scale = max(scale, other)
+        transform = marker["src"].input()
+        tm = transform.transform(cmdx.sWorld)
+        pos = cmdx.Point(tm.translation())
+        positions += [pos]
+        extents = marker["shapeExtents"].as_vector()
+        scale = transform.scale()
+        maximum.x = max(maximum.x, extents.x * scale.x)
+        maximum.y = max(maximum.y, extents.y * scale.y)
+        maximum.z = max(maximum.z, extents.z * scale.z)
+
+    bbox = cmdx.BoundingBox()
+
+    for pos in positions:
+        bbox.expand(pos)
+
+    thickness = sorted(maximum)[1] * 0.25
+    mid = sorted([bbox.width, bbox.height, bbox.depth])[1]
+    mid *= 1.5  # Some padding
+    mid += thickness
+
+    # Don't let it get smaller than the median extent
+    mid = max(thickness * 4, mid)
+
+    bbox.expand(bbox.min - cmdx.Vector(mid, mid, mid))
+    bbox.expand(bbox.max + cmdx.Vector(mid, mid, mid))
 
     with cmdx.DagModifier() as mod:
         transform = ground["sourceTransform"].input()
-        mod.set_attr(transform["scale"], scale * 2 + 1)
+
+        mod.set_attr(ground["shapeExtentsY"], thickness)
+        mod.set_attr(ground["shapeOffsetY"], -thickness * 0.5)
+
+        mod.set_attr(transform["scaleX"], bbox.width)
+        mod.set_attr(transform["scaleY"], 1)
+        mod.set_attr(transform["scaleZ"], bbox.depth)
+        mod.set_attr(transform["translateX"], bbox.center.x)
+        mod.set_attr(transform["translateY"], 0.0)
+        mod.set_attr(transform["translateZ"], bbox.center.z)
 
 
 def _find_current_solver(create_ground=True):
@@ -2176,6 +2206,7 @@ def assign_group(selection=None, **opts):
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
+
     return True
 
 
@@ -2203,6 +2234,7 @@ def assign_marker(selection=None, **opts):
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
+
     return True
 
 

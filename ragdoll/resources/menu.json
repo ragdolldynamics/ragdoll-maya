@@ -612,9 +612,9 @@
         "summary": "Capture this node",
         "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
-            "createGround",
-            "createObjectSet",
-            "createLollipop"
+            "markersCreateGround",
+            "markersCreateObjectSet",
+            "markersCreateLollipop"
         ]
     },
 
@@ -624,9 +624,9 @@
         "summary": "Capture this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
-            "createGround",
-            "createObjectSet",
-            "createLollipop"
+            "markersCreateGround",
+            "markersCreateObjectSet",
+            "markersCreateLollipop"
         ]
     },
 

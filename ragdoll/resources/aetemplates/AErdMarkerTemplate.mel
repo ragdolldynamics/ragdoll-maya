@@ -14,7 +14,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -endLayout;
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Recod" -collapse true;
+        editorTemplate -beginLayout "Record" -collapse true;
             editorTemplate -addControl "recordTranslation";
             editorTemplate -addControl "recordRotation";
             editorTemplate -addControl "sourceTransform";

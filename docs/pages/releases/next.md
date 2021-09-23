@@ -41,20 +41,20 @@ And that is amazing, it is. But something even more amazing has happened; Ragdol
 
 See, since launch I've had conversations with animators using Ragdoll for the very first time. One of those animators made a request that at first glance didn't look like much.
 
-!!! quote "The request"
-    "I don't like working with green channels, can I get rid of them?" - [Christopher Page](https://www.linkedin.com/in/3dsketchbook/)
+!!! quote
+    "I don't like working with green channels, as it is not ideal for animating. Is there a way to I can overcome this?" - [Christopher Page](https://www.linkedin.com/in/3dsketchbook/)
 
 Here's what he was referring to.
 
-https://user-images.githubusercontent.com/2152766/134045504-28e64cbb-cf4a-4d7c-8761-e8b05275d3ee.mp4
+https://user-images.githubusercontent.com/2152766/134045504-28e64cbb-cf4a-4d7c-8761-e8b05275d3ee.mp4 controls
 
 Notice how the nodes with physics applied got green channels? The reason they are green is because Ragdoll is driving them. They are green rather than yellow because you can still edit them, at the same time as Ragdoll is editing them. Your changes will be reflected in the simulation, this is how you *control* the simulation as it is running.
 
 Can we get rid of that connection? Well.. No? This is Ragdoll's connection to your controls. Without those.. there *is* no physics.
 
-I quickly dismissed that ludicrous idea and carried on with my day.. But then something *clicked*.. What if..?
+I quickly dismissed the idea and carried on with my day.. But then something *clicked*.. What if..?
 
-https://user-images.githubusercontent.com/2152766/134046287-5b84322b-3da7-49d6-987e-67a463b33c56.mp4
+https://user-images.githubusercontent.com/2152766/134046287-5b84322b-3da7-49d6-987e-67a463b33c56.mp4 controls
 
 In the next section, I'll dive into how this works and why this change goes far beyond just getting rid of green channels.
 
@@ -83,7 +83,7 @@ From here, this list has no end, because *anything* capable of affecting the wor
 
 ### Animation Capture
 
-Inspired by Motion Capture, *Animation Capture* is a new way to think about and work with physics in Maya.
+Inspired by Motion Capture - Animation Capture is a new way to think about and work with physics in Maya. To learn about it, let's first understand how Motion Capture generally works.
 
 ![image](https://user-images.githubusercontent.com/2152766/134006344-53f2744f-cc7f-48b0-860d-d0313a353c1f.png)
 
@@ -143,8 +143,6 @@ This is the key difference between `Marker` and `Rigid`. Although you still prov
 Once you're happy with what you see, you `Record`.
 
 https://user-images.githubusercontent.com/2152766/134164217-883c0635-6103-42da-87a1-0e9cd145aa1f.mp4 controls
-
-Makes sense? Ok, let's look at a more interesting example.
 
 <br>
 
@@ -287,7 +285,86 @@ https://user-images.githubusercontent.com/2152766/134319855-66c960d7-9d74-4bbf-b
 
 <br>
 
-#### Retargeting
+#### Recording
+
+Markers can be recorded all together, or independently. For example, say you wanted animation from frame 1-100, simulate 101-150 and return to animation from 151-200. You can do that.
+
+Furthermore, say you liked what the simulation was doing, but only on one half of the body. Or only on the hip, driving the main trajectory in a physically-plausible way. Keeping the rest of your animation intact.
+
+**Record All**
+
+With nothing selected, Ragdoll will record all marked controls to the current Maya playback range.
+
+https://user-images.githubusercontent.com/2152766/134327104-f3d54cda-4d88-480a-b263-faceb211e87a.mp4 controls
+
+**Record Selected Markers**
+
+Select a few controls to control what gets recorded.
+
+https://user-images.githubusercontent.com/2152766/134327103-5ad36b6b-177d-40a9-8666-cbaaab281527.mp4 controls
+
+**Record Range**
+
+Limit the Maya playback range for control over *when* recording takes place.
+
+https://user-images.githubusercontent.com/2152766/134327097-db0af345-bf15-45f5-9bc0-6ef50d3184f4.mp4 controls
+
+**Record Selected Range**
+
+Or, select an explicit range interactively.
+
+https://user-images.githubusercontent.com/2152766/134327093-ba62588e-d14f-4ff9-9b75-05d4230dbdb6.mp4 controls
+
+**Intelligent Range**
+
+A `Kinematic` marker is entirely animated, so there's no need to actually record those. Ragdoll will ensure only non-kinematic frames are recorded, so you can do things like this.
+
+https://user-images.githubusercontent.com/2152766/134504192-3514f235-1f9c-4ce8-83e5-6704bf3036df.mp4 controls
+
+<br>
+
+#### Input Type
+
+In the above examples, I mentioned `Kinematic` and you probably spotted a few other options too, like `Inherit` and `Guide`. What are those?
+
+The `Input Type` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Guide`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Off`?
+
+The `Input Type` can be set either for a whole group of markers, or each marker individually.
+
+| Type | Description
+|:-----|:-----------
+| Inherit  | Do whatever the group is doing, or `Kinematic` if there is no group
+| Off  | Do nothing, just fall under gravity
+| Kinematic | Follow the input *exactly*, physics need not apply
+| Guide | Follow the input approximately, with some `Stiffness` and `Damping`
+
+**Off**
+
+Treat the input as a starting position, but nothing else.
+
+https://user-images.githubusercontent.com/2152766/134478792-d7f4fc46-fea0-468a-9ec0-7737072263a1.mp4 controls
+
+**Kinematic**
+
+Follow the input exactly, no exceptions. Not even collisions.
+
+https://user-images.githubusercontent.com/2152766/134478795-daa12066-c151-4fd5-a762-443b60a7fc45.mp4 controls
+
+**Guide Balance -1**
+
+Follow the relative angles between controls in the input.
+
+https://user-images.githubusercontent.com/2152766/134478800-e90f8928-b590-4b91-a314-bdcd9152cfef.mp4 controls
+
+**Guide Balance +1**
+
+Follow the absolute position and orientation of the input.
+
+https://user-images.githubusercontent.com/2152766/134478803-889e6732-4e7b-433e-803d-d3edfed814a1.mp4 controls
+
+<br>
+
+#### Retarget
 
 We've talked a lot about "retargeting". But what *is* that?
 
@@ -304,7 +381,7 @@ But often times, rigs are more complicated and what you want is for the simulati
 
 <br>
 
-#### Reassigning
+#### Reassign
 
 Over in [Demo 2 - Ragdoll](#demo-2---ragdoll) we "reassigned" already marked controls. What does that mean?
 
@@ -316,52 +393,15 @@ We then also `Retarget` them, since they would have otherwise been recorded onto
 
 <br>
 
-#### Input Type
+#### Reparent
 
-In the above examples, I mentioned `Kinematic` and you probably spotted a few other options too, like `Inherit` and `Guide`. What are those?
+Sometimes, you change your mind.
 
-The `Input Type` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Guide`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Off`?
+https://user-images.githubusercontent.com/2152766/134465284-f9a3bd04-9392-4f33-a161-390cbe9049d2.mp4 controls
 
-| Type | Description
-|:-----|:-----------
-| Inherit  | Do whatever the group is doing, or `Kinematic` if there is no group
-| Off  | Do nothing, just fall under gravity
-| Kinematic | Follow the input *exactly*, physics need not apply
-| Guide | Follow the input approximately, with some `Stiffness` and `Damping`
+Success!
 
-This attribute can be animated too, to *transition* from simulation to animation (or vice versa).
-
-<br>
-
-#### Recording
-
-Markers can be recorded all together, or independently. For example, say you wanted animation from frame 1-100, simulate 101-150 and return to animation from 151-200. You can do that.
-
-Furthermore, say you liked what the simulation was doing, but only on one half of the body. Or only on the hip, driving the main trajectory in a physically-plausible way. Keeping the rest of your animation intact.
-
-**Record All**
-
-With nothing selected, Ragdoll will record all marked controls to the current Maya playback range.
-
-https://user-images.githubusercontent.com/2152766/134327104-f3d54cda-4d88-480a-b263-faceb211e87a.mp4
-
-**Record Selected Markers**
-
-Select a few controls to control what gets recorded.
-
-https://user-images.githubusercontent.com/2152766/134327103-5ad36b6b-177d-40a9-8666-cbaaab281527.mp4
-
-**Record Range**
-
-Limit the Maya playback range for control over *when* recording takes place.
-
-https://user-images.githubusercontent.com/2152766/134327097-db0af345-bf15-45f5-9bc0-6ef50d3184f4.mp4
-
-**Record Selected Range**
-
-Or, select an explicit range interactively.
-
-https://user-images.githubusercontent.com/2152766/134327093-ba62588e-d14f-4ff9-9b75-05d4230dbdb6.mp4
+https://user-images.githubusercontent.com/2152766/134465285-87eacea9-4b93-4526-980e-585bbc92151b.mp4 controls
 
 <br>
 
@@ -369,7 +409,7 @@ https://user-images.githubusercontent.com/2152766/134327093-ba62588e-d14f-4ff9-9
 
 Now let's talk about a few things you *haven't* seen yet.
 
-https://user-images.githubusercontent.com/2152766/134329974-7beb86d9-5660-44ba-b3f8-036ccc3aec28.mp4
+https://user-images.githubusercontent.com/2152766/134329974-7beb86d9-5660-44ba-b3f8-036ccc3aec28.mp4 controls
 
 > Look, it's Ragdoll Blaine!
 
@@ -381,7 +421,7 @@ Notice how with a `Guide Balance = -1` the controls arms remain relative the tor
 
 This attribute is also **animatable**, and is how you can transition from animation into simulation and back again.
 
-https://user-images.githubusercontent.com/2152766/134342444-2c2807ff-0be7-43f9-b106-73f231d55adb.mp4
+https://user-images.githubusercontent.com/2152766/134342444-2c2807ff-0be7-43f9-b106-73f231d55adb.mp4 controls
 
 Here's a more complete example:
 
@@ -398,6 +438,18 @@ https://user-images.githubusercontent.com/2152766/134332515-e7879b82-4a84-4881-9
 
 <br>
 
+### Transitions
+
+Let's have a look at how you would use markers to transition between simulation and animation.
+
+https://user-images.githubusercontent.com/2152766/134507548-382a0ccd-85b6-4990-b325-16dbd3b7d568.mp4 controls
+
+Notice how we're animated up until the jump, and then Ragdoll takes over. Once he approaches that box, we turn our `Guide Balance` from `-1` to `1` and have him reach the target pose in worldspace. Once he's close, we switch `Input Type` to `Kinematic` and kinematically move him until we once again transition to `Guide`, this time with a `Guide Balance` or `-1` for pose space.
+
+https://user-images.githubusercontent.com/2152766/134507546-49e84d32-b50a-48c6-a1b9-82410281a884.mp4 controls
+
+<br>
+
 ### Self Collision
 
 Previously, it was very important that your shapes did not overlap any shape other than it's immediate neighbour. If they did, chaos ensued.
@@ -406,7 +458,7 @@ Previously, it was very important that your shapes did not overlap any shape oth
 
 Clavicles intersect their parent spine, but also each other!
 
-https://user-images.githubusercontent.com/2152766/134362062-4197b3d6-2694-4011-9a8e-69adec92927f.mp4
+https://user-images.githubusercontent.com/2152766/134362062-4197b3d6-2694-4011-9a8e-69adec92927f.mp4 controls
 
 **After**
 
@@ -418,13 +470,16 @@ This can be taken into the extreme!
 
 https://user-images.githubusercontent.com/2152766/134362070-325aa8dc-3367-4765-a4a9-56670cc77b83.mp4 controls
 
-For which a practical example is this.
+And here's a another example to fill out a large volume in the center of a character.
 
 https://user-images.githubusercontent.com/2152766/134368633-ed4f69f4-1eba-4702-a3f6-bdddd2f0a98d.mp4 controls
 
+!!! info "Attention"
+    Notice how the spine is made up of many shapes, some of which cover the width of the body, others the depth. An overlapping mess that would never have simply not have been possible without self-collision support!
+
 https://user-images.githubusercontent.com/2152766/134368636-37cfd588-184e-46e9-b03a-6d8cacb80b76.mp4 controls
 
-
+> Original asset created by Mehmet Tayfur Türkmenoğluwe and Dr. Reel, licensed by The Rookies.
 
 <br>
 
@@ -436,103 +491,52 @@ Because `Rigids` were children of your controls, Maya had a funny way of includi
 
 Just look at this; why-oh-why would I want channels from a completely unrelated node when working with the hip?
 
-https://user-images.githubusercontent.com/2152766/134341270-72843d85-70c9-43af-86cc-c981e87fe297.mp4
+https://user-images.githubusercontent.com/2152766/134341270-72843d85-70c9-43af-86cc-c981e87fe297.mp4 controls
 
 **After**
 
 Contrast that to this, whereby only the nodes you actually select are made visible. You can even select `Markers` via the Channel Box and *deselect* your controls to get up real close.
 
-https://user-images.githubusercontent.com/2152766/134341497-cb64e666-75e6-4bfd-a3bd-aee27a61791b.mp4
+https://user-images.githubusercontent.com/2152766/134341497-cb64e666-75e6-4bfd-a3bd-aee27a61791b.mp4 controls
 
 <br>
 
-### Hidden Solver
+### No Initial State
 
-Hiding the solver completely removes all overhead of having Ragdoll in your scene. Previously, with `rdScene` and `rdRigid`, because they were directly connected to your controls, hiding things made little difference. But now, because we no longer have this direct connection, all computations come from explicitly seeing the `rdSolver` node.
+A significant effort was made to make the simulation start where you expected it to.
 
-No visible `rdSolver` node, no computations. Period.
+Under the hood, simulation and animation were at odds with one another. Ragdoll needed to know where to start, but it was also telling your controls where to start. It's an inherent cycle, which was finally broken.
 
-<br>
+!!! info "Read More"
+    You can read all about the month-long journey in the [release notes from March](/releases/2021.03.01/)
 
-### Transitions
+Nowadays, you barely have to think about it, but it does occasionally rear its ugly head. It is a hack.
 
-Let's have a look at how you would use markers to transition between simulation and animation.
-
-<br>
-
-**Workflow**
-
-- Marker Input    (e.g. joint1)
-- Marker Output   (e.g. spine_ctl)
-
-You can change the `Input` to a marker by using `Reassign`, and change the `Output` with `Retarget`.
-
-**Limitations**
-
-These are some of the things we'll be working on for subsequent releases.
-
-- Selecting rigids interacively
-- Manipulating shapes interactively
-- Manipulating constraints interactively
-- Toggle between previous animation and recorded simulation
-- No live-link
-- Cannot be exported
-- Cannot be add constraints
+With `Markers` there isn't any cycle to begin with. Ragdoll only reads from your controls, it doesn't write to anything. Under the hood, recording is a 2-step process; first it simulates, and then it writes animation back onto the controls. That's how this cycle is broken, without having any effect on the overall workflow.
 
 <br>
 
-### Performance Leap
+### No More Cycles
 
-200% performance. Wait, did I say percent? I meant **times** - 200x performance, or 20,000% whichever one you fancy. :D
+With the previous version, because `Rigids` both read and wrote to each control, you could sometimes run into a situation where the parent depends on a child.
 
-- 200x greater performance
-- 5x simpler workflow
-- 2x more fun
+**Before**
 
-Yes, you read that right. **200x** performance increase, and that's conservative. Actual numbers were `65.0 ms` turning into `0.31 ms`. Those are the numbers we want. Along with these nuggets.
+Here, I'll try and make a second chain in the opposite direction of how the controls are laid out hierarchically. This cannot work; because in order for Ragdoll to figure out where the Passive hand should be, it would first need to consult the upper arm, which is both dynamic and a child of the spine, which is also dynamic. It's a lovely cycle. ❤️
 
-- No more overlapping shapes
-- No more green channels
-- No more graph editor mess
-- No more initial state
-- No more cycles
-- No more cluttering of the Outliner
-- No more cluttering the viewport (offset render)
-- No more out-of-sync scale
+https://user-images.githubusercontent.com/2152766/134480453-279620c2-0a68-48fc-aad4-5c24c146265d.mp4 controls
 
-**Caveats**
+**After**
 
-1. Selecting any rigid selects all rigids, they are drawn as one
-2. A hidden solver will not simulate, drawing triggers simulation
+With `Markers`, this isn't a problem because to Ragdoll every limb can now be independently evaluated, in parallel.
 
-<br>
-
-### Enhanced Determinism
-
-!!! info "TLDR"
-    Sometimes, re-opening the scene could lead to different results. This has now been fixed.
-
-Each time you play a simulation starting from the beginning, the results are the same. This is an important characteristic of any simulation and is called "determinism". It used to be the case however that when you re-opened the scene, there was a small chance the results would differ from when you last saved it.
-
-This has now been fixed. The determinism is now dependent on the order in which rigid bodies connect to the `rdScene` node. It's an array attribute, whose order is saved with the Maya scene.
-
-<br>
-
-### Dynamic Constraints
-
-Constraints now have *presets*, which dynamically update based on wherever your creation is.
-
-<br>
-
-### Dynamic Time
-
-
+https://user-images.githubusercontent.com/2152766/134480451-f9be80ba-2579-485e-a4e4-ad92d0da4491.mp4 controls
 
 <br>
 
 ### Damping Ratio
 
-Constraints have 3 attributes to control their behavior.
+The current `rdConstraint` nodes have 3 attributes to control their behavior.
 
 - `Stiffness`
 - `Damping`
@@ -544,9 +548,60 @@ Where `Stiffness` and `Damping` are both multiplied by `Strength * Strength`. Fo
 final_stiffness = stiffness * strength * strength
 ```
 
-And that's great; it means you can animate just a single attribute in favour of two. Editing the relationship between the two attributes was done by changing either `Stiffness` or `Damping`.
+And that's great; it means you can animate just a single attribute in favour of two. Editing the ratio between the two attributes was done by changing either `Stiffness` or `Damping`.
 
-The new `rdMarker` node have a `dampingRatio`.. Well, no. FIX
+The `Marker` nodes gets rid of `Strength` and instead adds an explicit `Damping Ratio` attribute to control this ratio.
+
+Stiffness and damping is also multiplied by their associated Group and Solver.
+
+```py
+final_stiffness = maker.stiffness * group.stiffness * solver.stiffness
+```
+
+Meaning you can control either all or one marker at a time with ease.
+
+<br>
+
+### Quality of Life
+
+Some minor things to brighten your day.
+
+<br>
+
+#### Real Ground
+
+With `Rigids`, the ground was embedded into the scene. With `Markers`, an actual ground is created to for more stability and more control over its physical parameters. Something that can also be animated, and that dynamically appears right underneath your markers.
+
+https://user-images.githubusercontent.com/2152766/134493174-f57cc5ce-5056-4cfa-b98e-fae9114342fc.mp4 controls
+
+<br>
+
+#### Joints and the Attribute Editor
+
+The Attribute Editor doesn't show you `Rigids` related to Maya joints because of a Maya UI quirk.
+
+With `Markers`, this is no longer a problem!
+
+![image](https://user-images.githubusercontent.com/2152766/134464806-041e6abb-4be0-442f-b51d-d4a9776fd88b.png)
+
+<br>
+
+#### Hidden Solver
+
+Hiding the solver completely removes all overhead of having Ragdoll in your scene. Previously, with `rdScene` and `rdRigid`, because they were directly connected to your controls, hiding things made little difference. But now, because we no longer have this direct connection, all computations come from explicitly seeing the `rdSolver` node.
+
+No visible `rdSolver` node, no computations. Period.
+
+<br>
+
+#### Enhanced Determinism
+
+!!! info "TLDR"
+    Sometimes, re-opening the scene could lead to different results. This has now been fixed.
+
+Each time you play a simulation starting from the beginning, the results are the same. This is an important characteristic of any simulation and is called "determinism". It used to be the case however that when you re-opened the scene, there was a small chance the results would differ from when you last saved it.
+
+This has now been fixed. The determinism is now dependent on the order in which rigid bodies connect to the `rdSolver` node. It's an array attribute, whose order is saved with the Maya scene.
 
 <br>
 
@@ -567,3 +622,46 @@ cmds.ragdollLicence(getServer=True)
 # try and drop a licence from this address as well
 cmds.ragdollLicence(setServer=("localhost", 1313))
 ```
+
+<br>
+
+### Next Release
+
+This release is part 1/4, for next 2/4 release you can expect *Performance Improvements*.
+
+In this release, simulation and overall Maya scenegraph performance has seen a 200x performance boost, the performance is already there. You'll notice it as you try them on your rigs.
+
+However, *rendering* performance has dropped significantly, cancelling out *most* of that performance gain. Here's what performance looks like now.
+
+![image](https://user-images.githubusercontent.com/2152766/134397400-44ed30ce-b5c2-4cf7-9a24-2783a685b082.png)
+
+Rendering mostly Maya default shading, rendeing its own things. Unrelated to Ragdoll. The Rig Evaluation on the other hand is almost entirely Ragdoll. It's connected to every control in this rig, forcing each control to be evaluated in serial; one after the other.
+
+Here's what it looks like with `Markers`.
+
+![image](https://user-images.githubusercontent.com/2152766/134399139-cbe27611-3445-4453-b901-fbe1687dd299.png)
+
+Notice the huge pile of lines to the left? Those are all running parallel and almost entirely default Maya evaluations; things your rig would do without Ragdoll. Rendering on the other hand is almost entirely Ragdoll, it is *very* slow.
+
+To properly compare performance between `Rigids` and `Markers`, here's what you should be looking at.
+
+https://user-images.githubusercontent.com/2152766/134398643-bf2e3086-a8f6-4ea7-8e58-011c866acaaa.mp4 controls
+
+This is the only thing Ragdoll does to your rig. This is the entire overhead, the added load onto your rig. 16 *microseconds*. That's `0.016 ms`. For a rig to run at 30 fps, it'll need `1,000/30 = 33 ms` per frame. This overhead, `0.016 ms/frame` is all Ragdoll needs to solve an entire character, contacts and constraints and forces, all of it. In this particular profiling, that's 430x faster than `Rigids`, which not only took longer to solve but made everything else slower by just being connected to your controls.
+
+So how about we get this rendering performance sorted, shall we?
+
+<br>
+
+### Limitations
+
+These are some of the things lacking from `Markers` in this release that we'll be working on for subsequent releases.
+
+- Selecting rigids interacively
+- Manipulating shapes interactively
+- Manipulating constraints interactively
+- Toggle between previous animation and recorded simulation
+- Support for recording onto an animation layer
+- No "live-mode", where physics drives a control interactively
+- Markers cannot be exported
+- Markers cannot have additional constraints

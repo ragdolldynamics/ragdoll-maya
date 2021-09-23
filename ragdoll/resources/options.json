@@ -674,28 +674,44 @@
     "#": " Markers ",
     "#": "----------------",
 
-    "createGround": {
-        "name": "createGround",
+    "markersCreateGround": {
+        "name": "markersCreateGround",
         "label": "Create Ground",
         "type": "Boolean",
         "default": true,
         "help": "Whether or not to automatically create a ground with a new solver."
     },
 
-    "createObjectSet": {
-        "name": "createObjectSet",
+    "markersCreateObjectSet": {
+        "name": "markersCreateObjectSet",
         "label": "Create Object Set",
         "type": "Boolean",
         "default": false,
         "help": "Gather all newly created markers into an object set."
     },
 
-    "createLollipop": {
-        "name": "createLollipop",
+    "markersCreateLollipop": {
+        "name": "markersCreateLollipop",
         "label": "Create Lollipop",
         "type": "Boolean",
         "default": false,
         "help": "Add an extra 'lollipop' control to marked nodes, to more easily find relevant marker attributes."
+    },
+
+    "markersIgnoreJoints": {
+        "name": "markersIgnoreJoints",
+        "label": "Ignore Joints",
+        "type": "Boolean",
+        "default": true,
+        "help": "Do not record to joints, these are typically read-only."
+    },
+
+    "markersUseSelection": {
+        "name": "markersUseSelection",
+        "label": "Use Selection",
+        "type": "Boolean",
+        "default": true,
+        "help": "Should I record only to the selected controls?"
     },
 
     "#": "----------------",

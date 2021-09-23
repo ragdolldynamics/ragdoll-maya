@@ -35,6 +35,10 @@ global proc AErdSolverTemplate(string $nodeName) {
         editorTemplate -beginLayout "Visualisation" -collapse true;
             editorTemplate -addControl "displayType";
             editorTemplate -addControl "drawDepth";
+            editorTemplate -addControl "drawShapes";
+            editorTemplate -addControl "drawConstraints";
+            editorTemplate -addControl "drawLimits";
+            editorTemplate -addControl "drawDrives";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

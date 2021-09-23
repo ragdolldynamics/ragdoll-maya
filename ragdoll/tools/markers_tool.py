@@ -193,14 +193,15 @@ def assign(transforms, solver, lollipop=False):
 
 
 def record(solver,
-           transforms=None,
            start_time=None,
            end_time=None,
+           include=None,
+           exclude=None,
            maintain_offset=True):
     """Transfer simulation into animation
 
     Arguments:
-        transforms (list, optional): Record these transforms only
+        include (list, optional): Record these transforms only
         start_time (MTime, optional): Record from this time
         end_time (MTime, optional): Record to this time
         maintain_offset (bool, optional): Maintain whatever offset is
@@ -216,7 +217,8 @@ def record(solver,
     if end_time is None:
         end_time = cmdx.max_time()
 
-    transforms = {t: True for t in transforms} if transforms else {}
+    include = {t: True for t in include} if include else {}
+    exclude = {t: True for t in exclude} if exclude else {}
 
     assert end_time > start_time, "%d must be greater than %d" % (
         end_time, start_time
@@ -406,11 +408,11 @@ def record(solver,
             marker = markers[marker]
             dst = marker["dst"][0].input()
 
-            # No destination transforms here, carry on
+            # No destination transform here, carry on
             if dst is None:
                 continue
 
-            # Can only unroll transforms with all axes keyed
+            # Can only unroll transform with all axes keyed
             if all(is_keyed(dst[ch]) for ch in ("rx", "ry", "rz")):
 
                 # Should only unrol any that was actually
@@ -484,8 +486,11 @@ def record(solver,
                         if not dst:
                             continue
 
-                        # Filter out unwanted transforms
-                        if transforms and dst not in transforms:
+                        # Filter out unwanted nodes
+                        if include and dst not in include:
+                            continue
+
+                        if exclude and dst in exclude:
                             continue
 
                         matrix = output_matrix

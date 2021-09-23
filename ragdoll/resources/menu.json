@@ -579,6 +579,22 @@
             "selectUseSelection"
         ]
     },
+    "selectMarkers": {
+        "label": "Select Markers",
+        "icon": "marker.png",
+        "summary": "Select all markers in the scene.",
+        "description": "Select all markers in the scene.",
+        "options": [
+        ]
+    },
+    "selectSolvers": {
+        "label": "Select Solvers",
+        "icon": "solver.png",
+        "summary": "Select all solvers in the scene.",
+        "description": "Select all solvers in the scene.",
+        "options": [
+        ]
+    },
     "ragdoll": {
         "icon": "logo.png",
         "summary": "View your version, and eventually look for updates and tutorials. Not yet though."
@@ -618,8 +634,10 @@
         "label": "Record Markers",
         "icon": "record.png",
         "summary": "Transfer simulation into animation",
-        "description": "Bake the simulation of the selected nodes or markers, to their destination transforms.",
+        "description": "Record the simulation as animation onto the marker targets.",
         "options": [
+            "markersUseSelection",
+            "markersIgnoreJoints"
         ]
     },
 

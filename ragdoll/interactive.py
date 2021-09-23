@@ -618,7 +618,8 @@ def install_menu():
 
         divider("Record")
 
-        item("recordMarkers", record_markers, label="Record")
+        item("recordMarkers", record_markers, reassign_marker_options,
+             label="Record")
 
         divider("Edit")
 
@@ -773,6 +774,8 @@ def install_menu():
              select_constraints_options)
         item("selectControls", select_controls, select_controls_options)
         item("selectScenes", select_scenes, select_scenes_options)
+        item("selectMarkers", select_markers)
+        item("selectSolvers", select_solvers)
 
     divider()
 
@@ -2156,49 +2159,51 @@ def _add_to_objset(markers):
 def assign_group(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
     opts = dict({
-        "createGround": _opt("createGround", opts),
-        "createObjectSet": _opt("createObjectSet", opts),
-        "createLollipop": _opt("createLollipop", opts),
+        "markersCreateGround": _opt("markersCreateGround", opts),
+        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
+        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["createGround"])
+    solver, ground = _find_current_solver(opts["markersCreateGround"])
     markers = tools.assign_markers(
-        selection, solver, lollipop=opts["createLollipop"]
+        selection, solver, lollipop=opts["markersCreateLollipop"]
     )
 
     if ground:
         _fit_ground(ground, markers)
 
-    if opts["createObjectSet"]:
+    if opts["markersCreateObjectSet"]:
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
+    return True
 
 
 @i__.with_undo_chunk
 def assign_marker(selection=None, **opts):
     selection = selection or cmdx.selection(type=("transform", "joint"))
     opts = dict({
-        "createGround": _opt("createGround", opts),
-        "createObjectSet": _opt("createObjectSet", opts),
-        "createLollipop": _opt("createLollipop", opts),
+        "markersCreateGround": _opt("markersCreateGround", opts),
+        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
+        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["createGround"])
+    solver, ground = _find_current_solver(opts["markersCreateGround"])
     markers = []
 
     for transform in selection:
         markers.extend(tools.assign_markers(
-            [transform], solver, lollipop=opts["createLollipop"]
+            [transform], solver, lollipop=opts["markersCreateLollipop"]
         ))
 
     if ground:
         _fit_ground(ground, markers)
 
-    if opts["createObjectSet"]:
+    if opts["markersCreateObjectSet"]:
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
+    return True
 
 
 @contextlib.contextmanager
@@ -2224,8 +2229,20 @@ def progressbar(status="Progress.. ", max_value=100):
 @i__.with_undo_chunk
 @with_exception_handling
 def record_markers(selection=None, **opts):
+    opts = dict({
+        "markersUseSelection": _opt("markersUseSelection", opts),
+        "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
+    }, **(opts or {}))
+
     solvers = _filtered_selection("rdSolver")
-    transforms = _filtered_selection(cmdx.kDagNode)
+    include = []
+    exclude = []
+
+    if opts["markersUseSelection"]:
+        include += _filtered_selection(cmdx.kDagNode)
+
+    if opts["markersIgnoreJoints"]:
+        exclude += _filtered_selection(cmdx.kJoint)
 
     if len(solvers) < 1:
         solvers = cmdx.ls(type="rdSolver")
@@ -2249,9 +2266,10 @@ def record_markers(selection=None, **opts):
     with i__.Timer("bake") as duration, progressbar() as p:
         for solver in solvers:
             it = tools.record_markers(solver,
-                                      transforms=transforms,
                                       start_time=start_time,
-                                      end_time=end_time)
+                                      end_time=end_time,
+                                      include=include,
+                                      exclude=exclude)
             for step, progress in it:
                 print("%.1f%% (%s)" % (progress, step.title()))
 
@@ -2270,6 +2288,8 @@ def record_markers(selection=None, **opts):
         pos="topCenter",
         fade=True
     )
+
+    return True
 
 
 def retarget_marker(selection=None, **opts):
@@ -2299,6 +2319,9 @@ def reparent_marker(selection=None, **opts):
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["ragdollId"], a["parentMarker"])
+
+    log.info("Parented %s -> %s" % (a, b))
+    return True
 
 
 def untarget_marker(selection=None, **opts):
@@ -3042,6 +3065,14 @@ def select_rigids(selection=None, **opts):
     return select_type("rdRigid")(selection, **opts)
 
 
+def select_markers(selection=None, **opts):
+    return select_type("rdMarker")(selection, **opts)
+
+
+def select_solvers(selection=None, **opts):
+    return select_type("rdSolver")(selection, **opts)
+
+
 def select_constraints(selection=None, **opts):
     return select_type("rdConstraint")(selection, **opts)
 
@@ -3514,6 +3545,10 @@ def assign_marker_options(*args):
 
 def assign_group_options(*args):
     return _Window("assignGroup", assign_group)
+
+
+def reassign_marker_options(*args):
+    return _Window("recordMarkers", record_markers)
 
 
 def set_initial_state_options(*args):

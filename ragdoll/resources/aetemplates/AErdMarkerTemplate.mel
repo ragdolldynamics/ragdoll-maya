@@ -14,9 +14,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -endLayout;
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Capture" -collapse true;
-            editorTemplate -addControl "captureTranslation";
-            editorTemplate -addControl "captureRotation";
+        editorTemplate -beginLayout "Recod" -collapse true;
+            editorTemplate -addControl "recordTranslation";
+            editorTemplate -addControl "recordRotation";
             editorTemplate -addControl "sourceTransform";
             editorTemplate -addControl "destinationTransform";
         editorTemplate -endLayout;
@@ -58,6 +58,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "linearDamping";
             editorTemplate -addControl "angularDamping";
+            editorTemplate -addControl "driveInterpolation";
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "sleepThreshold";

@@ -20,9 +20,11 @@ def assign(transforms, solver, lollipop=False):
 
         if not group:
             with cmdx.DagModifier() as mod:
-                group_parent = mod.create_node("transform", name="rSuit")
+                name = internal.unique_name("rGroup")
+                shape_name = internal.shape_name(name)
+                group_parent = mod.create_node("transform", name=name)
                 group = mod.create_node("rdGroup",
-                                        name="rSuitShape",
+                                        name=shape_name,
                                         parent=group_parent)
 
                 index = solver["inputStart"].next_available_index()

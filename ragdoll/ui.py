@@ -1773,6 +1773,12 @@ class SplashScreen(QtWidgets.QDialog):
         icon.setPixmap(status)
         icon.setToolTip(tooltip)
 
+        if data["product"] == "personal":
+            pixmap = QtGui.QPixmap(_resource("ui", "splash_personal.png"))
+            pixmap = pixmap.scaledToWidth(
+                px(500), QtCore.Qt.SmoothTransformation)
+            self._widgets["background"].setPixmap(pixmap)
+
         message = self._widgets["statusMessage"]
         message.setText(
             "Ragdoll - {version} - <b>{product}</b> ({licence})".format(

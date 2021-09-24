@@ -6,9 +6,10 @@ description: Reverse motion capture, i.e. "Animation Capture" is introduced, for
 
 Highlight for this release is **Animation Capture**.
 
-- [**ADDED** Animation Capture](#animation-capture) A.k.a. Reverse Motion Capture
+- [**ADDED** Animation Capture](#animation-capture) AnimCap, a.k.a. Reverse Motion Capture
 - [**ADDED** Self-Collision](#self-collision) Overlapping shapes, begone
 - [**ADDED** Damping Ratio](#damping-ratio) One less attribute to worry about
+- [**ADDED** Lollipop Controls](#lollipop-controls) Clarity where there was none
 - [**IMPROVED** Quality of Life](#quality-of-life) Less clutter, more joy
 - [**IMPROVED** No Graph Editor Mess](#no-graph-editor-mess) Clean Graph Editor, clean mind
 - [**IMPROVED** No More Cycles](#no-more-cycles) Clean Graph Editor, clean mind
@@ -357,15 +358,15 @@ Follow the input exactly, no exceptions. Not even collisions.
 
 https://user-images.githubusercontent.com/2152766/134478795-daa12066-c151-4fd5-a762-443b60a7fc45.mp4 controls
 
-**Guide Balance -1**
+**Guide Space -1**
 
-Follow the relative angles between controls in the input.
+Follow the local angles of the input.
 
 https://user-images.githubusercontent.com/2152766/134478800-e90f8928-b590-4b91-a314-bdcd9152cfef.mp4 controls
 
-**Guide Balance +1**
+**Guide Space +1**
 
-Follow the absolute position and orientation of the input.
+Follow the world position and orientation of the input.
 
 https://user-images.githubusercontent.com/2152766/134478803-889e6732-4e7b-433e-803d-d3edfed814a1.mp4 controls
 
@@ -412,7 +413,7 @@ https://user-images.githubusercontent.com/2152766/134465285-87eacea9-4b93-4526-9
 
 <br>
 
-#### Guide Balance
+#### Guide Space
 
 Now let's talk about a few things you *haven't* seen yet.
 
@@ -424,7 +425,7 @@ So what's happening here? Well, it *looks* like a [Soft Pin](/documentation/soft
 
 https://user-images.githubusercontent.com/2152766/134331199-c381ab43-4055-4e7a-a190-68d2acd0668f.mp4 controls
 
-Notice how with a `Guide Balance = -1` the controls arms remain relative the torso. And with `Guide Balance = 1` they instead follow the *worldspace* orientation of the controls. Just like a Soft Pin.
+Notice how with a `Guide Space = -1` the controls arms remain relative the torso. And with `Guide Space = 1` they instead follow the *worldspace* orientation of the controls. Just like a Soft Pin.
 
 This attribute is also **animatable**, and is how you can transition from animation into simulation and back again.
 
@@ -451,7 +452,7 @@ Let's have a look at how you would use markers to transition between simulation 
 
 https://user-images.githubusercontent.com/2152766/134507548-382a0ccd-85b6-4990-b325-16dbd3b7d568.mp4 controls
 
-Notice how we're animated up until the jump, and then Ragdoll takes over. Once he approaches that box, we turn our `Guide Balance` from `-1` to `1` and have him reach the target pose in worldspace. Once he's close, we switch `Input Type` to `Kinematic` and kinematically move him until we once again transition to `Guide`, this time with a `Guide Balance` or `-1` for pose space.
+Notice how we're animated up until the jump, and then Ragdoll takes over. Once he approaches that box, we turn our `Guide Space` from `-1` to `1` and have him reach the target pose in worldspace. Once he's close, we switch `Input Type` to `Kinematic` and kinematically move him until we once again transition to `Guide`, this time with a `Guide Space` or `-1` for pose space.
 
 https://user-images.githubusercontent.com/2152766/134507546-49e84d32-b50a-48c6-a1b9-82410281a884.mp4 controls
 
@@ -566,6 +567,14 @@ final_stiffness = maker.stiffness * group.stiffness * solver.stiffness
 ```
 
 Meaning you can control either all or one marker at a time with ease.
+
+<br>
+
+### Lollipop Controls
+
+Sometimes, markers are added to an already busy control with tons of Channel Box entries. Lollipop controls can help organise things a little better.
+
+
 
 <br>
 

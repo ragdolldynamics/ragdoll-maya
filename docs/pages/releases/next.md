@@ -7,14 +7,17 @@ description: Reverse motion capture, i.e. "Animation Capture" is introduced, for
 Highlight for this release is **Animation Capture**.
 
 - [**ADDED** Animation Capture](#animation-capture) A.k.a. Reverse Motion Capture
-- [**ADDED** Groups](#capture-suit) Centralised character controls
 - [**ADDED** Self-Collision](#self-collision) Overlapping shapes, begone
-- [**ADDED** Collision Groups](#collision-groups) Fine control over what collides with what
-- [**ADDED** Offset Simulation](#offset-simulation) Visually separate between input and output
 - [**ADDED** Damping Ratio](#damping-ratio) One less attribute to worry about
-- [**ADDED** Keyable Status](#keyable-status) Which one is keyable, which is not?
-- [**IMPROVED** Enhanced Determinism](#enhanced-determinism) 
+- [**IMPROVED** Quality of Life](#quality-of-life) Less clutter, more joy
+- [**IMPROVED** No Graph Editor Mess](#no-graph-editor-mess) Clean Graph Editor, clean mind
+- [**IMPROVED** No More Cycles](#no-more-cycles) Clean Graph Editor, clean mind
+- [**IMPROVED** No Initial State](#no-initial-state) Less is more
 - [**FIXED** Multiple Floating Licences](#multiple-floating-licences) Now behaves as one would expect
+
+<br>
+
+https://user-images.githubusercontent.com/2152766/134507548-382a0ccd-85b6-4990-b325-16dbd3b7d568.mp4 controls
 
 <br>
 
@@ -216,11 +219,11 @@ And there you have it! This works with IK, SpineIK, Follicles, Geometry Constrai
 
 #### Demo 4 - Real World Example
 
-Here's an animation whereby the elbow should be resting on the table, but intersects it slightly as the torso moves about. Let's see how Ragdoll can sort this out.
+Here's a work-in-progress animation from [Christopher Page](https://www.linkedin.com/in/3dsketchbook/) (thanks for lending it to me!) Let's see how we can use Ragdoll to help improve upon it.
 
 **1. The Problem**
 
-This animation looks great (thanks [Christopher Page](https://www.linkedin.com/in/3dsketchbook/) for lending it to me!) but has a problem with the elbow. Notice how it intersects the table as he moves his torso around? A difficult problem and moving target as you need to keep tweaking both the torso and hand IK handle to tune your animation.
+Notice how the elbow intersects the table as he moves his torso around? A difficult problem and moving target as you need to keep tweaking both the torso and hand IK handle to tune your animation.
 
 https://user-images.githubusercontent.com/2152766/134319921-6e96ef8c-1226-47b4-b3db-7f076047c62a.mp4 controls
 
@@ -280,6 +283,10 @@ https://user-images.githubusercontent.com/2152766/134319858-e82de1cc-4ed7-4dea-b
 And there we go! 2 minutes or less, and you've got a reusable setup for correcting the elbow whenever the animation changes. IK is intact and you can keep working with keyframes. Keeping Ragdoll attached to your rig has *zero* impact on performance (as you can see by looking at the fps counter near the bottom of the two comparisons), and once hidden it has no impact on your Outliner either. All clean!
 
 https://user-images.githubusercontent.com/2152766/134319855-66c960d7-9d74-4bbf-bde4-5e813c7123cd.mp4 controls
+
+Here's one more I couldn't find room for, an earlier version of the animation with *stepped keys* and finger simulation. Look at all that juicy finger interaction with the table. 😊
+
+https://user-images.githubusercontent.com/2152766/134513003-7b25c2d1-87e8-4853-a89d-a73b3a5ba2e2.mp4 controls
 
 > Rig and Model courtesy of Ramon Arango - [Apollo Rig](https://ramonarango.gumroad.com/l/ArtemisApolloRig)
 

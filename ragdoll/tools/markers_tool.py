@@ -57,6 +57,18 @@ def assign(transforms, solver, lollipop=False):
             else:
                 parent_transform = None
 
+            shape = transform.shape(type=("mesh",
+                                          "nurbsCurve",
+                                          "nurbsSurface"))
+
+            if shape and shape.type() == "mesh":
+                dgmod.connect(shape["outMesh"],
+                              marker["inputGeometry"])
+
+            if shape and shape.type() in ("nurbsCurve", "nurbsSurface"):
+                dgmod.connect(shape["local"],
+                              marker["inputGeometry"])
+
             # It's a limb
             if parent_marker or len(transforms) > 1:
                 geo = commands.infer_geometry(transform,
@@ -69,19 +81,8 @@ def assign(transforms, solver, lollipop=False):
             else:
                 dgmod.set_attr(marker["inputType"], constants.InputOff)
 
-                shape = transform.shape(type=("mesh",
-                                              "nurbsCurve",
-                                              "nurbsSurface"))
                 if shape:
                     geo = commands._interpret_shape2(shape)
-
-                    if shape.type() == "mesh":
-                        dgmod.connect(shape["outMesh"],
-                                      marker["inputGeometry"])
-
-                    if shape.type() in ("nurbsCurve", "nurbsSurface"):
-                        dgmod.connect(shape["local"],
-                                      marker["inputGeometry"])
 
                 else:
                     geo = commands.infer_geometry(transform)
@@ -90,8 +91,6 @@ def assign(transforms, solver, lollipop=False):
             # Make the root passive
             if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["inputType"], constants.InputKinematic)
-
-            dgmod.set_attr(marker["limitType"], 0)
 
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
@@ -108,6 +107,9 @@ def assign(transforms, solver, lollipop=False):
             dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(time1["outTime"], marker["currentTime"])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
+            dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
+            dgmod.connect(transform["rotatePivotTranslate"],
+                          marker["rotatePivotTranslate"])
 
             if group:
                 dgmod.connect(group["startTime"], marker["startTime"])
@@ -135,6 +137,8 @@ def assign(transforms, solver, lollipop=False):
 
             # Keep next_available_index() up-to-date
             dgmod.do_it()
+
+            reset_constraint_frames(dgmod, marker)
 
             markers[transform] = marker
 
@@ -625,7 +629,7 @@ def create_constraint(parent, child, opts=None):
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(child["ragdollId"], con["childRigid"])
 
-        reset_constraint(mod, con)
+        reset_constraint_frames(mod, con)
         add_constraint(mod, con, group)
 
         mod.set_attr(con["limitEnabled"], True)
@@ -639,63 +643,26 @@ def add_constraint(mod, con, group):
     )
 
     time = cmdx.encode("time1")
-    index = group["inputConstraintStart"].next_available_index()
+    index = group["inputStart"].next_available_index()
 
     mod.set_attr(con["version"], internal.version())
-    mod.connect(con["startState"], group["inputConstraintStart"][index])
-    mod.connect(con["currentState"], group["inputConstraint"][index])
+    mod.connect(con["startState"], group["inputStart"][index])
+    mod.connect(con["currentState"], group["inputCurrent"][index])
     mod.connect(time["outTime"], con["currentTime"])
 
     # Ensure `next_available_index` is up-to-date
     mod.do_it()
 
 
-def reset_constraint(mod, con, opts=None):
-    assert con.type() == "rdConstraint", "%s must be an rdConstraint" % con
-
-    opts = opts or {}
-
-    # Setup default values
-    opts = dict({
-        "maintainOffset": True,
-    }, **opts)
-
-    def reset_attr(attr):
-        if attr.editable:
-            mod.reset_attr(attr)
-
-    reset_attr(con["limitEnabled"])
-    reset_attr(con["limitStrength"])
-    reset_attr(con["linearLimitX"])
-    reset_attr(con["linearLimitY"])
-    reset_attr(con["linearLimitZ"])
-    reset_attr(con["angularLimitX"])
-    reset_attr(con["angularLimitY"])
-    reset_attr(con["angularLimitZ"])
-
-    # This is normally what you'd expect
-    mod.set_attr(con["disableCollision"], True)
-
-    # Align constraint to whatever the local transformation is
-    if opts["maintainOffset"]:
-
-        # Ensure connection to childRigid is complete
-        mod.do_it()
-
-        reset_constraint_frames(con, _mod=mod)
-
-
-def reset_constraint_frames(con, _mod=None):
+def reset_constraint_frames(mod, marker):
     """Reset constraint frames"""
 
-    assert con and isinstance(con, cmdx.DagNode), (
-        "con was not a rdConstraint node"
+    assert marker and isinstance(marker, cmdx.Node), (
+        "%s was not a rdMarker node" % marker
     )
 
-    parent_marker = con["parentRigid"].input(type="rdMarker")
-    child_marker = con["childRigid"].input(type="rdMarker")
-
-    assert child_marker is not None, "Unconnected constraint: %s" % con
+    parent_marker = marker["parentMarker"].input(type="rdMarker")
+    assert marker is not None, "Unconnected constraint: %s" % marker
 
     if parent_marker is not None:
         parent_matrix = parent_marker["inputMatrix"].as_matrix()
@@ -703,45 +670,39 @@ def reset_constraint_frames(con, _mod=None):
         # It's connected to the world
         parent_matrix = cmdx.Matrix4()
 
-    transform = child_marker["src"].input()
+    # transform = marker["src"].input()
 
-    if "rotatePivot" in transform:
-        child_rotate_pivot = transform["rotatePivot"].as_vector()
-    else:
-        child_rotate_pivot = cmdx.Vector()
+    # if "rotatePivot" in transform:
+    #     child_rotate_pivot = transform["rotatePivot"].as_vector()
+    # else:
+    #     child_rotate_pivot = cmdx.Vector()
 
-    child_matrix = child_marker["inputMatrix"].as_matrix()
+    child_matrix = marker["inputMatrix"].as_matrix()
 
     child_frame = cmdx.Tm()
-    child_frame.translateBy(child_rotate_pivot)
+    # child_frame.translateBy(child_rotate_pivot)
     child_frame = child_frame.as_matrix()
 
     child_tm = cmdx.Tm(child_matrix)
-    child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+    # child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
 
     parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
 
-    def do_it(mod):
-        # Drive to where you currently are
-        if con["driveMatrix"].writable:
-            mod.set_attr(con["driveMatrix"], parent_frame)
-
-        mod.set_attr(con["parentFrame"], parent_frame)
-        mod.set_attr(con["childFrame"], child_frame)
-
-    if _mod is not None:
-        do_it(_mod)
-
-    else:
-        with cmdx.DagModifier() as mod:
-            do_it(mod)
+    mod.set_attr(marker["parentFrame"], parent_frame)
+    mod.set_attr(marker["childFrame"], child_frame)
 
 
-def get_local_pos_rot(wm, b):
-    pim = b["parentInverseMatrix"][0].as_matrix()
-    tm = cmdx.Tm(wm * pim)
+def get_local_pos_rot(world_matrix, dag_node):
+    """Get translate/rotate of `world_matrix` relative `dag_node`
 
-    b_tm = b.transformation()
+    Taking into account pivots and rotation order etc.
+
+    """
+
+    pim = dag_node["parentInverseMatrix"][0].as_matrix()
+    tm = cmdx.Tm(world_matrix * pim)
+
+    b_tm = dag_node.transformation()
     b_rp = b_tm.rotatePivot(cmdx.sTransform)
     b_rpt = b_tm.rotatePivotTranslation(cmdx.sTransform)
     b_sp = b_tm.scalePivot(cmdx.sTransform)

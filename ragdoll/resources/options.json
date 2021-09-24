@@ -710,14 +710,22 @@
         "name": "markersUseSelection",
         "label": "Use Selection",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Should I record only to the selected controls?"
     },
+
+    "markersRecordKinematic": {
+        "name": "markersRecordKinematic",
+        "label": "Include Kinematic Keys",
+        "type": "Boolean",
+        "default": false,
+        "help": "Should I include non-simulated (kinematic) motion during the record? These will be identical to the original animation and generally not necessary, unless the simulation is retargeted."
+    },
+
 
     "#": "----------------",
     "#": " Global options ",
     "#": "----------------",
-
 
 
     "autoInitialState": {

@@ -199,13 +199,16 @@ def record(solver,
            end_time=None,
            include=None,
            exclude=None,
+           kinematic=False,
            maintain_offset=True):
     """Transfer simulation into animation
 
     Arguments:
-        include (list, optional): Record these transforms only
         start_time (MTime, optional): Record from this time
         end_time (MTime, optional): Record to this time
+        include (list, optional): Record these transforms only
+        exclude (list, optional): Do not record these transforms
+        kinematic (bool, optional): Record kinematic frames too
         maintain_offset (bool, optional): Maintain whatever offset is
             between the source and destination transforms, default True
 
@@ -249,7 +252,6 @@ def record(solver,
         "tx": {}, "ty": {}, "tz": {},
         "rx": {}, "ry": {}, "rz": {},
     } for marker in markers}
-    # transitions = {marker: {} for marker in markers}
 
     def simulate():
         r"""Evaluate every frame between `start_frame` and `end_frame`
@@ -277,13 +279,16 @@ def record(solver,
 
                 # Record results
                 for key, marker in markers.items():
-                    kinematic = marker["_kinematic"].read()
+                    if kinematic:
+                        is_kinematic = False
+                    else:
+                        is_kinematic = marker["_kinematic"].read()
 
                     cache[key][frame] = {
                         "recordTranslation": marker["retr"].read(),
                         "recordRotation": marker["rero"].read(),
                         "outputMatrix": marker["ouma"].as_matrix(),
-                        "kinematic": kinematic,
+                        "kinematic": is_kinematic,
                         "transition": False,
                     }
 
@@ -291,7 +296,7 @@ def record(solver,
                         cache[key][frame]["recordTranslation"] = False
                         cache[key][frame]["recordRotation"] = False
 
-                    if kinematic:
+                    if is_kinematic:
                         cache[key][frame]["recordTranslation"] = False
                         cache[key][frame]["recordRotation"] = False
 

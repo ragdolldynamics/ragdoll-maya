@@ -2262,6 +2262,7 @@ def progressbar(status="Progress.. ", max_value=100):
 @with_exception_handling
 def record_markers(selection=None, **opts):
     opts = dict({
+        "markersRecordKinematic": _opt("markersRecordKinematic", opts),
         "markersUseSelection": _opt("markersUseSelection", opts),
         "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
     }, **(opts or {}))
@@ -2301,9 +2302,10 @@ def record_markers(selection=None, **opts):
                                       start_time=start_time,
                                       end_time=end_time,
                                       include=include,
-                                      exclude=exclude)
+                                      exclude=exclude,
+                                      kinematic=opts["markersRecordKinematic"])
             for step, progress in it:
-                print("%.1f%% (%s)" % (progress, step.title()))
+                log.info("%.1f%% (%s)" % (progress, step.title()))
 
                 # Allow the user to cancel with the ESC key
                 if cmds.progressBar(p, query=True, isCancelled=True):
@@ -2315,6 +2317,7 @@ def record_markers(selection=None, **opts):
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Recorded markers in %.2fs (%d fps)" % stats)
+
     cmds.inViewMessage(
         amg="Recorded markers in <hl>%.2fs</hl> (%d fps)" % stats,
         pos="topCenter",

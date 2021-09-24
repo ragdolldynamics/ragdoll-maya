@@ -138,64 +138,69 @@ def assign(transforms, solver, lollipop=False):
             # Keep next_available_index() up-to-date
             dgmod.do_it()
 
+            # Currently unused, markers compute their own frames
             reset_constraint_frames(dgmod, marker)
 
             markers[transform] = marker
 
     if lollipop:
-        with cmdx.DagModifier() as mod:
-            for index, transform in enumerate(transforms[:]):
-                name = transform.name(namespace=False)
-
-                # R_armBlend2_JNT --> R_armBlend2
-                name = name.rsplit("_", 1)[0]
-
-                # R_armBlend2 -> R_armBlend2_MRK
-                name = name + "_MRK"
-
-                lol = mod.create_node("transform", name=name, parent=transform)
-                mod.set_keyable(lol["translateX"], False)
-                mod.set_keyable(lol["translateY"], False)
-                mod.set_keyable(lol["translateZ"], False)
-                mod.set_keyable(lol["rotateX"], False)
-                mod.set_keyable(lol["rotateY"], False)
-                mod.set_keyable(lol["rotateZ"], False)
-                mod.set_keyable(lol["scaleX"], False)
-                mod.set_keyable(lol["scaleY"], False)
-                mod.set_keyable(lol["scaleZ"], False)
-
-                mod.set_attr(lol["overrideEnabled"], True)
-                mod.set_attr(lol["overrideShading"], False)
-                mod.set_attr(lol["overrideColor"], constants.YellowIndex)
-
-                # Find a suitable scale
-                scale = list(sorted(marker["shapeExtents"].read()))[1]
-                mod.set_attr(lol["scale"], scale * 0.25)
-
-                # Take over from here
-                marker = markers[transform]
-                mod.connect(lol["parentMatrix"][0], marker["inputMatrix"])
-
-                # Make shape
-                mod.do_it()
-                curve = cmdx.curve(
-                    lol, points=(
-                        (-0, +0, +0),
-                        (-0, +4, +0),
-                        (-1, +5, +0),
-                        (-0, +6, +0),
-                        (+1, +5, +0),
-                        (-0, +4, +0),
-                    ), mod=mod
-                )
-
-                # Delete this alongside physics
-                commands._take_ownership(mod, marker, lol)
-
-                # Hide from channelbox
-                mod.set_attr(curve["isHistoricallyInteresting"], False)
+        create_lollipop(markers.values())
 
     return list(markers.values())
+
+
+def create_lollipop(markers):
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            transform = marker["src"].input()
+            name = transform.name(namespace=False)
+
+            # R_armBlend2_JNT --> R_armBlend2
+            name = name.rsplit("_", 1)[0]
+
+            # R_armBlend2 -> R_armBlend2_MRK
+            name = name + "_MRK"
+
+            lol = mod.create_node("transform", name=name, parent=transform)
+            mod.set_keyable(lol["translateX"], False)
+            mod.set_keyable(lol["translateY"], False)
+            mod.set_keyable(lol["translateZ"], False)
+            mod.set_keyable(lol["rotateX"], False)
+            mod.set_keyable(lol["rotateY"], False)
+            mod.set_keyable(lol["rotateZ"], False)
+            mod.set_keyable(lol["scaleX"], False)
+            mod.set_keyable(lol["scaleY"], False)
+            mod.set_keyable(lol["scaleZ"], False)
+
+            mod.set_attr(lol["overrideEnabled"], True)
+            mod.set_attr(lol["overrideShading"], False)
+            mod.set_attr(lol["overrideColor"], constants.YellowIndex)
+
+            # Find a suitable scale
+            scale = list(sorted(marker["shapeExtents"].read()))[1]
+            mod.set_attr(lol["scale"], scale * 0.25)
+
+            # Take over from here
+            mod.connect(lol["parentMatrix"][0], marker["inputMatrix"])
+
+            # Make shape
+            mod.do_it()
+            curve = cmdx.curve(
+                lol, points=(
+                    (-0, +0, +0),
+                    (-0, +4, +0),
+                    (-1, +5, +0),
+                    (-0, +6, +0),
+                    (+1, +5, +0),
+                    (-0, +4, +0),
+                ), mod=mod
+            )
+
+            # Delete this alongside physics
+            commands._take_ownership(mod, marker, lol)
+
+            # Hide from channelbox
+            mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
 def record(solver,

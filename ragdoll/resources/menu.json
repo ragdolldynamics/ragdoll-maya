@@ -696,6 +696,15 @@
         ]
     },
 
+    "createLollipop": {
+        "label": "Create Lollipop",
+        "icon": "lollipop.png",
+        "summary": "Create a new lollipop for the selected marker.",
+        "description": "This creates a new lollipop for the marker such that it becomes easier to find in the viewport and Channel Box.",
+        "options": [
+        ]
+    },
+
     "#": "---------",
     "#": " Logging ",
     "#": "---------",

@@ -633,6 +633,11 @@ def install_menu():
         item("parentMarker", select_parent_marker, label="Parent")
         item("childMarker", select_child_marker, label="Child")
 
+        divider("Utilities")
+
+        item("createLollipop", create_lollipop)
+        # item("Snap to Simulation", snap_to_simulation)
+
     divider("Manipulate")
 
     with submenu("Constraints", icon="constraint.png"):
@@ -2240,7 +2245,6 @@ def assign_marker(selection=None, **opts):
 
 @contextlib.contextmanager
 def progressbar(status="Progress.. ", max_value=100):
-
     import maya.mel
     progress_bar = maya.mel.eval('$tmp = $gMainProgressBar')
 
@@ -2338,6 +2342,7 @@ def retarget_marker(selection=None, **opts):
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["dst"][0])
+    return True
 
 
 def reparent_marker(selection=None, **opts):
@@ -2367,6 +2372,7 @@ def untarget_marker(selection=None, **opts):
             assert marker and marker.type() == "rdMarker", "No marker found"
 
             mod.disconnect(marker["dst"][0])
+    return True
 
 
 def reassign_marker(selection=None, **opts):
@@ -2381,6 +2387,7 @@ def reassign_marker(selection=None, **opts):
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["src"])
         mod.connect(b["worldMatrix"][0], a["inputMatrix"])
+    return True
 
 
 def select_parent_marker(selection=None, **opts):
@@ -2403,6 +2410,7 @@ def select_parent_marker(selection=None, **opts):
         cmds.warning("No parent found")
     else:
         cmds.select(parent.shortest_path())
+    return True
 
 
 def select_child_marker(selection=None, **opts):
@@ -2429,6 +2437,21 @@ def select_child_marker(selection=None, **opts):
         cmds.warning("No markers selected")
     else:
         cmds.select([c.shortest_path() for c in children])
+    return True
+
+
+def create_lollipop(selection=None, **opts):
+    markers = []
+
+    for marker in cmdx.sl():
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+        assert marker and marker.type() == "rdMarker", "No marker found"
+
+        markers += [marker]
+
+    tools.create_lollipop(markers)
+    return True
 
 
 @contextlib.contextmanager

@@ -14,3 +14,4 @@ create_dynamic_control = chain_tool.create
 show_pivot_editor = pivot_editor_tool.show
 assign_markers = markers_tool.assign
 record_markers = markers_tool.record
+create_lollipop = markers_tool.create_lollipop

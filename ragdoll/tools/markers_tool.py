@@ -3,8 +3,20 @@ from ..vendor import cmdx
 from maya import cmds
 
 
-def assign(transforms, solver, lollipop=False):
+def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
+
+    existing = []
+    for t in transforms:
+        other = t["message"].output(type="rdMarker")
+        if other is not None:
+            existing += [other]
+
+    if existing:
+        raise RuntimeError(
+            "At least %d transform(s) were already assigned"
+            % len(existing)
+        )
 
     time1 = cmdx.encode("time1")
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
@@ -142,9 +154,6 @@ def assign(transforms, solver, lollipop=False):
             reset_constraint_frames(dgmod, marker)
 
             markers[transform] = marker
-
-    if lollipop:
-        create_lollipop(markers.values())
 
     return list(markers.values())
 

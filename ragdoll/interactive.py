@@ -100,7 +100,7 @@ MessageBox = ui.MessageBox
 
 if _is_standalone():
     def MessageBox(*args, **kwargs):
-        return True
+        return kSuccess
 
 
 def _after_scene_open(*args):
@@ -132,7 +132,7 @@ def requires_ui(func):
     @functools.wraps(func)
     def requires_ui_wrapper(*args, **kwargs):
         if _is_standalone():
-            return True
+            return kSuccess
         return func(*args, **kwargs)
     return requires_ui_wrapper
 
@@ -598,20 +598,14 @@ def install_menu():
     item("muscle", create_muscle, create_muscle_options)
     item("fluid")
 
-    with submenu("Character", icon="ragdoll.png"):
-        item("character", create_character, create_character_options,
-             label="New")
-
-        divider()
-
-        item("trajectory")
-        item("momentOfInertia")
-        item("centerOfMass")
-
     with submenu("Markers", icon="control.png"):
+        divider("Beta Version")
+
+        item("markersBeta", markers_beta, markers_beta_options)
+
         divider("Create")
 
-        item("assignMarker", assign_marker, assign_marker_options,
+        item("assignMarker", assign_single, assign_marker_options,
              label="Assign Single")
         item("assignGroup", assign_group, assign_group_options,
              label="Assign Group")
@@ -636,7 +630,7 @@ def install_menu():
         divider("Utilities")
 
         item("createLollipop", create_lollipop)
-        # item("Snap to Simulation", snap_to_simulation)
+        # item("snapToSim", snap_to_sim)
 
     divider("Manipulate")
 
@@ -964,17 +958,17 @@ def _find_current_scene(autocreate=True):
 @requires_ui
 def validate_evaluation_mode():
     if not options.read("validateEvaluationMode"):
-        return True
+        return kSuccess
 
     mode = cmds.evaluationManager(query=True, mode=True)
 
     if mode[0] != "off":  # Both Serial and Parallel are OK
-        return True
+        return kSuccess
 
     def enable_parallel():
         cmds.evaluationManager(mode="parallel")
         log.info("Enabled Parallel Evaluation")
-        return True
+        return kSuccess
 
     return ui.warn(
         option="validateEvaluationMode",
@@ -997,15 +991,15 @@ def validate_evaluation_mode():
 @requires_ui
 def validate_cached_playback():
     if not cmds.optionVar(query="cachedPlaybackEnable"):
-        return True
+        return kSuccess
 
     if not options.read("validateCachingMode"):
-        return True
+        return kSuccess
 
     def disable_cached_playback():
         cmds.optionVar(intValue=("cachedPlaybackEnable", 0))
         log.info("Cached Playback Disabled")
-        return True
+        return kSuccess
 
     return ui.warn(
         option="validateCachingMode",
@@ -1025,17 +1019,17 @@ def validate_cached_playback():
 @requires_ui
 def validate_playbackspeed():
     if not options.read("validatePlaybackSpeed"):
-        return True
+        return kSuccess
 
     playback_speed = cmds.playbackOptions(playbackSpeed=True, query=True)
 
     if playback_speed == 0.0:
-        return True
+        return kSuccess
 
     def fix_it():
         cmds.playbackOptions(playbackSpeed=0.0)
         log.info("Playing every frame")
-        return True
+        return kSuccess
 
     return ui.warn(
         option="validatePlaybackSpeed",
@@ -1057,12 +1051,12 @@ def validate_playbackspeed():
 @requires_ui
 def validate_legacy_opengl():
     if not options.read("validateLegacyOpenGL"):
-        return True
+        return kSuccess
 
     opengl_legacy = cmds.optionVar(query="vp2RenderingEngine") == "OpenGL"
 
     if not opengl_legacy:
-        return True
+        return kSuccess
 
     def fix_it():
         cmds.optionVar(stringValue=("vp2RenderingEngine",
@@ -1182,7 +1176,7 @@ def is_valid_transform(transform):
                 ]
             )
 
-    return True
+    return kSuccess
 
 
 def _opt(key, override=None):
@@ -1423,7 +1417,7 @@ def create_active_chain(selection=None, **opts):
 
         # Passive or active, this is fine
         if rigid:
-            return True
+            return kSuccess
 
         # This is not fine
         return not i__.is_dynamic(root, scene)
@@ -2191,33 +2185,14 @@ def _add_to_objset(markers):
 
 
 @i__.with_undo_chunk
-def assign_group(selection=None, **opts):
-    selection = selection or cmdx.selection(type=("transform", "joint"))
-    opts = dict({
-        "markersCreateGround": _opt("markersCreateGround", opts),
-        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
-        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
-    }, **(opts or {}))
+@with_exception_handling
+def assign_single(selection=None, **opts):
+    selection = selection or cmdx.selection()
+    selection = cmdx.ls(selection, type=("transform", "joint"))
 
-    solver, ground = _find_current_solver(opts["markersCreateGround"])
-    markers = tools.assign_markers(
-        selection, solver, lollipop=opts["markersCreateLollipop"]
-    )
+    if not selection:
+        return log.warning("Select one or more controls to assign markers to.")
 
-    if ground:
-        _fit_ground(ground, markers)
-
-    if opts["markersCreateObjectSet"]:
-        _add_to_objset(markers)
-
-    cmds.select(t.shortest_path() for t in selection)
-
-    return True
-
-
-@i__.with_undo_chunk
-def assign_marker(selection=None, **opts):
-    selection = selection or cmdx.selection(type=("transform", "joint"))
     opts = dict({
         "markersCreateGround": _opt("markersCreateGround", opts),
         "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
@@ -2227,10 +2202,14 @@ def assign_marker(selection=None, **opts):
     solver, ground = _find_current_solver(opts["markersCreateGround"])
     markers = []
 
-    for transform in selection:
-        markers.extend(tools.assign_markers(
-            [transform], solver, lollipop=opts["markersCreateLollipop"]
-        ))
+    try:
+        for transform in selection:
+            markers.extend(tools.assign_markers([transform], solver))
+    except RuntimeError as e:
+        raise i__.UserWarning("Already assigned", str(e))
+
+    if opts["markersCreateLollipop"]:
+        tools.create_lollipop(markers)
 
     if ground:
         _fit_ground(ground, markers)
@@ -2240,7 +2219,43 @@ def assign_marker(selection=None, **opts):
 
     cmds.select(t.shortest_path() for t in selection)
 
-    return True
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_group(selection=None, **opts):
+    selection = selection or cmdx.selection()
+    selection = cmdx.ls(selection, type=("transform", "joint"))
+
+    if not selection:
+        return log.warning("Select one or more controls to assign markers to.")
+
+    opts = dict({
+        "markersCreateGround": _opt("markersCreateGround", opts),
+        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
+        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
+    }, **(opts or {}))
+
+    solver, ground = _find_current_solver(opts["markersCreateGround"])
+
+    try:
+        markers = tools.assign_markers(selection, solver)
+    except RuntimeError as e:
+        raise i__.UserWarning("Already assigned", str(e))
+
+    if opts["markersCreateLollipop"]:
+        tools.create_lollipop(markers)
+
+    if ground:
+        _fit_ground(ground, markers)
+
+    if opts["markersCreateObjectSet"]:
+        _add_to_objset(markers)
+
+    cmds.select(t.shortest_path() for t in selection)
+
+    return kSuccess
 
 
 @contextlib.contextmanager
@@ -2271,23 +2286,24 @@ def record_markers(selection=None, **opts):
         "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
     }, **(opts or {}))
 
-    solvers = _filtered_selection("rdSolver")
+    solvers = _filtered_selection("rdSolver", selection)
     include = []
     exclude = []
 
     if opts["markersUseSelection"]:
-        include += _filtered_selection(cmdx.kDagNode)
+        include += _filtered_selection(cmdx.kDagNode, selection)
 
     if opts["markersIgnoreJoints"]:
-        exclude += _filtered_selection(cmdx.kJoint)
+        exclude += _filtered_selection(cmdx.kJoint, selection)
 
     if len(solvers) < 1:
         solvers = cmdx.ls(type="rdSolver")
 
     if len(solvers) < 1:
         raise i__.UserWarning(
-            "No Solver",
-            "No solvers found"
+            "Nothing to record",
+            "Ensure there is at least 1 marker in the "
+            "scene along with a solver."
         )
 
     start_time, end_time = cmdx.selected_time()
@@ -2328,25 +2344,53 @@ def record_markers(selection=None, **opts):
         fade=True
     )
 
-    return True
+    return kSuccess
 
 
+@i__.with_undo_chunk
 def retarget_marker(selection=None, **opts):
-    a, b = cmdx.sl()
+    try:
+        a, b = selection or cmdx.sl()
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select an existing marker along with "
+            "where you would like it reassigned."
+        )
 
     if a.isA(cmdx.kDagNode):
         a = a["message"].output(type="rdMarker")
 
-    assert a and a.type() == "rdMarker", "No marker found"
-    assert b and b.isA(cmdx.kDagNode), "%s not a DAG node" % b
+    if not (a and a.type() == "rdMarker"):
+        raise i__.UserWarning(
+            "No marker found",
+            "The first selection should have a marker assigned."
+        )
+
+    if not (b and b.isA(cmdx.kDagNode)):
+        raise i__.UserWarning(
+            "No suitable target found",
+            "The second selection should be a suitable target, a DAG node. "
+            "'%s' was <b>not</b> a DAG node" % b
+        )
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["dst"][0])
-    return True
+
+    return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
 def reparent_marker(selection=None, **opts):
-    a, b = cmdx.sl()
+    try:
+        a, b = selection or cmdx.sl()
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select a child marker along with "
+            "the marker to make the new parent."
+        )
 
     if a.isA(cmdx.kDagNode):
         a = a["message"].output(type="rdMarker")
@@ -2354,42 +2398,86 @@ def reparent_marker(selection=None, **opts):
     if b.isA(cmdx.kDagNode):
         b = b["message"].output(type="rdMarker")
 
-    assert a and a.type() == "rdMarker", "No child marker found"
-    assert b and b.type() == "rdMarker", "No parent marker found"
+    if not (a and a.type() == "rdMarker"):
+        raise i__.UserWarning(
+            "No child marker found",
+            "The first selection should be a child marker."
+        )
+
+    if not (b and b.type() == "rdMarker"):
+        raise i__.UserWarning(
+            "No parent marker found",
+            "The second selection should be the new parent."
+        )
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["ragdollId"], a["parentMarker"])
 
     log.info("Parented %s -> %s" % (a, b))
-    return True
+    return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
 def untarget_marker(selection=None, **opts):
+    selection = selection or cmdx.sl()
+    markers = []
+
+    for marker in selection:
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+
+        if marker and marker.type() == "rdMarker":
+            markers += [marker]
+
+    if not markers:
+        raise i__.UserWarning(
+            "No markers found",
+            "Select one or more markers to remove the target(s) from."
+        )
+
     with cmdx.DGModifier() as mod:
-        for marker in cmdx.sl():
-            if marker.isA(cmdx.kDagNode):
-                marker = marker["message"].output(type="rdMarker")
-            assert marker and marker.type() == "rdMarker", "No marker found"
-
+        for marker in markers:
             mod.disconnect(marker["dst"][0])
-    return True
+
+    return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
 def reassign_marker(selection=None, **opts):
-    a, b = cmdx.sl()
+    try:
+        a, b = selection or cmdx.sl()
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select an existing marker along with "
+            "where you would like it reassigned."
+        )
 
     if a.isA(cmdx.kDagNode):
         a = a["message"].output(type="rdMarker")
 
-    assert a and a.type() == "rdMarker", "No marker found"
-    assert b and b.isA(cmdx.kDagNode), "%s not a DAG node" % b
+    if not (a and a.type() == "rdMarker"):
+        raise i__.UserWarning(
+            "No marker found",
+            "The first selection should have a marker assigned."
+        )
+
+    if not (b and b.isA(cmdx.kDagNode)):
+        raise i__.UserWarning(
+            "No suitable target found",
+            "The second selection should be a suitable target, a DAG node. "
+            "'%s' was <b>not</b> a DAG node" % b
+        )
 
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["src"])
         mod.connect(b["worldMatrix"][0], a["inputMatrix"])
-    return True
+    return kSuccess
 
 
+@i__.with_undo_chunk
 def select_parent_marker(selection=None, **opts):
     parent = None
 
@@ -2408,11 +2496,14 @@ def select_parent_marker(selection=None, **opts):
 
     if not parent:
         cmds.warning("No parent found")
+        cmds.select(deselect=True)
     else:
         cmds.select(parent.shortest_path())
-    return True
+
+    return kSuccess
 
 
+@i__.with_undo_chunk
 def select_child_marker(selection=None, **opts):
     children = list()
 
@@ -2437,21 +2528,28 @@ def select_child_marker(selection=None, **opts):
         cmds.warning("No markers selected")
     else:
         cmds.select([c.shortest_path() for c in children])
-    return True
+    return kSuccess
 
 
+@i__.with_undo_chunk
 def create_lollipop(selection=None, **opts):
+    selection = selection or cmdx.sl()
     markers = []
 
-    for marker in cmdx.sl():
+    for marker in selection:
         if marker.isA(cmdx.kDagNode):
             marker = marker["message"].output(type="rdMarker")
-        assert marker and marker.type() == "rdMarker", "No marker found"
 
-        markers += [marker]
+        if marker and marker.type() == "rdMarker":
+            markers += [marker]
+
+    if not markers:
+        raise i__.UserWarning(
+        )
 
     tools.create_lollipop(markers)
-    return True
+
+    return kSuccess
 
 
 @contextlib.contextmanager
@@ -2987,7 +3085,7 @@ def normalise_shapes(selection=None):
 
     commands.normalise_shapes(root)
 
-    return True
+    return kSuccess
 
 
 @with_exception_handling
@@ -3067,7 +3165,7 @@ def multiply_selected(selection=None):
 
     cmds.select(list(map(str, multipliers)))
 
-    return True
+    return kSuccess
 
 
 def multiply_rigids(selection=None):
@@ -3083,7 +3181,7 @@ def multiply_rigids(selection=None):
 
     cmds.select(str(mult))
 
-    return True
+    return kSuccess
 
 
 def multiply_constraints(selection=None):
@@ -3100,7 +3198,7 @@ def multiply_constraints(selection=None):
 
     cmds.select(str(mult))
 
-    return True
+    return kSuccess
 
 
 def select_type(typ):
@@ -3114,7 +3212,7 @@ def select_type(typ):
         else:
             cmds.select(cmds.ls(type=typ))
 
-        return kSuccess
+        return Z
 
     return select
 
@@ -3589,6 +3687,14 @@ def create_character_options(*args):
     return window
 
 
+def markers_beta(selection=None, **opts):
+    return kSuccess
+
+
+def markers_beta_options(selection=None, **opts):
+    return _Window("markersBeta", markers_beta)
+
+
 def create_muscle_options(*args):
     return _Window("muscle", create_muscle)
 
@@ -3598,7 +3704,7 @@ def create_dynamic_control_options(*args):
 
 
 def assign_marker_options(*args):
-    return _Window("assignMarker", assign_marker)
+    return _Window("assignMarker", assign_single)
 
 
 def assign_group_options(*args):

@@ -579,22 +579,6 @@
             "selectUseSelection"
         ]
     },
-    "selectMarkers": {
-        "label": "Select Markers",
-        "icon": "marker.png",
-        "summary": "Select all markers in the scene.",
-        "description": "Select all markers in the scene.",
-        "options": [
-        ]
-    },
-    "selectSolvers": {
-        "label": "Select Solvers",
-        "icon": "solver.png",
-        "summary": "Select all solvers in the scene.",
-        "description": "Select all solvers in the scene.",
-        "options": [
-        ]
-    },
     "ragdoll": {
         "icon": "logo.png",
         "summary": "View your version, and eventually look for updates and tutorials. Not yet though."
@@ -605,6 +589,16 @@
     "#": "---------",
     "#": " Markers ",
     "#": "---------",
+
+
+    "markersBeta": {
+        "label": "Markers v0.25",
+        "icon": "internals.png",
+        "summary": "Markers version 1 out of 4, powerful but incomplete. Follow the release notes for latest up-to-date information.",
+        "description": "The Markers features just left Alpha and is generally made available, but isn't yet complete. It'll be followed several rounds of polish, tooling and performance improvements.",
+        "options": [
+        ]
+    },
 
     "assignMarker": {
         "label": "Assign Marker",
@@ -696,11 +690,38 @@
         ]
     },
 
+    "selectMarkers": {
+        "label": "Select Markers",
+        "icon": "marker.png",
+        "summary": "Select all markers in the scene.",
+        "description": "Select all markers in the scene.",
+        "options": [
+        ]
+    },
+
+    "selectSolvers": {
+        "label": "Select Solvers",
+        "icon": "solver.png",
+        "summary": "Select all solvers in the scene.",
+        "description": "Select all solvers in the scene.",
+        "options": [
+        ]
+    },
+
     "createLollipop": {
         "label": "Create Lollipop",
         "icon": "lollipop.png",
         "summary": "Create a new lollipop for the selected marker.",
         "description": "This creates a new lollipop for the marker such that it becomes easier to find in the viewport and Channel Box.",
+        "options": [
+        ]
+    },
+
+    "snapToSim": {
+        "label": "Snap to Sim",
+        "icon": "mimic.png",
+        "summary": "Snap marked controls to simulation.",
+        "description": "Translate and rotate marked controls to wherever the simulation is at the moment. Useful for partially recording only the current pose.",
         "options": [
         ]
     },

@@ -51,18 +51,19 @@ Here are some options for getting into Ragdoll.
 | Route | Description
 |:------|:-----
 | Install & Explore | Tried and true, who reads documentation anyway?
-| Watch Me | I've made a number of [videos](https://www.youtube.com/playlist?list=PLL4XIS5Woc6nVsTdsvs0XLmiKmXVCdwXy) demonstrating how to use Ragdoll.
+| Watch & Learn | We've made a number of [videos](https://www.youtube.com/playlist?list=PLL4XIS5Woc6nVsTdsvs0XLmiKmXVCdwXy) demonstrating how to use Ragdoll.
 | Read All About It | Keep clicking that next button at the bottom of every page.
 
 <br>
 
-<!-- 
+
 ## Press
 
 Mentions of Ragdoll in the press.
 
 | Date | Source | Title
 |:-----|:-------|:---------
+| 2021-09-21 | [80lv](https://80.lv/articles/development-and-capabilities-of-ragdoll-dynamics/) | Development and Capabilities of Ragdoll Dynamics
 | 2021-08-03 | [CGChannel](http://www.cgchannel.com/2021/08/ragdoll-dynamics-adds-real-time-physics-to-your-maya-rigs/) | Ragdoll Dynamics adds real-time physics to your Maya rigs
 | 2021-07-30 | [CGPress](https://cgpress.org/archives/ragdoll-dynamics-plugin-for-maya.html) | Ragdoll Dynamics plugin for Maya
 | 2021-07-28 | [80lv](https://80.lv/articles/ragdoll-a-new-tool-lets-you-animate-with-physics-in-real-time/) | New Tool Lets You Animate With Physics in Real-Time
@@ -75,7 +76,7 @@ Mentions of Ragdoll in the press.
       </div>
 
 <br>
- -->
+
 
 <video class=poster autoplay="autoplay" loop="loop" width="100%">
    <source src="/driving.mp4" type="video/mp4">

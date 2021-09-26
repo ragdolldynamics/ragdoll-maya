@@ -557,13 +557,6 @@ def record(solver,
 
                         t, r = get_local_pos_rot(matrix, dst)
 
-                        try:
-                            joint_orient = dst["jointOrient"].as_quaternion()
-                            r = r.as_quaternion() * joint_orient.inverse()
-                            r = r.as_euler_rotation()
-                        except cmdx.ExistError:
-                            pass
-
                         def set_keyframe(at, value):
                             path = dst.shortest_path()
                             tangent = (
@@ -603,6 +596,70 @@ def record(solver,
 
     reset()
     unroll()
+
+
+def snap(transforms):
+    markers = {}
+
+    for t in transforms:
+        marker = None
+
+        for plug in t["message"].outputs(type="rdMarker", plugs=True):
+            if plug.name(long=False).startswith("dst["):
+                marker = plug.node()
+                break
+
+        # Not every selected transform may actually have a marker assigned
+        if marker is None:
+            continue
+
+        markers[t] = marker
+
+    assert markers, "No markers found"
+
+    poses = {}
+    for transform, marker in markers.items():
+        pose = marker["outputMatrix"].as_matrix()
+        poses[marker] = (transform, pose)
+
+    # Figure out kinematic hierarchy for marker order
+    orders = {marker: 0 for marker in markers.values()}
+
+    for marker, order in orders.items():
+        parent = marker["parentMarker"].input(type="rdMarker")
+
+        while parent:
+            order += 1
+            parent = parent["parentMarker"].input()
+
+        orders[marker] = order
+
+    # Loop over each marker, in kinematic order
+    ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
+
+    with cmdx.DagModifier() as mod:
+        for marker in ordered_markers:
+            transform, pose = poses[marker]
+            pos, rot = get_local_pos_rot(pose, transform)
+
+            if marker["recordTranslation"]:
+                for index, axis in enumerate("xyz"):
+                    plug = transform["t%s" % axis]
+
+                    if plug.editable:
+                        mod.set_attr(plug, pos[index])
+
+            if marker["recordRotation"]:
+                for index, axis in enumerate("xyz"):
+                    plug = transform["r%s" % axis]
+
+                    if plug.editable:
+                        mod.set_attr(plug, pos[index])
+
+            # Ensure child hierarchy is up-to-date
+            mod.do_it()
+
+    return poses
 
 
 @internal.with_undo_chunk
@@ -744,5 +801,12 @@ def get_local_pos_rot(world_matrix, dag_node):
 
     pos = tm.translation(cmdx.sPostTransform)
     rot = tm.rotation()
+
+    try:
+        joint_orient = dag_node["jointOrient"].as_quaternion()
+        rot = rot.as_quaternion() * joint_orient.inverse()
+        rot = rot.as_euler_rotation()
+    except cmdx.ExistError:
+        pass
 
     return pos, rot

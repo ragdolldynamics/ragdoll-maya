@@ -1274,6 +1274,7 @@ class Node(object):
                                                plugs=plugs,
                                                source=source,
                                                destination=destination):
+
                 if connections:
                     yield connection, plug if plugs else self
                 else:
@@ -3843,6 +3844,21 @@ class Plug(object):
 
         """
 
+        def _name(plug):
+            return plug.partialName(
+                False,  # includeNodeName
+                False,  # includeNonMandatoryIndices
+                False,  # includeInstancedIndices
+                False,  # useAlias
+                False,  # useFullAttributePath
+                True    # useLongNames
+            )
+
+        plug_names = []
+        if isinstance(plugs, (list, tuple)):
+            plug_names = plugs
+            plugs = True
+
         for plug in self._mplug.connectedTo(source, destination):
             mobject = plug.node()
             node = Node(mobject)
@@ -3878,6 +3894,9 @@ class Plug(object):
                         else:
                             plug = node.findPlug(plug.partialName())
 
+                    if plug_names and _name(plug) not in plug_names:
+                        continue
+
                     yield Plug(node, plug, unit)
                 else:
                     yield node
@@ -3889,6 +3908,10 @@ class Plug(object):
                    plug=False,
                    unit=None):
         """Return first connection from :func:`connections()`"""
+
+        if isinstance(plug, string_types):
+            plug = (plug,)
+
         return next(self.connections(type=type,
                                      source=source,
                                      destination=destination,
@@ -3900,11 +3923,11 @@ class Plug(object):
               plug=False,
               unit=None):
         """Return input connection from :func:`connections()`"""
-        return next(self.connections(type=type,
-                                     source=True,
-                                     destination=False,
-                                     plugs=plug,
-                                     unit=unit), None)
+        return self.connection(type=type,
+                               source=True,
+                               destination=False,
+                               plug=plug,
+                               unit=unit)
 
     def outputs(self,
                 type=None,
@@ -3922,11 +3945,11 @@ class Plug(object):
                plug=False,
                unit=None):
         """Return first output connection from :func:`connections()`"""
-        return next(self.connections(type=type,
-                                     source=False,
-                                     destination=True,
-                                     plugs=plug,
-                                     unit=unit), None)
+        return self.connection(type=type,
+                               source=False,
+                               destination=True,
+                               plug=plug,
+                               unit=unit)
 
     def source(self, unit=None):
         cls = self.__class__

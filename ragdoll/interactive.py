@@ -774,6 +774,7 @@ def install_menu():
         item("selectControls", select_controls, select_controls_options)
         item("selectScenes", select_scenes, select_scenes_options)
         item("selectMarkers", select_markers)
+        item("selectGroups", select_groups)
         item("selectSolvers", select_solvers)
 
     divider()
@@ -2532,6 +2533,14 @@ def select_child_marker(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+def snap_to_sim(selection=None, **opts):
+    selection = selection or cmdx.sl()
+    selection = cmdx.ls(selection, type=("transform", "joint"))
+    tools.snap_markers(selection)
+    return kSuccess
+
+
+@i__.with_undo_chunk
 def create_lollipop(selection=None, **opts):
     selection = selection or cmdx.sl()
     markers = []
@@ -3212,7 +3221,7 @@ def select_type(typ):
         else:
             cmds.select(cmds.ls(type=typ))
 
-        return Z
+        return kSuccess
 
     return select
 
@@ -3223,6 +3232,10 @@ def select_rigids(selection=None, **opts):
 
 def select_markers(selection=None, **opts):
     return select_type("rdMarker")(selection, **opts)
+
+
+def select_groups(selection=None, **opts):
+    return select_type("rdGroup")(selection, **opts)
 
 
 def select_solvers(selection=None, **opts):
@@ -3688,6 +3701,13 @@ def create_character_options(*args):
 
 
 def markers_beta(selection=None, **opts):
+    MessageBox(
+        "Markers Beta 0.25",
+        "This is part 1 out of 4 for markers - powerful but incomplete.",
+        buttons=ui.OkButton,
+        icon=ui.InformationIcon
+    )
+
     return kSuccess
 
 

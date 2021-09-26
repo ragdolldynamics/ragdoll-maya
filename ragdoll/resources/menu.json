@@ -699,6 +699,15 @@
         ]
     },
 
+    "selectGroups": {
+        "label": "Select Groups",
+        "icon": "suit.png",
+        "summary": "Select all groups in the scene.",
+        "description": "Select all groups in the scene.",
+        "options": [
+        ]
+    },
+
     "selectSolvers": {
         "label": "Select Solvers",
         "icon": "solver.png",

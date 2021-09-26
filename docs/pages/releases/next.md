@@ -8,7 +8,6 @@ Highlight for this release is **Animation Capture**.
 
 - [**ADDED** Animation Capture](#animation-capture) AnimCap, a.k.a. Reverse Motion Capture
 - [**ADDED** Self-Collision](#self-collision) Overlapping shapes, begone
-- [**ADDED** Damping Ratio](#damping-ratio) One less attribute to worry about
 - [**ADDED** Lollipop Controls](#lollipop-controls) Clarity where there was none
 - [**IMPROVED** Quality of Life](#quality-of-life) Less clutter, more joy
 - [**IMPROVED** No Graph Editor Mess](#no-graph-editor-mess) Clean Graph Editor, clean mind
@@ -18,7 +17,18 @@ Highlight for this release is **Animation Capture**.
 
 <br>
 
+### Showcase
+
+Let's start with some eye-candy. :)
+
+https://user-images.githubusercontent.com/2152766/134707587-0275af62-29e3-46dc-b15f-ef68b6c6c58b.mp4 controls
+
+
 https://user-images.githubusercontent.com/2152766/134507548-382a0ccd-85b6-4990-b325-16dbd3b7d568.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/134804422-7b2f11c7-786c-434d-9ecc-b1ac84d19c76.mp4 controls
+
 
 <br>
 
@@ -329,6 +339,12 @@ A `Kinematic` marker is entirely animated, so there's no need to actually record
 
 https://user-images.githubusercontent.com/2152766/134504192-3514f235-1f9c-4ce8-83e5-6704bf3036df.mp4 controls
 
+**Record to Animation Layer**
+
+Ragdoll will record to whichever layer is currently active.
+
+https://user-images.githubusercontent.com/2152766/134775996-ea2ce5d1-8638-4d43-94f7-f7635585f532.mp4
+
 <br>
 
 #### Input Type
@@ -542,39 +558,28 @@ https://user-images.githubusercontent.com/2152766/134480451-f9be80ba-2579-485e-a
 
 <br>
 
-### Damping Ratio
-
-The current `rdConstraint` nodes have 3 attributes to control their behavior.
-
-- `Stiffness`
-- `Damping`
-- `Strength`
-
-Where `Stiffness` and `Damping` are both multiplied by `Strength * Strength`. For example, the final value of `Stiffness` is..
-
-```py
-final_stiffness = stiffness * strength * strength
-```
-
-And that's great; it means you can animate just a single attribute in favour of two. Editing the ratio between the two attributes was done by changing either `Stiffness` or `Damping`.
-
-The `Marker` nodes gets rid of `Strength` and instead adds an explicit `Damping Ratio` attribute to control this ratio.
-
-Stiffness and damping is also multiplied by their associated Group and Solver.
-
-```py
-final_stiffness = maker.stiffness * group.stiffness * solver.stiffness
-```
-
-Meaning you can control either all or one marker at a time with ease.
-
-<br>
-
 ### Lollipop Controls
 
 Sometimes, markers are added to an already busy control with tons of Channel Box entries. Lollipop controls can help organise things a little better.
 
+https://user-images.githubusercontent.com/2152766/134764389-3e15d829-24fa-4c3d-9f65-6c736cab99bd.mp4 controls
 
+These can be moved around and scaled to suit your needs, and will provide access to the same marker node in the channel box, so you can select and edit the marker from either the originally marked control or this lollipop control.
+
+<br>
+
+### Rotate Pivot
+
+Use the default Maya rotate pivot to control where to pin a simulation, both in worldspace and localspace.
+
+https://user-images.githubusercontent.com/2152766/134765087-837de9dc-87e1-4b41-9286-26e0f82344e1.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/134765085-473674bf-284f-4a75-bf30-7185bb90eb4e.mp4 controls
+
+
+!!! warning "Attention"
+    Take care about *scale*, especially the scale pivot. Ragdoll can sometimes struggle when the scale pivot differs from the rotate pivot. This will be addressed in a future release.
 
 <br>
 

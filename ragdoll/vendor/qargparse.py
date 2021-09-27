@@ -101,16 +101,12 @@ QLabel[type="Separator"] {
     text-decoration: underline;
 }
 
-QWidget[type="QArgparse:reset"] {
-    /* Ensure size fixed */
-    max-width: 11px;
-    max-height: 11px;
-    min-width: 11px;
-    min-height: 11px;
+QWidget #resetButton {
     padding-top: 0px;
     padding-bottom: 0px;
     padding-left: 0px;
     padding-right: 0px;
+    background: transparent;
 }
 
 #description, #icon {
@@ -376,10 +372,20 @@ class QArgumentParser(QtWidgets.QWidget):
             if self._style.get("useTooltip"):
                 widget.setToolTip(arg["help"])
 
+        def base64_to_pixmap(base64):
+            data = QtCore.QByteArray.fromBase64(base64)
+            pixmap = QtGui.QPixmap()
+            pixmap.loadFromData(data)
+            return pixmap
+
         # Reset btn widget
+        reset_icon = QtGui.QIcon(base64_to_pixmap(_reset_icon))
         reset_container = QtWidgets.QWidget()
-        reset_container.setProperty("type", "QArgparse:reset")
+        reset_container.setFixedSize(px(12), px(12))
         reset = QtWidgets.QPushButton("")  # default
+        reset.setObjectName("resetButton")
+        reset.setIcon(reset_icon)
+        reset.setIconSize(QtCore.QSize(px(12), px(12)))
         reset.setToolTip(arg.compose_reset_tip())
         reset.hide()  # shown on edit
 
@@ -1793,3 +1799,6 @@ if __name__ == '__main__':
 
     if opts.version:
         print(__version__)
+
+
+_reset_icon = r"iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAhpJREFUWIXt2MFLFGEcxvHn1ZI9KBixBnb1oKAsHSJEELt06JIdOnjtYkRKUYEegq6Bp/6JEE8Fhrc9FJSKh7JUrIjw5MGDUkLi7rfD/oRpXdeZ9505FPPcdt/3feaz7+wOMyvlyZPn347zXQick3RT0jVJJUndktolbUv6Kqks6YVzbiNG16KkqnNu0NcTLTsPPAd+cjzVBu/NA/2ndAKQBm4U2LG+CrAAjAMDQJvNKQCXgGngm809AKaAlsyAdoCjHXoN9MVYcxa4D/yydXNAIXUg8NA6DoFJj/X9kd1cAYqpAYGrBqsAY14ltZ5u4JNZVoGuYKB9n77Y+qe+uEhf0XB/IUOAE7b2A3AmFGidXfXIEOCmrb2RBq4J0hu4BLzjhMtDisiwX3EA4j0J0qgj9Z2pSzXB3DeZKfLkySp2mYmbpSwMJ/6KASfpcoKu/XBOggCuboc+AxcyOE6rXS/LvsAq8DErJHDLutdDgMUskEAbsG69d7yB9jp1JPDM+tawRwZvYAPkGnAxAHfbzs4BMORTcAwYQS7b2Heg5NE7Re0OHeBuYlwzoI0VgFkb3wcexTlFQAko27oK8MALdxowMv4Y+G3zfgBPgCtAh81pp/YIei8CA9gGrnvj4gAj8/qAlzR+aK/PLjADdMZ1NP3rA3gr6dA5NxLjA/VIGpM0LKlXUodq94NbklYlLUh65Zzbi4vLkyfP/5A/DV639GAOvUoAAAAASUVORK5CYII="

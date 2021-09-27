@@ -139,7 +139,6 @@ HelpPage #mediaTitle {
 
 
 PivotEditor QPushButton#tune {
-    /*min-height: 30px;*/
     background-color: #222;
 }
 
@@ -152,14 +151,16 @@ PivotEditor QPushButton#tune:hover {
 }
 
 PivotEditor QPushButton {
-    /*max-width: 24px;*/
 }
 
 PivotEditor #tooltip {
     color: white;
 }
 
-PivotEditor QPushButton, QPushButton:hover, QPushButton:checked, QPushButton:pressed {
+PivotEditor QPushButton,
+PivotEditor QPushButton:hover,
+PivotEditor QPushButton:checked,
+PivotEditor QPushButton:pressed {
     border: none;
     border-radius: 5px;
     padding: 5px;
@@ -178,10 +179,8 @@ PivotEditor QRadioButton::indicator {
 }
 
 PivotEditor QRadioButton {
-    /*min-width: 50px;*/
     max-width: 24px;
     border-radius: 5px;
-    /*padding-right: 5px;*/
 }
 
 PivotEditor QRadioButton:hover {

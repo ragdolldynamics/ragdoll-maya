@@ -3,6 +3,9 @@ from ..vendor import cmdx
 from maya import cmds
 
 
+AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
+
+
 def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
 
@@ -13,7 +16,7 @@ def assign(transforms, solver):
             existing += [other]
 
     if existing:
-        raise RuntimeError(
+        raise AlreadyAssigned(
             "At least %d transform(s) were already assigned"
             % len(existing)
         )
@@ -46,8 +49,8 @@ def assign(transforms, solver):
                 mod.connect(time1["outTime"], group["currentTime"])
                 mod.connect(group["currentState"],
                             solver["inputCurrent"][index])
-                mod.connect(group_parent["message"],
-                            group["exclusiveNodes"][0])
+
+                commands._take_ownership(mod, group, group_parent)
 
     markers = {}
     with cmdx.DGModifier() as dgmod:

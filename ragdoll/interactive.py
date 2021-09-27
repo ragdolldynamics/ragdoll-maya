@@ -2241,18 +2241,20 @@ def assign_group(selection=None, **opts):
     solver, ground = _find_current_solver(opts["markersCreateGround"])
 
     try:
-        markers = tools.assign_markers(selection, solver)
-    except RuntimeError as e:
+        assigned = tools.assign_markers(selection, solver)
+    except markers.AlreadyAssigned as e:
         raise i__.UserWarning("Already assigned", str(e))
+    except Exception as e:
+        raise i__.UserWarning("An unexpected error occurred", str(e))
 
     if opts["markersCreateLollipop"]:
-        tools.create_lollipop(markers)
+        tools.create_lollipop(assigned)
 
     if ground:
-        _fit_ground(ground, markers)
+        _fit_ground(ground, assigned)
 
     if opts["markersCreateObjectSet"]:
-        _add_to_objset(markers)
+        _add_to_objset(assigned)
 
     cmds.select(t.shortest_path() for t in selection)
 

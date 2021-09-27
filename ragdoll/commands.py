@@ -1089,13 +1089,20 @@ def rotate_constraint(con, degrees=90, axis=(1, 0, 0),
 
 def _take_ownership(mod, rdnode, node):
     """Make `rdnode` the owner of `node`"""
-    assert "exclusiveNodes" in rdnode, "%s not a Ragdoll node" % rdnode
+
+    try:
+        plug = rdnode["owner"]
+    except cmdx.ExistError:
+        try:
+            plug = rdnode["exclusiveNodes"]
+        except cmdx.ExistError:
+            raise TypeError("%s not a Ragdoll node" % rdnode)
 
     # Ensure next_available_index is up-to-date
     mod.do_it()
 
-    index = rdnode["exclusiveNodes"].next_available_index()
-    mod.connect(node["message"], rdnode["exclusiveNodes"][index])
+    index = plug.next_available_index()
+    mod.connect(node["message"], plug[index])
 
 
 @i__.with_undo_chunk

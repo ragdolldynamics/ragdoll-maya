@@ -310,4 +310,8 @@ def data():
 
         # It's either a Trial or Personal licence
         isNonCommercial=cmds.ragdollLicence(isNonCommercial=True, query=True),
+
+        # How many days until expiration
+        expires=cmds.ragdollLicence(expires=True, query=True),
+        expiryDays=cmds.ragdollLicence(expiryDays=True, query=True),
     )

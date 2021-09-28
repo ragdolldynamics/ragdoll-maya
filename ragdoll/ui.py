@@ -1541,6 +1541,12 @@ class SplashScreen(QtWidgets.QDialog):
         if data["isFloating"]:
             self.on_floating(data)
 
+        elif data["expires"]:
+            if data["expiryDays"] < 1:
+                self.on_expired(data["expiryDays"])
+            else:
+                self.on_trial(data["expiryDays"])
+
         elif data["isActivated"]:
             self.on_activated(data)
 

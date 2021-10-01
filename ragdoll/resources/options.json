@@ -903,5 +903,26 @@
         "type": "String",
         "default": "",
         "help": "Remember and restore the directory last browsed to for importing and exporting of physics."
+    },
+    "useShaders": {
+        "name": "useShaders",
+        "label": "Use Shaders",
+        "type": "Boolean",
+        "default": true,
+        "help": "Render using GLSL shaders in place of Maya factory Blinn."
+    },
+    "reloadShaders": {
+        "name": "reloadShaders",
+        "label": "Reload Shaders",
+        "type": "Boolean",
+        "default": false,
+        "help": "Interactively reload shaders on the creation of a new rdSolver node."
+    },
+    "shaderPath": {
+        "name": "shaderPath",
+        "label": "Shader Path",
+        "type": "String",
+        "default": "",
+        "help": "Absolute path to where shaders are located."
     }
 }

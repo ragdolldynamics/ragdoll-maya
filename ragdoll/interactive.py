@@ -469,6 +469,8 @@ def install_plugin():
         # May already have been loaded prior to calling install
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
+    options.write("shaderPath", _resource("shaders"))
+
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)
 

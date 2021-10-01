@@ -523,7 +523,9 @@
             "validateCachingMode",
             "validateLegacyOpenGL",
             "validateScalePivot",
-            "validatePlaybackSpeed"
+            "validatePlaybackSpeed",
+            "useShaders",
+            "reloadShaders"
         ]
     },
     "selectInvalidConstraints": {

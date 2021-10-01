@@ -1,0 +1,58 @@
+//**********
+//  Uniform parameter handling:
+//
+//  Loads the uniforms from all shader stage files
+//
+
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "solid.vert"
+#include "solid.frag"
+
+//**********
+//  Input stream handling:
+//
+//  Loads the attribute streams from all shader stage files
+//
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "solid.vert"
+#include "solid.frag"
+
+//**********
+//  Code handling:
+//
+//  We need to load the vertex stage and fragment stage in two
+//  different GLSLShader blocks in order to specify them in the
+//  technique definition below:
+//
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+// Vertex shader
+GLSLShader VS
+{
+#include "solid.vert"
+}
+
+// Fragment shader
+GLSLShader FS
+{
+#include "solid.frag"
+}
+
+technique Main
+{
+    pass p0
+    {
+        VertexShader (in AppData, out ToFrag) = VS;
+        PixelShader (in FromVert, out ToScreen) = FS;
+    }
+}

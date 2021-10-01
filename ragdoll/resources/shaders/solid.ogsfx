@@ -36,14 +36,12 @@
 #define HIDE_OGSFX_STREAMS 1
 #define HIDE_OGSFX_CODE 0
 
-// Vertex shader
-GLSLShader VS
+GLSLShader ShaderVertex
 {
 #include "solid.vert"
 }
 
-// Fragment shader
-GLSLShader FS
+GLSLShader ShaderColor
 {
 #include "solid.frag"
 }
@@ -52,7 +50,7 @@ technique Main
 {
     pass p0
     {
-        VertexShader (in AppData, out ToFrag) = VS;
-        PixelShader (in FromVert, out ToScreen) = FS;
+        VertexShader (in AppData, out ToColorPass) = ShaderVertex;
+        PixelShader (in FromVert, out ToScreen) = ShaderColor;
     }
 }

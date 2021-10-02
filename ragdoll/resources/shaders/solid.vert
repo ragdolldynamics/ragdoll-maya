@@ -1,5 +1,8 @@
 #if !HIDE_OGSFX_UNIFORMS
 
+// Find all available variables here
+// https://help.autodesk.com/view/MAYAUL/2020/ENU/?guid=GUID-0939A615-81AC-455C-9B23-9ECEC5835F93
+
 // transform object vertices to world-space
 uniform mat4 gWorldXf : World;
 
@@ -15,16 +18,6 @@ uniform mat4 gViewXf : View;
 uniform mat4 gWorldView : ViewProjectionTranspose;
 
 uniform mat4 gShadowViewPrj : ViewProjection;
-
-// Ambient Light
-uniform vec3 gAmbient : AMBIENT = { 0.17f, 0.17f, 0.17f };
-
-uniform mat4 gMoveTowardsView = {
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, -0.000001, 1.0
-};
 
 uniform vec3 Light0Pos : POSITION = {1.0, 1.0, 1.0};
 uniform vec3 Light0Dir : DIRECTION = {0.0, -1.0, 0.0};
@@ -113,8 +106,10 @@ void main()
     vec4 Po = vec4(inPosition, 1);
     vec3 Pw = (gWorldXf * Po).xyz;
 
+    WorldPosition = gWvpXf * Po;
+
     // Prevent z-fighting
-    WorldPosition = gMoveTowardsView * gWvpXf * Po;
+    WorldPosition.z -= 0.00001;
 
     gl_Position = WorldPosition;
 }

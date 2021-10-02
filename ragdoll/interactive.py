@@ -764,10 +764,6 @@ def install_menu():
             item("loggingWarning", logging_warning)
             item("loggingDebug", logging_debug)
 
-        if c.RAGDOLL_DEVELOPER:
-            with submenu("Debug"):
-                item("selectInvalidConstraints", select_invalid_constraints)
-
     with submenu("Select", icon="select.png"):
         item("selectRigids", select_rigids, select_rigids_options)
         item("selectConstraints",
@@ -2069,6 +2065,7 @@ def _make_ground(solver):
         name="rGround",
         subdivisionsHeight=1,
         subdivisionsWidth=1,
+        axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
     ))
 
     marker = tools.assign_markers([plane], solver)[0]
@@ -2118,18 +2115,27 @@ def _fit_ground(ground, markers):
     bbox.expand(bbox.min - cmdx.Vector(mid, mid, mid))
     bbox.expand(bbox.max + cmdx.Vector(mid, mid, mid))
 
+    up_axis = cmdx.up_axis()
+    z = "Z" if up_axis.y else "Y"
+    y = "Y" if up_axis.y else "Z"
+
     with cmdx.DagModifier() as mod:
         transform = ground["sourceTransform"].input()
 
-        mod.set_attr(ground["shapeExtentsY"], thickness)
-        mod.set_attr(ground["shapeOffsetY"], -thickness * 0.5)
+        mod.set_attr(ground["shapeOffset"], 0)
+        mod.set_attr(ground["shapeExtents"], 1)
+
+        mod.set_attr(ground["shapeExtents" + y], thickness)
+        mod.set_attr(ground["shapeOffset" + y], -thickness * 0.5)
 
         mod.set_attr(transform["scaleX"], bbox.width)
-        mod.set_attr(transform["scaleY"], 1)
-        mod.set_attr(transform["scaleZ"], bbox.depth)
+        mod.set_attr(transform["scale" + y], 1)
+        mod.set_attr(transform["scale" + z], bbox.depth)
         mod.set_attr(transform["translateX"], bbox.center.x)
-        mod.set_attr(transform["translateY"], 0.0)
-        mod.set_attr(transform["translateZ"], bbox.center.z)
+        mod.set_attr(transform["translate" + y], 0.0)
+        mod.set_attr(transform["translate" + z], (
+            bbox.center.z if up_axis.y else bbox.center.y
+        ))
 
 
 def _find_current_solver(create_ground=True):
@@ -2152,7 +2158,9 @@ def _find_current_solver(create_ground=True):
             mod.set_attr(solver["version"], i__.version())
             mod.set_attr(solver["startTime"], cmdx.min_time())
             mod.connect(time1["outTime"], solver["currentTime"])
-            mod.connect(solver_parent["message"], solver["exclusiveNodes"][0])
+            mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
+
+            commands._take_ownership(mod, solver, solver_parent)
 
             # Default values
             mod.set_attr(solver["positionIterations"], 4)
@@ -2165,7 +2173,6 @@ def _find_current_solver(create_ground=True):
             else:
                 mod.set_keyable(solver["gravityZ"])
                 mod.set_nice_name(solver["gravityZ"], "Gravity")
-                mod.set_attr(solver_parent["rotateX"], cmdx.radians(90))
 
     if create_ground:
         ground = _make_ground(solver)

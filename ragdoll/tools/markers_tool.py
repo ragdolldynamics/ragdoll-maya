@@ -21,7 +21,6 @@ def assign(transforms, solver):
             % len(existing)
         )
 
-    time1 = cmdx.encode("time1")
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
 
     group = None
@@ -45,8 +44,6 @@ def assign(transforms, solver):
                 index = solver["inputStart"].next_available_index()
                 mod.set_attr(group["version"], internal.version())
                 mod.connect(group["startState"], solver["inputStart"][index])
-                mod.connect(solver["startTime"], group["startTime"])
-                mod.connect(time1["outTime"], group["currentTime"])
                 mod.connect(group["currentState"],
                             solver["inputCurrent"][index])
 
@@ -120,14 +117,12 @@ def assign(transforms, solver):
 
             dgmod.connect(transform["message"], marker["src"])
             dgmod.connect(transform["message"], marker["dst"][0])
-            dgmod.connect(time1["outTime"], marker["currentTime"])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
             dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
 
             if group:
-                dgmod.connect(group["startTime"], marker["startTime"])
 
                 index = group["inputMarker"].next_available_index()
                 dgmod.connect(marker["currentState"],
@@ -142,7 +137,6 @@ def assign(transforms, solver):
                 parent_marker = marker
 
             else:
-                dgmod.connect(solver["startTime"], marker["startTime"])
                 index = solver["inputStart"].next_available_index()
 
                 dgmod.connect(marker["startState"],

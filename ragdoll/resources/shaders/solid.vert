@@ -6,21 +6,13 @@
 // transform object vertices to world-space
 uniform mat4 gWorldXf : World;
 
-// transform object normals, tangents, & binormals to world-space
-uniform mat4 gWorldITXf : WorldInverseTranspose;
-
 // transform object vertices to view space and project them in perspective
 uniform mat4 gWvpXf : WorldViewProjection;
 
-// transform from "view" or "eye" coords back to world-space
-uniform mat4 gViewXf : View;
-
 uniform mat4 gWorldView : ViewProjectionTranspose;
 
-uniform mat4 gShadowViewPrj : ViewProjection;
-
-uniform vec3 Light0Pos : POSITION = {1.0, 1.0, 1.0};
-uniform vec3 Light0Dir : DIRECTION = {0.0, -1.0, 0.0};
+uniform vec3 Light0Pos : POSITION = { 1.0, 1.0, 1.0 };
+uniform vec3 Light0Dir : DIRECTION = { 0.0, -1.0, 0.0 };
 
 uniform texture2D SurfaceMask
 <
@@ -79,7 +71,7 @@ uniform float SurfaceMaskCutoff = 0.0;
 attribute AppData {
     vec3 inPosition   : POSITION;
     vec3 inNormal     : NORMAL;
-    vec4 inColor      : COLOR0;
+    vec3 inColor      : COLOR0;
 };
 
 /* Data passed from vertex shader to fragment shader */
@@ -101,15 +93,12 @@ void main()
 {
     vec3 worldNormal = normalize(mat3(gWorldXf) * inNormal);
     Normal = vec4(worldNormal, 1.0);
-    Diffuse = inColor;
+    Diffuse = vec4(inColor, 1);
 
     vec4 Po = vec4(inPosition, 1);
-    vec3 Pw = (gWorldXf * Po).xyz;
 
     WorldPosition = gWvpXf * Po;
-
-    // Prevent z-fighting
-    WorldPosition.z -= 0.00001;
+    WorldPosition.z -= 0.0001;
 
     gl_Position = WorldPosition;
 }

@@ -835,7 +835,7 @@
     "sceneScale": {
         "name": "sceneScale",
         "type": "Float",
-        "default": 10.0,
+        "default": 0.1,
         "min": 0.001,
         "max": 100.0,
         "help": "(Requires plug-in reload) Internal tolerances to use when computing convex meshes and some forces, default is 0.1 meaning things are assumed 10x smaller than real-world scale e.g. a character is 17 cm tall."

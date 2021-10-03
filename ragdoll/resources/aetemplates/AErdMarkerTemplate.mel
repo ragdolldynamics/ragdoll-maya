@@ -45,10 +45,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitRange";
             editorTemplate -addControl "limitStiffness";
             editorTemplate -addControl "limitDampingRatio";
-            editorTemplate -beginLayout "Frames" -collapse true;
-                editorTemplate -addControl "parentFrame";
-                editorTemplate -addControl "childFrame";
-            editorTemplate -endLayout;
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse true;
@@ -63,6 +59,10 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "wakeCounter";
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
+            editorTemplate -beginLayout "Constraint Frames" -collapse true;
+                editorTemplate -addControl "parentFrame";
+                editorTemplate -addControl "childFrame";
+            editorTemplate -endLayout;
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

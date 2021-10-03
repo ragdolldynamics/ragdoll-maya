@@ -23,6 +23,7 @@ def assign(transforms, solver):
 
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
 
+    time = cmdx.encode("time1")
     group = None
 
     if len(transforms) > 1:
@@ -115,6 +116,7 @@ def assign(transforms, solver):
             dgmod.set_attr(marker["color"], internal.random_color())
             dgmod.set_attr(marker["version"], internal.version())
 
+            dgmod.connect(time["outTime"], marker["currentTime"])
             dgmod.connect(transform["message"], marker["src"])
             dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])

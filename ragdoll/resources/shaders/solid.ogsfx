@@ -1,56 +1,89 @@
-//**********
-//  Uniform parameter handling:
-//
-//  Loads the uniforms from all shader stage files
-//
+// All available global variables are here
+// https://help.autodesk.com/view/MAYAUL/2020/ENU/?guid=GUID-0939A615-81AC-455C-9B23-9ECEC5835F93
 
-#define HIDE_OGSFX_UNIFORMS 0
-#define HIDE_OGSFX_STREAMS 1
-#define HIDE_OGSFX_CODE 1
+// transform object vertices to world-space
+uniform mat4 gWorldXf : World;
 
-#include "solid.vert"
-#include "solid.frag"
+// transform object vertices to view space and project them in perspective
+uniform mat4 gWvpXf : WorldViewProjection;
 
-//**********
-//  Input stream handling:
-//
-//  Loads the attribute streams from all shader stage files
-//
+uniform mat4 gWorldView : ViewProjectionTranspose;
 
-#define HIDE_OGSFX_UNIFORMS 1
-#define HIDE_OGSFX_STREAMS 0
-#define HIDE_OGSFX_CODE 1
+uniform vec3 gLightDir;
 
-#include "solid.vert"
-#include "solid.frag"
+/* Data from application vertex buffer */
+attribute ToVertex {
+    vec3 inPosition   : POSITION;
+    vec3 inNormal     : NORMAL;
+    vec4 inColor      : COLOR0;
+};
 
-//**********
-//  Code handling:
-//
-//  We need to load the vertex stage and fragment stage in two
-//  different GLSLShader blocks in order to specify them in the
-//  technique definition below:
-//
+attribute ToFragment {
+    vec4 Normal         : NORMAL;
+    vec4 WorldPosition  : TEXCOORD0;
+    vec4 ObjectColor    : COLOR0;
 
-#define HIDE_OGSFX_UNIFORMS 1
-#define HIDE_OGSFX_STREAMS 1
-#define HIDE_OGSFX_CODE 0
+    // Whether or not light should affect the surface color
+    float ObjectShading;
+};
+
+/* Data output by the fragment shader */
+attribute ToScreen  {
+    vec4 outColor : COLOR0;
+}
 
 GLSLShader ShaderVertex
 {
-#include "solid.vert"
+    void main() 
+    {
+        vec3 worldNormal = normalize(mat3(gWorldXf) * inNormal);
+        Normal = vec4(worldNormal, 1.0);
+        ObjectColor = vec4(inColor.rgb, 1);
+        ObjectShading = inColor.a;
+
+        WorldPosition = gWvpXf * vec4(inPosition, 1);
+        WorldPosition.z -= 0.0001;
+
+        gl_Position = WorldPosition;
+    }
 }
 
 GLSLShader ShaderColor
 {
-#include "solid.frag"
+    void main()
+    {
+        float colorAmount = 0.8;
+        float diffuseAmount = 0.2;
+        float specularAmount = 0.1;
+        float brightness = 1.0;
+        float ambient = 0.0;
+        int shininess = 2;
+
+        // Diffuse
+        vec3 lightColor = vec3(1, 1, 1);
+        vec3 norm = normalize(Normal.xyz);
+        vec3 lightDir = -normalize(mat3(gWorldView) * gLightDir);
+        float diff = max(dot(norm, lightDir), ambient);
+        vec3 diffuse = diff * lightColor * diffuseAmount * ObjectShading;
+
+        // Specular
+        vec3 viewDir = lightDir;
+        vec3 reflectDir = reflect(-lightDir, norm);  
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+        vec3 specular = spec * lightColor * specularAmount * ObjectShading;
+        vec3 objectColor = ObjectColor.rgb * colorAmount;
+
+        // Composite
+        vec3 result = objectColor + diffuse + specular;
+        outColor = vec4(result * brightness, 1.0);
+    }
 }
 
 technique Main
 {
     pass p0
     {
-        VertexShader (in AppData, out ToColorPass) = ShaderVertex;
-        PixelShader (in FromVert, out ToScreen) = ShaderColor;
+        VertexShader (in ToVertex, out ToFragment) = ShaderVertex;
+        PixelShader (in ToFragment, out ToScreen) = ShaderColor;
     }
 }

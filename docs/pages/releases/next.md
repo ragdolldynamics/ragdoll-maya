@@ -7,6 +7,7 @@ description: Performance, performance, performance
 Highlight for this release is **Rendering Performance**.
 
 - [**ENHANCED** Performance](#performance) Less work, greater parallelism and more GPU
+- [**ADDED** Motion Blur](#motion-blur) More robust and actually useful compared to native Maya motion blur
 - [**ENHANCED** Quality of Life](#quality-of-life) Automated clean-up, support for Z-up and more!
 
 <br>
@@ -21,7 +22,7 @@ In terms of time spent, Ragdoll has three stages.
 | 2 | `Simulation` | Once evaluated, Ragdoll considers all of this data and applies forces, solves constraints, contacts, that kind of thing.
 | 3 | `Rendering` | Finally, we need pixels. In the case of Ragdoll, this means generating and uploading geometry to the GPU; including capsules but also your meshes which are converted into "convex hulls".
 
-In the previous release, we focused entirely on workflow which had an indirect impact on `Evaluation` and `Rendering`. One got faster, but the other got slower.
+Simulation has always been fast and in the previous release, we focused entirely on workflow which had an indirect impact on `Evaluation` and `Rendering`. One got faster, but the other got slower.
 
 ![image](https://user-images.githubusercontent.com/2152766/135710838-f8fe9c13-ba0d-4f11-a41c-bce1155829b9.png)
 
@@ -50,27 +51,10 @@ With this release, we'll tackle that rendering block. Let's have a look at what'
 
 | Topic  | Savings | Description
 |:--------|:--------|:------------
-| Change Monitoring | 5-10x | Ignore anything that hasn't actually changed
-| Connection Monitoring | 1-5x | Less dependence on time, more on physical connections being made
+| Less CPU to GPU communication | 1550x | More buffers, less uniforms
+| Connection Monitoring | 40x | Less dependence on time, more on physical connections being made and unmade
+| Change Monitoring | 40x | Ignore anything that hasn't actually changed
 | Less Dirty Propagation | 3x | Less of a shotgun blast, more like a sniper
-| Less CPU to GPU communication | 2x | More buffers, less uniforms
-
-<br>
-
-#### Change Monitoring
-
-In the last release, Ragdoll would repeat itself on each frame.
-
-1. Release all memory from GPU (slow)
-2. Generate meshes, like capsules and convex hulls (fast)
-3. Upload meshes to GPU (slow)
-4. Render (slow)
-
-With this release, steps 1-3 only happens when things change, and only for things that do change.
-
-<br>
-
-#### Connection Monitoring
 
 <br>
 
@@ -78,10 +62,12 @@ With this release, steps 1-3 only happens when things change, and only for thing
 
 The previous release, and each one before it, had 1 shader per rigid. In the case of 600 rigid bodies, that meant 600 shaders. 600 shaders means 600 parameter updates of primarily color and 600 unique draw calls.
 
-This release consolidates all shaders into *one*. Colors are uploaded only once alongside their geometry and rendered using custom a GLSL shader.
+On top of this, all geometry was regenerated and re-uploaded to the GPU on every frame. Robust, but not very fast.
 
-!!! info "DirectX 11"
-    If you can't use OpenGL for whichever reason, there is backwards compatibility built-in.
+This release consolidates all shaders into *one*, colors are uploaded only once alongside their geometry and rendered using a custom GLSL shader (i.e. OpenGL 3.3).
+
+??? info "What about DirectX?"
+    If you are on Windows and can't use OpenGL for whichever reason, there is backwards compatibility built-in.
 
     ```py
     from ragdoll import options
@@ -93,6 +79,82 @@ This release consolidates all shaders into *one*. Colors are uploaded only once 
     ![image](https://user-images.githubusercontent.com/2152766/135706370-250f4ebb-93e7-4752-9062-ffad65de47ad.png)
 
     Bearing in mind this will cost you 50% of the rendering performance and won't benefit from future shading related features and improvements. It will remain until it's clear whether and how much it is actually used. (Let us know in the chat!)
+
+Let's have a look at how this change affects your overall experience.
+
+**Before (7fps)**
+
+https://user-images.githubusercontent.com/2152766/135825072-fb1b52b0-34bc-493c-a960-be8537a38e27.mp4
+
+**After (130 fps)**
+
+https://user-images.githubusercontent.com/2152766/135825078-d3c876a2-6de7-42b4-8485-6d8947e94cec.mp4
+
+A closer look reveals exactly where this improvement comes from.
+
+**Before**
+
+This block is what we control, it's the Ragdoll rendering pipeline taking a whopping **93 ms** per refresh.
+
+![image](https://user-images.githubusercontent.com/2152766/135825217-017f37fa-dae0-457f-8a33-cc0c8b6419c1.png)
+
+**After**
+
+With this release, this number dropped to **0.06ms** (58 microseconds) that's an improvement of 1550x (!).
+
+![image](https://user-images.githubusercontent.com/2152766/135819476-4d2c90d9-7f16-4f6b-a809-b18f60aec826.png)
+
+!!! question "What about the other blocks?"
+    The bottleneck has now moved to that green one and all of those blue, and those are Maya's internal rendering pipeline.
+
+    There isn't much we can do to *directly* impact it; it's mostly out of our hands. However, by massaging our data more and making life easier for Maya it should be possible to reduce these as well.
+
+    See [Future Work](#future-work) for details on next steps, and if this is something you, fellow reader, is familiar with do [get in touch!](https://ragdolldynamics/contact)
+
+<br>
+
+#### Connection & Change Monitoring
+
+In the previous release, and all versions of Ragdoll so far, we've tasked Maya with evaluating every plug on every frame, including the heavy-duty plugs between `Rigid Body` -> `Solver`.
+
+Here's what this felt like in a scenario of 600 unique objects.
+
+**Before (5 fps)**
+
+Painful! The reason is because even though we're only moving a single box, Ragdoll checks-in with all other boxes too.
+
+https://user-images.githubusercontent.com/2152766/135825726-53b76429-0d05-4fa3-847c-19c825d0c34d.mp4 controls
+
+**After (90 fps)**
+
+Blissful. In this case, only one of the boxes is actually updated, as one would expect.
+
+https://user-images.githubusercontent.com/2152766/135825732-ca3631a2-2920-428a-9f8d-2cb165a4531a.mp4 controls
+
+Let's have a closer look at where performance is going here.
+
+**Before**
+
+Oh that's ghastly. Not only does it spend time evaluating all of those boxes, but it's making the solver take much longer consolidating the results taking a whopping **56 ms**.
+
+![image](https://user-images.githubusercontent.com/2152766/135825628-e671a785-38ef-4c2f-8d52-2a33a1c4b099.png)
+
+**After**
+
+Whereas now, as one would expect, we're only evaluating this one box in a total of **0.7ms**, resulting in a performance improvement 80x.
+
+![image](https://user-images.githubusercontent.com/2152766/135825659-a2f96650-1d84-4994-885f-e9d10fdaa3e7.png)
+
+!!! question "That looks like 3?"
+    And that's true, it still makes three separate calls to this one box. Which means there's more room to optimise here, and we'll get there.
+
+    Needless to say, this happened before as well but was obscured by how many calls there actually are. Luckily, at least two of these calls happen in parallel.
+
+**600 capsules**
+
+The current framerate on 600 unique objects, something for future Ragdoll to try and compete with. For reference, an average ragdoll consists of about 20-30 objects.
+
+https://user-images.githubusercontent.com/2152766/135828652-cc0ef941-a6ad-4ecd-9c9d-f69469a29a17.mp4 controls
 
 <br>
 
@@ -110,15 +172,14 @@ The challenge in both of these is deduplication; of identifying which of the man
 
 <br>
 
-#### Limitations
+### Motion Blur
 
-Because monitoring for and responding to changes is a hard problem to solve, odds are some things aren't updating the way you expect. If you encounter any such issues, let us know in [the chat](https://ragdolldynamics.com/chat) or ping me directly at marcus@ragdolldynamics.com.
+An unintended conseqence of the optimisation and shader work, we're currently compliant with Maya's requirement for motion blur. Since all of our simulation is transform-based, it means all of what you simulate can be motion blurred, as opposed to deformer and particle-based motion.
 
-**Known Issues**
+https://user-images.githubusercontent.com/2152766/135816508-81aae73d-7f4a-4165-9af8-abbc0c074409.mp4 controls
 
-| Limitation | Description
-|:-----------|:----------
-| Constraint frames and translation | Frames are automatically computed based on the position and pivots of a control. Changing the pivot will update the constraint, but changing the position currently does not do a good job updating the constraint at both ends of the connection. Work around this by editing the position or pivot of any children and undo afterwards, to trigger a refresh. Alternatively re-open the scene to refresh everything.
+!!! info "Heads up"
+    I use the word "currently" because there are a few key requirements that we might not be able to maintain into the future. Motion blur changes the evaluation graph almost entirely, needing to evaluate things before and after the current time, and doing a lot of that work in parallel. Our code is 99% parallelised already which is how this can work, but some code simply cannot be run in parallel.
 
 <br>
 
@@ -127,6 +188,16 @@ Because monitoring for and responding to changes is a hard problem to solve, odd
 A few things to make your day that much more bright.
 
 <br>
+
+#### Guide Space 2.0
+
+In the previous release, we introduced `Guide Space`. Which was a quick way of controlling whether a simulation should follow your animation in..
+
+1. Local space
+2. Worldspace
+3. Both
+
+But it was challenging to control, not very obvious. Especially with how it was also taking into account its "group" guide space. This release addresses this by enabling you to specify a guide space for *all* markers and selectively override only the ones you're interested in. Just like how the `Input Space` works.
 
 #### Auto Delete
 
@@ -162,6 +233,19 @@ https://user-images.githubusercontent.com/2152766/135707451-00b49389-47b6-4d4e-8
 
 Start simulating at the Maya start time, wherever it may be.
 
+
+
+<br>
+
+### Limitations
+
+Because monitoring for and responding to changes is a hard problem to solve, odds are some things aren't updating the way you expect. If you encounter any such issues, let us know in [the chat](https://ragdolldynamics.com/chat) or ping me directly at marcus@ragdolldynamics.com.
+
+**Known Issues**
+
+| Limitation | Description
+|:-----------|:----------
+| Constraint frames and translation | Frames are automatically computed based on the position and pivots of a control. Changing the pivot will update the constraint, but changing the position currently does not do a good job updating the constraint at both ends of the connection. Work around this by editing the position or pivot of any children and undo afterwards, to trigger a refresh. Alternatively re-open the scene to refresh everything.
 
 <br>
 

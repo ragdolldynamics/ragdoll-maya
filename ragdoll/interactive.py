@@ -2156,7 +2156,7 @@ def _find_current_solver(create_ground=True):
                                      parent=solver_parent)
 
             mod.set_attr(solver["version"], i__.version())
-            mod.set_attr(solver["startTime"], cmdx.min_time())
+            mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
             mod.connect(time1["outTime"], solver["currentTime"])
             mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
 
@@ -2849,18 +2849,18 @@ def edit_shape(selection=None):
         rigid = node
 
         if rigid.isA(cmdx.kTransform):
-            rigid = node.shape(type="rdRigid")
+            rigid = node.shape(type=("rdMaker", "rdRigid"))
 
         if rigid is None:
             log.warning("No rigid found for %s" % node)
             continue
 
-        if rigid.type() != "rdRigid":
+        if rigid.type() not in ("rdRigid", "rdMarker"):
             log.warning("%s was not a rigid" % rigid)
             continue
 
         if not rigid:
-            log.warning("%s had no constraint" % node)
+            log.warning("%s had no rigid" % node)
             continue
 
         editors.append(commands.edit_shape(rigid))

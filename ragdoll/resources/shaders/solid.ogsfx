@@ -58,14 +58,15 @@ GLSLShader ShaderColor
         // Object-color to light ratio
         float ratio = 0.8;
         float brightness = 0.8;
-        float specularStrength = 0.3;
+        float specularStrength = 0.2;
+        float ambient = 0.2;
         int shininess = 8;
 
         // diffuse
-        vec3 lightColor = vec3(1-ratio, 1-ratio, 1-ratio);
+        vec3 lightColor = vec3(1, 1, 1);
         vec3 norm = normalize(Normal.xyz);
         vec3 lightDir = -normalize(mat3(gWorldView) * vec3(0.5, -0.25, 1));
-        float diff = max(dot(norm, lightDir), 0.0);
+        float diff = max(dot(norm, lightDir), ambient);
         vec3 diffuse = diff * lightColor;
 
         // specular
@@ -75,7 +76,7 @@ GLSLShader ShaderColor
         vec3 specular = specularStrength * spec * lightColor;
         vec3 objectColor = ObjectColor.rgb * ratio;
 
-        vec3 result = objectColor + diffuse + specular;
+        vec3 result = objectColor * diffuse + specular;
         colorOut = vec4(result * brightness, 1.0);
     }
 }

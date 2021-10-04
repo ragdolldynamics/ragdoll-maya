@@ -30,7 +30,6 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "threadCount";
-            editorTemplate -addControl "frozen";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

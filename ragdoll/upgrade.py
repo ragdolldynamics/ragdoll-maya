@@ -29,6 +29,7 @@ RAGDOLL_PLUGIN_NAME = os.path.basename(RAGDOLL_PLUGIN)
 
 @internal.with_undo_chunk
 def upgrade_all():
+    print("Updating..")
 
     # Fetch node types from the horses mouth
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
@@ -47,6 +48,9 @@ def upgrade_all():
         "rdRigid": rigid,
         "rdRigidMultiplier": rigid_multiplier,
         "rdConstraintMultiplier": constraint_multiplier,
+        "rdMarker": marker,
+        "rdGroup": group,
+        "rdSolver": solver,
     }
 
     upgraded_count = 0
@@ -116,6 +120,15 @@ def has_upgrade(node, from_version):
     if node.type() == "rdConstraintMultiplier":
         return from_version < 20210411
 
+    if node.type() == "rdSolver":
+        return from_version < 20211008
+
+    if node.type() == "rdMarker":
+        return from_version < 20211008
+
+    if node.type() == "rdGroup":
+        return from_version < 20211008
+
 
 def scene(node, from_version, to_version):
     if from_version <= 0:
@@ -184,6 +197,36 @@ def constraint_multiplier(node, from_version, to_version):
 
     if from_version < 20210411:
         _constraint_multiplier_20210308_20210411(node)
+        upgraded = True
+
+    return upgraded
+
+
+def marker(node, from_version, to_version):
+    upgraded = False
+
+    if from_version < 20211008:
+        _marker_20210928_20211008(node)
+        upgraded = True
+
+    return upgraded
+
+
+def group(node, from_version, to_version):
+    upgraded = False
+
+    if from_version < 20211008:
+        _group_20210928_20211008(node)
+        upgraded = True
+
+    return upgraded
+
+
+def solver(node, from_version, to_version):
+    upgraded = False
+
+    if from_version < 20211008:
+        _solver_20210928_20211008(node)
         upgraded = True
 
     return upgraded
@@ -315,3 +358,32 @@ def _rigid_multiplier_20210308_20210411(mult):
                                              plugs=True)
         for index, other in enumerate(others):
             mod.connect(mult["ragdollId"], other)
+
+
+def _solver_20210928_20211008(solver):
+    log.info("Upgrading %s to 2021.10.08" % solver)
+
+    with cmdx.DagModifier() as mod:
+        # Used to be a number, is now an enum
+        start_time = solver["startTime"].read()
+        start_time = cmdx.om.MTime(start_time, cmdx.TimeUiUnit())
+        mod.set_attr(solver["startTimeCustom"], start_time)
+        mod.set_attr(solver["startTime"], 2)  # Custom
+
+        # The transform wasn't connected, but now it should be
+        transform = solver.parent()
+        mod.connect(transform["worldMatrix"][0], solver["inputMatrix"])
+
+
+def _marker_20210928_20211008(marker):
+    pass
+
+
+def _group_20210928_20211008(group):
+    log.info("Upgrading %s to 2021.10.08" % group)
+
+    with cmdx.DagModifier() as mod:
+        for index, oldstart in enumerate(group["inputMarkerStart"]):
+            marker = oldstart.input()
+            mod.connect(marker["startState"], group["inputStart"][index])
+            mod.connect(marker["currentState"], group["inputCurrent"][index])

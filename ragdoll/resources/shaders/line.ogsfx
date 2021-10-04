@@ -29,7 +29,7 @@ GLSLShader ShaderVertex
         WorldPosition = gWvpXf * Po;
 
         // Prevent z-fighting, and draw on top of solid
-        WorldPosition.z -= 0.001;
+        WorldPosition.z -= 0.0002;
 
         gl_Position = WorldPosition;
     }

@@ -45,7 +45,6 @@ def assign(transforms, solver):
                 index = solver["inputStart"].next_available_index()
                 mod.set_attr(group["version"], internal.version())
                 mod.connect(group["startState"], solver["inputStart"][index])
-                mod.connect(solver["startTime"], group["startTime"])
                 mod.connect(time1["outTime"], group["currentTime"])
                 mod.connect(group["currentState"],
                             solver["inputCurrent"][index])
@@ -127,8 +126,6 @@ def assign(transforms, solver):
                           marker["rotatePivotTranslate"])
 
             if group:
-                dgmod.connect(group["startTime"], marker["startTime"])
-
                 index = group["inputMarker"].next_available_index()
                 dgmod.connect(marker["currentState"],
                               group["inputMarker"][index])
@@ -142,7 +139,6 @@ def assign(transforms, solver):
                 parent_marker = marker
 
             else:
-                dgmod.connect(solver["startTime"], marker["startTime"])
                 index = solver["inputStart"].next_available_index()
 
                 dgmod.connect(marker["startState"],

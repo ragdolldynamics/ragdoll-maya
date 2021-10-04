@@ -5,6 +5,7 @@ global proc AErdSolverTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "timeMode";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "substeps";
             editorTemplate -addControl "positionIterations";

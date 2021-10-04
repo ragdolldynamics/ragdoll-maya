@@ -1,5 +1,4 @@
-
-// Find all available variables here
+// All available global variables are here
 // https://help.autodesk.com/view/MAYAUL/2020/ENU/?guid=GUID-0939A615-81AC-455C-9B23-9ECEC5835F93
 
 // transform object vertices to world-space
@@ -10,30 +9,27 @@ uniform mat4 gWvpXf : WorldViewProjection;
 
 uniform mat4 gWorldView : ViewProjectionTranspose;
 
+uniform vec3 gLightDir;
+
 /* Data from application vertex buffer */
-attribute AppData {
+attribute ToVertex {
     vec3 inPosition   : POSITION;
     vec3 inNormal     : NORMAL;
-    vec3 inColor      : COLOR0;
+    vec4 inColor      : COLOR0;
 };
 
-/* Data passed from vertex shader to fragment shader */
-attribute ToColorPass {
+attribute ToFragment {
     vec4 Normal         : NORMAL;
     vec4 WorldPosition  : TEXCOORD0;
-    vec4 ObjectColor        : COLOR0;
-};
+    vec4 ObjectColor    : COLOR0;
 
-/* Data passed from vertex shader to fragment shader */
-attribute FromVert {
-    vec4 Normal         : NORMAL;
-    vec4 WorldPosition  : TEXCOORD0;
-    vec4 ObjectColor        : COLOR0;
+    // Whether or not light should affect the surface color
+    float ObjectShading;
 };
 
 /* Data output by the fragment shader */
 attribute ToScreen  {
-    vec4 colorOut : COLOR0;
+    vec4 outColor : COLOR0;
 }
 
 GLSLShader ShaderVertex
@@ -42,7 +38,8 @@ GLSLShader ShaderVertex
     {
         vec3 worldNormal = normalize(mat3(gWorldXf) * inNormal);
         Normal = vec4(worldNormal, 1.0);
-        ObjectColor = vec4(inColor, 1);
+        ObjectColor = vec4(inColor.rgb, 1);
+        ObjectShading = inColor.a;
 
         WorldPosition = gWvpXf * vec4(inPosition, 1);
         WorldPosition.z -= 0.0001;
@@ -55,29 +52,30 @@ GLSLShader ShaderColor
 {
     void main()
     {
-        // Object-color to light ratio
-        float ratio = 0.8;
-        float brightness = 0.8;
-        float specularStrength = 0.2;
-        float ambient = 0.2;
-        int shininess = 8;
+        float colorAmount = 0.8;
+        float diffuseAmount = 0.2;
+        float specularAmount = 0.1;
+        float brightness = 1.0;
+        float ambient = 0.0;
+        int shininess = 2;
 
-        // diffuse
+        // Diffuse
         vec3 lightColor = vec3(1, 1, 1);
         vec3 norm = normalize(Normal.xyz);
-        vec3 lightDir = -normalize(mat3(gWorldView) * vec3(0.5, -0.25, 1));
+        vec3 lightDir = -normalize(mat3(gWorldView) * gLightDir);
         float diff = max(dot(norm, lightDir), ambient);
-        vec3 diffuse = diff * lightColor;
+        vec3 diffuse = diff * lightColor * diffuseAmount * ObjectShading;
 
-        // specular
+        // Specular
         vec3 viewDir = lightDir;
         vec3 reflectDir = reflect(-lightDir, norm);  
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-        vec3 specular = specularStrength * spec * lightColor;
-        vec3 objectColor = ObjectColor.rgb * ratio;
+        vec3 specular = spec * lightColor * specularAmount * ObjectShading;
+        vec3 objectColor = ObjectColor.rgb * colorAmount;
 
-        vec3 result = objectColor * diffuse + specular;
-        colorOut = vec4(result * brightness, 1.0);
+        // Composite
+        vec3 result = objectColor + diffuse + specular;
+        outColor = vec4(result * brightness, 1.0);
     }
 }
 
@@ -85,7 +83,7 @@ technique Main
 {
     pass p0
     {
-        VertexShader (in AppData, out ToColorPass) = ShaderVertex;
-        PixelShader (in FromVert, out ToScreen) = ShaderColor;
+        VertexShader (in ToVertex, out ToFragment) = ShaderVertex;
+        PixelShader (in ToFragment, out ToScreen) = ShaderColor;
     }
 }

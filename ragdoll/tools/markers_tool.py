@@ -9,17 +9,18 @@ AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
 
-    existing = []
-    for t in transforms:
-        other = t["message"].output(type="rdMarker")
-        if other is not None:
-            existing += [other]
+    if len(transforms) > 1:
+        existing = []
+        for t in transforms[1:]:
+            other = t["message"].output(type="rdMarker")
+            if other is not None:
+                existing += [other]
 
-    if existing:
-        raise AlreadyAssigned(
-            "At least %d transform(s) were already assigned"
-            % len(existing)
-        )
+        if existing:
+            raise AlreadyAssigned(
+                "At least %d transform(s) were already assigned"
+                % len(existing)
+            )
 
     time1 = cmdx.encode("time1")
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")

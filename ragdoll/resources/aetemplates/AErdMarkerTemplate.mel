@@ -6,6 +6,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -beginLayout "Input" -collapse false;
             editorTemplate -label "Type" -addControl "inputType";
             editorTemplate -addControl "driveSpace";
+            editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveStiffness";
             editorTemplate -addControl "driveDampingRatio";
             editorTemplate -addControl "driveLinearAngularAmount";
@@ -14,13 +15,14 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -beginLayout "Record" -collapse true;
             editorTemplate -addControl "recordTranslation";
             editorTemplate -addControl "recordRotation";
+            editorTemplate -addControl "recordToExistingKeys";
+            editorTemplate -addControl "recordToExistingTangents";
             editorTemplate -addControl "sourceTransform";
             editorTemplate -addControl "destinationTransform";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Shape" -collapse false;
             editorTemplate -addControl "collide";
-            editorTemplate -addControl "asleep";
             editorTemplate -addControl "shapeType";
             editorTemplate -addControl "mass";
             editorTemplate -addControl "friction";
@@ -31,11 +33,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "shapeRadius";
             editorTemplate -addControl "shapeOffset";
             editorTemplate -addControl "shapeRotation";
-            editorTemplate -addControl "angularMass";
-            editorTemplate -addControl "centerOfMass";
-            editorTemplate -addControl "collisionGroup";
-            editorTemplate -addControl "shapeVertexLimit";
-            editorTemplate -addControl "color";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Limit" -collapse false;
@@ -47,12 +44,25 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitDampingRatio";
         editorTemplate -endLayout;
 
+        editorTemplate -beginLayout "Visualisation" -collapse true;
+            editorTemplate -addControl "displayType";
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "drawScale";
+            editorTemplate -addControl "drawLimit";
+            editorTemplate -addControl "drawDrive";
+        editorTemplate -endLayout;
+
         editorTemplate -beginLayout "Advanced" -collapse true;
+            editorTemplate -addControl "asleep";
+            editorTemplate -addControl "disableGravity";
+            editorTemplate -addControl "angularMass";
+            editorTemplate -addControl "centerOfMass";
+            editorTemplate -addControl "shapeVertexLimit";
+            editorTemplate -addControl "collisionGroup";
             editorTemplate -addControl "enableCCD";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "linearDamping";
             editorTemplate -addControl "angularDamping";
-            editorTemplate -addControl "driveInterpolation";
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "sleepThreshold";

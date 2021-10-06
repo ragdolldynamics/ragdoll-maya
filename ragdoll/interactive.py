@@ -632,8 +632,10 @@ def install_menu():
         divider("Utilities")
 
         item("createLollipop", create_lollipop)
-        item("linkSolver", link_solver)
-        # item("snapToSim", snap_to_sim)
+
+        if c.RAGDOLL_DEVELOPER:
+            item("linkSolver", link_solver)
+            # item("snapToSim", snap_to_sim)
 
     divider("Manipulate")
 

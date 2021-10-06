@@ -11,6 +11,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "gravity";
+            editorTemplate -addControl "link";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Guides" -collapse false;

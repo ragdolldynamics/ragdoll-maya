@@ -245,7 +245,7 @@ def record(solver,
 
     """
 
-    solver_start_time = solver["startTime"].as_time()
+    solver_start_time = solver["_startTime"].as_time()
 
     if start_time is None:
         start_time = solver_start_time

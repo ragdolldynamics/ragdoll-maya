@@ -632,6 +632,7 @@ def install_menu():
         divider("Utilities")
 
         item("createLollipop", create_lollipop)
+        item("linkSolver", link_solver)
         # item("snapToSim", snap_to_sim)
 
     divider("Manipulate")
@@ -2560,6 +2561,7 @@ def snap_to_sim(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@with_exception_handling
 def create_lollipop(selection=None, **opts):
     selection = selection or cmdx.sl()
     markers = []
@@ -2573,10 +2575,44 @@ def create_lollipop(selection=None, **opts):
 
     if not markers:
         raise i__.UserWarning(
+            "No markers",
+            "Select one or more markers to assign a lollipop to."
         )
 
     tools.create_lollipop(markers)
 
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def link_solver(selection=None, **opts):
+    try:
+        a, b = selection or cmdx.selection()
+    except ValueError:
+        raise i__.UserWarning(
+            "Select two solvers",
+            "Select a solver <b>(a)</b> to link with another solver "
+            "<b>(b)</b>.<br>"
+            "Solver <b>(b)</b> will participate in Solver <b>(a)</b>."
+        )
+
+    if a.isA(cmdx.kTransform):
+        a = a.shape(type="rdSolver")
+
+    if b.isA(cmdx.kTransform):
+        b = b.shape(type="rdSolver")
+
+    if not a or not b:
+        raise i__.UserWarning(
+            "Bad selection",
+            "%s or %s was not two solvers." % (a, b)
+        )
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(b["message"], a["link"])
+
+    log.info("Successfully linked %s -> %s" % (a, b))
     return kSuccess
 
 

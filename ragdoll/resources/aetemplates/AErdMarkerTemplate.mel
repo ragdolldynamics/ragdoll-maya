@@ -4,6 +4,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "Input" -collapse false;
+            editorTemplate -addControl "enabled";
             editorTemplate -label "Type" -addControl "inputType";
             editorTemplate -addControl "driveSpace";
             editorTemplate -addControl "driveSpaceCustom";

@@ -26,6 +26,7 @@ def assign(transforms, solver):
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
 
     group = None
+    root_transform = transforms[0]
 
     if len(transforms) > 1:
         if parent_marker:
@@ -36,7 +37,8 @@ def assign(transforms, solver):
 
         if not group:
             with cmdx.DagModifier() as mod:
-                name = internal.unique_name("rGroup")
+                root_name = root_transform.name(namespace=False)
+                name = internal.unique_name("%s_rGroup" % root_name)
                 shape_name = internal.shape_name(name)
                 group_parent = mod.create_node("transform", name=name)
                 group = mod.create_node("rdGroup",
@@ -126,12 +128,23 @@ def assign(transforms, solver):
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
 
+            if transform.type() == "joint":
+                draw_scale = marker["shapeLength"].read() * 0.25
+            else:
+                draw_scale = sum(marker["shapeExtents"].read()) / 3.0
+
+            dgmod.set_attr(marker["drawScale"], draw_scale)
+
+            # Currently not implemented
+            dgmod.lock_attr(marker["recordToExistingKeys"])
+            dgmod.lock_attr(marker["recordToExistingTangents"])
+
             if group:
-                index = group["inputMarker"].next_available_index()
+                index = group["inputCurrent"].next_available_index()
                 dgmod.connect(marker["currentState"],
-                              group["inputMarker"][index])
+                              group["inputCurrent"][index])
                 dgmod.connect(marker["startState"],
-                              group["inputMarkerStart"][index])
+                              group["inputStart"][index])
 
                 if parent_marker is not None:
                     dgmod.connect(parent_marker["ragdollId"],
@@ -261,7 +274,7 @@ def record(solver,
             markers += [entity]
 
         if entity.type() == "rdGroup":
-            members = [el.input() for el in entity["inputMarkerStart"]]
+            members = [el.input() for el in entity["inputStart"]]
             markers.extend(members)
 
     markers = {m.shortest_path(): m for m in markers}

@@ -2112,12 +2112,20 @@ def _fit_ground(ground, markers):
     # Don't let it get smaller than the median extent
     mid = max(thickness * 4, mid)
 
-    bbox.expand(bbox.min - cmdx.Vector(mid, mid, mid))
-    bbox.expand(bbox.max + cmdx.Vector(mid, mid, mid))
+    exbbox = cmdx.BoundingBox(bbox)
+    exbbox.expand(bbox.min - cmdx.Vector(mid, mid, mid))
+    exbbox.expand(bbox.max + cmdx.Vector(mid, mid, mid))
 
     up_axis = cmdx.up_axis()
     z = "Z" if up_axis.y else "Y"
     y = "Y" if up_axis.y else "Z"
+
+    ground_level = 0.0
+
+    # Let things resting on the ground, rest on the ground
+    # But things intersecting the ground should be given some space.
+    if bbox.min.y <= 0:
+        ground_level = exbbox.min.y
 
     with cmdx.DagModifier() as mod:
         transform = ground["sourceTransform"].input()
@@ -2128,13 +2136,13 @@ def _fit_ground(ground, markers):
         mod.set_attr(ground["shapeExtents" + y], thickness)
         mod.set_attr(ground["shapeOffset" + y], -thickness * 0.5)
 
-        mod.set_attr(transform["scaleX"], bbox.width)
+        mod.set_attr(transform["scaleX"], exbbox.width)
         mod.set_attr(transform["scale" + y], 1)
-        mod.set_attr(transform["scale" + z], bbox.depth)
-        mod.set_attr(transform["translateX"], bbox.center.x)
-        mod.set_attr(transform["translate" + y], 0.0)
+        mod.set_attr(transform["scale" + z], exbbox.depth)
+        mod.set_attr(transform["translateX"], exbbox.center.x)
+        mod.set_attr(transform["translate" + y], ground_level)
         mod.set_attr(transform["translate" + z], (
-            bbox.center.z if up_axis.y else bbox.center.y
+            exbbox.center.z if up_axis.y else exbbox.center.y
         ))
 
 

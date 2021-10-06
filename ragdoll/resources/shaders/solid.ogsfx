@@ -30,7 +30,8 @@ attribute ToFragment {
 /* Data output by the fragment shader */
 attribute ToScreen  {
     vec4 outColor : COLOR0;
-}
+};
+
 
 GLSLShader ShaderVertex
 {

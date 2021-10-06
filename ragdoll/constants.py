@@ -123,6 +123,15 @@ InputOff = 1
 InputKinematic = 2
 InputGuide = 3
 
+GuideInherit = 0
+GuideRelative = 1
+GuideAbsolute = 2
+GuideCustom = 3
+
+# Aliases
+GuideLocal = GuideCustom
+GuideWorld = GuideAbsolute
+
 DisplayDefault = 0
 DisplayWire = 1
 DisplayConstant = 2

@@ -6331,6 +6331,7 @@ class _BaseModifier(object):
         smart_set_attr = smartSetAttr
         delete_attr = deleteAttr
         reset_attr = resetAttr
+        lock_attr = setLocked
         try_connect = tryConnect
         connect_attr = connectAttr
         connect_attrs = connectAttrs

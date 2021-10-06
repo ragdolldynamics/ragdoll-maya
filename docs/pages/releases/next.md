@@ -6,9 +6,33 @@ description: Performance, performance, performance
 
 Highlight for this release is **Rendering Performance**.
 
-- [**ENHANCED** Performance](#performance) Less work, greater parallelism and more GPU
+- [**ADDED** Performance](#performance) Less work, greater parallelism and more GPU
 - [**ADDED** Motion Blur](#motion-blur) More robust and actually useful compared to native Maya motion blur
+- [**ADDED** Overlap Groups](#overlap-groups) Fine control over what overlaps with what
+- [**ADDED** Asleep](#asleep) Start simulating on first contact
 - [**ENHANCED** Quality of Life](#quality-of-life) Automated clean-up, support for Z-up and more!
+
+### Showcase
+
+You know the drill, we'll start with some eye candy. 🍬
+
+**New Shading**
+
+Now more like *actual* candy. Nom nom nom!
+
+![image](https://user-images.githubusercontent.com/2152766/135989994-53f9f751-1cce-48f7-97a8-b907079eb645.png)
+
+**Do the Robot**
+
+Model and Rig courtesy of [Amedeo Beratta](https://www.linkedin.com/in/amedeoberetta/)
+
+https://user-images.githubusercontent.com/2152766/136040898-8b754d97-3dc1-4bc6-896c-e63186252552.mp4 controls
+
+**Vehicular Render**
+
+Made by @tris
+
+https://user-images.githubusercontent.com/2152766/136041166-52db6a64-b1a7-4f13-bff3-ff503fd310bf.mp4 controls
 
 <br>
 
@@ -172,6 +196,48 @@ The challenge in both of these is deduplication; of identifying which of the man
 
 <br>
 
+### Overlap Group
+
+Specify which markers may overlap rather than collide. This can be useful to enable dense areas of a character, like the clavicles, where there is natural overlap amongst large shapes like with the neck and spine.
+
+| Value | Meaning
+|:------|:-------------
+| -1    | Collide with everything
+| 0     | Respect self collision (default)
+| 1-255 | Overlap with everything with the same number
+
+An `rdMarker` part of a `rdGroup` can get an overlap group assigned procedurally, based on other members of that group. For example, in a complete ragdoll, all markers are part of the same group. So a `Self Collide = On` means these will all be given the same overlap group.
+
+If it isn't in a group, then `0` is the same as `-1`, in that it will collide with everything.
+
+Let's have a look at a few scenarios.
+
+<br>
+
+#### Collide with Everything
+
+In this example, every marker is part of the same group. The group has `Self Collide = Off`, which is fine for just about every marker *except the fingers*. In that case, we *do* want self-collision, so they are given the group `-1`.
+
+https://user-images.githubusercontent.com/2152766/136033654-9e84313f-d2f8-4e97-a14f-600154dfd709.mp4 controls
+
+<br>
+
+#### Respect Self Collision
+
+In this case, we're happy with a default group of `0` since we don't need anything to self collide. Especially these clavicles that overlap significantly!
+
+https://user-images.githubusercontent.com/2152766/136034921-e9fd364b-9889-430c-8ab2-215ab5b998f1.mp4 controls
+
+<br>
+
+#### Surgical Control
+
+Finally, for the very specific cases of wanting two or more markers to overlap. Notice how we give both the ground and 3 of the boxes an `Overlap Group = 5`.
+
+https://user-images.githubusercontent.com/2152766/136040503-66728dee-d4f9-4411-bd08-9bf18043c334.mp4 controls
+
+<br>
+
 ### Motion Blur
 
 An unintended conseqence of the optimisation and shader work, we're currently compliant with Maya's requirement for motion blur. Since all of our simulation is transform-based, it means all of what you simulate can be motion blurred, as opposed to deformer and particle-based motion.
@@ -180,6 +246,14 @@ https://user-images.githubusercontent.com/2152766/135816508-81aae73d-7f4a-4165-9
 
 !!! info "Heads up"
     I use the word "currently" because there are a few key requirements that we might not be able to maintain into the future. Motion blur changes the evaluation graph almost entirely, needing to evaluate things before and after the current time, and doing a lot of that work in parallel. Our code is 99% parallelised already which is how this can work, but some code simply cannot be run in parallel.
+
+<br>
+
+### Asleep
+
+Sometimes, you want things to stay put until something comes into contact with it. That's when you can tell a marker to start asleep, and wake up when something bumps in to you.
+
+![](https://placehold.it/500x300)
 
 <br>
 
@@ -239,19 +313,25 @@ Start simulating at the Maya start time, wherever it may be.
 
 ### Limitations
 
-Because monitoring for and responding to changes is a hard problem to solve, odds are some things aren't updating the way you expect. If you encounter any such issues, let us know in [the chat](https://ragdolldynamics.com/chat) or ping me directly at marcus@ragdolldynamics.com.
+Monitoring for and responding to changes is a hard problem.
 
-**Known Issues**
+Odds are some things aren't updating the way you expect, which could affect viewport rendering, or worse, the actual simulation. If you encounter any such issues, please let us know in [the chat](https://ragdolldynamics.com/chat) or ping me directly at marcus@ragdolldynamics.com
 
-| Limitation | Description
-|:-----------|:----------
-| Constraint frames and translation | Frames are automatically computed based on the position and pivots of a control. Changing the pivot will update the constraint, but changing the position currently does not do a good job updating the constraint at both ends of the connection. Work around this by editing the position or pivot of any children and undo afterwards, to trigger a refresh. Alternatively re-open the scene to refresh everything.
+Here are the currently known issues that we'll be fixing once a solution presents itself.
+
+<br>
+
+#### Slow Constraints
+
+Like in earlier versions, drawing constraints are the slowest part. If you don't need them, disable them. You can do that either on the `rSolver` node, or individually per `rMarker` node.
+
+https://user-images.githubusercontent.com/2152766/136005274-cebbe043-d356-4350-af77-51cefe4aa2b3.mp4
 
 <br>
 
 ### Resources
 
-Some well-hidden but essential resources for any of the above.
+Some well-hidden but essential resources for any of the above. If you are into anything related to Maya plug-in development and performance, you'll treasure these as I have.
 
 - [Parallel Evaluation](https://download.autodesk.com/us/company/files/UsingParallelMaya/2020/UsingParallelMaya.html)
 - [VP2 API Porting Guide for Locators](images.autodesk.com/adsk/files/VP2_API_Porting_Guide_for_Locators.pdf)

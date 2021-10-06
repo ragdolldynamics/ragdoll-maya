@@ -376,7 +376,22 @@ def _solver_20210928_20211008(solver):
 
 
 def _marker_20210928_20211008(marker):
-    pass
+    log.info("Upgrading %s to 2021.10.08" % marker)
+
+    with cmdx.DagModifier() as mod:
+        # driveSpace turned into an enum
+        custom = marker["driveSpace"].read()
+        mod.set_attr(marker["driveSpaceCustom"], custom)
+
+        space = constants.GuideInherit
+
+        if custom < -0.99:
+            space = constants.GuideLocal
+
+        if custom > 0.99:
+            space = constants.GuideWorld
+
+        mod.set_attr(marker["driveSpace"], space)
 
 
 def _group_20210928_20211008(group):
@@ -387,3 +402,7 @@ def _group_20210928_20211008(group):
             marker = oldstart.input()
             mod.connect(marker["startState"], group["inputStart"][index])
             mod.connect(marker["currentState"], group["inputCurrent"][index])
+            mod.disconnect(oldstart)
+
+        for oldcurrent in group["inputMarker"]:
+            mod.disconnect(oldcurrent)

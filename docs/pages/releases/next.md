@@ -4,12 +4,14 @@ title: Animation Capture pt. 2/4
 description: Performance, performance, performance
 ---
 
-Highlight for this release is **Rendering Performance**.
+![performance](https://user-images.githubusercontent.com/2152766/136225293-9d00d280-6e8b-427e-84e1-4f0566c0fae2.png)
+
+Highlight for this release is **Performance**, and is part 2/4 of the new [Markers](http://localhost:8001/releases/2021.09.27/).
 
 - [**ADDED** Performance](#performance) Less work, greater parallelism and more GPU
-- [**ADDED** Motion Blur](#motion-blur) More robust and actually useful compared to native Maya motion blur
 - [**ADDED** Overlap Groups](#overlap-groups) Fine control over what overlaps with what
 - [**ADDED** Asleep](#asleep) Start simulating on first contact
+- [**ADDED** Ignore Gravity](#ignore-gravity) Because sometimes, you don't want to play by the rules
 - [**ENHANCED** Quality of Life](#quality-of-life) Automated clean-up, support for Z-up and more!
 
 ### Showcase
@@ -21,6 +23,12 @@ You know the drill, we'll start with some eye candy. 🍬
 Now more like *actual* candy. Nom nom nom!
 
 ![image](https://user-images.githubusercontent.com/2152766/135989994-53f9f751-1cce-48f7-97a8-b907079eb645.png)
+
+**Raining Ragdolls**
+
+Quick! Get inside!
+
+https://user-images.githubusercontent.com/2152766/136224776-05f997f6-c08d-4c49-b26e-59e45b5ff289.mp4 controls
 
 **Do the Robot**
 
@@ -34,16 +42,38 @@ Made by @tris
 
 https://user-images.githubusercontent.com/2152766/136041166-52db6a64-b1a7-4f13-bff3-ff503fd310bf.mp4 controls
 
+**Guide Space Mania**
+
+Oh the trickery you can get up to. 🥳
+
+https://user-images.githubusercontent.com/2152766/136201645-94418df8-ed05-44fd-be71-e89019a45469.mp4
+
+<br>
+
+### 1 year
+
+That's right! Ragdoll has turned 1 this week! 🥳
+
+In my original business plan, I had written..
+
+> "Revenue, year 1: £20,000"
+
+..which was blissfully optimistic. However! I'm happy to say that I blew past this about 6 days into launch, on the 28th of July this year. Very few startups achieve this amount of revenue in year 1; the vast majority achieve £0* for the first number of years (I watch a lot of Dragon's Den 😅). So this to me is validation that *you want this*.
+
+So let's keep it going, shall we? :)
+
 <br>
 
 ### Performance
+
+This release is all about performance, so how did we do?
 
 In terms of time spent, Ragdoll has three stages.
 
 | # | Stage | Description
 |:--|:------|:----------
-| 1 | `Evaluation` | This is your character rig - the transform hierarchy, constraints, any deformers, that kind of thing.
-| 2 | `Simulation` | Once evaluated, Ragdoll considers all of this data and applies forces, solves constraints, contacts, that kind of thing.
+| 1 | `Evaluation` | This is primarily your character rig - the transform hierarchy, constraints, any deformers, and so forth. It is how data is passed from Maya into Ragdoll.
+| 2 | `Simulation` | Once data has been aquired, Ragdoll considers all of it and applies forces, solves constraints, contacts, that kind of thing.
 | 3 | `Rendering` | Finally, we need pixels. In the case of Ragdoll, this means generating and uploading geometry to the GPU; including capsules but also your meshes which are converted into "convex hulls".
 
 Simulation has always been fast and in the previous release, we focused entirely on workflow which had an indirect impact on `Evaluation` and `Rendering`. One got faster, but the other got slower.
@@ -102,7 +132,7 @@ This release consolidates all shaders into *one*, colors are uploaded only once 
 
     ![image](https://user-images.githubusercontent.com/2152766/135706370-250f4ebb-93e7-4752-9062-ffad65de47ad.png)
 
-    Bearing in mind this will cost you 50% of the rendering performance and won't benefit from future shading related features and improvements. It will remain until it's clear whether and how much it is actually used. (Let us know in the chat!)
+    Bearing in mind this will cost you 50% of the rendering performance and won't benefit from future shading related features and improvements. The option will remain until it's clear whether and how much it is actually used. (Let us know in [the chat!](https://ragdolldynamics.com/chat))
 
 Let's have a look at how this change affects your overall experience.
 
@@ -134,6 +164,12 @@ With this release, this number dropped to **0.06ms** (58 microseconds) that's an
     There isn't much we can do to *directly* impact it; it's mostly out of our hands. However, by massaging our data more and making life easier for Maya it should be possible to reduce these as well.
 
     See [Future Work](#future-work) for details on next steps, and if this is something you, fellow reader, is familiar with do [get in touch!](https://ragdolldynamics/contact)
+
+Finally, as a result of having complete control over the shader running on the GPU, we're now able to more intimately design it to look the way we want. Expect more refinements here over time.
+
+| Before | After
+|:-------|:-----
+| ![image](https://user-images.githubusercontent.com/2152766/136246481-e1ed679c-28ea-4e36-a15c-b1055f3db6f3.png) | ![image](https://user-images.githubusercontent.com/2152766/136246710-2cba7c5e-42da-4491-ab10-81ba88904232.png)
 
 <br>
 
@@ -188,7 +224,7 @@ There is at least 4-16x performance left on the table for specialised cases.
 
 | Work | Savings | Benefit
 |:-----|:--------|:----
-| Optimised Render Items | 4x | Native Maya still renders 4x faster than us
+| Optimised Render Items | 4x | Native Maya still renders 4x faster than us, which means there's more things we can do.
 | Instancing for Rendering | 2-4x | Every render item is currently unique which means neither Maya nor your GPU is able to reuse geometry. Instancing is how games is able to render millions of objects on-screen at 60 fps, and best we can hope for is thousands.
 | Instancing for Simulation | 2-4x | Likewise, every physics object is unique and, again, instancing in simulation is how games is able to run destruction and have thousands of objects interact in real-time.
 
@@ -202,9 +238,9 @@ Specify which markers may overlap rather than collide. This can be useful to ena
 
 | Value | Meaning
 |:------|:-------------
-| -1    | Collide with everything
-| 0     | Respect self collision (default)
-| 1-255 | Overlap with everything with the same number
+| `-1`    | No overlap allowed
+| `0`     | Default, respects self-collision on the group (if any)
+| `1-255` | Overlap everything with the same number
 
 An `rdMarker` part of a `rdGroup` can get an overlap group assigned procedurally, based on other members of that group. For example, in a complete ragdoll, all markers are part of the same group. So a `Self Collide = On` means these will all be given the same overlap group.
 
@@ -238,22 +274,19 @@ https://user-images.githubusercontent.com/2152766/136040503-66728dee-d4f9-4411-b
 
 <br>
 
-### Motion Blur
-
-An unintended conseqence of the optimisation and shader work, we're currently compliant with Maya's requirement for motion blur. Since all of our simulation is transform-based, it means all of what you simulate can be motion blurred, as opposed to deformer and particle-based motion.
-
-https://user-images.githubusercontent.com/2152766/135816508-81aae73d-7f4a-4165-9af8-abbc0c074409.mp4 controls
-
-!!! info "Heads up"
-    I use the word "currently" because there are a few key requirements that we might not be able to maintain into the future. Motion blur changes the evaluation graph almost entirely, needing to evaluate things before and after the current time, and doing a lot of that work in parallel. Our code is 99% parallelised already which is how this can work, but some code simply cannot be run in parallel.
-
-<br>
-
 ### Asleep
 
 Sometimes, you want things to stay put until something comes into contact with it. That's when you can tell a marker to start asleep, and wake up when something bumps in to you.
 
 ![](https://placehold.it/500x300)
+
+<br>
+
+### Ignore Gravity
+
+It surrounds us. It penetrates us. It binds the galaxy together. But sometimes, you just don't care.
+
+
 
 <br>
 
@@ -318,6 +351,53 @@ Monitoring for and responding to changes is a hard problem.
 Odds are some things aren't updating the way you expect, which could affect viewport rendering, or worse, the actual simulation. If you encounter any such issues, please let us know in [the chat](https://ragdolldynamics.com/chat) or ping me directly at marcus@ragdolldynamics.com
 
 Here are the currently known issues that we'll be fixing once a solution presents itself.
+
+<br>
+
+### Motion Blur
+
+As an unintended conseqence of the optimisation and shader work, we're currently compliant with Maya's requirement for motion blur. Since all of our simulation is transform-based, it means all of what you simulate can be motion blurred, as opposed to deformer and particle-based motion.
+
+https://user-images.githubusercontent.com/2152766/135816508-81aae73d-7f4a-4165-9af8-abbc0c074409.mp4 controls
+
+It won't work with any animated attributes, which makes it rather limited in what you can use it for. 🤔
+
+<br>
+
+#### Maintain Offset IK/FK
+
+Recording has an option to `Maintain Offset`. That's important if the assigned control has a different position and/or orientation than the destination control. For example, you can assign to a joint, but record onto a NURBS control.
+
+If IK joints are assigned markers and record onto FK controls, the option to `Maintain Offset` will maintain the offset between the IK and FK controls. Which probably isn't what you want.
+
+https://user-images.githubusercontent.com/2152766/136211952-61910881-e9d0-4069-898a-afb870c39860.mp4
+
+To combat this, you have two options.
+
+1. Do not maintain offset
+2. Match FK controls to IK prior to baking
+
+(1) may not always be an option. If the position and/or orientation of an assigned control is simply different, then there isn't much you can do. :(
+
+(2) is most likely possible, but not necessarily simple. If your rig has an option to snap FK to IK controls, this would be the place to use it. Otherwise, orienting your FK controls into the approximate starting position of the simulation will do, just bear in mind that any difference between then will be maintained throughout the recording.
+
+This will be addressed in a future release.
+
+<br>
+
+#### Recording Kinematic Markers
+
+When a marker treats the input as `Kinematic`, it means it won't simulate it. It'll be 100% locked to animation. If that's the case, then there's really no point in recording those keys, right? Because they'd be 100% identical to the animation?
+
+Except! If there's a parent, then we'll still need those keys to compensate for the *parent* not being kinematic.
+
+**Problem**
+
+https://user-images.githubusercontent.com/2152766/136213022-be377129-b34f-4877-8aa9-ab0bd27b8ded.mp4 controls
+
+**Solution**
+
+https://user-images.githubusercontent.com/2152766/136213048-d79142e9-b545-4e40-9ec3-17054d524460.mp4 controls
 
 <br>
 

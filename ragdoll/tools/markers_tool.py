@@ -128,6 +128,11 @@ def assign(transforms, solver):
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
 
+            # For the offset, we need to store the difference between
+            # the source and destination transforms. At the time of
+            # creation, these are the same.
+            dgmod.set_attr(marker["offsetMatrix"][0], cmdx.Matrix4())
+
             if transform.type() == "joint":
                 draw_scale = marker["shapeLength"].read() * 0.25
             else:
@@ -225,13 +230,7 @@ def create_lollipop(markers):
             mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
-def record(solver,
-           start_time=None,
-           end_time=None,
-           include=None,
-           exclude=None,
-           kinematic=False,
-           maintain_offset=True):
+def record(solver, opts):
     """Transfer simulation into animation
 
     Arguments:
@@ -245,6 +244,21 @@ def record(solver,
 
     """
 
+    opts = opts or {}
+    opts = dict({
+        "startTime": None,
+        "endTime": None,
+        "include": None,
+        "exclude": None,
+        "includeKinematic": False,
+        "maintainOffset": True,
+        "simplifyCurves": True,
+        "unrollRotations": True,
+        "resetMarkers": True,
+    }, **opts)
+
+    start_time = opts["startTime"]
+    end_time = opts["endTime"]
     solver_start_time = solver["_startTime"].as_time()
 
     if start_time is None:
@@ -253,8 +267,8 @@ def record(solver,
     if end_time is None:
         end_time = cmdx.max_time()
 
-    include = {t: True for t in include} if include else {}
-    exclude = {t: True for t in exclude} if exclude else {}
+    include = {t: True for t in opts["include"]} if opts["include"] else {}
+    exclude = {t: True for t in opts["exclude"]} if opts["exclude"] else {}
 
     assert end_time > start_time, "%d must be greater than %d" % (
         end_time, start_time
@@ -265,8 +279,19 @@ def record(solver,
     end_frame = int(end_time.value)
     total = end_frame - start_frame
 
+    end_frame += 1  # One more for safety
+
     # Allocate data
     entities = [el.input() for el in solver["inputStart"]]
+
+    # Account for linked solvers
+    def recurse(s):
+        for link in s["message"].outputs(type="rdSolver", plugs=("link",)):
+            linked_solver = link.node()
+            entities.extend(el.input() for el in linked_solver["inputStart"])
+            recurse(linked_solver)
+
+    recurse(solver)
 
     markers = []
     for entity in entities:
@@ -310,7 +335,7 @@ def record(solver,
 
                 # Record results
                 for key, marker in markers.items():
-                    if kinematic:
+                    if opts["includeKinematic"]:
                         is_kinematic = False
                     else:
                         is_kinematic = marker["_kinematic"].read()
@@ -385,7 +410,6 @@ def record(solver,
 
         unkeyed = []
 
-        # for marker, channels in anim.items():
         for marker, frames in cache.items():
 
             # Cull entirely kinematic markers
@@ -410,24 +434,31 @@ def record(solver,
             start_frame = frame
 
             marker = markers[marker]
-            transform = marker["dst"][0].input()
-            for channel in "tr":
-                if channel == "t" and kinematic_translation:
-                    continue
+            for el in marker["dst"]:
+                transform = el.input()
 
-                if channel == "r" and kinematic_rotation:
-                    continue
+                for channel in "tr":
+                    if channel == "r" and kinematic_rotation:
+                        continue
 
-                for axis in "xyz":
-                    plug = transform[channel + axis]
+                    for axis in "xyz":
+                        plug = transform[channel + axis]
 
-                    # Not keyframed
-                    if not plug.input(type=("animCurveTL", "animCurveTA")):
-                        unkeyed.append((start_frame, plug))
+                        # Not keyframed
+                        if channel == "t" and not kinematic_translation:
+                            if not plug.input(type="animCurveTL"):
+                                unkeyed.append((start_frame, plug))
+
+                        if channel == "r" and not kinematic_rotation:
+                            if not plug.input(type="animCurveTA"):
+                                unkeyed.append((start_frame, plug))
 
         for start_frame, plug in unkeyed:
             node = plug.node().shortest_path()
-            cmds.setKeyframe(node, time=start_frame, attribute=plug.name())
+            cmds.setKeyframe(node,
+                             time=start_frame,
+                             attribute=plug.name(),
+                             dirtyDG=True)
 
     def reset():
         groups = set()
@@ -463,7 +494,7 @@ def record(solver,
 
                 # It may have a different kind of connection, like a proxy
                 if not group["inputType"].connected:
-                    mod.set_attr(group["inputType"], 1)
+                    mod.set_attr(group["inputType"], constants.InputKinematic)
 
     @internal.with_undo_chunk
     def unroll():
@@ -474,24 +505,55 @@ def record(solver,
 
         for marker, channels in anim.items():
             marker = markers[marker]
-            dst = marker["dst"][0].input()
 
-            # No destination transform here, carry on
-            if dst is None:
-                continue
+            for el in marker["dst"]:
+                dst = el.input()
 
-            # Can only unroll transform with all axes keyed
-            if all(is_keyed(dst[ch]) for ch in ("rx", "ry", "rz")):
+                # No destination transform here, carry on
+                if dst is None:
+                    continue
 
-                # Should only unrol any that was actually
-                # part of our simulation output.
-                if any(anim[marker][ch] for ch in ("rx", "ry", "rz")):
-                    rotate_channels += ["%s.rx" % dst]
-                    rotate_channels += ["%s.ry" % dst]
-                    rotate_channels += ["%s.rz" % dst]
+                # Can only unroll transform with all axes keyed
+                if all(is_keyed(dst[ch]) for ch in ("rx", "ry", "rz")):
+
+                    # Should only unrol any that was actually
+                    # part of our simulation output.
+                    if any(anim[marker][ch] for ch in ("rx", "ry", "rz")):
+                        rotate_channels += ["%s.rx" % dst]
+                        rotate_channels += ["%s.ry" % dst]
+                        rotate_channels += ["%s.rz" % dst]
 
         cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
         cmds.rotationInterpolation(rotate_channels, c="none")
+
+    @internal.with_undo_chunk
+    def simplify():
+        """TODO This isn't the same as simplify-dense in the Graph Editor"""
+        for marker, channels in anim.items():
+            marker = markers[marker]
+            recorded_channels = []
+
+            for el in marker["dst"]:
+                dst = el.input()
+
+                # No destination transform here, carry on
+                if dst is None:
+                    continue
+
+                # Should only simplify any that was actually
+                # part of our simulation output.
+                recorded_channels = [
+                    "%s.%s" % (dst, chan)
+                    for chan in ("rx", "ry", "rz",
+                                 "tx", "ty", "tz")
+                    if chan in channels
+                ]
+
+                cmds.simplify(
+                    recorded_channels,
+                    timeTolerance=0.005,
+                    valueTolerance=0.01
+                )
 
     @internal.with_undo_chunk
     def write():
@@ -517,26 +579,6 @@ def record(solver,
         # the opposite order of Maya's hierarchy.
         ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
 
-        offsets = {}
-        if maintain_offset:
-            with cmdx.Context(start_frame, cmdx.TimeUiUnit()):
-                for key in ordered_markers:
-                    start_data = cache[key][start_frame]
-
-                    marker = markers[key]
-
-                    for el in marker["dst"]:
-                        dst = el.input()
-
-                        if not dst:
-                            continue
-
-                        wim = dst["wim"][0].as_matrix()
-                        output_matrix = start_data["outputMatrix"]
-
-                        offset = output_matrix * wim
-                        offsets[(marker, dst)] = offset
-
         for frame in range(start_frame, end_frame):
             with cmdx.Context(frame, cmdx.TimeUiUnit()):
                 for key in ordered_markers:
@@ -549,7 +591,7 @@ def record(solver,
                                 data["recordRotation"]]):
                         continue
 
-                    for el in marker["dst"]:
+                    for index, el in enumerate(marker["dst"]):
                         dst = el.input()
 
                         if not dst:
@@ -564,8 +606,8 @@ def record(solver,
 
                         matrix = output_matrix
 
-                        if maintain_offset:
-                            offset = offsets[(marker, dst)]
+                        if opts["maintainOffset"]:
+                            offset = marker["offsetMatrix"][index].as_matrix()
                             matrix = offset.inverse() * output_matrix
 
                         t, r = get_local_pos_rot(matrix, dst)
@@ -607,8 +649,44 @@ def record(solver,
     for status in write():
         yield (status[0], 50 + status[1] * 0.50)
 
-    reset()
-    unroll()
+    if opts["resetMarkers"]:
+        reset()
+
+    if opts["unrollRotations"]:
+        unroll()
+
+    if opts["simplifyCurves"]:
+        simplify()
+
+
+def retarget(marker, transform, append=False):
+    """Retarget `marker` to `transform`
+
+    When recording, write simulation from `marker` onto `transform`,
+    regardless of where it is assigned.
+
+    """
+
+    with cmdx.DGModifier() as mod:
+        if not append:
+            for el in marker["dst"]:
+                mod.disconnect(el, destination=False)
+
+            for el in marker["offsetMatrix"]:
+                mod.disconnect(el, destination=False)
+
+            mod.do_it()
+
+        index = marker["dst"].next_available_index()
+        src = marker["src"].input()
+        dst = marker["dst"][index]
+
+        mod.connect(transform["message"], dst)
+
+        # Store offset for recording later
+        offset = src["worldMatrix"][0].as_matrix()
+        offset *= transform["worldInverseMatrix"][0].as_matrix()
+        mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
 def snap(transforms):

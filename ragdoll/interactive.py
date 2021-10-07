@@ -2307,6 +2307,8 @@ def record_markers(selection=None, **opts):
         "markersRecordKinematic": _opt("markersRecordKinematic", opts),
         "markersUseSelection": _opt("markersUseSelection", opts),
         "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
+        "markersRecordSimplify": _opt("markersRecordSimplify", opts),
+        "markersRecordUnroll": _opt("markersRecordUnroll", opts),
         "markersRecordMaintainOffset": _opt(
             "markersRecordMaintainOffset", opts),
     }, **(opts or {}))
@@ -2348,15 +2350,16 @@ def record_markers(selection=None, **opts):
     total_frames = 0
     with i__.Timer("bake") as duration, progressbar() as p:
         for solver in solvers:
-            it = tools.record_markers(
-                solver,
-                start_time=start_time,
-                end_time=end_time,
-                include=include,
-                exclude=exclude,
-                kinematic=opts["markersRecordKinematic"],
-                maintain_offset=opts["markersRecordMaintainOffset"],
-            )
+            it = tools.record_markers(solver, {
+                "startTime": start_time,
+                "endTime": end_time,
+                "include": include,
+                "exclude": exclude,
+                "includeKinematic": opts["markersRecordKinematic"],
+                "maintainOffset": opts["markersRecordMaintainOffset"],
+                "simplifyCurves": opts["markersRecordSimplify"],
+                "unrollRotations": opts["markersRecordUnroll"],
+            })
 
             for step, progress in it:
                 log.info("%.1f%% (%s)" % (progress, step.title()))

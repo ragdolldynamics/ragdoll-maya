@@ -393,6 +393,23 @@ def _marker_20210928_20211008(marker):
 
         mod.set_attr(marker["driveSpace"], space)
 
+        # offsetMatrix was introduced
+        for index, dst in enumerate(marker["dst"]):
+            src = marker["src"].input(type=("transform", "joint"))
+            dst = dst.input(type=("transform", "joint"))
+
+            if not dst:
+                # An untargeted marker, leave it
+                continue
+
+            if not src:
+                # This would be odd, but technically possible
+                continue
+
+            offset = src["worldMatrix"].as_matrix()
+            offset *= dst["worldInverseMatrix"][0].as_matrix()
+            mod.set_attr(marker["offsetMatrix"][index], offset)
+
 
 def _group_20210928_20211008(group):
     log.info("Upgrading %s to 2021.10.08" % group)

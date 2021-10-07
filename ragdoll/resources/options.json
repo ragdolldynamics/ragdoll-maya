@@ -727,7 +727,23 @@
         "label": "Include Kinematic Keys",
         "type": "Boolean",
         "default": true,
-        "help": "Should I include non-simulated (kinematic) motion during the record?."
+        "help": "Should I include non-simulated (kinematic) motion during the record?"
+    },
+
+    "markersRecordSimplify": {
+        "name": "markersRecordSimplify",
+        "label": "Simplify Recorded Channels",
+        "type": "Boolean",
+        "default": false,
+        "help": "Should I reduce static keys and generally make the result easier to work with?"
+    },
+
+    "markersRecordUnroll": {
+        "name": "markersRecordUnroll",
+        "label": "Unroll Rotations",
+        "type": "Boolean",
+        "default": true,
+        "help": "Should I let rotations go beyond 180 degrees? Generally yes, for things like motion blur and anything happening between two keys."
     },
 
 

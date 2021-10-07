@@ -632,10 +632,11 @@
         "summary": "Transfer simulation into animation",
         "description": "Record the simulation as animation onto the marker targets.",
         "options": [
+            "markersUseSelection",
+            "markersIgnoreJoints",
             "markersRecordMaintainOffset",
             "markersRecordKinematic",
-            "markersUseSelection",
-            "markersIgnoreJoints"
+            "markersRecordUnroll"
         ]
     },
 

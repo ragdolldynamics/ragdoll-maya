@@ -714,12 +714,20 @@
         "help": "Should I record only to the selected controls?"
     },
 
+    "markersRecordMaintainOffset": {
+        "name": "markersRecordMaintainOffset",
+        "label": "Maintain Offset",
+        "type": "Boolean",
+        "default": true,
+        "help": "Should I keep the offset between marker and control as I record?"
+    },
+
     "markersRecordKinematic": {
         "name": "markersRecordKinematic",
         "label": "Include Kinematic Keys",
         "type": "Boolean",
-        "default": false,
-        "help": "Should I include non-simulated (kinematic) motion during the record? These will be identical to the original animation and generally not necessary, unless the simulation is retargeted."
+        "default": true,
+        "help": "Should I include non-simulated (kinematic) motion during the record?."
     },
 
 

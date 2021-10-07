@@ -2307,6 +2307,8 @@ def record_markers(selection=None, **opts):
         "markersRecordKinematic": _opt("markersRecordKinematic", opts),
         "markersUseSelection": _opt("markersUseSelection", opts),
         "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
+        "markersRecordMaintainOffset": _opt(
+            "markersRecordMaintainOffset", opts),
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)
@@ -2329,6 +2331,11 @@ def record_markers(selection=None, **opts):
             "scene along with a solver."
         )
 
+    # Remove linked solvers, we'll record those from the main solver
+    for solver in solvers[:]:
+        if solver["link"].input() is not None:
+            solvers.remove(solver)
+
     start_time, end_time = cmdx.selected_time()
 
     if end_time.value - start_time.value < 2:
@@ -2341,12 +2348,16 @@ def record_markers(selection=None, **opts):
     total_frames = 0
     with i__.Timer("bake") as duration, progressbar() as p:
         for solver in solvers:
-            it = tools.record_markers(solver,
-                                      start_time=start_time,
-                                      end_time=end_time,
-                                      include=include,
-                                      exclude=exclude,
-                                      kinematic=opts["markersRecordKinematic"])
+            it = tools.record_markers(
+                solver,
+                start_time=start_time,
+                end_time=end_time,
+                include=include,
+                exclude=exclude,
+                kinematic=opts["markersRecordKinematic"],
+                maintain_offset=opts["markersRecordMaintainOffset"],
+            )
+
             for step, progress in it:
                 log.info("%.1f%% (%s)" % (progress, step.title()))
 
@@ -2397,8 +2408,7 @@ def retarget_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    with cmdx.DGModifier() as mod:
-        mod.connect(b["message"], a["dst"][0])
+    markers.retarget(a, b)
 
     return kSuccess
 

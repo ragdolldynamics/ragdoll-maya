@@ -2320,9 +2320,6 @@ def record_markers(selection=None, **opts):
     if opts["markersUseSelection"]:
         include += _filtered_selection(cmdx.kDagNode, selection)
 
-    if opts["markersIgnoreJoints"]:
-        exclude += _filtered_selection(cmdx.kJoint, selection)
-
     if len(solvers) < 1:
         solvers = cmdx.ls(type="rdSolver")
 
@@ -2359,6 +2356,7 @@ def record_markers(selection=None, **opts):
                 "maintainOffset": opts["markersRecordMaintainOffset"],
                 "simplifyCurves": opts["markersRecordSimplify"],
                 "unrollRotations": opts["markersRecordUnroll"],
+                "ignoreJoints": opts["markersIgnoreJoints"],
             })
 
             for step, progress in it:

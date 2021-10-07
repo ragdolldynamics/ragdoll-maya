@@ -251,6 +251,7 @@ def record(solver, opts):
         "include": None,
         "exclude": None,
         "includeKinematic": False,
+        "ignoreJoints": True,
         "maintainOffset": True,
         "simplifyCurves": True,
         "unrollRotations": True,
@@ -437,6 +438,9 @@ def record(solver, opts):
             for el in marker["dst"]:
                 transform = el.input()
 
+                if opts["ignoreJoints"] and transform.isA(cmdx.kJoint):
+                    continue
+
                 for channel in "tr":
                     if channel == "r" and kinematic_rotation:
                         continue
@@ -604,6 +608,9 @@ def record(solver, opts):
                         if exclude and dst in exclude:
                             continue
 
+                        if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                            continue
+
                         matrix = output_matrix
 
                         if opts["maintainOffset"]:
@@ -643,8 +650,9 @@ def record(solver, opts):
     for status in simulate():
         yield (status[0], status[1] * 0.50)
 
-    initial_keyframe()
-    compute_transitions()
+    if not opts["includeKinematic"]:
+        initial_keyframe()
+        compute_transitions()
 
     for status in write():
         yield (status[0], 50 + status[1] * 0.50)

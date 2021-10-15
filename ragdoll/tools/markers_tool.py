@@ -52,6 +52,10 @@ def assign(transforms, solver):
                 mod.connect(group["currentState"],
                             solver["inputCurrent"][index])
 
+                if constants.RAGDOLL_DEVELOPER:
+                    mod.set_keyable(group["articulated"], True)
+                    mod.set_keyable(group["articulationType"], True)
+
                 commands._take_ownership(mod, group, group_parent)
 
     markers = {}
@@ -109,6 +113,16 @@ def assign(transforms, solver):
             if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["inputType"], constants.InputKinematic)
 
+            # Root or lone object
+            if not parent_marker:
+                dgmod.lock_attr(marker["limitType"])
+                dgmod.lock_attr(marker["limitAxis"])
+                dgmod.lock_attr(marker["limitRotation"])
+                dgmod.lock_attr(marker["limitRange"])
+                dgmod.lock_attr(marker["limitOffset"])
+                dgmod.lock_attr(marker["limitStiffness"])
+                dgmod.lock_attr(marker["limitDampingRatio"])
+
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
             dgmod.set_attr(marker["shapeLength"], geo.length)
@@ -134,9 +148,9 @@ def assign(transforms, solver):
             dgmod.set_attr(marker["offsetMatrix"][0], cmdx.Matrix4())
 
             if transform.type() == "joint":
-                draw_scale = marker["shapeLength"].read() * 0.25
+                draw_scale = geo.length * 0.25
             else:
-                draw_scale = sum(marker["shapeExtents"].read()) / 3.0
+                draw_scale = sum(geo.extents) / 3.0
 
             dgmod.set_attr(marker["drawScale"], draw_scale)
 

@@ -21,6 +21,13 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "angularDriveDamping";
         editorTemplate -endLayout;
 
+        editorTemplate -beginLayout "Limits" -collapse false;
+            editorTemplate -addControl "linearLimitStiffness";
+            editorTemplate -addControl "linearLimitDamping";
+            editorTemplate -addControl "angularLimitStiffness";
+            editorTemplate -addControl "angularLimitDamping";
+        editorTemplate -endLayout;
+
         editorTemplate -beginLayout "Scale" -collapse true;
             editorTemplate -addControl "timeMultiplier";
             editorTemplate -addControl "spaceMultiplier";

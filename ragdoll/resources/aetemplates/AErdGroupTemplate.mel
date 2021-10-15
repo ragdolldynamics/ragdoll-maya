@@ -1,0 +1,34 @@
+//AErdGroupTemplate.mel
+
+global proc AErdGroupTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "Input" -collapse false;
+            editorTemplate -addControl "enabled";
+            editorTemplate -addControl "inputType";
+            editorTemplate -addControl "driveSpace";
+            editorTemplate -addControl "driveSpaceCustom";
+            editorTemplate -addControl "driveStiffness";
+            editorTemplate -addControl "driveDampingRatio";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Visualisation" -collapse true;
+            editorTemplate -addControl "displayType";
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "drawScale";
+            editorTemplate -addControl "drawLimit";
+            editorTemplate -addControl "drawDrive";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+    editorTemplate -suppress "frozen";
+}

@@ -121,13 +121,13 @@ def has_upgrade(node, from_version):
         return from_version < 20210411
 
     if node.type() == "rdSolver":
-        return from_version < 20211008
+        return from_version < 20211007
 
     if node.type() == "rdMarker":
-        return from_version < 20211008
+        return from_version < 20211007
 
     if node.type() == "rdGroup":
-        return from_version < 20211008
+        return from_version < 20211007
 
 
 def scene(node, from_version, to_version):
@@ -205,8 +205,8 @@ def constraint_multiplier(node, from_version, to_version):
 def marker(node, from_version, to_version):
     upgraded = False
 
-    if from_version < 20211008:
-        _marker_20210928_20211008(node)
+    if from_version < 20211007:
+        _marker_20210928_20211007(node)
         upgraded = True
 
     return upgraded
@@ -215,8 +215,8 @@ def marker(node, from_version, to_version):
 def group(node, from_version, to_version):
     upgraded = False
 
-    if from_version < 20211008:
-        _group_20210928_20211008(node)
+    if from_version < 20211007:
+        _group_20210928_20211007(node)
         upgraded = True
 
     return upgraded
@@ -225,8 +225,8 @@ def group(node, from_version, to_version):
 def solver(node, from_version, to_version):
     upgraded = False
 
-    if from_version < 20211008:
-        _solver_20210928_20211008(node)
+    if from_version < 20211007:
+        _solver_20210928_20211007(node)
         upgraded = True
 
     return upgraded
@@ -360,8 +360,8 @@ def _rigid_multiplier_20210308_20210411(mult):
             mod.connect(mult["ragdollId"], other)
 
 
-def _solver_20210928_20211008(solver):
-    log.info("Upgrading %s to 2021.10.08" % solver)
+def _solver_20210928_20211007(solver):
+    log.info("Upgrading %s to 2021.10.07" % solver)
 
     with cmdx.DagModifier() as mod:
         # Used to be a number, is now an enum
@@ -375,8 +375,8 @@ def _solver_20210928_20211008(solver):
         mod.connect(transform["worldMatrix"][0], solver["inputMatrix"])
 
 
-def _marker_20210928_20211008(marker):
-    log.info("Upgrading %s to 2021.10.08" % marker)
+def _marker_20210928_20211007(marker):
+    log.info("Upgrading %s to 2021.10.07" % marker)
 
     with cmdx.DagModifier() as mod:
         # driveSpace turned into an enum
@@ -411,8 +411,8 @@ def _marker_20210928_20211008(marker):
             mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
-def _group_20210928_20211008(group):
-    log.info("Upgrading %s to 2021.10.08" % group)
+def _group_20210928_20211007(group):
+    log.info("Upgrading %s to 2021.10.07" % group)
 
     with cmdx.DagModifier() as mod:
         for index, oldstart in enumerate(group["inputMarkerStart"]):

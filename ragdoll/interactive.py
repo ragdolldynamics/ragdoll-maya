@@ -57,7 +57,7 @@ from . import (
     internal as i__,
     __
 )
-from .tools import markers_tool as markers
+from .tools import markers_tool as markers_
 
 log = logging.getLogger("ragdoll")
 
@@ -611,6 +611,7 @@ def install_menu():
              label="Assign Single")
         item("assignGroup", assign_group, assign_group_options,
              label="Assign Group")
+        item("assignConstraint", assign_constraint)
 
         divider("Record")
 
@@ -739,6 +740,17 @@ def install_menu():
         item("clearInitialState", clear_initial_state,
              clear_initial_state_options)
 
+    with submenu("Select", icon="select.png"):
+        item("selectRigids", select_rigids, select_rigids_options)
+        item("selectConstraints",
+             select_constraints,
+             select_constraints_options)
+        item("selectControls", select_controls, select_controls_options)
+        item("selectScenes", select_scenes, select_scenes_options)
+        item("selectMarkers", select_markers)
+        item("selectGroups", select_groups)
+        item("selectSolvers", select_solvers)
+
     with submenu("System", icon="system.png"):
         divider("Scene")
 
@@ -766,17 +778,6 @@ def install_menu():
             item("loggingInfo", logging_info)
             item("loggingWarning", logging_warning)
             item("loggingDebug", logging_debug)
-
-    with submenu("Select", icon="select.png"):
-        item("selectRigids", select_rigids, select_rigids_options)
-        item("selectConstraints",
-             select_constraints,
-             select_constraints_options)
-        item("selectControls", select_controls, select_controls_options)
-        item("selectScenes", select_scenes, select_scenes_options)
-        item("selectMarkers", select_markers)
-        item("selectGroups", select_groups)
-        item("selectSolvers", select_solvers)
 
     divider()
 
@@ -1640,7 +1641,7 @@ def create_constraint(selection=None, **opts):
     # Is it a marker?
     if any(node.type() == "rdMarker" for node in selection):
         a, b = selection
-        return markers.create_constraint(a, b, opts)
+        return markers_.create_constraint(a, b, opts)
 
     selected_markers = []
     for node in selection:
@@ -1650,7 +1651,7 @@ def create_constraint(selection=None, **opts):
     if selected_markers:
         assert len(selected_markers) == 2, selected_markers
         a, b = selected_markers
-        return markers.create_constraint(a, b, opts)
+        return markers_.create_constraint(a, b, opts)
 
     if selection and selection[0].type() == "rdConstraint":
         # The user meant to convert/restore a constraint
@@ -2225,7 +2226,7 @@ def assign_single(selection=None, **opts):
 
     try:
         for transform in selection:
-            markers.extend(tools.assign_markers([transform], solver))
+            markers_.extend(tools.assign_markers([transform], solver))
     except RuntimeError as e:
         raise i__.UserWarning("Already assigned", str(e))
 
@@ -2262,7 +2263,7 @@ def assign_group(selection=None, **opts):
 
     try:
         assigned = tools.assign_markers(selection, solver)
-    except markers.AlreadyAssigned as e:
+    except markers_.AlreadyAssigned as e:
         raise i__.UserWarning("Already assigned", str(e))
     except Exception as e:
         raise i__.UserWarning("An unexpected error occurred", str(e))
@@ -2279,6 +2280,43 @@ def assign_group(selection=None, **opts):
     cmds.select(t.shortest_path() for t in selection)
 
     return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    try:
+        a, b = selection
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select two markers to constrain."
+        )
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    if b.isA(cmdx.kDagNode):
+        b = b["message"].output(type="rdMarker")
+
+    if not (a and a.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[0]
+        )
+
+    if not (b and b.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[1]
+        )
+
+    con = markers_.create_constraint(a, b)
+    cmds.select(str(con.parent()))
+
+    return True
 
 
 @contextlib.contextmanager
@@ -2409,7 +2447,7 @@ def retarget_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    markers.retarget(a, b)
+    markers_.retarget(a, b)
 
     return kSuccess
 
@@ -3524,6 +3562,8 @@ def export_physics(selection=None, **opts):
         % (fname, data["info"]["serialisationTimeMs"])
     )
 
+    return True
+
 
 @with_exception_handling
 def import_physics_from_file(selection=None, **opts):
@@ -3562,6 +3602,8 @@ def import_physics_from_file(selection=None, **opts):
 
     options.write("importPath", fname)
     log.info("Successfully imported %s" % fname)
+
+    return True
 
 
 def _Arg(var, label=None, callback=None):

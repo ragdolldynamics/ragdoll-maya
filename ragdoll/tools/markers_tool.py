@@ -777,34 +777,32 @@ def snap(transforms):
 
 @internal.with_undo_chunk
 def create_constraint(parent, child, opts=None):
-    assert child.type() in ("rdMarker",), child.type()
-    assert parent.type() in ("rdMarker", "rdGroup"), (
-        "%s must be a rigid or group" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+
+    solver = parent["startState"].output(type="rdSolver")
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
     )
 
-    opts = dict({
-        "name": "rConstraint",
-    }, **(opts or {}))
-
-    if parent.type() == "rdGroup":
-        group = parent
-    else:
-        group = parent["startState"].output(type="rdGroup")
-        assert group and group.type() in ("rdGroup",), (
-            "%s was not part of a group" % parent
-        )
-
-    assert child["startState"].output(type="rdGroup") == group, (
-        "%s and %s was not part of the same group" % (parent, child)
+    assert child["startState"].output(type="rdSolver") == solver, (
+        "%s and %s was not part of the same solver" % (parent, child)
     )
 
-    name = internal.unique_name(opts["name"])
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
 
     with cmdx.DagModifier() as mod:
         transform = mod.create_node("transform", name=name)
-        con = commands._rdconstraint(mod, name, parent=transform)
+        con = commands._rdconstraint(mod, shape_name, parent=transform)
+        src = child["src"].input()
 
-        if child["src"].input().type() == "joint":
+        if src and src.isA(cmdx.kJoint):
             draw_scale = child["shapeLength"].read() * 0.25
         else:
             draw_scale = sum(child["shapeExtents"].read()) / 3.0
@@ -812,68 +810,67 @@ def create_constraint(parent, child, opts=None):
         mod.set_attr(con["drawScale"], draw_scale)
         mod.connect(parent["ragdollId"], con["parentRigid"])
         mod.connect(child["ragdollId"], con["childRigid"])
+        mod.connect(child["inputMatrix"], con["driveMatrix"])
 
+        add_constraint(mod, con, solver)
         reset_constraint_frames(mod, con)
-        add_constraint(mod, con, group)
 
         mod.set_attr(con["limitEnabled"], True)
 
     return con
 
 
-def add_constraint(mod, con, group):
-    assert con["startState"].connection() != group, (
-        "%s already a member of %s" % (con, group)
+def add_constraint(mod, con, solver):
+    assert con["startState"].output() != solver, (
+        "%s already a member of %s" % (con, solver)
     )
 
     time = cmdx.encode("time1")
-    index = group["inputStart"].next_available_index()
+    index = solver["inputStart"].next_available_index()
 
     mod.set_attr(con["version"], internal.version())
-    mod.connect(con["startState"], group["inputStart"][index])
-    mod.connect(con["currentState"], group["inputCurrent"][index])
+    mod.connect(con["startState"], solver["inputStart"][index])
+    mod.connect(con["currentState"], solver["inputCurrent"][index])
     mod.connect(time["outTime"], con["currentTime"])
 
     # Ensure `next_available_index` is up-to-date
     mod.do_it()
 
 
-def reset_constraint_frames(mod, marker):
+def reset_constraint_frames(mod, con):
     """Reset constraint frames"""
 
-    assert marker and isinstance(marker, cmdx.Node), (
-        "%s was not a rdMarker node" % marker
+    assert con and isinstance(con, cmdx.Node), (
+        "%s was not a cmdx instance" % con
     )
 
-    parent_marker = marker["parentMarker"].input(type="rdMarker")
-    assert marker is not None, "Unconnected constraint: %s" % marker
+    if con.isA("rdMarker"):
+        parent = con["parentMarker"].input(type="rdMarker")
+        child = con
+    elif con.isA("rdConstraint"):
+        parent = con["parentRigid"].input(type="rdMarker")
+        child = con["childRigid"].input(type="rdMarker")
 
-    if parent_marker is not None:
-        parent_matrix = parent_marker["inputMatrix"].as_matrix()
+    if parent is not None:
+        parent_matrix = parent["inputMatrix"].as_matrix()
     else:
         # It's connected to the world
         parent_matrix = cmdx.Matrix4()
 
-    # transform = marker["src"].input()
-
-    # if "rotatePivot" in transform:
-    #     child_rotate_pivot = transform["rotatePivot"].as_vector()
-    # else:
-    #     child_rotate_pivot = cmdx.Vector()
-
-    child_matrix = marker["inputMatrix"].as_matrix()
+    rotate_pivot = child["rotatePivot"].as_vector()
+    rest_matrix = child["inputMatrix"].as_matrix()
 
     child_frame = cmdx.Tm()
-    # child_frame.translateBy(child_rotate_pivot)
+    child_frame.translateBy(rotate_pivot)
     child_frame = child_frame.as_matrix()
 
-    child_tm = cmdx.Tm(child_matrix)
-    # child_tm.translateBy(child_rotate_pivot, cmdx.sPreTransform)
+    child_tm = cmdx.Tm(rest_matrix)
+    child_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
 
     parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
 
-    mod.set_attr(marker["parentFrame"], parent_frame)
-    mod.set_attr(marker["childFrame"], child_frame)
+    mod.set_attr(con["parentFrame"], parent_frame)
+    mod.set_attr(con["childFrame"], child_frame)
 
 
 def get_local_pos_rot(world_matrix, dag_node):

@@ -626,6 +626,15 @@
         ]
     },
 
+    "assignConstraint": {
+        "label": "Assign Constraint",
+        "icon": "orient_constraint.png",
+        "summary": "Constrain the two selected markers",
+        "description": "Create a new constraint between the two selected markers.",
+        "options": [
+        ]
+    },
+
     "recordMarkers": {
         "label": "Record Markers",
         "icon": "record.png",

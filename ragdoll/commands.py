@@ -3268,7 +3268,8 @@ def extract_from_scene(rigids,
                 _add_constraint(mod, con, new)
 
     # Automatically delete empty scenes
-    if discard_empty_scenes:
+    if discard_empty_scenes and not any(scene.is_referenced()
+                                        for scene in old_scenes):
         with cmdx.DagModifier() as mod:
             for scene in old_scenes:
 
@@ -3289,10 +3290,10 @@ def combine_scenes(scenes):
 
     master = scenes[0]
     for scene in scenes[1:]:
-        rigids = filter(None, [
+        rigids = tuple(filter(None, [
             el.connection(type="rdRigid")
             for el in scene["outputObjects"]
-        ])
+        ]))
 
         move_to_scene(rigids, master)
 
@@ -4118,7 +4119,7 @@ def reset_constraint_frames(con, _mod=None):
     """Reset constraint frames"""
 
     assert con and isinstance(con, cmdx.DagNode), (
-        "con was not a rdConstraint node"
+        "%s was not a rdConstraint node" % con
     )
 
     parent_rigid = con["parentRigid"].connection(type="rdRigid")

@@ -35,7 +35,7 @@ global proc AErdConstraintTemplate(string $nodeName) {
             // but currently show up as integer values. :(
             editorTemplate -addControl "parentRigid";
             editorTemplate -addControl "childRigid";
-  
+
             editorTemplate -label "Allow Overlap" -addControl "disableCollision";
             editorTemplate -addControl "frozen";
         editorTemplate -endLayout;
@@ -64,9 +64,4 @@ global proc AErdConstraintTemplate(string $nodeName) {
     editorTemplate -suppress "nodeState";
     editorTemplate -suppress "localPosition";
     editorTemplate -suppress "localScale";
-}
-
-
-global proc create_header_image(string $nodeName) {
-    image -w 400 -h 100 -image "header_tw_cloth_solver.png";
 }

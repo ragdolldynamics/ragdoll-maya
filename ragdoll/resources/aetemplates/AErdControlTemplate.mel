@@ -24,8 +24,3 @@ global proc AErdControlTemplate(string $nodeName) {
     editorTemplate -suppress "localPosition";
     editorTemplate -suppress "localScale";
 }
-
-
-global proc create_header_image(string $nodeName) {
-    image -w 400 -h 100 -image "header_tw_cloth_solver.png";
-}

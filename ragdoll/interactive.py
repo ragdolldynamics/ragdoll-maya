@@ -628,7 +628,7 @@ def install_menu():
         divider("Select")
 
         item("parentMarker", select_parent_marker, label="Parent")
-        item("childMarker", select_child_marker, label="Child")
+        item("childMarkers", select_child_markers, label="Children")
 
         divider("Utilities")
 
@@ -2226,7 +2226,7 @@ def assign_single(selection=None, **opts):
 
     try:
         for transform in selection:
-            markers_.extend(tools.assign_markers([transform], solver))
+            markers.extend(tools.assign_markers([transform], solver))
     except RuntimeError as e:
         raise i__.UserWarning("Already assigned", str(e))
 
@@ -2576,7 +2576,7 @@ def select_parent_marker(selection=None, **opts):
 
 
 @i__.with_undo_chunk
-def select_child_marker(selection=None, **opts):
+def select_child_markers(selection=None, **opts):
     children = list()
 
     for marker in selection or cmdx.sl():

@@ -794,28 +794,30 @@ def create_constraint(parent, child, opts=None):
     parent_name = parent_transform.name(namespace=False)
     child_name = child_transform.name(namespace=False)
 
+    parent_position = cmdx.Point(parent_transform.translation(cmdx.sWorld))
+    child_position = cmdx.Point(child_transform.translation(cmdx.sWorld))
+    distance = parent_position.distanceTo(child_position)
+
     name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
     shape_name = internal.shape_name(name)
 
     with cmdx.DagModifier() as mod:
         transform = mod.create_node("transform", name=name)
-        con = commands._rdconstraint(mod, shape_name, parent=transform)
-        src = child["src"].input()
+        con = commands._rddistanceconstraint(mod, shape_name, parent=transform)
 
-        if src and src.isA(cmdx.kJoint):
-            draw_scale = child["shapeLength"].read() * 0.25
-        else:
-            draw_scale = sum(child["shapeExtents"].read()) / 3.0
+        # if child_transform and child_transform.isA(cmdx.kJoint):
+        #     draw_scale = child["shapeLength"].read() * 0.25
+        # else:
+        #     draw_scale = sum(child["shapeExtents"].read()) / 3.0
 
-        mod.set_attr(con["drawScale"], draw_scale)
-        mod.connect(parent["ragdollId"], con["parentRigid"])
-        mod.connect(child["ragdollId"], con["childRigid"])
-        mod.connect(child["inputMatrix"], con["driveMatrix"])
+        # mod.set_attr(con["drawScale"], draw_scale)
+        mod.set_attr(con["minimum"], distance)
+        mod.set_attr(con["maximum"], distance)
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
 
         add_constraint(mod, con, solver)
-        reset_constraint_frames(mod, con)
-
-        mod.set_attr(con["limitEnabled"], True)
+        # reset_constraint_frames(mod, con)
 
     return con
 

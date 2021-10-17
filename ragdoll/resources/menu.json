@@ -694,10 +694,10 @@
         ]
     },
 
-    "childMarker": {
+    "childMarkers": {
         "label": "Child Markers",
         "icon": "children.png",
-        "summary": "Select the first child of this marker",
+        "summary": "Select the children of this marker",
         "description": "",
         "options": [
         ]

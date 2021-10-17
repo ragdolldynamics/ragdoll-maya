@@ -2661,7 +2661,12 @@ def link_solver(selection=None, **opts):
         )
 
     with cmdx.DagModifier() as mod:
-        mod.connect(b["message"], a["link"])
+        index = b["inputStart"].next_available_index()
+        mod.connect(a["startState"], b["inputStart"][index])
+        mod.connect(a["currentState"], b["inputCurrent"][index])
+
+        # Make it obvious which is main
+        mod.set_attr(a.parent()["visibility"], False)
 
     log.info("Successfully linked %s -> %s" % (a, b))
     return kSuccess

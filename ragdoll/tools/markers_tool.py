@@ -342,11 +342,13 @@ def record(solver, opts):
 
         """
 
+        solver["startState"].read()
+
         for frame in range(solver_start_frame, end_frame):
             with cmdx.Context(frame, cmdx.TimeUiUnit()):
 
                 # Trigger simulation
-                solver["output"].read()
+                solver["currentState"].read()
 
                 # Record results
                 for key, marker in markers.items():
@@ -777,16 +779,20 @@ def snap(transforms):
 
 @internal.with_undo_chunk
 def create_constraint(parent, child, opts=None):
-    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
-
-    solver = parent["startState"].output(type="rdSolver")
-    assert solver and solver.isA("rdSolver"), (
-        "%s was not part of a solver" % parent
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
     )
 
-    assert child["startState"].output(type="rdSolver") == solver, (
-        "%s and %s was not part of the same solver" % (parent, child)
+    def find_solver(start):
+        while start and not start.isA("rdSolver"):
+            start = start["startState"].output(("rdGroup", "rdSolver"))
+        return start
+
+    solver = find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
     )
 
     parent_transform = parent["src"].input(type=cmdx.kDagNode)

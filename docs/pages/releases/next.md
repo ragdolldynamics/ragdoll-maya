@@ -7,14 +7,21 @@ description: Recording Performance
 Highlight for this release is **Recording Performance**, and is part 3 out of 4 of the new [Markers](/releases/2021.09.27/).
 
 - [**ADDED** Performance](#performance) Faster recording is what we all want
+- [**ADDED** Solver Linking](#solver-linking) Run two or more solvers together, as one
 - [**ADDED** Markers & Limits](#limits) On par with the previous constraints, but much easier to work with
 - [**ADDED** Markers & Constraints](#constraints) That's right!
 
 ### Showcase
 
+https://user-images.githubusercontent.com/2152766/137677733-af55a032-aabe-49e4-af6f-253086b68be3.mp4 controls
+
 <br>
 
 ### Performance
+
+<br>
+
+### Solver Linking
 
 <br>
 

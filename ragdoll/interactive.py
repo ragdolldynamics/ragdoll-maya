@@ -146,8 +146,7 @@ def with_exception_handling(func):
             return func(*args, **kwargs)
 
         except i__.UserWarning as e:
-            _print_exception()
-            log.warning(str(e))
+            log.warning(traceback.format_exc())
 
             MessageBox(
                 e.title,
@@ -158,10 +157,9 @@ def with_exception_handling(func):
 
             return kFailure
 
-        except Exception as e:
+        except Exception:
             # Turn this into a friendly warning
-            _print_exception()
-            log.warning(str(e))
+            log.warning(traceback.format_exc())
             return kFailure
 
     return format_exception_wrapper

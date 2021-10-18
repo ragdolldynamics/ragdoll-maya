@@ -383,7 +383,7 @@ def with_timing(func):
 
 
 class Timer(object):
-    def __init__(self, name, verbose=True):
+    def __init__(self, name="", verbose=True):
         self._name = name
         self._t0 = 0
         self._t1 = 0

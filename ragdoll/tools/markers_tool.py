@@ -272,6 +272,7 @@ def record(solver, opts):
         "resetMarkers": True,
     }, **opts)
 
+    initial_time = cmdx.current_time()
     start_time = opts["startTime"]
     end_time = opts["endTime"]
     solver_start_time = solver["_startTime"].as_time()
@@ -344,37 +345,37 @@ def record(solver, opts):
         """
 
         for frame in range(solver_start_frame, end_frame):
-            with cmdx.Context(frame, cmdx.TimeUiUnit()):
+            cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
 
-                if frame == solver_start_frame:
-                    # Initialise solver
-                    solver["startState"].read()
+            if frame == solver_start_frame:
+                # Initialise solver
+                solver["startState"].read()
+            else:
+                # Step simulation
+                solver["currentState"].read()
+
+            # Record results
+            for key, marker in markers.items():
+                if opts["includeKinematic"]:
+                    is_kinematic = False
                 else:
-                    # Step simulation
-                    solver["currentState"].read()
+                    is_kinematic = marker["_kinematic"].read()
 
-                # Record results
-                for key, marker in markers.items():
-                    if opts["includeKinematic"]:
-                        is_kinematic = False
-                    else:
-                        is_kinematic = marker["_kinematic"].read()
+                cache[key][frame] = {
+                    "recordTranslation": marker["retr"].read(),
+                    "recordRotation": marker["rero"].read(),
+                    "outputMatrix": marker["ouma"].as_matrix(),
+                    "kinematic": is_kinematic,
+                    "transition": False,
+                }
 
-                    cache[key][frame] = {
-                        "recordTranslation": marker["retr"].read(),
-                        "recordRotation": marker["rero"].read(),
-                        "outputMatrix": marker["ouma"].as_matrix(),
-                        "kinematic": is_kinematic,
-                        "transition": False,
-                    }
+                if frame < start_frame:
+                    cache[key][frame]["recordTranslation"] = False
+                    cache[key][frame]["recordRotation"] = False
 
-                    if frame < start_frame:
-                        cache[key][frame]["recordTranslation"] = False
-                        cache[key][frame]["recordRotation"] = False
-
-                    if is_kinematic:
-                        cache[key][frame]["recordTranslation"] = False
-                        cache[key][frame]["recordRotation"] = False
+                if is_kinematic:
+                    cache[key][frame]["recordTranslation"] = False
+                    cache[key][frame]["recordRotation"] = False
 
             percentage = 100 * float(frame - start_frame) / total
             yield ("simulating", percentage)
@@ -578,6 +579,74 @@ def record(solver, opts):
                     valueTolerance=0.01
                 )
 
+    def store():
+        # Figure out kinematic hierarchy for marker order
+        orders = {marker: 0 for marker in markers}
+
+        for key, order in orders.items():
+            marker = markers[key]
+            parent = marker["parentMarker"].input(type="rdMarker")
+
+            while parent:
+                order += 1
+                parent = parent["parentMarker"].input()
+
+            orders[key] = order
+
+        ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
+
+        with cmdx.DagModifier() as mod:
+            for frame in range(start_frame, end_frame):
+                cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
+
+                for key in ordered_markers:
+                    marker = markers[key]
+                    data = cache[key][frame]
+                    output_matrix = data["outputMatrix"]
+
+                    # Nothing to do.
+                    if not any([data["recordTranslation"],
+                                data["recordRotation"]]):
+                        continue
+
+                    for index, el in enumerate(marker["dst"]):
+                        dst = el.input()
+
+                        if not dst:
+                            continue
+
+                        if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                            continue
+
+                        # Filter out unwanted nodes
+                        if include and dst not in include:
+                            continue
+
+                        if exclude and dst in exclude:
+                            continue
+
+                        matrix = output_matrix
+
+                        if opts["maintainOffset"]:
+                            offset = marker["offsetMatrix"][index].as_matrix()
+                            matrix = offset.inverse() * output_matrix
+
+                        t, r = get_local_pos_rot(matrix, dst)
+
+                        mod.try_set_attr(dst["tx"], t.x)
+                        mod.try_set_attr(dst["ty"], t.y)
+                        mod.try_set_attr(dst["tz"], t.z)
+                        mod.try_set_attr(dst["rx"], r.x)
+                        mod.try_set_attr(dst["ry"], r.y)
+                        mod.try_set_attr(dst["rz"], r.z)
+
+                    mod.commit()
+
+                # cmds.refresh()
+
+                percentage = 100 * float(frame - start_frame) / total
+                yield ("writing", percentage)
+
     @internal.with_undo_chunk
     def write():
         # Figure out kinematic hierarchy for marker order
@@ -603,78 +672,85 @@ def record(solver, opts):
         ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
 
         for frame in range(start_frame, end_frame):
-            with cmdx.Context(frame, cmdx.TimeUiUnit()):
-                for key in ordered_markers:
-                    marker = markers[key]
-                    data = cache[key][frame]
-                    output_matrix = data["outputMatrix"]
+            cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
 
-                    # Nothing to do.
-                    if not any([data["recordTranslation"],
-                                data["recordRotation"]]):
+            for key in ordered_markers:
+                marker = markers[key]
+                data = cache[key][frame]
+                output_matrix = data["outputMatrix"]
+
+                # Nothing to do.
+                if not any([data["recordTranslation"],
+                            data["recordRotation"]]):
+                    continue
+
+                for index, el in enumerate(marker["dst"]):
+                    dst = el.input()
+
+                    if not dst:
                         continue
 
-                    for index, el in enumerate(marker["dst"]):
-                        dst = el.input()
+                    # Filter out unwanted nodes
+                    if include and dst not in include:
+                        continue
 
-                        if not dst:
-                            continue
+                    if exclude and dst in exclude:
+                        continue
 
-                        # Filter out unwanted nodes
-                        if include and dst not in include:
-                            continue
+                    if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                        continue
 
-                        if exclude and dst in exclude:
-                            continue
+                    matrix = output_matrix
 
-                        if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
-                            continue
+                    if opts["maintainOffset"]:
+                        offset = marker["offsetMatrix"][index].as_matrix()
+                        matrix = offset.inverse() * output_matrix
 
-                        matrix = output_matrix
+                    t, r = get_local_pos_rot(matrix, dst)
 
-                        if opts["maintainOffset"]:
-                            offset = marker["offsetMatrix"][index].as_matrix()
-                            matrix = offset.inverse() * output_matrix
+                    def set_keyframe(at, value):
+                        path = dst.shortest_path()
+                        tangent = (
+                            "stepnext"
+                            if data["transition"]
+                            else "linear"
+                        )
+                        cmds.setKeyframe(path,
+                                         attribute=at,
+                                         time=frame,
+                                         value=value,
+                                         inTangentType=tangent,
+                                         outTangentType=tangent,
+                                         dirtyDG=True)
 
-                        t, r = get_local_pos_rot(matrix, dst)
+                    if data["recordTranslation"]:
+                        set_keyframe("tx", t.x)
+                        set_keyframe("ty", t.y)
+                        set_keyframe("tz", t.z)
 
-                        def set_keyframe(at, value):
-                            path = dst.shortest_path()
-                            tangent = (
-                                "stepnext"
-                                if data["transition"]
-                                else "linear"
-                            )
-                            cmds.setKeyframe(path,
-                                             attribute=at,
-                                             time=frame,
-                                             value=value,
-                                             inTangentType=tangent,
-                                             outTangentType=tangent,
-                                             dirtyDG=True)
-
-                        if data["recordTranslation"]:
-                            set_keyframe("tx", t.x)
-                            set_keyframe("ty", t.y)
-                            set_keyframe("tz", t.z)
-
-                        if data["recordRotation"]:
-                            set_keyframe("rx", cmdx.degrees(r.x))
-                            set_keyframe("ry", cmdx.degrees(r.y))
-                            set_keyframe("rz", cmdx.degrees(r.z))
+                    if data["recordRotation"]:
+                        set_keyframe("rx", cmdx.degrees(r.x))
+                        set_keyframe("ry", cmdx.degrees(r.y))
+                        set_keyframe("rz", cmdx.degrees(r.z))
 
             percentage = 100 * float(frame - start_frame) / total
             yield ("writing", percentage)
 
-    for status in simulate():
-        yield (status[0], status[1] * 0.50)
+    with internal.Timer() as sim_timer:
+        for status in simulate():
+            yield (status[0], status[1] * 0.50)
 
     if not opts["includeKinematic"]:
         initial_keyframe()
         compute_transitions()
 
-    for status in write():
-        yield (status[0], 50 + status[1] * 0.50)
+    with internal.Timer() as write_timer:
+        for status in write():
+            yield (status[0], 50 + status[1] * 0.50)
+
+    # with internal.Timer() as store_timer:
+    #     for status in store():
+    #         yield (status[0], 50 + status[1] * 0.50)
 
     if opts["resetMarkers"]:
         reset()
@@ -684,6 +760,13 @@ def record(solver, opts):
 
     if opts["simplifyCurves"]:
         simplify()
+
+    # Restore time
+    cmdx.current_time(initial_time)
+
+    print("simulated in %.2f" % sim_timer.ms)
+    print("wrote in %.2f" % write_timer.ms)
+    # print("wrote in %.2f" % store_timer.ms)
 
 
 def retarget(marker, transform, append=False):

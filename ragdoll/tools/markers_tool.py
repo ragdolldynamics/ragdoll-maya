@@ -300,8 +300,7 @@ def record(solver, opts):
     markers = []
 
     def find_inputs(solver):
-        entities = [el.input() for el in solver["inputStart"]]
-        for entity in entities:
+        for entity in [el.input() for el in solver["inputStart"]]:
             if entity.isA("rdMarker"):
                 markers.append(entity)
 
@@ -323,7 +322,12 @@ def record(solver, opts):
     } for marker in markers}
 
     def simulate():
-        r"""Evaluate every frame between `start_frame` and `end_frame`
+        r"""Evaluate every frame between `solver_start_frame` and `end_frame`
+
+        We'll need to start from the solver start frame, even if the user
+        provides a later frame. Since the simulation won't be accurate
+        otherwise.
+
 
                |
                |
@@ -337,16 +341,17 @@ def record(solver, opts):
 
         ______________________
 
-
         """
-
-        solver["startState"].read()
 
         for frame in range(solver_start_frame, end_frame):
             with cmdx.Context(frame, cmdx.TimeUiUnit()):
 
-                # Trigger simulation
-                solver["currentState"].read()
+                if frame == solver_start_frame:
+                    # Initialise solver
+                    solver["startState"].read()
+                else:
+                    # Step simulation
+                    solver["currentState"].read()
 
                 # Record results
                 for key, marker in markers.items():

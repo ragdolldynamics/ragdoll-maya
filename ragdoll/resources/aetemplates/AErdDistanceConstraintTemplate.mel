@@ -8,8 +8,8 @@ global proc AErdDistanceConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "method";
             editorTemplate -addControl "minimum";
             editorTemplate -addControl "maximum";
-            editorTemplate -addControl "dampingRatio";
             editorTemplate -addControl "stiffness";
+            editorTemplate -addControl "dampingRatio";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Offsets" -collapse true;

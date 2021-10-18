@@ -2370,7 +2370,7 @@ def record_markers(selection=None, **opts):
 
     # Remove linked solvers, we'll record those from the main solver
     for solver in solvers[:]:
-        if solver["link"].input() is not None:
+        if solver["startState"].output(type="rdSolver") is not None:
             solvers.remove(solver)
 
     start_time, end_time = cmdx.selected_time()

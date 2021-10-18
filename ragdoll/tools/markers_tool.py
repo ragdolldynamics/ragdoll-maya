@@ -297,25 +297,23 @@ def record(solver, opts):
     end_frame += 1  # One more for safety
 
     # Allocate data
-    entities = [el.input() for el in solver["inputStart"]]
-
-    # Account for linked solvers
-    def recurse(s):
-        for link in s["message"].outputs(type="rdSolver", plugs=("link",)):
-            linked_solver = link.node()
-            entities.extend(el.input() for el in linked_solver["inputStart"])
-            recurse(linked_solver)
-
-    recurse(solver)
-
     markers = []
-    for entity in entities:
-        if entity.type() == "rdMarker":
-            markers += [entity]
 
-        if entity.type() == "rdGroup":
-            members = [el.input() for el in entity["inputStart"]]
-            markers.extend(members)
+    def find_inputs(solver):
+        entities = [el.input() for el in solver["inputStart"]]
+        for entity in entities:
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            if entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            if entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+    find_inputs(solver)
 
     markers = {m.shortest_path(): m for m in markers}
     cache = {marker: {} for marker in markers}

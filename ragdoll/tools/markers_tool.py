@@ -488,6 +488,8 @@ def record(solver, opts):
         groups = set()
 
         with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 0)
+
             for marker in markers.values():
                 curve = marker["inputType"].input(type="animCurveTU")
 
@@ -579,74 +581,6 @@ def record(solver, opts):
                     valueTolerance=0.01
                 )
 
-    def store():
-        # Figure out kinematic hierarchy for marker order
-        orders = {marker: 0 for marker in markers}
-
-        for key, order in orders.items():
-            marker = markers[key]
-            parent = marker["parentMarker"].input(type="rdMarker")
-
-            while parent:
-                order += 1
-                parent = parent["parentMarker"].input()
-
-            orders[key] = order
-
-        ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
-
-        with cmdx.DagModifier() as mod:
-            for frame in range(start_frame, end_frame):
-                cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
-
-                for key in ordered_markers:
-                    marker = markers[key]
-                    data = cache[key][frame]
-                    output_matrix = data["outputMatrix"]
-
-                    # Nothing to do.
-                    if not any([data["recordTranslation"],
-                                data["recordRotation"]]):
-                        continue
-
-                    for index, el in enumerate(marker["dst"]):
-                        dst = el.input()
-
-                        if not dst:
-                            continue
-
-                        if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
-                            continue
-
-                        # Filter out unwanted nodes
-                        if include and dst not in include:
-                            continue
-
-                        if exclude and dst in exclude:
-                            continue
-
-                        matrix = output_matrix
-
-                        if opts["maintainOffset"]:
-                            offset = marker["offsetMatrix"][index].as_matrix()
-                            matrix = offset.inverse() * output_matrix
-
-                        t, r = get_local_pos_rot(matrix, dst)
-
-                        mod.try_set_attr(dst["tx"], t.x)
-                        mod.try_set_attr(dst["ty"], t.y)
-                        mod.try_set_attr(dst["tz"], t.z)
-                        mod.try_set_attr(dst["rx"], r.x)
-                        mod.try_set_attr(dst["ry"], r.y)
-                        mod.try_set_attr(dst["rz"], r.z)
-
-                    mod.commit()
-
-                # cmds.refresh()
-
-                percentage = 100 * float(frame - start_frame) / total
-                yield ("writing", percentage)
-
     @internal.with_undo_chunk
     def write():
         # Figure out kinematic hierarchy for marker order
@@ -736,21 +670,15 @@ def record(solver, opts):
             percentage = 100 * float(frame - start_frame) / total
             yield ("writing", percentage)
 
-    with internal.Timer() as sim_timer:
-        for status in simulate():
-            yield (status[0], status[1] * 0.50)
+    for status in simulate():
+        yield (status[0], status[1] * 0.50)
 
     if not opts["includeKinematic"]:
         initial_keyframe()
         compute_transitions()
 
-    with internal.Timer() as write_timer:
-        for status in write():
-            yield (status[0], 50 + status[1] * 0.50)
-
-    # with internal.Timer() as store_timer:
-    #     for status in store():
-    #         yield (status[0], 50 + status[1] * 0.50)
+    for status in write():
+        yield (status[0], 50 + status[1] * 0.50)
 
     if opts["resetMarkers"]:
         reset()
@@ -764,9 +692,47 @@ def record(solver, opts):
     # Restore time
     cmdx.current_time(initial_time)
 
-    print("simulated in %.2f" % sim_timer.ms)
-    print("wrote in %.2f" % write_timer.ms)
-    # print("wrote in %.2f" % store_timer.ms)
+
+def cache(solvers):
+    initial_time = cmdx.current_time()
+
+    for solver in solvers:
+        cmdx.current_time(solver["_startTime"].asTime())
+
+        # Clear existing cache
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 0)
+
+        solver["startState"].read()
+
+        # Prime for updated cache
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 1)
+
+    start_frames = {
+        s: int(s["_startTime"].asTime().value)
+        for s in solvers
+    }
+
+    start_frame = min(start_frames.values())
+    end_frame = int(cmdx.max_time().value)
+    total = end_frame - start_frame
+
+    for frame in range(start_frame, end_frame + 1):
+        time = cmdx.om.MTime(frame, cmdx.TimeUiUnit())
+        cmdx.current_time(time)
+
+        for solver in solvers:
+            if frame == start_frames[solver]:
+                solver["startState"].read()
+
+            elif frame > start_frames[solver]:
+                solver["currentState"].read()
+
+        percentage = 100 * float(frame - start_frame) / total
+        yield percentage
+
+    cmdx.current_time(initial_time)
 
 
 def retarget(marker, transform, append=False):

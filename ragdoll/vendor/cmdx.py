@@ -6319,6 +6319,7 @@ class _BaseModifier(object):
     rename = renameNode
 
     if ENABLE_PEP8:
+        commit = doIt
         do_it = doIt
         undo_it = undoIt
         create_node = createNode

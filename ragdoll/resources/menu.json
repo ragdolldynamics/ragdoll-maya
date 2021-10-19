@@ -739,6 +739,24 @@
         ]
     },
 
+    "cacheAll": {
+        "label": "Cache All",
+        "icon": "bake.png",
+        "summary": "Cache the entire simulation of all solvers",
+        "description": "This enables caching on all solvers, and runs through the current time to cache all of it.",
+        "options": [
+        ]
+    },
+
+    "uncache": {
+        "label": "Uncache",
+        "icon": "unbake.png",
+        "summary": "Cache the entire simulation of all solvers",
+        "description": "This enables caching on all solvers, and runs through the current time to cache all of it.",
+        "options": [
+        ]
+    },
+
     "snapToSim": {
         "label": "Snap to Sim",
         "icon": "mimic.png",

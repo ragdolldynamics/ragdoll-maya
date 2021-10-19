@@ -616,6 +616,11 @@ def install_menu():
         item("recordMarkers", record_markers, reassign_marker_options,
              label="Record")
 
+        divider("Cache")
+
+        item("cacheAll", cache_all, label="Cache")
+        item("uncache", uncache)
+
         divider("Edit")
 
         item("reassignMarker", reassign_marker, label="Reassign")
@@ -2381,7 +2386,7 @@ def record_markers(selection=None, **opts):
     end_frame = int(end_time.value)
 
     total_frames = 0
-    with i__.Timer("bake") as duration, progressbar() as p:
+    with i__.Timer("record") as duration, progressbar() as p:
         for solver in solvers:
             it = tools.record_markers(solver, {
                 "startTime": start_time,
@@ -2395,8 +2400,13 @@ def record_markers(selection=None, **opts):
                 "ignoreJoints": opts["markersIgnoreJoints"],
             })
 
+            previous_progress = 0
             for step, progress in it:
-                log.info("%.1f%% (%s)" % (progress, step.title()))
+                progress = int(progress)
+
+                if progress % 5 == 0 and progress != previous_progress:
+                    log.info("%.1f%% (%s)" % (progress, step.title()))
+                    previous_progress = progress
 
                 # Allow the user to cancel with the ESC key
                 if cmds.progressBar(p, query=True, isCancelled=True):
@@ -2631,6 +2641,65 @@ def create_lollipop(selection=None, **opts):
     tools.create_lollipop(markers)
 
     return kSuccess
+
+
+def cache_all(selection=None, **opts):
+    solvers = _filtered_selection("rdSolver", selection)
+    solvers = solvers or cmdx.ls(type="rdSolver")
+    solvers = [s for s in solvers if s["startState"].output() is None]
+
+    total_solvers = len(solvers)
+    log.info("Caching %d solver%s" % (
+        total_solvers, "s" if total_solvers > 1 else "")
+    )
+
+    total_frames = 0
+    with i__.Timer() as duration, progressbar() as p:
+        it = markers_.cache(solvers)
+
+        previous_progress = 0
+        for progress in it:
+            progress = int(progress)
+            if progress % 5 == 0 and progress != previous_progress:
+                log.info("%.1f%%" % progress)
+                previous_progress = progress
+
+            # Allow the user to cancel with the ESC key
+            if cmds.progressBar(p, query=True, isCancelled=True):
+                break
+
+            total_frames += 1
+            cmds.progressBar(p, edit=True, step=1)
+
+    stats = (duration.s, total_frames / max(0.00001, duration.s))
+    log.info("Cached %d frames for %d solvers in %.1fs (%d fps)" % (
+        total_frames, total_solvers, *stats
+    ))
+
+    cmds.inViewMessage(
+        amg="Cached in <hl>%.2fs</hl> (%d fps)" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+    return True
+
+
+def uncache(selection=None, **opts):
+    solvers = _filtered_selection("rdSolver", selection)
+    solvers = solvers or cmdx.ls(type="rdSolver")
+    solvers = [s for s in solvers if s["startState"].output() is None]
+
+    start_time = cmdx.min_time()
+    with cmdx.DagModifier() as mod:
+        for solver in solvers:
+            mod.set_attr(solver["cache"], 0)
+
+            solver_start = solver["_startTime"].asTime()
+            if solver_start < start_time:
+                start_time = solver_start
+
+    cmdx.current_time(start_time)
 
 
 @i__.with_undo_chunk

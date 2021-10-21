@@ -610,30 +610,32 @@ def install_menu():
         item("assignGroup", assign_group, assign_group_options,
              label="Assign Group")
 
+        with submenu("Constraints", icon="constraint.png"):
+            item("distanceConstraint", create_distance_constraint)
+            item("fixedConstraint", create_fixed_constraint)
+
         divider("Record")
 
         item("recordMarkers", record_markers, reassign_marker_options,
              label="Record")
 
-        with submenu("Constrain", icon="constraint.png"):
-            item("assignConstraint", assign_constraint,
-                 label="Weld Constraint")
-            item("assignConstraint", assign_constraint,
-                 label="Distance Constraint")
-
         with submenu("Cache", icon="bake.png"):
             item("cacheSolver", cache_all, label="Cache")
             item("uncacheSolver", uncache, label="Uncache")
 
-        with submenu("Link", icon="link.png"):
-            item("linkSolver", link_solver)
-            item("unlinkSolver", unlink_solver)
+        divider("Manipulate")
 
         with submenu("Edit", icon="kinematic.png"):
             item("reassignMarker", reassign_marker, label="Reassign")
             item("retargetMarker", retarget_marker, label="Retarget")
             item("reparentMarker", reparent_marker, label="Reparent")
             item("untargetMarker", untarget_marker, label="Untarget")
+
+        with submenu("Link", icon="link.png"):
+            item("linkSolver", link_solver)
+            item("unlinkSolver", unlink_solver)
+
+        divider("Utilities")
 
         with submenu("Select", icon="select.png"):
             item("parentMarker", select_parent_marker, label="Parent")
@@ -2288,7 +2290,7 @@ def assign_group(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def assign_constraint(selection=None, **opts):
+def create_distance_constraint(selection=None, **opts):
     selection = selection or cmdx.sl()
 
     try:
@@ -2317,7 +2319,44 @@ def assign_constraint(selection=None, **opts):
             "%s wasn't a marker" % selection[1]
         )
 
-    con = markers_.create_constraint(a, b)
+    con = markers_.create_distance_constraint(a, b)
+    cmds.select(str(con.parent()))
+
+    return True
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def create_fixed_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    try:
+        a, b = selection
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select two markers to constrain."
+        )
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    if b.isA(cmdx.kDagNode):
+        b = b["message"].output(type="rdMarker")
+
+    if not (a and a.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[0]
+        )
+
+    if not (b and b.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[1]
+        )
+
+    con = markers_.create_fixed_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True

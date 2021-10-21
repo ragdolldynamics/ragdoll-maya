@@ -635,6 +635,24 @@
         ]
     },
 
+    "distanceConstraint": {
+        "label": "Distance Constraint",
+        "icon": "distance.png",
+        "summary": "Constrain the distance between two markers",
+        "description": "Create a new constraint between the two selected markers.",
+        "options": [
+        ]
+    },
+
+    "fixedConstraint": {
+        "label": "Weld Constraint",
+        "icon": "parent_constraint.png",
+        "summary": "Constrain the position and orientation between two markers",
+        "description": "Create a new constraint between the two selected markers.",
+        "options": [
+        ]
+    },
+
     "recordMarkers": {
         "label": "Record Markers",
         "icon": "record.png",

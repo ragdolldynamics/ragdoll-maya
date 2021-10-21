@@ -851,20 +851,21 @@ def snap(transforms):
     return poses
 
 
+def _find_solver(start):
+    while start and not start.isA("rdSolver"):
+        start = start["startState"].output(("rdGroup", "rdSolver"))
+    return start
+
+
 @internal.with_undo_chunk
-def create_constraint(parent, child, opts=None):
+def create_distance_constraint(parent, child, opts=None):
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert parent["_scene"] == child["_scene"], (
         "%s and %s not part of the same solver"
     )
 
-    def find_solver(start):
-        while start and not start.isA("rdSolver"):
-            start = start["startState"].output(("rdGroup", "rdSolver"))
-        return start
-
-    solver = find_solver(parent)
+    solver = _find_solver(parent)
     assert solver and solver.isA("rdSolver"), (
         "%s was not part of a solver" % parent
     )
@@ -885,19 +886,47 @@ def create_constraint(parent, child, opts=None):
         transform = mod.create_node("transform", name=name)
         con = commands._rddistanceconstraint(mod, shape_name, parent=transform)
 
-        # if child_transform and child_transform.isA(cmdx.kJoint):
-        #     draw_scale = child["shapeLength"].read() * 0.25
-        # else:
-        #     draw_scale = sum(child["shapeExtents"].read()) / 3.0
-
-        # mod.set_attr(con["drawScale"], draw_scale)
         mod.set_attr(con["minimum"], distance)
         mod.set_attr(con["maximum"], distance)
         mod.connect(parent["ragdollId"], con["parentMarker"])
         mod.connect(child["ragdollId"], con["childMarker"])
 
+        commands._take_ownership(mod, con, transform)
         add_constraint(mod, con, solver)
-        # reset_constraint_frames(mod, con)
+
+    return con
+
+
+@internal.with_undo_chunk
+def create_fixed_constraint(parent, child, opts=None):
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
+    )
+
+    solver = _find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
+    )
+
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = commands._rdfixedconstraint(mod, shape_name, parent=transform)
+
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
+
+        commands._take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
 
     return con
 

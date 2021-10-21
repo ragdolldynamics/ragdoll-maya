@@ -609,37 +609,38 @@ def install_menu():
              label="Assign Single")
         item("assignGroup", assign_group, assign_group_options,
              label="Assign Group")
-        item("assignConstraint", assign_constraint)
 
         divider("Record")
 
         item("recordMarkers", record_markers, reassign_marker_options,
              label="Record")
 
-        divider("Cache")
+        with submenu("Constrain", icon="constraint.png"):
+            item("assignConstraint", assign_constraint,
+                 label="Weld Constraint")
+            item("assignConstraint", assign_constraint,
+                 label="Distance Constraint")
 
-        item("cacheAll", cache_all, label="Cache")
-        item("uncache", uncache)
+        with submenu("Cache", icon="bake.png"):
+            item("cacheSolver", cache_all, label="Cache")
+            item("uncacheSolver", uncache, label="Uncache")
 
-        divider("Edit")
-
-        item("reassignMarker", reassign_marker, label="Reassign")
-        item("retargetMarker", retarget_marker, label="Retarget")
-        item("reparentMarker", reparent_marker, label="Reparent")
-        item("untargetMarker", untarget_marker, label="Untarget")
-
-        divider("Select")
-
-        item("parentMarker", select_parent_marker, label="Parent")
-        item("childMarkers", select_child_markers, label="Children")
-
-        divider("Utilities")
-
-        item("createLollipop", create_lollipop)
-
-        if c.RAGDOLL_DEVELOPER:
+        with submenu("Link", icon="link.png"):
             item("linkSolver", link_solver)
-            # item("snapToSim", snap_to_sim)
+            item("unlinkSolver", unlink_solver)
+
+        with submenu("Edit", icon="kinematic.png"):
+            item("reassignMarker", reassign_marker, label="Reassign")
+            item("retargetMarker", retarget_marker, label="Retarget")
+            item("reparentMarker", reparent_marker, label="Reparent")
+            item("untargetMarker", untarget_marker, label="Untarget")
+
+        with submenu("Select", icon="select.png"):
+            item("parentMarker", select_parent_marker, label="Parent")
+            item("childMarkers", select_child_markers, label="Children")
+
+        with submenu("Utilities", icon="magnet.png"):
+            item("createLollipop", create_lollipop)
 
     divider("Manipulate")
 
@@ -2727,15 +2728,38 @@ def link_solver(selection=None, **opts):
             "%s or %s was not two solvers." % (a, b)
         )
 
-    with cmdx.DagModifier() as mod:
-        index = b["inputStart"].next_available_index()
-        mod.connect(a["startState"], b["inputStart"][index])
-        mod.connect(a["currentState"], b["inputCurrent"][index])
+    markers_.link(a, b)
 
-        # Make it obvious which is main
-        mod.set_attr(a.parent()["visibility"], False)
+    # Trigger a draw refresh
+    cmds.select(cmds.ls(selection=True))
 
     log.info("Successfully linked %s -> %s" % (a, b))
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def unlink_solver(selection=None, **opts):
+    solvers = []
+    for solver in selection or cmdx.selection():
+        if solver.isA(cmdx.kTransform):
+            solver = solver.shape(type="rdSolver")
+
+        if not solver:
+            raise i__.UserWarning(
+                "Bad selection",
+                "%s was not a solver." % solver
+            )
+
+        solvers += [solver]
+
+    for solver in solvers:
+        markers_.unlink(solver)
+        log.info("Successfully unlinked %s" % solver)
+
+    # Trigger a draw refresh
+    cmds.select(cmds.ls(selection=True))
+
     return kSuccess
 
 

@@ -735,6 +735,28 @@ def cache(solvers):
     cmdx.current_time(initial_time)
 
 
+def link(a, b):
+    assert a and a.isA("rdSolver"), "%s was not a solver" % a
+    assert b and b.isA("rdSolver"), "%s was not a solver" % b
+
+    with cmdx.DagModifier() as mod:
+        index = b["inputStart"].next_available_index()
+        mod.connect(a["startState"], b["inputStart"][index])
+        mod.connect(a["currentState"], b["inputCurrent"][index])
+
+        # Make it obvious which is main
+        mod.try_set_attr(a.parent()["visibility"], False)
+
+
+def unlink(solver):
+    assert solver and solver.isA("rdSolver"), "%s was not a solver" % solver
+    with cmdx.DagModifier() as mod:
+        mod.disconnect(solver["startState"])
+        mod.disconnect(solver["currentState"])
+
+        mod.try_set_attr(solver.parent()["visibility"], True)
+
+
 def retarget(marker, transform, append=False):
     """Retarget `marker` to `transform`
 

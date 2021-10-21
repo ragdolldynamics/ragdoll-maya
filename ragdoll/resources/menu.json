@@ -739,20 +739,20 @@
         ]
     },
 
-    "cacheAll": {
-        "label": "Cache All",
+    "cacheSolver": {
+        "label": "Cache Solver",
         "icon": "bake.png",
-        "summary": "Cache the entire simulation of all solvers",
+        "summary": "Cache the entire simulation of a solver",
         "description": "This enables caching on all solvers, and runs through the current time to cache all of it.",
         "options": [
         ]
     },
 
-    "uncache": {
-        "label": "Uncache",
+    "uncacheSolver": {
+        "label": "Uncache Solver",
         "icon": "unbake.png",
-        "summary": "Cache the entire simulation of all solvers",
-        "description": "This enables caching on all solvers, and runs through the current time to cache all of it.",
+        "summary": "Remove the cache for a solver",
+        "description": "This disables and clears the cache on a solver.",
         "options": [
         ]
     },
@@ -771,6 +771,15 @@
         "icon": "link.png",
         "summary": "Simulate two or more solvers as one.",
         "description": "Make markers from one solver participate in the simulation of another, such that they can interact. Useful for e.g. referencing two or more characters with their own solvers into one Maya scene, and still have them collide and be constrained to each other.",
+        "options": [
+        ]
+    },
+
+    "unlinkSolver": {
+        "label": "Unlink Solver",
+        "icon": "unlink.png",
+        "summary": "Simulate previously linked solvers separately.",
+        "description": "Restore an independent behavior of a linked solver.",
         "options": [
         ]
 

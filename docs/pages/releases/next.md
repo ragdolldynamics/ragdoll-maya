@@ -18,6 +18,10 @@ Highlight for this release is **Recording Performance**, and is part 3 out of 4 
 
 https://user-images.githubusercontent.com/2152766/137677733-af55a032-aabe-49e4-af6f-253086b68be3.mp4 controls
 
+**Hang On!**
+
+https://user-images.githubusercontent.com/2152766/138250857-27c10b93-4fc4-4b96-bb55-ba31407cf57b.mp4 controls
+
 <br>
 
 ### Performance
@@ -129,8 +133,12 @@ You should find a lot less need to use `Edit Pivots` from here on, and in the ne
 
 You can now constrain two markers!
 
-- Weld Constraint
-- Distance Constraint
+| Constraint Type | Description
+|:----------------|:-------------
+| Weld Constraint | Simplest of constraints, welds two markers together; no change to their distance or relative orientation is allowed. This is akin to the Maya `Parent Constraint`
+| Distance Constraint | Maintain a minimum, maximum or total distance between two markers.
+
+https://user-images.githubusercontent.com/2152766/138263114-b9a9e3a8-230c-4676-a757-073cfc42af70.mp4 controls
 
 <br>
 

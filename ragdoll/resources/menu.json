@@ -646,7 +646,7 @@
 
     "fixedConstraint": {
         "label": "Weld Constraint",
-        "icon": "parent_constraint.png",
+        "icon": "fixed_constraint.png",
         "summary": "Constrain the position and orientation between two markers",
         "description": "Create a new constraint between the two selected markers.",
         "options": [

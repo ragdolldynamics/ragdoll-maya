@@ -7,11 +7,6 @@ global proc AErdFixedConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "enabled";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Offsets" -collapse true;
-            editorTemplate -addControl "parentFrame";
-            editorTemplate -addControl "childFrame";
-        editorTemplate -endLayout;
-
         // Create an "Extras" section and also add controls for any
         // attributes we have not explicitly mentioned.
         editorTemplate -addExtraControls;

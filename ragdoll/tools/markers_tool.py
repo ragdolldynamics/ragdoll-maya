@@ -9,7 +9,15 @@ AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 def assign(transforms, solver):
     assert len(transforms) > 0, "Nothing to assign to"
 
-    if len(transforms) > 1:
+    if len(transforms) == 1:
+        other = transforms[0]["message"].output(type="rdMarker")
+
+        if other is not None:
+            raise AlreadyAssigned(
+                "%s was already assigned a marker" % transforms[0]
+            )
+
+    else:
         existing = []
         for t in transforms[1:]:
             other = t["message"].output(type="rdMarker")

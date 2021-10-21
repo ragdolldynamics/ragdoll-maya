@@ -611,8 +611,8 @@ def install_menu():
              label="Assign Group")
 
         with submenu("Constraints", icon="constraint.png"):
-            item("distanceConstraint", create_distance_constraint)
             item("fixedConstraint", create_fixed_constraint)
+            item("distanceConstraint", create_distance_constraint)
 
         divider("Record")
 

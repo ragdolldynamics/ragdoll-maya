@@ -14,6 +14,8 @@ Highlight for this release is **Recording Performance**, and is part 3 out of 4 
 
 ### Showcase
 
+Let's start these notes with some examples of what you can do with all of the new features added. 🥰
+
 **Best Friends, No Matter What**
 
 Two referenced characters, their solvers linked.
@@ -26,9 +28,33 @@ The new `Distance Constraint` at work.
 
 https://user-images.githubusercontent.com/2152766/138250857-27c10b93-4fc4-4b96-bb55-ba31407cf57b.mp4 controls
 
+**Dance Baby!**
+
+An example of the new Pin Constraint for Markers, working alongside a the Distance Constraint and regular old pose matching.
+
+https://user-images.githubusercontent.com/2152766/138433045-cd14d52c-a54e-4703-a858-42f702c5f5b4.mp4 controls
+
+<br>
+
+### Manikin Rig
+
+Updated with *limits* from this release.
+
+As before, this guy can either be opened or referenced into your scene. See [Solver Linking](#solver-linking) for how you can reference *multiple* characters into the same simulation.
+
+<div class="hboxlayout">
+<a href="https://files.ragdolldynamics.com/api/public/dl/4Lok2bRj/manikin_v002.zip" class="button red"><b>Download Manikin</b></a>
+</div>
+
+![image](https://user-images.githubusercontent.com/2152766/138433444-101076cf-566a-4b2a-ac8f-a319f8ddc1d2.png)
+
 <br>
 
 ### Performance
+
+A 200% boost to Recording performance!
+
+
 
 <br>
 

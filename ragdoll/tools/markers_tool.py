@@ -1,8 +1,11 @@
+import logging
+
 from .. import commands, internal, constants
 from ..vendor import cmdx
 from maya import cmds
 
 
+log = logging.getLogger("ragdoll")
 AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 
 
@@ -678,15 +681,17 @@ def record(solver, opts):
             percentage = 100 * float(frame - start_frame) / total
             yield ("writing", percentage)
 
-    for status in simulate():
-        yield (status[0], status[1] * 0.50)
+    with internal.Timer() as sim_timer:
+        for status in simulate():
+            yield (status[0], status[1] * 0.50)
 
     if not opts["includeKinematic"]:
         initial_keyframe()
         compute_transitions()
 
-    for status in write():
-        yield (status[0], 50 + status[1] * 0.50)
+    with internal.Timer() as write_timer:
+        for status in write():
+            yield (status[0], 50 + status[1] * 0.50)
 
     if opts["resetMarkers"]:
         reset()
@@ -699,6 +704,9 @@ def record(solver, opts):
 
     # Restore time
     cmdx.current_time(initial_time)
+
+    log.debug("Simulated in %.2f ms" % sim_timer.ms)
+    log.debug("Wrote in %.2f ms" % write_timer.ms)
 
 
 def cache(solvers):
@@ -932,6 +940,41 @@ def create_fixed_constraint(parent, child, opts=None):
 
         mod.connect(parent["ragdollId"], con["parentMarker"])
         mod.connect(child["ragdollId"], con["childMarker"])
+
+        commands._take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+@internal.with_undo_chunk
+def create_pin_constraint(child, opts=None):
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+
+    solver = _find_solver(child)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % child
+    )
+
+    source_transform = child["src"].input(type=cmdx.kDagNode)
+    source_name = source_transform.name(namespace=False)
+    source_tm = source_transform.transform(cmdx.sWorld)
+
+    name = internal.unique_name("%s_rPin" % source_name)
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = commands._rdpinconstraint(mod, shape_name, parent=transform)
+
+        mod.set_attr(transform["translate"], source_tm.translation())
+        mod.set_attr(transform["rotate"], source_tm.rotation())
+
+        # Temporary means of viewport selection
+        mod.set_attr(transform["displayHandle"], True)
+
+        mod.connect(child["ragdollId"], con["marker"])
+        mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 
         commands._take_ownership(mod, con, transform)
         add_constraint(mod, con, solver)

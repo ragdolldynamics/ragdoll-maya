@@ -653,6 +653,15 @@
         ]
     },
 
+    "pinConstraint": {
+        "label": "Pin Constraint",
+        "icon": "softpin.png",
+        "summary": "Softly constrain the position and orientation of a marker in worldspace",
+        "description": "Create a new pin constraint between the selected marker and the world.",
+        "options": [
+        ]
+    },
+
     "recordMarkers": {
         "label": "Record Markers",
         "icon": "record.png",

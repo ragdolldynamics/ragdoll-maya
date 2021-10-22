@@ -616,6 +616,8 @@ def install_menu():
              create_fixed_constraint, label="Weld")
         item("distanceConstraint",
              create_distance_constraint, label="Distance")
+        item("pinConstraint",
+             create_pin_constraint, label="Pin")
 
         divider("Record")
 
@@ -2361,6 +2363,30 @@ def create_fixed_constraint(selection=None, **opts):
 
     con = markers_.create_fixed_constraint(a, b)
     cmds.select(str(con.parent()))
+
+    return True
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def create_pin_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    cons = []
+    for a in selection:
+        if a.isA(cmdx.kDagNode):
+            a = a["message"].output(type="rdMarker")
+
+        if not (a and a.isA("rdMarker")):
+            raise i__.UserWarning(
+                "Not a marker",
+                "%s wasn't a marker" % selection[0]
+            )
+
+        con = markers_.create_pin_constraint(a)
+        cons += [con.path()]
+
+    cmds.select(cons)
 
     return True
 

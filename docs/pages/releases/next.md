@@ -16,9 +16,13 @@ Highlight for this release is **Recording Performance**, and is part 3 out of 4 
 
 **Best Friends, No Matter What**
 
+Two referenced characters, their solvers linked.
+
 https://user-images.githubusercontent.com/2152766/137677733-af55a032-aabe-49e4-af6f-253086b68be3.mp4 controls
 
 **Hang On!**
+
+The new `Distance Constraint` at work.
 
 https://user-images.githubusercontent.com/2152766/138250857-27c10b93-4fc4-4b96-bb55-ba31407cf57b.mp4 controls
 
@@ -51,7 +55,7 @@ Unlinking restores their previous behavior exactly.
 https://user-images.githubusercontent.com/2152766/137937281-7f71cacf-f591-494b-bbdc-14365b631000.mp4 controls
 
 !!! question "That's neat, but can you.."
-    I know exactly what you're thinking, I was thinking the exact same thing.
+    I know exactly what you're thinking, I was thinking the same thing.
 
     Can you link a solver to another solver that is also linked? So that I can build a *network* of simple solvers that all work together to form one *complex* solver?
 
@@ -142,7 +146,17 @@ https://user-images.githubusercontent.com/2152766/138263114-b9a9e3a8-230c-4676-a
 
 <br>
 
-#### Distance Constraint
+#### Weld
+
+Weld two controls together.
+
+https://user-images.githubusercontent.com/2152766/138267073-dfd2e913-9a92-437b-8ba3-b99fe24223b4.mp4
+
+This will keep their position and orientation relative one another fixed from the first frame onwards.
+
+<br>
+
+#### Distance
 
 A simple but versatile constraint with animatable distance.
 

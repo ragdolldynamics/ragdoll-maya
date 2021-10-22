@@ -2677,9 +2677,19 @@ def delete_physics(nodes, dry_run=False):
         if node.isA(cmdx.kDagNode):
             shapes += node.shapes()
 
+    # Include DG nodes too
+    dgnodes = []
+    for node in nodes:
+        dgnodes += node["message"].output(
+            type=("rdGroup",
+                  "rdMarker",
+                  "rdDistanceConstraint",
+                  "rdFixedConstraint")
+        )
+
     shapes = filter(None, shapes)
     shapes = list(shapes) + nodes
-    nodes = shapes
+    nodes = shapes + dgnodes
 
     # Filter by our types
     all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)

@@ -1,16 +1,16 @@
 ---
 hidden: true
 title: Animation Capture pt. 3/4
-description: Recording Performance
+description: Linking and Caching
 ---
 
-Highlight for this release is **Recording Performance**, and is part 3 out of 4 of the new [Markers](/releases/2021.09.27/).
+Highlight for this release is **Linking and Caching**, and is part 3 out of 4 of the new [Markers](/releases/2021.09.27/).
 
-- [**ADDED** Performance](#performance) Faster recording is what we all want
-- [**ADDED** Solver Linking](#solver-linking) Run two or more solvers together, as one
-- [**ADDED** Solver Caching](#solver-caching) Run once and explore
+- [**ADDED** Solver Linking](#solver-linking) Run two or more solvers together as one
+- [**ADDED** Solver Caching](#solver-caching) Run once and update on-demand
 - [**ADDED** Marker Limits](#marker-limits) On par with the previous constraints, but much easier to work with
-- [**ADDED** Marker Constraints](#marker-constraints) Oh yes!
+- [**ADDED** Marker Constraints](#marker-constraints) Including Soft Pin!
+- [**ADDED** Recording Performance](#recording-performance) A bit faster recording
 
 ### Showcase
 
@@ -50,23 +50,17 @@ As before, this guy can either be opened or referenced into your scene. See [Sol
 
 <br>
 
-### Performance
-
-A 200% boost to Recording performance!
-
-
-
-<br>
-
 ### Solver Linking
+
+![image](https://user-images.githubusercontent.com/2152766/138452628-3cf97eb1-876f-43f5-8d1c-1a3dbd0eaecb.png)
 
 Reference two characters, link their solvers.
 
-Until now, you've been able to author a ragdoll using Active Chain and combine scenes using the `Combine Scene` menu item. That would transfer all connected rigids from one scene to another.
+Until now, you've been able to author physics using `Active Chain` and combine scenes using the `Combine Scene` menu item. That would transfer all connected rigids from one scene to another.
 
 But, that feature is *destructive*. There's no way to "uncombine" and even if you could, there's no record of what was originally combined.
 
-Meet `Solver Linking`.
+Let me introduce `Solver Linking`.
 
 **Linking**
 
@@ -89,9 +83,15 @@ https://user-images.githubusercontent.com/2152766/137937281-7f71cacf-f591-494b-b
 
 <br>
 
-#### Non-destructive Workflow
+#### Network of Solvers
 
-Here's 2 assets, a manikin and a backpack, referenced twice each for a total of 4 solvers. The backpack is referenced to the corresponding manikin solver, which are all linked into one final solver.
+Here are 2 assets, a manikin and a backpack.
+
+| Manikin | Backback
+|:---------|:--------
+| ![image](https://user-images.githubusercontent.com/2152766/138450294-4582e087-0472-436c-97cc-cf99dffb9fa2.png) | ![image](https://user-images.githubusercontent.com/2152766/138450174-10295b96-3527-4b1f-9904-d58994fbb064.png)
+
+The backback and manikin has been combined into one, which is then referenced twice into the final scene for a total of 4 unique solvers.
 
 **Non-destructively link solvers**
 
@@ -111,13 +111,9 @@ Technically, a solver is added to another solver in the same manner a marker, gr
 
 <br>
 
-#### Limitations
-
-None were left behind for this release, but if you find anything do let us know either in [the chat](https://ragdolldynamics.com/chat) or via the [contact form](https://ragdolldynamics.com/contact).
-
-<br>
-
 ### Solver Caching
+
+![image](https://user-images.githubusercontent.com/2152766/138453070-02e69094-6c37-469c-8bb1-7348ba9f42ac.png)
 
 Ragdoll runs alongside your character animation, but sometimes it can be useful to keep the results from a previous run and stop being so interactive.
 
@@ -127,7 +123,7 @@ https://user-images.githubusercontent.com/2152766/137889320-1f20ecd3-a6e7-4529-8
 
 Caching is entirely non-destructive, and in fact leverages the very same cache you've been enjoying all this time whenever rewinding.
 
-The menu commands toggle an attribute on your solver node, called `.cache` and automatically plays the entire timeline for you. But the same result can be achieved by setting the attribute yourself, and playing it yourself.
+The menu commands toggle an attribute on your solver node, called `.cache` and automatically plays the entire timeline for you. But the same result can be achieved by setting the attribute and playing it yourself.
 
 https://user-images.githubusercontent.com/2152766/137889717-dac3ed54-6105-4742-a312-a79aa1bba945.mp4 controls
 
@@ -159,6 +155,68 @@ You should find a lot less need to use `Edit Pivots` from here on, and in the ne
 
 <br>
 
+#### Hinge Limit
+
+The simplest of limits, allow a limb to rotate along a single axis. Like hinges on a door.
+
+Use this for knees and elbows.
+
+https://user-images.githubusercontent.com/2152766/138458863-6f7c0b0e-1dd0-4251-a764-6814bdba6169.mp4 controls
+
+<br>
+
+#### Ragdoll Limit
+
+For more complex anatomical limits, such as shoulders and hips, use the "ragdoll" limit for control over each of the 3 rotate axes.
+
+**Defaults**
+
+A good place to start is to just play with default settings and get an idea of what it looks like.
+
+https://user-images.githubusercontent.com/2152766/138458750-a07eff3b-e2a0-409a-95eb-3b0278f59583.mp4 controls
+
+**Customise**
+
+In this case, we'll keep the leg from crossing over too far, and from bending too far backwards. Like a real human leg.
+
+https://user-images.githubusercontent.com/2152766/138458753-76246fc5-aa71-489c-a9a8-bc8939f5f28d.mp4 controls
+
+<br>
+
+#### Custom Limit
+
+The Hinge and Ragdoll limits should cover the vast majority of limit needs, but sometimes you need more control. The `Custom` limit lets you control the parent and child frames independently, similar to the "traditional" Rigid constraints let you do.
+
+Here's an example of replicating the `Ragdoll` constraint with a custom limit.
+
+https://user-images.githubusercontent.com/2152766/138463267-bedc1a6f-ce97-4f29-aee8-f1bdf3855146.mp4 controls
+
+<br>
+
+#### Axis
+
+Specify the "main" axis for your limit.
+
+Different rigs follow different conventions, and this attribute enables you to keep Ragdoll in the loop. It should typically align with whatever axis your joint or control points in the direction of the child joint or control.
+
+https://user-images.githubusercontent.com/2152766/138464613-17e23daf-5c91-437a-a94a-e2b6faef3190.mp4 controls
+
+<br>
+
+#### Rotation vs Offset
+
+You can either rotate or *offset* the limit.
+
+- `Rotation` rotates both parent and child frames
+- `Offset` rotates only the parent frame
+
+!!! hint "Remember"
+    The `Parent Frame` is the space in which a `Child Frame` is allowed to move.
+
+https://user-images.githubusercontent.com/2152766/138464618-8ffaab80-a649-4bd9-bb30-6f936a571cbe.mp4 controls
+
+<br>
+
 ### Marker Constraints
 
 You can now constrain two markers!
@@ -174,11 +232,12 @@ https://user-images.githubusercontent.com/2152766/138263114-b9a9e3a8-230c-4676-a
 
 #### Weld
 
-Weld two controls together.
+Maintain the position and orientation of one marker relative another from the first frame onwards.
 
-https://user-images.githubusercontent.com/2152766/138267073-dfd2e913-9a92-437b-8ba3-b99fe24223b4.mp4
+https://user-images.githubusercontent.com/2152766/138453515-936e7297-b40e-46bf-a63e-bb1153f8f166.mp4 controls
 
-This will keep their position and orientation relative one another fixed from the first frame onwards.
+
+https://user-images.githubusercontent.com/2152766/138267073-dfd2e913-9a92-437b-8ba3-b99fe24223b4.mp4 controls
 
 <br>
 
@@ -224,7 +283,7 @@ https://user-images.githubusercontent.com/2152766/138125038-390d999d-dad3-474d-9
 
 **Hard Distance**
 
-A `Stiffness = -1` means the constraint is "hard". It will not accept any slack or "springiness", that would be a solver fault.
+A `Stiffness = -1` means the constraint is "hard". It will not accept any slack or "springiness".
 
 In this example, the distance is animated whilst soft, and transitioned into a hard constraint. Notice how it snaps into place once hard.
 
@@ -232,3 +291,29 @@ https://user-images.githubusercontent.com/2152766/138226874-2fafa5c1-f8c3-4143-b
 
 !!! hint "Limitation"
     A limitation of a hard constraint is that the distance cannot be animated whilst hard. You can however animate it between values of -1 and above, to transition to and from hard to soft.
+
+<br>
+
+#### Pin
+
+Similar to the `Soft Pin` used with Rigids, this creates a new position and orientation a marker will try and reach.
+
+https://user-images.githubusercontent.com/2152766/138454713-ceaedf52-3777-4af8-81de-e543318316f5.mp4 controls
+
+<br>
+
+### Recording Performance
+
+A mere 15% boost to Recording performance.
+
+**Before**
+
+https://user-images.githubusercontent.com/2152766/138439243-4ed9022e-9e34-4b31-81c5-080adcbdf8d6.mp4 controls
+
+**After**
+
+https://user-images.githubusercontent.com/2152766/138439246-68acc8c2-10a0-4a59-ad2f-c9dc2f3adb04.mp4 controls
+
+More was expected, and odds are there's room to optimise this further. But, the bottleneck is writing keyframes which cannot happen across multiple threads. It also needs to happen alongside evaluating your rig, which is dirtied with setting of each key, else it cannot take into account the various constraints, offset groups and IK solvers happening in there.
+
+On the upside, the more complex your rig, the more benefit you should see from this optimisation. What happens in the above examples are extremely lightweight rigs with no animation, hence the difference is minor.

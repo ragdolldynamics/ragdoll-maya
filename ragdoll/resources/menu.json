@@ -587,7 +587,6 @@
     },
 
 
-
     "#": "---------",
     "#": " Markers ",
     "#": "---------",
@@ -596,8 +595,8 @@
     "markersBeta": {
         "label": "Markers v0.75",
         "icon": "internals.png",
-        "summary": "Markers version 1 out of 4, powerful but incomplete. Follow the release notes for latest up-to-date information.",
-        "description": "The Markers features just left Alpha and is generally made available, but isn't yet complete. It'll be followed several rounds of polish, tooling and performance improvements.",
+        "summary": "Markers version 3 out of 4, powerful but incomplete. Follow the release notes for latest up-to-date information.",
+        "description": "The Markers features just left Alpha and is generally made available, but isn't yet complete. It'll be followed by one more round of polish, tooling and performance improvements.",
         "options": [
         ]
     },

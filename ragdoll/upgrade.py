@@ -16,6 +16,7 @@ compatibility path for all time.
 
 import os
 import logging
+import traceback
 
 from maya import cmds
 from . import constants, internal
@@ -69,6 +70,7 @@ def upgrade_all():
             upgraded = func(node, node_version, current_version)
 
         except Exception as e:
+            log.debug(traceback.format_exc())
             log.warning(e)
             log.warning("Bug, had trouble upgrading")
             continue
@@ -388,35 +390,37 @@ def _marker_20210928_20211007(marker):
 
     with cmdx.DagModifier() as mod:
         # driveSpace turned into an enum
-        custom = marker["driveSpace"].read()
-        mod.set_attr(marker["driveSpaceCustom"], custom)
+        if "driveSpace" in marker:
+            custom = marker["driveSpace"].read()
+            mod.set_attr(marker["driveSpaceCustom"], custom)
 
-        space = constants.GuideInherit
+            space = constants.GuideInherit
 
-        if custom < -0.99:
-            space = constants.GuideLocal
+            if custom < -0.99:
+                space = constants.GuideLocal
 
-        if custom > 0.99:
-            space = constants.GuideWorld
+            if custom > 0.99:
+                space = constants.GuideWorld
 
-        mod.set_attr(marker["driveSpace"], space)
+            mod.set_attr(marker["driveSpace"], space)
 
         # offsetMatrix was introduced
-        for index, dst in enumerate(marker["dst"]):
-            src = marker["src"].input(type=("transform", "joint"))
-            dst = dst.input(type=("transform", "joint"))
+        if "offsetMatrix" in marker:
+            for index, dst in enumerate(marker["dst"]):
+                src = marker["src"].input(type=("transform", "joint"))
+                dst = dst.input(type=("transform", "joint"))
 
-            if not dst:
-                # An untargeted marker, leave it
-                continue
+                if not dst:
+                    # An untargeted marker, leave it
+                    continue
 
-            if not src:
-                # This would be odd, but technically possible
-                continue
+                if not src:
+                    # This would be odd, but technically possible
+                    continue
 
-            offset = src["worldMatrix"].as_matrix()
-            offset *= dst["worldInverseMatrix"][0].as_matrix()
-            mod.set_attr(marker["offsetMatrix"][index], offset)
+                offset = src["worldMatrix"][0].as_matrix()
+                offset *= dst["worldInverseMatrix"][0].as_matrix()
+                mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
 def _group_20210928_20211007(group):

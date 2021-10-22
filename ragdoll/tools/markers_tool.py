@@ -1082,3 +1082,60 @@ def get_local_pos_rot(world_matrix, dag_node):
         pass
 
     return pos, rot
+
+
+@internal.with_undo_chunk
+def edit_constraint_frames(marker, opts=None):
+    assert marker and marker.isA("rdMarker"), "%s was not a marker" % marker
+    opts = dict({
+        "addUserAttributes": False,
+    }, **(opts or {}))
+
+    parent_marker = marker["parentMarker"].connection()
+    child_marker = marker
+
+    assert parent_marker and child_marker, (
+        "Unconnected constraint: %s" % marker
+    )
+
+    parent = parent_marker["src"].input(type=cmdx.kDagNode)
+    child = child_marker["src"].input(type=cmdx.kDagNode)
+
+    assert parent and child, (
+        "Could not find source transform for %s and/or %s" % (
+            parent_marker, child_marker)
+    )
+
+    parent = parent.parent()
+    child = child.parent()
+
+    with cmdx.DagModifier() as mod:
+        parent_frame = mod.create_node("transform",
+                                       name="parentFrame",
+                                       parent=parent)
+        child_frame = mod.create_node("transform",
+                                      name="childFrame",
+                                      parent=child)
+
+        for frame in (parent_frame, child_frame):
+            mod.set_attr(frame["displayHandle"], True)
+            mod.set_attr(frame["displayLocalAxis"], True)
+
+        parent_frame_tm = cmdx.Tm(marker["parentFrame"].asMatrix())
+        child_frame_tm = cmdx.Tm(marker["childFrame"].asMatrix())
+
+        parent_translate = parent_frame_tm.translation()
+        child_translate = child_frame_tm.translation()
+
+        mod.set_attr(parent_frame["translate"], parent_translate)
+        mod.set_attr(parent_frame["rotate"], parent_frame_tm.rotation())
+        mod.set_attr(child_frame["translate"], child_translate)
+        mod.set_attr(child_frame["rotate"], child_frame_tm.rotation())
+
+        mod.connect(parent_frame["matrix"], marker["parentFrame"])
+        mod.connect(child_frame["matrix"], marker["childFrame"])
+
+        commands._take_ownership(mod, marker, parent_frame)
+        commands._take_ownership(mod, marker, child_frame)
+
+    return parent_frame, child_frame

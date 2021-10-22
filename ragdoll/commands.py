@@ -2680,12 +2680,12 @@ def delete_physics(nodes, dry_run=False):
     # Include DG nodes too
     dgnodes = []
     for node in nodes:
-        dgnodes += node["message"].output(
-            type=("rdGroup",
-                  "rdMarker",
-                  "rdDistanceConstraint",
-                  "rdFixedConstraint")
-        )
+        dgnodes += list(
+            node["message"].outputs(
+                type=("rdGroup",
+                      "rdMarker",
+                      "rdDistanceConstraint",
+                      "rdFixedConstraint")))
 
     shapes = filter(None, shapes)
     shapes = list(shapes) + nodes

@@ -649,6 +649,10 @@ def install_menu():
         with submenu("Utilities", icon="magnet.png"):
             item("createLollipop", create_lollipop)
 
+            item("editConstraintFrames",
+                 edit_marker_constraint_frames,
+                 label="Edit Pivots")
+
     divider("Manipulate")
 
     with submenu("Constraints", icon="constraint.png"):
@@ -2692,14 +2696,14 @@ def snap_to_sim(selection=None, **opts):
 @with_exception_handling
 def create_lollipop(selection=None, **opts):
     selection = selection or cmdx.sl()
-    markers = []
+    markers = set()
 
     for marker in selection:
         if marker.isA(cmdx.kDagNode):
             marker = marker["message"].output(type="rdMarker")
 
         if marker and marker.type() == "rdMarker":
-            markers += [marker]
+            markers.add(marker)
 
     if not markers:
         raise i__.UserWarning(
@@ -2742,7 +2746,7 @@ def cache_all(selection=None, **opts):
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Cached %d frames for %d solvers in %.1fs (%d fps)" % (
-        total_frames, total_solvers, *stats
+        total_frames, total_solvers, stats[0], stats[1]
     ))
 
     cmds.inViewMessage(
@@ -2999,6 +3003,32 @@ def edit_constraint_frames(selection=None):
         frames.extend(commands.edit_constraint_frames(con))
 
     log.info("Created %d frames" % len(frames))
+    cmds.select(map(str, frames))
+    return kSuccess
+
+
+def edit_marker_constraint_frames(selection=None):
+    frames = []
+    markers = set()
+
+    for node in selection or cmdx.selection():
+        marker = node
+
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+
+        if not (marker and marker.isA("rdMarker")):
+            raise i__.UserWarning(
+                "No marker found",
+                "%s was not a marker." % node
+            )
+
+        markers.add(marker)
+
+    for marker in markers:
+        frames.extend(markers_.edit_constraint_frames(marker))
+
+    log.info("Created %d pivots" % len(frames))
     cmds.select(map(str, frames))
     return kSuccess
 

@@ -12,6 +12,7 @@ Highlight for this release is **Linking and Caching**, and is part 3 out of 4 of
 - [**ADDED** Solver Caching](#solver-caching) Run once and update on-demand
 - [**ADDED** Marker Limits](#marker-limits) On par with the previous constraints, but much easier to work with
 - [**ADDED** Marker Constraints](#marker-constraints) Including Soft Pin!
+- [**ADDED** Cascading Attributes](#cascading-attributes) Control an entire simulation from one spot
 - [**ADDED** Recording Performance](#recording-performance) A bit faster recording
 
 ### Showcase
@@ -32,7 +33,7 @@ https://user-images.githubusercontent.com/2152766/138250857-27c10b93-4fc4-4b96-b
 
 **Dance Baby!**
 
-An example of the new Pin Constraint for Markers, working alongside a the Distance Constraint and regular old pose matching.
+The new `Pin Constraint` working alongside a `Distance Constraint` and regular old pose matching.
 
 https://user-images.githubusercontent.com/2152766/138433045-cd14d52c-a54e-4703-a858-42f702c5f5b4.mp4 controls
 
@@ -52,29 +53,104 @@ As before, this guy can either be opened or referenced into your scene. See [Sol
 
 <br>
 
-### Tutorials
+### New Tutorials
 
-Markers have part 4 out of 4 remaining, for a next-generation UI, before being considered feature complete. But until then here's how you can get started with Markers today.
+Markers have one part left before being considered complete, at which point they can completely succeed `Active Rigid` and `Active Chain`.
 
-So far, the parts missing functionally from Rigids are:
+Since this release, the missing functionally from Rigids are:
 
 - Forces
 - Export/Import
 
-Both of which will be handled in either the next release or the release following. Forces are getting an overhaul too, of integrating with the native Maya forces such that you can simulate nHair and nCloth alongside Ragdoll, using the same forces (called "fields" in Maya) like turbulence and wind.
+Until then, here's how you can get started with Markers today.
 
-|   | Tutorial | Duration | Description
-|:--|:--------|:-----------
-|   | [Overlapping Motion I]()  | 02:27 | The very basics or Capture and Record
-|   | [Overlapping Motion II]() | 02:21 | Animation layers
-|   | [Full Ragdoll I]()        | 04:08 | Hierarchy and volume
-|   | [Full Ragdoll II]()       | 04:05 | Kinematic and animation
-|   | [Full Ragdoll III]()      | 04:30 | Self collisions and recording
-|   | [IK I]()                  | 02:30 |
-|   | [IK II]()                 | 02:30 |
-|   | [Elbow Intersection]()    | 02:30 | Chris's example
-|   | [Replace Reference]()     | 02:30 |
-|   | [FK/IK/Physics]()         | 02:30 |
+<table>
+<style>
+    td { vertical-align: middle !important; }
+</style>
+<tr>
+    <th></th>
+    <th>Tutorial</th>
+    <th>Duration</th>
+    <th>Description</th>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138587450-5473c870-666b-4d09-95b2-6cfaedf422d9.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=KU8mvjVG5Jg&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=1>Overlapping Motion I</a></nobr>
+    <td>02:27</td>
+    <td>The very basics or Capture and Record</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138587450-5473c870-666b-4d09-95b2-6cfaedf422d9.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=MNzi6DkAp2M&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=2>Overlapping Motion II</a></nobr>
+    <td>02:21</td>
+    <td>Animation layers</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138587469-c920df07-d3d1-43c1-8837-ccca339299cb.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=QKCz8HPz1YQ&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=3>Full Ragdoll I</a></nobr>
+    <td>04:08</td>
+    <td>Hierarchy and volume</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138587475-1d6db79c-0424-44e7-b8b0-c98efcbad91b.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=J7x7TEhOUKA&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=4>Full Ragdoll II</a></nobr>
+    <td>04:05</td>
+    <td>Kinematic and animation</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138587486-76ca86fb-856f-41e7-9386-0bfa7b79ce66.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=judGjSp5nw4&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=5>Full Ragdoll III</a></nobr>
+    <td>04:30</td>
+    <td>Self collisions and recording</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138593662-c60bf20f-f3c5-4e0b-9eec-924037cd0e01.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=eK23t0qw8Q4&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=6>IK I</a></nobr>
+    <td>03:00</td>
+    <td>Capturing the skeleton</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138593690-4e4418fb-60cd-4beb-9599-e3d0008ec048.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=r1o7v8yG1Io&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=7>IK II</a></nobr>
+    <td>01:59</td>
+    <td>Retargeting to IK controls</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138593713-a4fcfbd6-9f25-4b37-94cd-7bdd709c971d.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=r1o7v8yG1Io&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=8>IK III</a></nobr>
+    <td>01:59</td>
+    <td>Record both Translation and Rotation</td>
+</tr>
+<tr>
+    <td><img src=https://user-images.githubusercontent.com/2152766/138600345-87001141-7a42-412e-b83e-260448d1880b.png></td>
+    <td><nobr><a href=https://www.youtube.com/watch?v=IHpMd4Oh88E&list=PLL4XIS5Woc6nG48mb7MD4vVvTWuK9k8jl&index=12>Practical Example I</a></nobr>
+    <td>06:53</td>
+    <td>Fix table and elbow intersection in this dialog performance.</td>
+</tr>
+
+
+<!--
+<tr>
+    <td><img src=></td>
+    <td><nobr><a href=>Workflow Example I</a></nobr>
+    <td>04:30</td>
+    <td>Retarget physics from one rig to another.</td>
+</tr>
+<tr>
+    <td><img src=></td>
+    <td><nobr><a href=>Workflow Example II</a></nobr>
+    <td>04:30</td>
+    <td>Setup and replace a referenced character with physics.</td>
+</tr>
+<tr>
+    <td><img src=></td>
+    <td><nobr><a href=>Workflow Example III</a></nobr>
+    <td>04:30</td>
+    <td>Take Physics into consideration during the rigging process</td>
+</tr>
+ -->
+</table>
 
 <br>
 
@@ -331,6 +407,35 @@ https://user-images.githubusercontent.com/2152766/138454713-ceaedf52-3777-4af8-8
 
 <br>
 
+### Cascading Attributes
+
+Sometimes, you want to tweak the overall look of an entire simulation at once, rather than tweaking or modifying individual nodes. Now you can.
+
+All guides, limits and constraints now have their values combined with equivalent values on the solver node.
+
+![image](https://user-images.githubusercontent.com/2152766/138586598-7d354fb0-0e01-49c0-9a11-228e0c61ac91.png)
+
+**Edit One**
+
+Here's how you edit just a single marker or constraint.
+
+https://user-images.githubusercontent.com/2152766/138586813-2e30fb6d-b500-4862-aba2-39df4ab0dd98.mp4
+
+**Edit Many**
+
+And here's how you can edit them all.
+
+https://user-images.githubusercontent.com/2152766/138586814-a56bee45-0713-45f1-a93a-b27bb2cffb80.mp4
+
+!!! hint "Animation"
+    Guides and Constraints can be animated, however Limits cannot.
+
+This behavior is consistent with the `rdGroup` node too, here's the complete attribute hierarchy.
+
+![hierarchy2](https://user-images.githubusercontent.com/2152766/138588682-d739104d-db23-4646-b9b5-e4bd05ec23c5.gif)
+
+<br>
+
 ### Recording Performance
 
 A mere 15% boost to Recording performance.
@@ -346,12 +451,3 @@ https://user-images.githubusercontent.com/2152766/138439246-68acc8c2-10a0-4a59-a
 More was expected, and odds are there's room to optimise this further. But, the bottleneck is writing keyframes which cannot happen across multiple threads. It also needs to happen alongside evaluating your rig, which is dirtied with setting of each key, else it cannot take into account the various constraints, offset groups and IK solvers happening in there.
 
 On the upside, the more complex your rig, the more benefit you should see from this optimisation. What happens in the above examples are extremely lightweight rigs with no animation, hence the difference is minor.
-
-<br>
-
-### Tutorial
-
-- No retargeting
-- Retarget joint to control
-- Retarget control to another control, e.g. FK/IK/Physics
-- Retarget one rig to another

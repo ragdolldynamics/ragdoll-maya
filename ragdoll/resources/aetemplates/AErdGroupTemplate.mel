@@ -12,14 +12,6 @@ global proc AErdGroupTemplate(string $nodeName) {
             editorTemplate -addControl "driveDampingRatio";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Visualisation" -collapse true;
-            editorTemplate -addControl "displayType";
-            editorTemplate -addControl "color";
-            editorTemplate -addControl "drawScale";
-            editorTemplate -addControl "drawLimit";
-            editorTemplate -addControl "drawDrive";
-        editorTemplate -endLayout;
-
         // Create an "Extras" section and also add controls for any
         // attributes we have not explicitly mentioned.
         editorTemplate -addExtraControls;

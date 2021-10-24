@@ -642,16 +642,16 @@ def install_menu():
 
         divider("Utilities")
 
-        with submenu("Select", icon="select.png"):
-            item("parentMarker", select_parent_marker, label="Parent")
-            item("childMarkers", select_child_markers, label="Children")
-
         with submenu("Utilities", icon="magnet.png"):
             item("createLollipop", create_lollipop)
 
             item("editConstraintFrames",
                  edit_marker_constraint_frames,
                  label="Edit Pivots")
+
+        with submenu("Select", icon="select.png"):
+            item("parentMarker", select_parent_marker, label="Parent")
+            item("childMarkers", select_child_markers, label="Children")
 
     divider("Manipulate")
 

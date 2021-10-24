@@ -714,6 +714,14 @@
         "help": "Should I record only to the selected controls?"
     },
 
+    "markersRecordReset": {
+        "name": "markersRecordReset",
+        "label": "Reset Markers",
+        "type": "Boolean",
+        "default": false,
+        "help": "Make all markers kinematic once recording is complete."
+    },
+
     "markersRecordMaintainOffset": {
         "name": "markersRecordMaintainOffset",
         "label": "Maintain Offset",

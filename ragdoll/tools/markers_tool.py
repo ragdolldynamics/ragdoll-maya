@@ -280,7 +280,7 @@ def record(solver, opts):
         "maintainOffset": True,
         "simplifyCurves": True,
         "unrollRotations": True,
-        "resetMarkers": True,
+        "resetMarkers": False,
     }, **opts)
 
     initial_time = cmdx.current_time()

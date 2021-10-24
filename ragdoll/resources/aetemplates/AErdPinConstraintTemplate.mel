@@ -5,6 +5,7 @@ global proc AErdPinConstraintTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "springType";
             editorTemplate -addControl "linearStiffness";
             editorTemplate -addControl "linearDampingRatio";
             editorTemplate -addControl "angularStiffness";

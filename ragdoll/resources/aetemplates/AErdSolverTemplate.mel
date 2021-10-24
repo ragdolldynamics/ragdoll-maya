@@ -12,21 +12,27 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "gravity";
-            // editorTemplate -addControl "link";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Guides" -collapse false;
-            editorTemplate -addControl "linearDriveStiffness";
-            editorTemplate -addControl "linearDriveDamping";
-            editorTemplate -addControl "angularDriveStiffness";
-            editorTemplate -addControl "angularDriveDamping";
+        editorTemplate -beginLayout "Guides" -collapse true;
+            editorTemplate -label "Translate Stiffness" -addControl "linearDriveStiffness";
+            editorTemplate -label "Translate Damping" -addControl "linearDriveDamping";
+            editorTemplate -label "Rotate Stiffness" -addControl "angularDriveStiffness";
+            editorTemplate -label "Rotate Damping" -addControl "angularDriveDamping";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Limits" -collapse false;
-            editorTemplate -addControl "linearLimitStiffness";
-            editorTemplate -addControl "linearLimitDamping";
-            editorTemplate -addControl "angularLimitStiffness";
-            editorTemplate -addControl "angularLimitDamping";
+        editorTemplate -beginLayout "Limits" -collapse true;
+            editorTemplate -label "Translate Stiffness" -addControl "linearLimitStiffness";
+            editorTemplate -label "Translate Damping" -addControl "linearLimitDamping";
+            editorTemplate -label "Rotate Stiffness" -addControl "angularLimitStiffness";
+            editorTemplate -label "Rotate Damping" -addControl "angularLimitDamping";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Constraints" -collapse true;
+            editorTemplate -label "Translate Stiffness" -addControl "linearConstraintStiffness";
+            editorTemplate -label "Translate Damping" -addControl "linearConstraintDamping";
+            editorTemplate -label "Rotate Stiffness" -addControl "angularConstraintStiffness";
+            editorTemplate -label "Rotate Damping" -addControl "angularConstraintDamping";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Scale" -collapse true;

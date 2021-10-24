@@ -4,6 +4,8 @@ title: Animation Capture pt. 3/4
 description: Linking and Caching
 ---
 
+<video autoplay="" class="poster" muted="" loop="" controls="" height="30%" width="100%"><source src="https://user-images.githubusercontent.com/2152766/138547703-7b6ba449-1b8b-43c9-9728-7d309e0d8db8.mp4" type="video/mp4"></video>
+
 Highlight for this release is **Linking and Caching**, and is part 3 out of 4 of the new [Markers](/releases/2021.09.27/).
 
 - [**ADDED** Solver Linking](#solver-linking) Run two or more solvers together as one
@@ -50,17 +52,43 @@ As before, this guy can either be opened or referenced into your scene. See [Sol
 
 <br>
 
+### Tutorials
+
+Markers have part 4 out of 4 remaining, for a next-generation UI, before being considered feature complete. But until then here's how you can get started with Markers today.
+
+So far, the parts missing functionally from Rigids are:
+
+- Forces
+- Export/Import
+
+Both of which will be handled in either the next release or the release following. Forces are getting an overhaul too, of integrating with the native Maya forces such that you can simulate nHair and nCloth alongside Ragdoll, using the same forces (called "fields" in Maya) like turbulence and wind.
+
+|   | Tutorial | Duration | Description
+|:--|:--------|:-----------
+|   | [Overlapping Motion I]()  | 02:27 | The very basics or Capture and Record
+|   | [Overlapping Motion II]() | 02:21 | Animation layers
+|   | [Full Ragdoll I]()        | 04:08 | Hierarchy and volume
+|   | [Full Ragdoll II]()       | 04:05 | Kinematic and animation
+|   | [Full Ragdoll III]()      | 04:30 | Self collisions and recording
+|   | [IK I]()                  | 02:30 |
+|   | [IK II]()                 | 02:30 |
+|   | [Elbow Intersection]()    | 02:30 | Chris's example
+|   | [Replace Reference]()     | 02:30 |
+|   | [FK/IK/Physics]()         | 02:30 |
+
+<br>
+
 ### Solver Linking
 
-![image](https://user-images.githubusercontent.com/2152766/138452628-3cf97eb1-876f-43f5-8d1c-1a3dbd0eaecb.png)
-
 Reference two characters, link their solvers.
+
+![image](https://user-images.githubusercontent.com/2152766/138452628-3cf97eb1-876f-43f5-8d1c-1a3dbd0eaecb.png)
 
 Until now, you've been able to author physics using `Active Chain` and combine scenes using the `Combine Scene` menu item. That would transfer all connected rigids from one scene to another.
 
 But, that feature is *destructive*. There's no way to "uncombine" and even if you could, there's no record of what was originally combined.
 
-Let me introduce `Solver Linking`.
+Let me introduce `Solver Linking`, a lightweight and non-destructive alternative.
 
 **Linking**
 
@@ -83,7 +111,7 @@ https://user-images.githubusercontent.com/2152766/137937281-7f71cacf-f591-494b-b
 
 <br>
 
-#### Network of Solvers
+#### Example
 
 Here are 2 assets, a manikin and a backpack.
 
@@ -219,12 +247,13 @@ https://user-images.githubusercontent.com/2152766/138464618-8ffaab80-a649-4bd9-b
 
 ### Marker Constraints
 
-You can now constrain two markers!
+You can now constrain one marker to anothe!
 
 | Constraint Type | Description
 |:----------------|:-------------
 | Weld Constraint | Simplest of constraints, welds two markers together; no change to their distance or relative orientation is allowed. This is akin to the Maya `Parent Constraint`
 | Distance Constraint | Maintain a minimum, maximum or total distance between two markers.
+| Pin Constraint | Match a position and orientation in worldspace, similar to `Drive Space = World`.
 
 https://user-images.githubusercontent.com/2152766/138263114-b9a9e3a8-230c-4676-a757-073cfc42af70.mp4 controls
 
@@ -296,7 +325,7 @@ https://user-images.githubusercontent.com/2152766/138226874-2fafa5c1-f8c3-4143-b
 
 #### Pin
 
-Similar to the `Soft Pin` used with Rigids, this creates a new position and orientation a marker will try and reach.
+Similar to the `Soft Pin` used with Rigids, this creates a new position and orientation a marker will try and reach. It's exactly what you get using `Guide Space = World` on the markers themselves, but with the convenience of a new transform you can animate. They will both try and pull on the marker, greatest stiffness wins!
 
 https://user-images.githubusercontent.com/2152766/138454713-ceaedf52-3777-4af8-81de-e543318316f5.mp4 controls
 
@@ -317,3 +346,12 @@ https://user-images.githubusercontent.com/2152766/138439246-68acc8c2-10a0-4a59-a
 More was expected, and odds are there's room to optimise this further. But, the bottleneck is writing keyframes which cannot happen across multiple threads. It also needs to happen alongside evaluating your rig, which is dirtied with setting of each key, else it cannot take into account the various constraints, offset groups and IK solvers happening in there.
 
 On the upside, the more complex your rig, the more benefit you should see from this optimisation. What happens in the above examples are extremely lightweight rigs with no animation, hence the difference is minor.
+
+<br>
+
+### Tutorial
+
+- No retargeting
+- Retarget joint to control
+- Retarget control to another control, e.g. FK/IK/Physics
+- Retarget one rig to another

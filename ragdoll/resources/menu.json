@@ -669,6 +669,7 @@
         "options": [
             "markersUseSelection",
             "markersIgnoreJoints",
+            "markersRecordReset",
             "markersRecordMaintainOffset",
             "markersRecordKinematic",
             "markersRecordUnroll"

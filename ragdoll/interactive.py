@@ -2421,6 +2421,7 @@ def record_markers(selection=None, **opts):
         "markersRecordKinematic": _opt("markersRecordKinematic", opts),
         "markersUseSelection": _opt("markersUseSelection", opts),
         "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
+        "markersRecordReset": _opt("markersRecordReset", opts),
         "markersRecordSimplify": _opt("markersRecordSimplify", opts),
         "markersRecordUnroll": _opt("markersRecordUnroll", opts),
         "markersRecordMaintainOffset": _opt(
@@ -2471,6 +2472,7 @@ def record_markers(selection=None, **opts):
                 "simplifyCurves": opts["markersRecordSimplify"],
                 "unrollRotations": opts["markersRecordUnroll"],
                 "ignoreJoints": opts["markersIgnoreJoints"],
+                "resetMarkers": opts["markersRecordReset"],
             })
 
             previous_progress = 0

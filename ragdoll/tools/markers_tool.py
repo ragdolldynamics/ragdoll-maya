@@ -797,6 +797,14 @@ def retarget(marker, transform, append=False):
 
         mod.connect(transform["message"], dst)
 
+        # Should we record translation?
+        if all(transform["t%s" % axis].editable for axis in "xyz"):
+            mod.try_set_attr(marker["recordTranslation"], True)
+
+        # Should we record translation?
+        if all(transform["r%s" % axis].editable for axis in "xyz"):
+            mod.try_set_attr(marker["recordRotation"], True)
+
         # Store offset for recording later
         offset = src["worldMatrix"][0].as_matrix()
         offset *= transform["worldInverseMatrix"][0].as_matrix()

@@ -14,7 +14,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "gravity";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Guides" -collapse true;
+        editorTemplate -beginLayout "Pose" -collapse true;
             editorTemplate -label "Translate Stiffness" -addControl "linearDriveStiffness";
             editorTemplate -label "Translate Damping" -addControl "linearDriveDamping";
             editorTemplate -label "Rotate Stiffness" -addControl "angularDriveStiffness";

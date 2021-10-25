@@ -878,6 +878,12 @@
         "default": false,
         "help": "Use native Maya proxy attributes for Ragdoll user attributes. CAUTION! This is unstable and may fatal crash Maya, especially during deletion of physics."
     },
+    "useUIDrawManager": {
+        "name": "useUIDrawManager",
+        "type": "Boolean",
+        "default": true,
+        "help": "Whether to draw lines and things using Maya's native API, which appears broken on some hardware..."
+    },
 
 
     "deleteFromSelection": {

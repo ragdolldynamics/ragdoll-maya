@@ -525,7 +525,8 @@
             "validateScalePivot",
             "validatePlaybackSpeed",
             "useShaders",
-            "reloadShaders"
+            "reloadShaders",
+            "useUIDrawManager"
         ]
     },
     "selectInvalidConstraints": {

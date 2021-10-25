@@ -3,7 +3,7 @@
 global proc AErdMarkerTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
-        editorTemplate -beginLayout "Input" -collapse false;
+        editorTemplate -beginLayout "Behaviour" -collapse false;
             editorTemplate -addControl "enabled";
             editorTemplate -addControl "inputType";
             editorTemplate -addControl "driveSpace";
@@ -44,6 +44,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "limitStiffness";
             editorTemplate -addControl "limitDampingRatio";
+            editorTemplate -addControl "limitLinearLock";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

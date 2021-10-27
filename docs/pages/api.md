@@ -2,9 +2,9 @@
   <img class="hero-image" src=/yoga13.png>
 </div>
 
-Ragdoll consists of custom ([`MPxLocatorNode`](https://help.autodesk.com/view/MAYAUL/2020/ENU/?guid=__cpp_ref_class_m_px_locator_node_html)) nodes written in C++, but everything involved in connecting these up and generating the dependency network happens in Python. This API is exposed to you for integration with auto-rigging, tools development and to generally just extend the capabilities of the system.
+Ragdoll consists of custom nodes written in C++, but everything involved in connecting these up and generating the dependency network happens in Python. This API is exposed to you for integration with auto-rigging, tools development and to generally just extend the capabilities of the system.
 
-The API is also [available on GitHub](https://github.com/mottosso/ragdoll) for issue tracking and user contributions.
+The full source code of everything Python is also [available on GitHub](https://github.com/mottosso/ragdoll), where you may also submit issues and pull-requests to improve the tooling for everyone.
 
 <br>
 
@@ -111,6 +111,9 @@ ri.create_rigid()
 cmds.evalDeferred(cmds.play)
 ```
 
+!!! hint "Quick Tip"
+  Whenever you click a menu item, its Python command is printed in the Script Editor!
+
 <br>
 
 ## Members
@@ -160,7 +163,7 @@ api.duplicate(rigid)
 
 ## Environment Variables
 
-Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables. For example, to manually load the Ragdoll plug-in and Maya menu, set `RAGDOLL_NO_AUTOLOAD=1` and then call:
+Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables. For example, to avoid the startup dialog on first launch, set `RAGDOLL_NO_STARTUP_DIALOG=1` and then call:
 
 ```py
 import ragdoll.interactive

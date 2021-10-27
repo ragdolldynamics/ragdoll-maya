@@ -2255,6 +2255,7 @@ def assign_single(selection=None, **opts):
         _add_to_objset(markers)
 
     cmds.select(t.shortest_path() for t in selection)
+    cmds.refresh()
 
     return kSuccess
 
@@ -2293,6 +2294,7 @@ def assign_group(selection=None, **opts):
         _add_to_objset(assigned)
 
     cmds.select(t.shortest_path() for t in selection)
+    cmds.refresh()
 
     return kSuccess
 

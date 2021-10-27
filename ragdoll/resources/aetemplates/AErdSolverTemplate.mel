@@ -43,9 +43,9 @@ global proc AErdSolverTemplate(string $nodeName) {
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "solverType";
             editorTemplate -addControl "collisionDetectionType";
-            editorTemplate -addControl "enableStabilisation";
-            editorTemplate -addControl "enableEnhancedFriction";
-            editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
+            // editorTemplate -addControl "enableStabilisation";
+            // editorTemplate -addControl "enableEnhancedFriction";
+            // editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
             editorTemplate -addControl "bounceThresholdVelocity";
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
@@ -58,7 +58,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "drawConstraints";
             editorTemplate -addControl "drawLimits";
             editorTemplate -addControl "drawDrives";
-            editorTemplate -addControl "lightDirection";
+            // editorTemplate -addControl "lightDirection";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

@@ -10,7 +10,8 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveStiffness";
             editorTemplate -addControl "driveDampingRatio";
-            editorTemplate -addControl "driveLinearAngularAmount";
+            editorTemplate -addControl "driveAbsoluteLinear";
+            editorTemplate -addControl "driveAbsoluteAngular";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Record" -collapse true;

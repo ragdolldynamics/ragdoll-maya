@@ -438,6 +438,7 @@ def record(solver, opts=None):
         "unrollRotations": True,
         "bakeToLayer": False,
         "resetMarkers": False,
+        "experimental": False,
     }, **opts)
 
     initial_time = cmdx.current_time()
@@ -542,7 +543,11 @@ def record(solver, opts=None):
         """
 
         for frame in range(solver_start_frame, end_frame):
-            cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
+            if opts["experimental"]:
+                # This does run faster, but at what cost?
+                cmds.setAttr("time1.outTime", int(frame))
+            else:
+                cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
 
             if frame == solver_start_frame:
                 # Initialise solver
@@ -658,9 +663,6 @@ def record(solver, opts=None):
             tm = cmdx.Tm(offset)
             t = tm.translation()
             r = tm.rotation()
-
-            if "_pv" in dst.name():
-                print("offsetting: %s" % tm)
 
             with cmdx.DagModifier() as mod:
                 mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)

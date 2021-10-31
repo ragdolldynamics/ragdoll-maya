@@ -1348,7 +1348,7 @@ def create_active_rigid(selection=None, **opts):
 
         if select:
             all_rigids = [r.parent() for r in new_rigids]
-            cmds.select(list(map(str, all_rigids)), replace=True)
+            cmds.select(list(map(str, all_rigids)))
 
         log.info("Created %d rigid bodies", len(new_rigids))
         return kSuccess
@@ -1760,7 +1760,7 @@ def convert_constraint(selection=None, **opts):
         return log.warning("Nothing converted")
 
     elif select:
-        cmds.select(list(map(str, converted), replace=True))
+        cmds.select(list(map(str, converted)), replace=True)
 
     log.info("Converted %d constraints" % len(converted))
     return kSuccess

@@ -255,7 +255,554 @@ def create_lollipop(markers):
             mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
-def record(solver, opts):
+def snap(solver, opts=None, _force=False):
+    """Snap animation to simulation"""
+
+    opts = opts or {}
+    opts = dict({
+        "include": None,
+        "exclude": None,
+        "includeKinematic": True,
+        "ignoreJoints": False,
+        "maintainOffset": True,
+    }, **opts)
+
+    include = {t: True for t in opts["include"]} if opts["include"] else {}
+    markers = []
+
+    def find_inputs(solver):
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if not entity:
+                continue
+
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            elif entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            elif entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+    with internal.Timer("findMarkers") as t1:
+        find_inputs(solver)
+
+    dst_to_marker = {}
+    dst_to_offset = {}
+
+    def find_destinations():
+        for marker in markers:
+            for index, el in enumerate(marker["dst"]):
+                dst = el.input()
+
+                if not dst:
+                    continue
+
+                if not dst.isA(cmdx.kDagNode):
+                    continue
+
+                if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                    continue
+
+                # Filter out unwanted nodes
+                if include and dst not in include:
+                    continue
+
+                offset = marker["offsetMatrix"][index].as_matrix()
+
+                dst_to_marker[dst] = marker
+                dst_to_offset[dst] = offset.inverse()
+
+    with internal.Timer("findDestinations") as t2:
+        find_destinations()
+
+    delete = []
+
+    t4 = internal.Timer("generateHierarchy")
+    t5 = internal.Timer("applyMatrix")
+    t6 = internal.Timer("parentConstraint")
+
+    marker_to_dagnode = generate_kinematic_hierarchy(solver)
+
+    marker_to_matrix = {}
+    for marker in marker_to_dagnode.keys():
+        matrix = marker["outputMatrix"].as_matrix()
+        marker_to_matrix[marker] = matrix
+
+    with t5:
+        with cmdx.DagModifier() as mod:
+            for marker, dagnode in marker_to_dagnode.items():
+                parent = marker["parentMarker"].input(type="rdMarker")
+                matrix = marker_to_matrix[marker]
+                parent_matrix = marker_to_matrix.get(parent, cmdx.Mat4())
+                local_matrix = matrix * parent_matrix.inverse()
+
+                tm = cmdx.Tm(local_matrix)
+                t = tm.translation()
+                r = tm.rotation()
+
+                mod.set_attr(dagnode["translate"], t)
+                mod.set_attr(dagnode["rotate"], r)
+
+    with t6:
+        for dst, marker in dst_to_marker.items():
+            src = marker_to_dagnode.get(marker, None)
+
+            if not src:
+                continue
+
+            skip_rotate = []
+            skip_translate = []
+
+            for chan, plug in zip("xyz", dst["rotate"]):
+                if plug.locked:
+                    skip_rotate.append(chan)
+
+            for chan, plug in zip("xyz", dst["translate"]):
+                if plug.locked:
+                    skip_translate.append(chan)
+
+            skip_rotate = skip_rotate or "none"
+            skip_translate = skip_translate or "none"
+
+            con = cmds.parentConstraint(
+                src.shortest_path(),
+                dst.shortest_path(),
+
+                # We'll manually set the offset
+                maintainOffset=False,
+
+                # Account for locked channels
+                skipTranslate=skip_translate,
+                skipRotate=skip_rotate,
+            )
+
+            con = cmdx.encode(con[0])
+
+            offset = dst_to_offset[dst]
+            tm = cmdx.Tm(offset)
+            t = tm.translation()
+            r = tm.rotation()
+
+            with cmdx.DagModifier() as mod:
+                mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)
+                mod.set_attr(con["target"][0]["targetOffsetRotate"], r)
+
+            # Pull to refresh
+            dst["worldMatrix"][0].as_matrix()
+            dst["translate"].read()
+            dst["rotate"].read()
+
+            delete.append(str(con))
+        delete.extend(str(node) for node in marker_to_dagnode.values())
+    t6.finish()
+
+    with internal.Timer("delete") as t7:
+        if _force:
+            cmds.dgdirty(allPlugs=True)
+            cmds.refresh(force=True)
+
+        cmds.delete(delete)
+
+    for timer in (t1, t2, t4, t5, t6, t7):
+        log.debug("%s = %.4fms" % (timer.name, timer.ms))
+
+
+def record(solver, opts=None):
+    """Snap animation to simulation
+
+    Arguments:
+        start_time (MTime, optional): Record from this time
+        end_time (MTime, optional): Record to this time
+        include (list, optional): Record these transforms only
+        exclude (list, optional): Do not record these transforms
+        kinematic (bool, optional): Record kinematic frames too
+        maintain_offset (bool, optional): Maintain whatever offset is
+            between the source and destination transforms, default
+            value is True
+
+    """
+
+    opts = opts or {}
+    opts = dict({
+        "startTime": None,
+        "endTime": None,
+        "include": None,
+        "exclude": None,
+        "includeKinematic": False,
+        "ignoreJoints": False,
+        "maintainOffset": True,
+        # "simplifyCurves": True,
+        "unrollRotations": True,
+        "bakeToLayer": False,
+        "resetMarkers": False,
+    }, **opts)
+
+    initial_time = cmdx.current_time()
+    start_time = opts["startTime"]
+    end_time = opts["endTime"]
+    solver_start_time = solver["_startTime"].as_time()
+
+    if start_time is None:
+        start_time = solver_start_time
+
+    if end_time is None:
+        end_time = cmdx.max_time()
+
+    include = {t: True for t in opts["include"]} if opts["include"] else {}
+    exclude = {t: True for t in opts["exclude"]} if opts["exclude"] else {}
+
+    assert end_time > start_time, "%d must be greater than %d" % (
+        end_time, start_time
+    )
+
+    solver_start_frame = int(solver_start_time.value)
+    start_frame = int(start_time.value)
+    end_frame = int(end_time.value)
+    total = end_frame - start_frame
+
+    end_frame += 1  # One extra for safety
+
+    # Temporary nodes created during this process
+    temp = []
+
+    def find_inputs(solver):
+        markers = []
+
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if not entity:
+                continue
+
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            elif entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            elif entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+        return markers
+
+    def find_destinations():
+        dst_to_marker = {}
+        dst_to_offset = {}
+
+        for marker in markers:
+            for index, el in enumerate(marker["dst"]):
+                dst = el.input()
+
+                if not dst:
+                    continue
+
+                if not dst.isA(cmdx.kDagNode):
+                    continue
+
+                if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                    continue
+
+                # Filter out unwanted nodes
+                if include and dst not in include:
+                    continue
+
+                if exclude and dst in exclude:
+                    continue
+
+                offset = marker["offsetMatrix"][index].as_matrix()
+
+                dst_to_marker[dst] = marker
+                dst_to_offset[dst] = offset.inverse()
+
+        return dst_to_marker, dst_to_offset
+
+    def simulate():
+        r"""Evaluate every frame between `solver_start_frame` and `end_frame`
+
+        We'll need to start from the solver start frame, even if the user
+        provides a later frame. Since the simulation won't be accurate
+        otherwise.
+
+
+               |
+               |
+               |      |
+               |  |   |
+               | _|___|
+                /     \
+               |       |
+               |       |
+                \_____/
+
+        ______________________
+
+        """
+
+        for frame in range(solver_start_frame, end_frame):
+            cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
+
+            if frame == solver_start_frame:
+                # Initialise solver
+                solver["startState"].read()
+            else:
+                # Step simulation
+                solver["currentState"].read()
+
+            # Record results
+            for marker in markers:
+                if opts["includeKinematic"]:
+                    is_kinematic = False
+                else:
+                    is_kinematic = marker["_kinematic"].read()
+
+                cache[marker][frame] = {
+                    "recordTranslation": marker["retr"].read(),
+                    "recordRotation": marker["rero"].read(),
+                    "outputMatrix": marker["ouma"].as_matrix(),
+                    "kinematic": is_kinematic,
+                    "transition": False,
+                }
+
+                if frame < start_frame:
+                    cache[marker][frame]["recordTranslation"] = False
+                    cache[marker][frame]["recordRotation"] = False
+
+                if is_kinematic:
+                    cache[marker][frame]["recordTranslation"] = False
+                    cache[marker][frame]["recordRotation"] = False
+
+            percentage = 100 * float(frame - start_frame) / total
+            yield ("simulating", percentage)
+
+    def generate(marker_to_dagnode):
+        total = len(marker_to_dagnode)
+
+        # Generate animation
+        for index, (marker, dagnode) in enumerate(marker_to_dagnode.items()):
+            parent = marker["parentMarker"].input(type="rdMarker")
+
+            tx, ty, tz = {}, {}, {}
+            rx, ry, rz = {}, {}, {}
+
+            for frame, values in cache[marker].items():
+                matrix = values["outputMatrix"]
+                parent_matrix = cmdx.Mat4()
+
+                if parent in cache:
+                    parent_matrix = cache[parent][frame]["outputMatrix"]
+
+                tm = cmdx.Tm(matrix * parent_matrix.inverse())
+                t = tm.translation()
+                r = tm.rotation()
+
+                tx[frame] = t.x
+                ty[frame] = t.y
+                tz[frame] = t.z
+
+                rx[frame] = r.x
+                ry[frame] = r.y
+                rz[frame] = r.z
+
+            with cmdx.DagModifier() as mod:
+                mod.set_attr(dagnode["tx"], tx)
+                mod.set_attr(dagnode["ty"], ty)
+                mod.set_attr(dagnode["tz"], tz)
+                mod.set_attr(dagnode["rx"], rx)
+                mod.set_attr(dagnode["ry"], ry)
+                mod.set_attr(dagnode["rz"], rz)
+
+            percentage = 100 * (index + 1) / total
+            yield ("generating", percentage)
+
+    def constrain(marker_to_dagnode):
+        total = len(marker_to_dagnode)
+
+        for index, (dst, marker) in enumerate(dst_to_marker.items()):
+            src = marker_to_dagnode.get(marker, None)
+
+            if not src:
+                continue
+
+            skip_rotate = []
+            skip_translate = []
+
+            for chan, plug in zip("xyz", dst["rotate"]):
+                if plug.locked:
+                    skip_rotate.append(chan)
+
+            for chan, plug in zip("xyz", dst["translate"]):
+                if plug.locked:
+                    skip_translate.append(chan)
+
+            skip_rotate = skip_rotate or "none"
+            skip_translate = skip_translate or "none"
+
+            con = cmds.parentConstraint(
+                src.shortest_path(),
+                dst.shortest_path(),
+
+                # We'll manually set the offset
+                maintainOffset=False,
+
+                # Account for locked channels
+                skipTranslate=skip_translate,
+                skipRotate=skip_rotate,
+            )
+
+            con = cmdx.encode(con[0])
+
+            offset = dst_to_offset[dst]
+            tm = cmdx.Tm(offset)
+            t = tm.translation()
+            r = tm.rotation()
+
+            if "_pv" in dst.name():
+                print("offsetting: %s" % tm)
+
+            with cmdx.DagModifier() as mod:
+                mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)
+                mod.set_attr(con["target"][0]["targetOffsetRotate"], r)
+
+            # Pull to refresh
+            dst["worldMatrix"][0].as_matrix()
+            dst["translate"].read()
+            dst["rotate"].read()
+
+            temp.append(str(con))
+
+            percentage = 100 * (index + 1) / total
+            yield ("constraining", percentage)
+
+        temp.extend(str(node) for node in marker_to_dagnode.values())
+
+    def bake(transforms):
+        kwargs = {
+            "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
+            "simulation": False,
+            "time": (start_time.value, end_time.value),
+            "sampleBy": 1,
+            "oversamplingRate": 1,
+            "disableImplicitControl": True,
+            "preserveOutsideKeys": False,
+            "sparseAnimCurveBake": False,
+            "removeBakedAttributeFromLayer": False,
+            "removeBakedAnimFromLayer": False,
+            "bakeOnOverrideLayer": opts["bakeToLayer"],
+            "minimizeRotation": False,
+        }
+
+        cmds.bakeResults(*transforms, **kwargs)
+
+        if opts["unrollRotations"]:
+            rotate_channels = ["%s.rx" % t for t in transforms]
+            rotate_channels += ["%s.ry" % t for t in transforms]
+            rotate_channels += ["%s.rz" % t for t in transforms]
+            cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
+            cmds.rotationInterpolation(rotate_channels, c="none")
+
+    def reset():
+        groups = set()
+
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 0)
+
+            for marker in markers:
+                curve = marker["inputType"].input(type="animCurveTU")
+
+                if curve is not None:
+                    mod.delete(curve)
+                    mod.do_it()
+
+                group = marker["startState"].output(type="rdGroup")
+
+                # It may have a different kind of connection, like a proxy
+                if not marker["inputType"].connected:
+                    mod.set_attr(marker["inputType"], (
+                        constants.InputInherit if group else
+                        constants.InputKinematic
+                    ))
+
+                groups.add(group) if group else None
+
+            #
+            # Turn all groups to kinematic
+            #
+            for group in groups:
+                curve = group["inputType"].input(type="animCurveTU")
+
+                if curve is not None:
+                    mod.delete(curve)
+                    mod.do_it()
+
+                # It may have a different kind of connection, like a proxy
+                if not group["inputType"].connected:
+                    mod.set_attr(group["inputType"], constants.InputKinematic)
+
+    @internal.with_undo_chunk
+    def unroll():
+        rotate_channels = []
+
+        def is_keyed(plug):
+            return plug.input(type="animCurveTA") is not None
+
+        for dst in dst_to_marker:
+            # Can only unroll transform with all axes keyed
+            if not all(is_keyed(dst[ch]) for ch in ("rx", "ry", "rz")):
+                continue
+
+            rotate_channels += ["%s.rx" % dst]
+            rotate_channels += ["%s.ry" % dst]
+            rotate_channels += ["%s.rz" % dst]
+
+        cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
+        cmds.rotationInterpolation(rotate_channels, c="none")
+
+    markers = find_inputs(solver)
+    dst_to_marker, dst_to_offset = find_destinations()
+    cache = {marker: {} for marker in markers}
+
+    with internal.Timer("simulate") as t1:
+        for message, progress in simulate():
+            yield (message, progress * 0.50)
+
+    marker_to_dagnode = generate_kinematic_hierarchy(solver)
+
+    with internal.Timer("generate") as t2:
+        for message, progress in generate(marker_to_dagnode):
+            yield (message, 50 + progress * 0.10)
+
+    with internal.Timer("constrain") as t3:
+        for message, progress in constrain(marker_to_dagnode):
+            yield (message, 60 + progress * 0.10)
+
+    with internal.Timer("bake") as t4:
+        yield ("baking", 70)
+        transforms = [dst.shortest_path() for dst in dst_to_marker]
+        bake(transforms)
+        yield ("baking", 95)
+
+    with internal.Timer("cleanup") as t5:
+        yield ("cleaning", 96)
+        cmds.delete(temp)
+        yield ("cleaning", 100)
+
+    if opts["resetMarkers"]:
+        reset()
+
+    if opts["unrollRotations"]:
+        unroll()
+
+    # Restore time
+    cmdx.current_time(initial_time)
+
+    for timer in (t1, t2, t3, t4, t5):
+        log.debug("%s = %.4fms" % (timer.name, timer.ms))
+
+
+def record2(solver, opts=None):
     """Transfer simulation into animation
 
     Arguments:
@@ -709,16 +1256,139 @@ def record(solver, opts):
     log.debug("Wrote in %.2f ms" % write_timer.ms)
 
 
+def snap2(solver, opts=None):
+    """Snap animation to simulation"""
+
+    opts = opts or {}
+    opts = dict({
+        "include": None,
+        "exclude": None,
+        "includeKinematic": True,
+        "ignoreJoints": True,
+        "maintainOffset": True,
+    }, **opts)
+
+    include = {t: True for t in opts["include"]} if opts["include"] else {}
+    markers = []
+
+    def find_inputs(solver):
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if not entity:
+                continue
+
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            elif entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            elif entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+    find_inputs(solver)
+
+    # In case we cannot sort by evaluation order, this will be
+    # our fallback. A decent but not 100% reliable outcome.
+    markers = internal.sort_by_parent(markers)
+
+    dsts = []
+    dst_to_marker = {}
+    for marker in markers:
+        for index, el in enumerate(marker["dst"]):
+            dst = el.input()
+
+            if not dst:
+                continue
+
+            if not dst.isA(cmdx.kDagNode):
+                continue
+
+            if opts["ignoreJoints"] and dst.isA(cmdx.kJoint):
+                continue
+
+            # Filter out unwanted nodes
+            if include and dst not in include:
+                continue
+
+            dsts.append(dst)
+            dst_to_marker[dst] = marker
+
+    try:
+        dsts = internal.sort_by_evaluation_order(dsts)
+    except RuntimeError:
+        log.warning(
+            "Could to reliably detect evaluation order, "
+            "try re-running this command with either "
+            "Parallel or Serial evaluation modes for "
+            "better results."
+        )
+
+    for dst in dsts:
+        marker = dst_to_marker[dst]
+        output_matrix = marker["outputMatrix"].as_matrix()
+
+        record_t = marker["recordTranslation"].read()
+        record_r = marker["recordRotation"].read()
+
+        # Nothing to do.
+        if not any([record_t, record_r]):
+            continue
+
+        local_matrix = output_matrix
+
+        if opts["maintainOffset"]:
+            offset = marker["offsetMatrix"][index].as_matrix()
+            local_matrix = offset.inverse() * output_matrix
+
+        t, r = get_local_pos_rot(local_matrix, dst)
+
+        with cmdx.DagModifier() as mod:
+            if record_t:
+                mod.try_set_attr(dst["tx"], t.x)
+                mod.try_set_attr(dst["ty"], t.y)
+                mod.try_set_attr(dst["tz"], t.z)
+
+            if record_r:
+                mod.try_set_attr(dst["rx"], r.x)
+                mod.try_set_attr(dst["ry"], r.y)
+                mod.try_set_attr(dst["rz"], r.z)
+
+
 def cache(solvers):
+    """Persistently store the simulated result of the `solvers`
+
+    Use this to scrub the timeline both backwards and forwards without
+    resimulating anything.
+
+    """
+
+    # Remember where we came from
     initial_time = cmdx.current_time()
 
     for solver in solvers:
-        cmdx.current_time(solver["_startTime"].asTime())
+        start_time = solver["_startTime"].asTime()
 
         # Clear existing cache
         with cmdx.DagModifier() as mod:
             mod.set_attr(solver["cache"], 0)
 
+        # Special case of caching whilst standing on the start time.
+        if initial_time == start_time:
+            next_time = start_time + cmdx.om.MTime(1, cmdx.TimeUiUnit())
+            # Ensure start frame is visited from a frame other than
+            # the start frame, as that's when non-keyed plugs are dirtied
+            #
+            # |   |   |   |   |   |
+            # |===|---------------|
+            # <---
+            # --->--->--->--->--->
+            #
+            cmdx.current_time(next_time)
+            solver["currentState"].read()
+
+        cmdx.current_time(start_time)
         solver["startState"].read()
 
         # Prime for updated cache
@@ -748,6 +1418,7 @@ def cache(solvers):
         percentage = 100 * float(frame - start_frame) / total
         yield percentage
 
+    # Restore where we came from
     cmdx.current_time(initial_time)
 
 
@@ -773,7 +1444,7 @@ def unlink(solver):
         mod.try_set_attr(solver.parent()["visibility"], True)
 
 
-def retarget(marker, transform, append=False):
+def retarget(marker, transform, opts=None):
     """Retarget `marker` to `transform`
 
     When recording, write simulation from `marker` onto `transform`,
@@ -781,13 +1452,17 @@ def retarget(marker, transform, append=False):
 
     """
 
+    opts = dict({
+        "append": False,
+    }, **(opts or {}))
+
     with cmdx.DGModifier() as mod:
-        if not append:
+        if not opts["append"]:
             for el in marker["dst"]:
                 mod.disconnect(el, destination=False)
 
             for el in marker["offsetMatrix"]:
-                mod.disconnect(el, destination=False)
+                mod.set_attr(el, cmdx.Mat4())
 
             mod.do_it()
 
@@ -806,73 +1481,11 @@ def retarget(marker, transform, append=False):
             mod.try_set_attr(marker["recordRotation"], True)
 
         # Store offset for recording later
+        # offset = transform["worldMatrix"][0].as_matrix()
+        # offset *= src["worldInverseMatrix"][0].as_matrix()
         offset = src["worldMatrix"][0].as_matrix()
         offset *= transform["worldInverseMatrix"][0].as_matrix()
         mod.set_attr(marker["offsetMatrix"][index], offset)
-
-
-def snap(transforms):
-    markers = {}
-
-    for t in transforms:
-        marker = None
-
-        for plug in t["message"].outputs(type="rdMarker", plugs=True):
-            if plug.name(long=False).startswith("dst["):
-                marker = plug.node()
-                break
-
-        # Not every selected transform may actually have a marker assigned
-        if marker is None:
-            continue
-
-        markers[t] = marker
-
-    assert markers, "No markers found"
-
-    poses = {}
-    for transform, marker in markers.items():
-        pose = marker["outputMatrix"].as_matrix()
-        poses[marker] = (transform, pose)
-
-    # Figure out kinematic hierarchy for marker order
-    orders = {marker: 0 for marker in markers.values()}
-
-    for marker, order in orders.items():
-        parent = marker["parentMarker"].input(type="rdMarker")
-
-        while parent:
-            order += 1
-            parent = parent["parentMarker"].input()
-
-        orders[marker] = order
-
-    # Loop over each marker, in kinematic order
-    ordered_markers = sorted(orders.keys(), key=lambda m: orders[m])
-
-    with cmdx.DagModifier() as mod:
-        for marker in ordered_markers:
-            transform, pose = poses[marker]
-            pos, rot = get_local_pos_rot(pose, transform)
-
-            if marker["recordTranslation"]:
-                for index, axis in enumerate("xyz"):
-                    plug = transform["t%s" % axis]
-
-                    if plug.editable:
-                        mod.set_attr(plug, pos[index])
-
-            if marker["recordRotation"]:
-                for index, axis in enumerate("xyz"):
-                    plug = transform["r%s" % axis]
-
-                    if plug.editable:
-                        mod.set_attr(plug, pos[index])
-
-            # Ensure child hierarchy is up-to-date
-            mod.do_it()
-
-    return poses
 
 
 def _find_solver(start):
@@ -1147,3 +1760,60 @@ def edit_constraint_frames(marker, opts=None):
         commands._take_ownership(mod, marker, child_frame)
 
     return parent_frame, child_frame
+
+
+def generate_kinematic_hierarchy(solver):
+    def find_inputs(solver):
+        markers = []
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if not entity:
+                continue
+
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            elif entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            elif entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+        return markers
+
+    markers = find_inputs(solver)
+    marker_to_dagnode = {}
+    roots = []
+
+    def find_roots():
+        for marker in markers:
+            if marker["parentMarker"].input(type="rdMarker"):
+                continue
+
+            roots.append(marker)
+
+    find_roots()
+
+    # Recursively create childhood
+    def recurse(mod, root, parent=None):
+        parent = marker_to_dagnode.get(parent)
+        name = root.name() + "_jnt"
+
+        joint = mod.create_node("joint", name=name, parent=parent)
+        marker_to_dagnode[root] = joint
+
+        children = root["ragdollId"].outputs(type="rdMarker", plugs=True)
+
+        for plug in children:
+            if plug.name() != "parentMarker":
+                continue
+
+            child = plug.node()
+            recurse(mod, child, root)
+
+    with cmdx.DagModifier() as mod:
+        for root in roots:
+            recurse(mod, root)
+
+    return marker_to_dagnode

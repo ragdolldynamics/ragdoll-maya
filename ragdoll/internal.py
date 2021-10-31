@@ -1,13 +1,17 @@
 """Internal functions, don't look"""
 
 import re
+import os
 import json
 import time
 import random
 import logging
 import functools
+import tempfile
 
 from maya import cmds
+from maya.debug import em_debug_utilities
+
 from .vendor import cmdx
 from . import constants
 
@@ -383,26 +387,38 @@ def with_timing(func):
 
 
 class Timer(object):
-    def __init__(self, name="", verbose=True):
+    def __init__(self, name="", verbose=False):
         self._name = name
         self._t0 = 0
         self._t1 = 0
         self._verbose = verbose
+        self._duration = 0.0
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def s(self):
-        return self._t1 - self._t0
+        return self._duration
 
     @property
     def ms(self):
         return self.s * 1000
 
-    def __enter__(self):
+    def start(self):
         self._t0 = time.time()
+
+    def finish(self):
+        self._t1 = time.time()
+        self._duration += self._t1 - self._t0
+
+    def __enter__(self):
+        self.start()
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self._t1 = time.time()
+        self.finish()
 
         if self._verbose:
             log.debug("%s in %.2fms" % (self._name, self.ms))
@@ -558,55 +574,144 @@ def is_dynamic(transform, scene):
     return not scene["clean"].read()
 
 
-def write_graph(scheduling=False, open=True):
-    import os
-    import tempfile
-    import webbrowser
-    from maya.debug import (
-        GraphVizManager,
-        em_debug_utilities
+def write_svg(infname, outfname):
+    from maya.debug import GraphVizManager
+    gv = GraphVizManager.GraphVizManager(False)
+    gv.convert_dot_to(
+        input_file_name=infname,
+        output_file_name=outfname,
+        transitive_reduction=True
     )
 
+    print("Graph written to %s" % outfname)
+
+
+def write_graph():
     tmp = tempfile.gettempdir()
     dot = os.path.join(tmp, "graph.dot")
     svg = os.path.join(tmp, "graph.svg")
 
-    def write_svg():
-        gv = GraphVizManager.GraphVizManager(False)
-        gv.convert_dot_to(
-            input_file_name=dot,
-            output_file_name=svg,
-            transitive_reduction=True
-        )
+    em_debug_utilities.dbg_graph_to_dot(
+        include_plugs=True,
+        use_selection=False,
+        selection_depth=1,
+        out_dot=dot
+    )
 
-        if open:
-            webbrowser.open(svg)
-
-        print("Graph written to %s" % svg)
-
-    def write_graph():
-        em_debug_utilities.dbg_graph_to_dot(
-            include_plugs=True,
-            use_selection=False,
-            selection_depth=1,
-            out_dot=dot
-        )
-
-        write_svg()
-
-    def write_scheduling_graph():
-        em_debug_utilities.dbg_scheduling_graph_to_dot(
-            include_clusters=True,
-            use_selection=False,
-            selection_depth=1,
-            out_dot=dot
-        )
-
-        write_svg()
-
-    if scheduling:
-        write_scheduling_graph()
-    else:
-        write_graph()
+    write_svg(dot, svg)
 
     return svg
+
+
+def write_scheduling_graph():
+    tmp = tempfile.gettempdir()
+    dot = os.path.join(tmp, "graph.dot")
+    svg = os.path.join(tmp, "graph.svg")
+
+    em_debug_utilities.dbg_scheduling_graph_to_dot(
+        include_clusters=True,
+        use_selection=False,
+        selection_depth=1,
+        out_dot=dot
+    )
+
+    write_svg(dot, svg)
+
+    return svg
+
+
+def sort_by_evaluation_order(nodes, minimal=False):
+    """Return `nodes` sorted by the order in which they are evaluated
+
+    Reach into Maya's evaluation graph for hints about the execution
+    order, accessible via cmds.dbpeek. This won't work for DG evaluation
+    however..
+
+    Arguments:
+        node (list): Of any kind of DG or DagNode
+        minimal (bool, optional): Only look at `nodes`, default False
+
+    """
+
+    peek_args = {
+        "op": "graph",
+        "evaluationGraph": True,
+        "argument": ["scheduling", "verbose"]
+    }
+
+    data = cmds.dbpeek(
+        [node.shortest_path() for node in nodes]
+        if minimal else [],
+        **peek_args
+    )
+
+    if data.startswith("\nERROR"):
+        # This only works in Parallel/Serial modes
+        raise RuntimeError("No valid graph")
+
+    scheduling = json.loads(data)["scheduling"]
+
+    keys = {node.shortest_path().encode("ascii"): node for node in nodes}
+    nodes = {key: 0 for key in keys.keys()}
+
+    def walk(key, value, depth=0):
+        # Include evaluators, e.g. CycleLayer[2,_:R_leftFoot_ctl]
+        # and e.g. pruneRoots|CustomEvaluatorLayer[2,_:L_hand_ctl]
+        key = key.rsplit(",", 1)[-1].rstrip("]")
+
+        if key in nodes:
+            nodes[key] += depth
+
+        for key, value in value.items():
+            walk(key, value, depth + 1)
+
+    with Timer() as t:
+        # The execution order is a depth-first dictionary
+        # of the order in which nodes execute.
+        walk("", scheduling["executionOrder"])
+
+    log.debug("sort_by_evaluation_order: %.2fms" % t.ms)
+
+    # Turn back into objects
+    items = sorted(nodes.items(), key=lambda item: item[1])
+    return list(keys[item[0]] for item in items)
+
+
+def sort_by_hierarchy(dagnodes):
+    pass
+
+
+def sort_by_parent(markers):
+    """Figure out kinematic hierarchy of `markers`
+
+    Look to the parent marker for a hint about its evaluation order.
+
+    What we want is for Maya to finish computing anything out marker
+    depends on, like the Maya parent hierarchy. This will *normally*
+    align with the marker hierarchy, but not always.
+    It's possible for the user to create a marker hierarchy in the
+    opposite order of Maya's hierarchy, or for an e.g. pole-vector
+    to be parented to an IK control in which case the order will
+    not be correct.
+
+    """
+
+    assert isinstance(markers, (list, tuple)), (
+        "%s was not a list of markers" % str(markers)
+    )
+
+    orders = {marker: 0 for marker in markers}
+
+    with Timer() as t:
+        for marker, order in orders.items():
+            parent = marker["parentMarker"].input(type="rdMarker")
+
+            while parent:
+                order += 1
+                parent = parent["parentMarker"].input()
+
+            orders[marker] = order
+
+    log.debug("sort_by_parent: %.2fms" % t.ms)
+
+    return list(sorted(orders.keys(), key=lambda key: orders[key]))

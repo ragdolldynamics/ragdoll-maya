@@ -754,6 +754,14 @@
         "help": "Should I let rotations go beyond 180 degrees? Generally yes, for things like motion blur and anything happening between two keys."
     },
 
+    "markersAppendTarget": {
+        "name": "markersAppendTarget",
+        "label": "Append",
+        "type": "Boolean",
+        "default": false,
+        "help": "Should I <b>replace</b> the current target, or add another?"
+    },
+
 
     "#": "----------------",
     "#": " Global options ",

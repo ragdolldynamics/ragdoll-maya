@@ -599,10 +599,6 @@ def install_menu():
     item("fluid")
 
     with submenu("Markers", icon="control.png"):
-        divider("Beta Version")
-
-        item("markersBeta", markers_beta, markers_beta_options)
-
         divider("Create")
 
         item("assignMarker", assign_single, assign_marker_options,
@@ -621,18 +617,20 @@ def install_menu():
 
         divider("Record")
 
-        item("recordMarkers", record_markers, reassign_marker_options,
-             label="Record")
+        item("recordMarkers", record_markers, record_markers_options)
+
+        item("snapMarkers", snap_markers, snap_markers_options)
+
+        divider("Manipulate")
 
         with submenu("Cache", icon="bake.png"):
             item("cacheSolver", cache_all, label="Cache")
             item("uncacheSolver", uncache, label="Uncache")
 
-        divider("Manipulate")
-
         with submenu("Edit", icon="kinematic.png"):
             item("reassignMarker", reassign_marker, label="Reassign")
-            item("retargetMarker", retarget_marker, label="Retarget")
+            item("retargetMarker", retarget_marker, retarget_marker_options,
+                 label="Retarget")
             item("reparentMarker", reparent_marker, label="Reparent")
             item("untargetMarker", untarget_marker, label="Untarget")
 
@@ -1458,22 +1456,6 @@ def create_active_chain(selection=None, **opts):
     return kSuccess
 
 
-@i__.with_undo_chunk
-def create_link(*args):
-    links = []
-
-    scene = _find_current_scene()
-    for node in cmdx.selection():
-        if not node.isA(cmdx.kJoint):
-            return log.error("%s must be a joint" % node)
-
-        link = commands.create_link(node, scene)
-        links += [link]
-
-    cmds.select(map(str, links))
-    return kSuccess
-
-
 def _axis_to_vector(axis="x"):
     return {
         "x": cmdx.Vector(1, 0, 0),
@@ -1778,7 +1760,7 @@ def convert_constraint(selection=None, **opts):
         return log.warning("Nothing converted")
 
     elif select:
-        cmds.select(map(str, converted), replace=True)
+        cmds.select(list(map(str, converted), replace=True))
 
     log.info("Converted %d constraints" % len(converted))
     return kSuccess
@@ -2254,7 +2236,7 @@ def assign_single(selection=None, **opts):
     if opts["markersCreateObjectSet"]:
         _add_to_objset(markers)
 
-    cmds.select(t.shortest_path() for t in selection)
+    cmds.select(list(t.shortest_path() for t in selection))
     cmds.refresh()
 
     return kSuccess
@@ -2293,7 +2275,7 @@ def assign_group(selection=None, **opts):
     if opts["markersCreateObjectSet"]:
         _add_to_objset(assigned)
 
-    cmds.select(t.shortest_path() for t in selection)
+    cmds.select(list(t.shortest_path() for t in selection))
     cmds.refresh()
 
     return kSuccess
@@ -2418,6 +2400,32 @@ def progressbar(status="Progress.. ", max_value=100):
 
 @i__.with_undo_chunk
 @with_exception_handling
+def snap_markers(selection=None, **opts):
+    opts = dict({
+        "useSelection": _opt("markersUseSelection", opts),
+        "ignoreJoints": _opt("markersIgnoreJoints", opts),
+        "maintainOffset": _opt("markersRecordMaintainOffset", opts),
+    }, **(opts or {}))
+
+    solvers = _filtered_selection("rdSolver", selection)
+    include = []
+
+    if len(solvers) < 1:
+        solvers = cmdx.ls(type="rdSolver")
+
+        # if opts["useSelection"]:
+        include += _filtered_selection(cmdx.kDagNode, selection)
+
+    for solver in solvers:
+        markers_.snap(solver, {
+            "include": include,
+            "ignoreJoints": opts["ignoreJoints"],
+            "maintainOffset": opts["maintainOffset"],
+        })
+
+
+@i__.with_undo_chunk
+@with_exception_handling
 def record_markers(selection=None, **opts):
     opts = dict({
         "markersRecordKinematic": _opt("markersRecordKinematic", opts),
@@ -2462,7 +2470,8 @@ def record_markers(selection=None, **opts):
     end_frame = int(end_time.value)
 
     total_frames = 0
-    with i__.Timer("record") as duration, progressbar() as p:
+    timer = i__.Timer("record")
+    with timer as duration, progressbar() as p, refresh_suspended():
         for solver in solvers:
             it = tools.record_markers(solver, {
                 "startTime": start_time,
@@ -2506,7 +2515,12 @@ def record_markers(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@with_exception_handling
 def retarget_marker(selection=None, **opts):
+    opts = dict({
+        "append": _opt("markersAppendTarget", opts),
+    }, **(opts or {}))
+
     try:
         a, b = selection or cmdx.sl()
     except ValueError:
@@ -2532,7 +2546,7 @@ def retarget_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    markers_.retarget(a, b)
+    markers_.retarget(a, b, opts)
 
     return kSuccess
 
@@ -3007,7 +3021,7 @@ def edit_constraint_frames(selection=None):
         frames.extend(commands.edit_constraint_frames(con))
 
     log.info("Created %d frames" % len(frames))
-    cmds.select(map(str, frames))
+    cmds.select(list(map(str, frames)))
     return kSuccess
 
 
@@ -3033,7 +3047,7 @@ def edit_marker_constraint_frames(selection=None):
         frames.extend(markers_.edit_constraint_frames(marker))
 
     log.info("Created %d pivots" % len(frames))
-    cmds.select(map(str, frames))
+    cmds.select(list(map(str, frames)))
     return kSuccess
 
 
@@ -3159,7 +3173,7 @@ def edit_shape(selection=None):
         editors.append(commands.edit_shape(rigid))
 
     log.info("Created %d shape editors" % len(editors))
-    cmds.select(map(str, editors))
+    cmds.select(list(map(str, editors)))
     return kSuccess
 
 
@@ -4039,8 +4053,16 @@ def assign_group_options(*args):
     return _Window("assignGroup", assign_group)
 
 
-def reassign_marker_options(*args):
+def record_markers_options(*args):
     return _Window("recordMarkers", record_markers)
+
+
+def snap_markers_options(*args):
+    return _Window("snapMarkers", snap_markers)
+
+
+def retarget_marker_options(*args):
+    return _Window("retargetMarker", retarget_marker)
 
 
 def set_initial_state_options(*args):

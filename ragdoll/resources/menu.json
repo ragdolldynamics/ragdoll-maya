@@ -663,17 +663,29 @@
     },
 
     "recordMarkers": {
-        "label": "Record Markers",
+        "label": "Record Simulation",
         "icon": "record.png",
         "summary": "Transfer simulation into animation",
         "description": "Record the simulation as animation onto the marker targets.",
         "options": [
             "markersUseSelection",
             "markersIgnoreJoints",
-            "markersRecordReset",
             "markersRecordMaintainOffset",
             "markersRecordKinematic",
-            "markersRecordUnroll"
+            "markersRecordUnroll",
+            "markersRecordReset"
+        ]
+    },
+
+    "snapMarkers": {
+        "label": "Snap to Simulation",
+        "icon": "snap.png",
+        "summary": "Snap animation to simulation",
+        "description": "Move animation to where the simulation is right now.",
+        "options": [
+            "markersUseSelection",
+            "markersIgnoreJoints",
+            "markersRecordMaintainOffset"
         ]
     },
 
@@ -681,8 +693,9 @@
         "label": "Retarget Marker",
         "icon": "retarget.png",
         "summary": "Change where to output this marker",
-        "description": "",
+        "description": "When recording, this is where keyframes go. Typically this is from e.g. a joint to an animation control, but can also be from the same control that was assigned a marker.",
         "options": [
+            "markersAppendTarget"
         ]
     },
 

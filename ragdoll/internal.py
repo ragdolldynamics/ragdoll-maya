@@ -10,7 +10,6 @@ import functools
 import tempfile
 
 from maya import cmds
-from maya.debug import em_debug_utilities
 
 from .vendor import cmdx
 from . import constants
@@ -587,6 +586,7 @@ def write_svg(infname, outfname):
 
 
 def write_graph():
+    from maya.debug import em_debug_utilities
     tmp = tempfile.gettempdir()
     dot = os.path.join(tmp, "graph.dot")
     svg = os.path.join(tmp, "graph.svg")
@@ -604,6 +604,7 @@ def write_graph():
 
 
 def write_scheduling_graph():
+    from maya.debug import em_debug_utilities
     tmp = tempfile.gettempdir()
     dot = os.path.join(tmp, "graph.dot")
     svg = os.path.join(tmp, "graph.svg")

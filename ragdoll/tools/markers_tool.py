@@ -435,7 +435,7 @@ def record(solver, opts=None):
         "ignoreJoints": False,
         "maintainOffset": True,
         # "simplifyCurves": True,
-        "unrollRotations": True,
+        "rotationFilter": 1,
         "bakeToLayer": False,
         "resetMarkers": False,
         "experimental": False,
@@ -817,6 +817,129 @@ def record(solver, opts=None):
 
     for timer in (t1, t2, t3, t4, t5):
         log.debug("%s = %.4fms" % (timer.name, timer.ms))
+
+
+def extract(solver, opts=None):
+    for result in extract_it(solver, opts):
+        pass
+
+    # marker_to_dagnode dictionary
+    return result
+
+
+def extract_it(solver, opts=None):
+    opts = opts or {}
+    opts = dict({
+        "experimental": False,
+    }, **opts)
+
+    initial_time = cmdx.current_time()
+    solver_start_time = solver["_startTime"].as_time()
+    start_time = solver_start_time
+    end_time = cmdx.max_time()
+
+    assert end_time > start_time, "%d must be greater than %d" % (
+        end_time, start_time
+    )
+
+    start_frame = int(solver_start_time.value)
+    end_frame = int(end_time.value)
+    total = end_frame - start_frame
+
+    end_frame += 1  # One extra for safety
+
+    def find_inputs(solver):
+        markers = []
+
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if not entity:
+                continue
+
+            if entity.isA("rdMarker"):
+                markers.append(entity)
+
+            elif entity.isA("rdGroup"):
+                markers.extend(el.input() for el in entity["inputStart"])
+
+            elif entity.isA("rdSolver"):
+                # A solver will have markers and groups of its own
+                # that we need to iterate over again.
+                find_inputs(entity)
+
+        return markers
+
+    def simulate():
+        for frame in range(start_frame, end_frame):
+            cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
+
+            if frame == start_frame:
+                solver["startState"].read()
+            else:
+                solver["currentState"].read()
+
+            # Record results
+            for marker in markers:
+                cache[marker][frame] = {
+                    "outputMatrix": marker["ouma"].as_matrix(),
+                }
+
+            percentage = 100 * float(frame - start_frame) / total
+            yield ("simulating", percentage)
+
+    def bake(marker_to_dagnode):
+        total = len(marker_to_dagnode)
+
+        # Generate animation
+        for index, (marker, dagnode) in enumerate(marker_to_dagnode.items()):
+            parent = marker["parentMarker"].input(type="rdMarker")
+
+            tx, ty, tz = {}, {}, {}
+            rx, ry, rz = {}, {}, {}
+
+            for frame, values in cache[marker].items():
+                matrix = values["outputMatrix"]
+                parent_matrix = cmdx.Mat4()
+
+                if parent in cache:
+                    parent_matrix = cache[parent][frame]["outputMatrix"]
+
+                tm = cmdx.Tm(matrix * parent_matrix.inverse())
+                t = tm.translation()
+                r = tm.rotation()
+
+                tx[frame] = t.x
+                ty[frame] = t.y
+                tz[frame] = t.z
+
+                rx[frame] = r.x
+                ry[frame] = r.y
+                rz[frame] = r.z
+
+            with cmdx.DagModifier() as mod:
+                mod.set_attr(dagnode["tx"], tx)
+                mod.set_attr(dagnode["ty"], ty)
+                mod.set_attr(dagnode["tz"], tz)
+                mod.set_attr(dagnode["rx"], rx)
+                mod.set_attr(dagnode["ry"], ry)
+                mod.set_attr(dagnode["rz"], rz)
+
+            percentage = 100 * (index + 1) / total
+            yield ("baking", percentage)
+
+    markers = find_inputs(solver)
+    cache = {marker: {} for marker in markers}
+
+    for message, progress in simulate():
+        yield (message, progress * 0.50)
+
+    marker_to_dagnode = generate_kinematic_hierarchy(solver, tips=True)
+
+    for message, progress in bake(marker_to_dagnode):
+        yield (message, 50 + progress * 0.50)
+
+    yield marker_to_dagnode
+
+    cmdx.current_time(initial_time)
 
 
 def cache(solvers):
@@ -1225,7 +1348,7 @@ def edit_constraint_frames(marker, opts=None):
     return parent_frame, child_frame
 
 
-def generate_kinematic_hierarchy(solver):
+def generate_kinematic_hierarchy(solver, tips=False):
     def find_inputs(solver):
         markers = []
         for entity in [el.input() for el in solver["inputStart"]]:
@@ -1275,8 +1398,25 @@ def generate_kinematic_hierarchy(solver):
             child = plug.node()
             recurse(mod, child, root)
 
+    def extend_tips(mod):
+        for marker, dagnode in marker_to_dagnode.items():
+            child = dagnode.child()
+
+            if child:
+                continue
+
+            offset = marker["shapeOffset"].as_vector()
+            name = marker.name() + "_tip"
+            joint = mod.create_node("joint", name=name, parent=dagnode)
+            mod.set_attr(joint["t"], offset * 2)
+
     with cmdx.DagModifier() as mod:
         for root in roots:
             recurse(mod, root)
+
+    if tips:
+        with cmdx.DagModifier() as mod:
+            mod.do_it()
+            extend_tips(mod)
 
     return marker_to_dagnode

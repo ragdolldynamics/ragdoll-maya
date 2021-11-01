@@ -689,6 +689,15 @@
         ]
     },
 
+    "extractMarkers": {
+        "label": "Extract Simulation",
+        "icon": "exoskeleton2.png",
+        "summary": "Extract simulation from markers",
+        "description": "Generate a joint hierarchy for each marker along with the baked simulation.",
+        "options": [
+        ]
+    },
+
     "retargetMarker": {
         "label": "Retarget Marker",
         "icon": "retarget.png",

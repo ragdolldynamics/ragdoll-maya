@@ -641,6 +641,7 @@ def install_menu():
         divider("Utilities")
 
         with submenu("Utilities", icon="magnet.png"):
+            item("extractMarkers", extract_markers)
             item("createLollipop", create_lollipop)
 
             item("editConstraintFrames",
@@ -2506,6 +2507,72 @@ def record_markers(selection=None, **opts):
 
     cmds.inViewMessage(
         amg="Recorded markers in <hl>%.2fs</hl> (%d fps)" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def extract_markers(selection=None, **opts):
+    opts = dict({
+    }, **(opts or {}))
+
+    solvers = _filtered_selection("rdSolver", selection)
+
+    if len(solvers) < 1:
+        solvers = cmdx.ls(type="rdSolver")
+
+    if len(solvers) < 1:
+        raise i__.UserWarning(
+            "Nothing to extract",
+            "Ensure there is at least 1 marker in the "
+            "scene along with a solver."
+        )
+
+    # Remove linked solvers, we'll record those from the main solver
+    for solver in solvers[:]:
+        if solver["startState"].output(type="rdSolver") is not None:
+            solvers.remove(solver)
+
+    start_time = cmdx.min_time()
+    end_time = cmdx.max_time()
+    start_frame = int(start_time.value)
+    end_frame = int(end_time.value)
+
+    total_frames = 0
+    timer = i__.Timer("record")
+    with timer as duration, progressbar() as p, refresh_suspended():
+        for solver in solvers:
+            it = markers_.extract_it(solver)
+
+            previous_progress = 0
+            for status in it:
+                if len(status) != 2:
+                    continue
+
+                step, progress = status
+                progress = int(progress)
+
+                if progress % 5 == 0 and progress != previous_progress:
+                    log.info("%.1f%% (%s)" % (progress, step.title()))
+                    previous_progress = progress
+
+                # Allow the user to cancel with the ESC key
+                if cmds.progressBar(p, query=True, isCancelled=True):
+                    break
+
+                cmds.progressBar(p, edit=True, step=1)
+
+            total_frames += end_frame - start_frame
+
+    stats = (duration.s, total_frames / max(0.00001, duration.s))
+    log.info("Extracted markers in %.2fs (%d fps)" % stats)
+
+    cmds.inViewMessage(
+        amg="Extracted markers in <hl>%.2fs</hl> (%d fps)" % stats,
         pos="topCenter",
         fade=True
     )

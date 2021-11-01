@@ -754,6 +754,15 @@
         "help": "Should I let rotations go beyond 180 degrees? Generally yes, for things like motion blur and anything happening between two keys."
     },
 
+    "markersRecordFilter": {
+        "name": "markersRecordFilter",
+        "label": "Rotation Filter",
+        "type": "Enum",
+        "items": ["Off", "Euler", "Quaternion"],
+        "default": 1,
+        "help": "Ragdoll can't go recognise rotations past 180 degrees, this filter enables Maya's curves to do that anyway."
+    },
+
     "markersAppendTarget": {
         "name": "markersAppendTarget",
         "label": "Append",

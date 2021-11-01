@@ -2428,21 +2428,20 @@ def snap_markers(selection=None, **opts):
 @with_exception_handling
 def record_markers(selection=None, **opts):
     opts = dict({
-        "markersRecordKinematic": _opt("markersRecordKinematic", opts),
-        "markersUseSelection": _opt("markersUseSelection", opts),
-        "markersIgnoreJoints": _opt("markersIgnoreJoints", opts),
-        "markersRecordReset": _opt("markersRecordReset", opts),
-        "markersRecordSimplify": _opt("markersRecordSimplify", opts),
-        "markersRecordUnroll": _opt("markersRecordUnroll", opts),
-        "markersRecordMaintainOffset": _opt(
-            "markersRecordMaintainOffset", opts),
+        "recordKinematic": _opt("markersRecordKinematic", opts),
+        "useSelection": _opt("markersUseSelection", opts),
+        "ignoreJoints": _opt("markersIgnoreJoints", opts),
+        "recordReset": _opt("markersRecordReset", opts),
+        "recordSimplify": _opt("markersRecordSimplify", opts),
+        "recordFilter": _opt("markersRecordFilter", opts),
+        "recordMaintainOffset": _opt("markersRecordMaintainOffset", opts),
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)
     include = []
     exclude = []
 
-    if opts["markersUseSelection"]:
+    if opts["useSelection"]:
         include += _filtered_selection(cmdx.kDagNode, selection)
 
     if len(solvers) < 1:
@@ -2478,12 +2477,12 @@ def record_markers(selection=None, **opts):
                 "endTime": end_time,
                 "include": include,
                 "exclude": exclude,
-                "includeKinematic": opts["markersRecordKinematic"],
-                "maintainOffset": opts["markersRecordMaintainOffset"],
-                "simplifyCurves": opts["markersRecordSimplify"],
-                "unrollRotations": opts["markersRecordUnroll"],
-                "ignoreJoints": opts["markersIgnoreJoints"],
-                "resetMarkers": opts["markersRecordReset"],
+                "includeKinematic": opts["recordKinematic"],
+                "maintainOffset": opts["recordMaintainOffset"],
+                "simplifyCurves": opts["recordSimplify"],
+                "rotationFilter": opts["recordFilter"],
+                "ignoreJoints": opts["ignoreJoints"],
+                "resetMarkers": opts["recordReset"],
             })
 
             previous_progress = 0

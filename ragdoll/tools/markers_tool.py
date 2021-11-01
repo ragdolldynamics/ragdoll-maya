@@ -698,13 +698,6 @@ def record(solver, opts=None):
 
         cmds.bakeResults(*transforms, **kwargs)
 
-        if opts["unrollRotations"]:
-            rotate_channels = ["%s.rx" % t for t in transforms]
-            rotate_channels += ["%s.ry" % t for t in transforms]
-            rotate_channels += ["%s.rz" % t for t in transforms]
-            cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
-            cmds.rotationInterpolation(rotate_channels, c="none")
-
     def reset():
         groups = set()
 
@@ -744,7 +737,8 @@ def record(solver, opts=None):
                     mod.set_attr(group["inputType"], constants.InputKinematic)
 
     @internal.with_undo_chunk
-    def unroll():
+    def quat_filter():
+        """Unroll rotations by converting to quaternions and back to euler"""
         rotate_channels = []
 
         def is_keyed(plug):
@@ -761,6 +755,24 @@ def record(solver, opts=None):
 
         cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
         cmds.rotationInterpolation(rotate_channels, c="none")
+
+    @internal.with_undo_chunk
+    def euler_filter():
+        """Unroll rotations by applying a euler filter"""
+        rotate_curves = []
+
+        def is_keyed(plug):
+            return plug.input(type="animCurveTA") is not None
+
+        for dst in dst_to_marker:
+            # Can only unroll transform with all axes keyed
+            if not all(is_keyed(dst[ch]) for ch in ("rx", "ry", "rz")):
+                continue
+
+            for channel in ("rx", "ry", "rz"):
+                rotate_curves += [dst[channel].input().name()]
+
+        cmds.filterCurve(rotate_curves, filter="euler")
 
     markers = find_inputs(solver)
     dst_to_marker, dst_to_offset = find_destinations()
@@ -794,8 +806,11 @@ def record(solver, opts=None):
     if opts["resetMarkers"]:
         reset()
 
-    if opts["unrollRotations"]:
-        unroll()
+    if opts["rotationFilter"] == 1:
+        euler_filter()
+
+    elif opts["rotationFilter"] == 2:
+        quat_filter()
 
     # Restore time
     cmdx.current_time(initial_time)

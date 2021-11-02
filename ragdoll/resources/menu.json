@@ -662,6 +662,15 @@
         ]
     },
 
+    "poseConstraint": {
+        "label": "Pose Constraint",
+        "icon": "softpin.png",
+        "summary": "Softly constrain the position and orientation of one marker in to another",
+        "description": "Create a new pose constraint between the two selected markers.",
+        "options": [
+        ]
+    },
+
     "recordMarkers": {
         "label": "Record Simulation",
         "icon": "record.png",

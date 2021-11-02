@@ -1155,6 +1155,47 @@ def create_fixed_constraint(parent, child, opts=None):
 
 
 @internal.with_undo_chunk
+def create_pose_constraint(parent, child, opts=None):
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
+    )
+
+    solver = _find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
+    )
+
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = commands._rdpinconstraint(mod, shape_name, parent=transform)
+
+        mod.set_attr(transform["translate"], child_transform.translation())
+        mod.set_attr(transform["rotate"], child_transform.rotation())
+
+        # Temporary means of viewport selection
+        mod.set_attr(transform["displayHandle"], True)
+
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
+        mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
+
+        commands._take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+@internal.with_undo_chunk
 def create_pin_constraint(child, opts=None):
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
 

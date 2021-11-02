@@ -614,6 +614,8 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, label="Pin")
+        item("poseConstraint",
+             create_pose_constraint, label="Pose")
 
         divider("Record")
 
@@ -2376,6 +2378,43 @@ def create_pin_constraint(selection=None, **opts):
         cons += [con.path()]
 
     cmds.select(cons)
+
+    return True
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def create_pose_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    try:
+        a, b = selection
+    except ValueError:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select two markers to constrain."
+        )
+
+    if a.isA(cmdx.kDagNode):
+        a = a["message"].output(type="rdMarker")
+
+    if b.isA(cmdx.kDagNode):
+        b = b["message"].output(type="rdMarker")
+
+    if not (a and a.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[0]
+        )
+
+    if not (b and b.isA("rdMarker")):
+        raise i__.UserWarning(
+            "Not a marker",
+            "%s wasn't a marker" % selection[1]
+        )
+
+    con = markers_.create_pose_constraint(a, b)
+    cmds.select(str(con.parent()))
 
     return True
 

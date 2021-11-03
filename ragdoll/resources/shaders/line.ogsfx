@@ -2,7 +2,7 @@ uniform mat4 gWvpXf : WorldViewProjection;
 
 attribute AppData {
     vec3 inPosition   : POSITION;
-    vec3 inColor      : COLOR0;
+    vec4 inColor      : COLOR0;
 };
 
 attribute FromVert {
@@ -23,7 +23,7 @@ GLSLShader ShaderVertex
 {
     void main() 
     {
-        Diffuse = vec4(inColor, 1);
+        Diffuse = inColor;
 
         vec4 Po = vec4(inPosition, 1);
         WorldPosition = gWvpXf * Po;

@@ -362,6 +362,30 @@ def euler_filter(transforms):
 
 
 class _Recorder(object):
+    """A.k.a. brute-force recorder
+
+    Recording has 5 steps.
+
+    1. Run and store the simulation as worldspace matrices
+    2. Create and apply simulation onto a new FK hierarchy as keyframes
+    3. Constrain destination controls to FK hierarchy
+    4. Call cmds.bakeResults
+    5. Delete constraints and FK hierarchy
+
+    2, 3 and 5 are very wasteful and should not be necessary, and
+    bakeResults does not communicate progress. But, the parent constraint
+    does a few things for us we know we need, like rotate and scale pivots,
+    whilst likely handling other things we don't know we need. The edgecases
+    around translating from a matrix to local translate/rotate values are
+    large and severe, so we use the parent constraint as a kind of buffer
+    against that. Likewise, bakeResults does things we clearly have not yet
+    mastered. Our approach of calling cmds.setKeyframe was 2x slower than
+    bakeResults, which tells us its doing something differently.
+
+    So todo, replace steps 2-5 with our own implementation.
+
+    """
+
     def __init__(self, solver, opts=None):
         opts = dict({
             "startTime": None,
@@ -421,8 +445,6 @@ class _Recorder(object):
         self._opts = opts
 
     def record(self):
-        initial_time = cmdx.current_time()
-
         for progress in self._generate_cache():
             yield ("simulating", progress * 0.49)
 
@@ -447,13 +469,22 @@ class _Recorder(object):
         elif self._opts["rotationFilter"] == 2:
             quat_filter(self._dst_to_marker.keys())
 
-        temp = []
-        temp.extend(str(node) for node in marker_to_dagnode.values())
-        temp.extend(str(con) for con in constraints)
-        cmds.delete(temp)
+        def cleanup():
+            # Ahead of deleting the constraints, ensure we're on the
+            # solver start frame. Why? Because those are the values we want
+            # stored on the BaseAnimation layer, if the animation was in
+            # fact written to a layer.
+            initial_time = cmdx.current_time()
+            cmdx.current_time(self._solver_start_frame)
 
-        # Restore time
-        cmdx.current_time(initial_time)
+            temp = []
+            temp.extend(str(node) for node in marker_to_dagnode.values())
+            temp.extend(str(con) for con in constraints)
+            cmds.delete(temp)
+
+            cmdx.current_time(initial_time)
+
+        cleanup()
 
         yield ("done", 100)
 
@@ -523,6 +554,8 @@ class _Recorder(object):
 
         """
 
+        initial_time = cmdx.current_time()
+
         total = self._solver_start_frame - self._end_frame
         for frame in range(self._solver_start_frame, self._end_frame):
             if self._opts["experimental"]:
@@ -563,6 +596,8 @@ class _Recorder(object):
 
             percentage = 100 * float(frame - self._start_frame) / total
             yield percentage
+
+        cmdx.current_time(initial_time)
 
     @internal.with_timing
     def _cache_to_curves(self, marker_to_dagnode):
@@ -698,11 +733,16 @@ class _Recorder(object):
             kwargs["destinationLayer"] = layer[0]
             kwargs["bakeOnOverrideLayer"] = False
 
+        initial_time = cmdx.current_time()
+
         # The cheeky little bakeResults changes our selection
         selection = cmds.ls(selection=True)
         destinations = [str(d) for d in self._dst_to_marker]
         cmds.bakeResults(*destinations, **kwargs)
         cmds.select(selection)
+
+        # Restore time
+        cmdx.current_time(initial_time)
 
     @internal.with_timing
     def _reset(self):

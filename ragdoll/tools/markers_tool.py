@@ -445,7 +445,7 @@ class _Recorder(object):
         self._opts = opts
 
     def record(self):
-        for progress in self._generate_cache():
+        for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
@@ -489,7 +489,7 @@ class _Recorder(object):
         yield ("done", 100)
 
     def extract(self):
-        for progress in self._generate_cache():
+        for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.50)
 
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
@@ -532,7 +532,7 @@ class _Recorder(object):
         cmds.delete(temp)
 
     @internal.with_timing
-    def _generate_cache(self):
+    def _sim_to_cache(self):
         r"""Evaluate every frame between `solver_start_frame` and `end_frame`
 
         We'll need to start from the solver start frame, even if the user
@@ -603,7 +603,7 @@ class _Recorder(object):
     def _cache_to_curves(self, marker_to_dagnode):
         """Convert worldspace matrices into translate/rotate channels"""
 
-        assert self._cache, "Must call `_generate_cache()` first"
+        assert self._cache, "Must call `_sim_to_cache()` first"
 
         total = len(marker_to_dagnode)
 
@@ -805,12 +805,27 @@ def record(solver, opts=None):
 
 
 def snap(solver, opts=None, _force=False):
-    """Snap animation to simulation"""
+    """Snap animation to simulation
+
+    Like record() except it sets values on the current frame.
+    If the translate/rotate channels are unlocked and keyed,
+    and you have auto-key enabled, it'll set key too.
+
+    """
+
     recorder = _Recorder(solver, opts)
     recorder.snap(_force)
 
 
 def extract(solver, opts=None):
+    """Generate an animated joint hierarchy from `solver`
+
+    This will generate a new joint hierarchy and apply the full
+    simulation as keyframes onto it, for a complete replica of
+    the simulation in a Ragdoll-independent way.
+
+    """
+
     recorder = _Recorder(solver, opts)
 
     for message, progress in recorder.extract():

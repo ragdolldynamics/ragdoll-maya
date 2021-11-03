@@ -678,6 +678,7 @@
         "description": "Record the simulation as animation onto the marker targets.",
         "options": [
             "markersRecordFilter",
+            "markersRecordToLayer",
             "markersUseSelection",
             "markersIgnoreJoints",
             "markersRecordMaintainOffset",

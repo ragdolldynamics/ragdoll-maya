@@ -614,8 +614,10 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, label="Pin")
-        item("poseConstraint",
-             create_pose_constraint, label="Pose")
+
+        if c.RAGDOLL_DEVELOPER:
+            item("poseConstraint",
+                 create_pose_constraint, label="Pose")
 
         divider("Record")
 
@@ -2469,6 +2471,7 @@ def snap_markers(selection=None, **opts):
 def record_markers(selection=None, **opts):
     opts = dict({
         "recordKinematic": _opt("markersRecordKinematic", opts),
+        "recordToLayer": _opt("markersRecordToLayer", opts),
         "useSelection": _opt("markersUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
@@ -2501,7 +2504,7 @@ def record_markers(selection=None, **opts):
 
     start_time, end_time = cmdx.selected_time()
 
-    if end_time.value - start_time.value < 2:
+    if (end_time.value - start_time.value) < 2:
         start_time = cmdx.min_time()
         end_time = cmdx.max_time()
 
@@ -2510,9 +2513,9 @@ def record_markers(selection=None, **opts):
 
     total_frames = 0
     timer = i__.Timer("record")
-    with timer as duration, progressbar() as p, refresh_suspended():
-        for solver in solvers:
-            it = tools.record_markers(solver, {
+    for solver in solvers:
+        with timer as duration, progressbar() as p, refresh_suspended():
+            recorder = markers_._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
                 "include": include,
@@ -2521,12 +2524,13 @@ def record_markers(selection=None, **opts):
                 "maintainOffset": opts["recordMaintainOffset"],
                 "simplifyCurves": opts["recordSimplify"],
                 "rotationFilter": opts["recordFilter"],
+                "toLayer": opts["recordToLayer"],
                 "ignoreJoints": opts["ignoreJoints"],
                 "resetMarkers": opts["recordReset"],
             })
 
             previous_progress = 0
-            for step, progress in it:
+            for step, progress in recorder.record():
                 progress = int(progress)
 
                 if progress % 5 == 0 and progress != previous_progress:
@@ -2576,22 +2580,21 @@ def extract_markers(selection=None, **opts):
         if solver["startState"].output(type="rdSolver") is not None:
             solvers.remove(solver)
 
-    start_time = cmdx.min_time()
     end_time = cmdx.max_time()
-    start_frame = int(start_time.value)
-    end_frame = int(end_time.value)
 
     total_frames = 0
     timer = i__.Timer("record")
-    with timer as duration, progressbar() as p, refresh_suspended():
-        for solver in solvers:
-            it = markers_.extract_it(solver)
+
+    for solver in solvers:
+        with timer as duration, progressbar() as p, refresh_suspended():
+            start_time = solver["_startTime"].as_time()
+            recorder = markers_._Recorder(solver, {
+                "startTime": start_time,
+                "endTime": end_time,
+            })
 
             previous_progress = 0
-            for status in it:
-                if len(status) != 2:
-                    continue
-
+            for status in recorder.extract():
                 step, progress = status
                 progress = int(progress)
 
@@ -2605,7 +2608,7 @@ def extract_markers(selection=None, **opts):
 
                 cmds.progressBar(p, edit=True, step=1)
 
-            total_frames += end_frame - start_frame
+            total_frames += int((end_time - start_time).value)
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Extracted markers in %.2fs (%d fps)" % stats)

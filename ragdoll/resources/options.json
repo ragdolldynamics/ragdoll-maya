@@ -760,7 +760,15 @@
         "type": "Enum",
         "items": ["Off", "Euler", "Quaternion"],
         "default": 1,
-        "help": "Ragdoll can't go recognise rotations past 180 degrees, this filter enables Maya's curves to do that anyway."
+        "help": "Ragdoll can't recognise rotations past 180 degrees, this filter enables Maya's curves to do that anyway."
+    },
+
+    "markersRecordToLayer": {
+        "name": "markersRecordToLayer",
+        "label": "Record to Layer",
+        "type": "Boolean",
+        "default": true,
+        "help": "Put all simulation onto a new Animation Layer"
     },
 
     "markersAppendTarget": {

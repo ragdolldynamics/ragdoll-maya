@@ -1109,7 +1109,7 @@ def create_pin_constraint(child, opts=None):
         # Temporary means of viewport selection
         mod.set_attr(transform["displayHandle"], True)
 
-        mod.connect(child["ragdollId"], con["marker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
         mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 
         commands._take_ownership(mod, con, transform)

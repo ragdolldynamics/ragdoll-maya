@@ -1106,6 +1106,10 @@ def create_pin_constraint(child, opts=None):
         mod.set_attr(transform["translate"], source_tm.translation())
         mod.set_attr(transform["rotate"], source_tm.rotation())
 
+        # More suitable default values
+        mod.set_attr(con["linearStiffness"], 0.01)
+        mod.set_attr(con["angularStiffness"], 0.01)
+
         # Temporary means of viewport selection
         mod.set_attr(transform["displayHandle"], True)
 

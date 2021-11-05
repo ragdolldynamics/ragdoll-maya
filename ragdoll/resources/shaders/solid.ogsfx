@@ -35,7 +35,7 @@ attribute ToScreen  {
 
 GLSLShader ShaderVertex
 {
-    void main() 
+    void main()
     {
         vec3 worldNormal = normalize(mat3(gWorldXf) * inNormal);
         Normal = vec4(worldNormal, 1.0);
@@ -69,7 +69,7 @@ GLSLShader ShaderColor
 
         // Specular
         vec3 viewDir = lightDir;
-        vec3 reflectDir = reflect(-lightDir, norm);  
+        vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
         vec3 specular = spec * lightColor * specularAmount * ObjectShading;
         vec3 objectColor = ObjectColor.rgb * colorAmount;

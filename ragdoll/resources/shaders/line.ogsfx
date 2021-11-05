@@ -21,7 +21,7 @@ attribute ToScreen  {
 
 GLSLShader ShaderVertex
 {
-    void main() 
+    void main()
     {
         Diffuse = inColor;
 

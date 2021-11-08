@@ -164,6 +164,8 @@ def px(value):
         scale = window.screen().logicalDotsPerInch() / 96.0
         log.debug("DPI scale was %.1fx" % scale)
 
+        any_widget.deleteLater()
+
         # Store for later
         self._dpi = scale
 

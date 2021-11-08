@@ -987,5 +987,12 @@
         "type": "String",
         "default": "",
         "help": "Absolute path to where shaders are located."
+    },
+    "fontPath": {
+        "name": "fontPath",
+        "label": "Font Path",
+        "type": "String",
+        "default": "",
+        "help": "Absolute path to where fonts are located."
     }
 }

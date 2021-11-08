@@ -468,6 +468,7 @@ def install_plugin():
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
     options.write("shaderPath", _resource("shaders"))
+    options.write("fontPath", _resource("fonts"))
 
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)

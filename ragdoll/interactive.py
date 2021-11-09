@@ -2161,33 +2161,7 @@ def _find_current_solver(create_ground=True):
         return solver[0], ground
 
     else:
-        time1 = cmdx.encode("time1")
-        up = cmdx.up_axis()
-
-        with cmdx.DagModifier() as mod:
-            solver_parent = mod.create_node("transform", name="rSolver")
-            solver = mod.create_node("rdSolver",
-                                     name="rSolverShape",
-                                     parent=solver_parent)
-
-            mod.set_attr(solver["version"], i__.version())
-            mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
-            mod.connect(time1["outTime"], solver["currentTime"])
-            mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
-
-            commands._take_ownership(mod, solver, solver_parent)
-
-            # Default values
-            mod.set_attr(solver["positionIterations"], 4)
-            mod.set_attr(solver["gravity"], up * -982)
-            mod.set_attr(solver["spaceMultiplier"], 0.1)
-
-            if up.y:
-                mod.set_keyable(solver["gravityY"])
-                mod.set_nice_name(solver["gravityY"], "Gravity")
-            else:
-                mod.set_keyable(solver["gravityZ"])
-                mod.set_nice_name(solver["gravityZ"], "Gravity")
+        solver = markers_.create_solver()
 
     if create_ground:
         ground = _make_ground(solver)

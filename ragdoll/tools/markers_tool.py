@@ -962,6 +962,45 @@ def retarget(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
+def create_solver():
+    time1 = cmdx.encode("time1")
+    up = cmdx.up_axis()
+
+    with cmdx.DagModifier() as mod:
+        solver_parent = mod.create_node("transform", name="rSolver")
+        solver = mod.create_node("rdSolver",
+                                 name="rSolverShape",
+                                 parent=solver_parent)
+        hud = mod.create_node("rdHud",
+                              name="rHudShape",
+                              parent=solver_parent)
+
+        mod.set_attr(hud["hiddenInOutliner"], True)
+        mod.set_attr(solver["version"], internal.version())
+        mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
+        mod.connect(solver["ragdollId"], hud["solver"])
+        mod.connect(time1["outTime"], solver["currentTime"])
+        mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
+
+        mod.lock_attr(solver_parent["scaleX"])
+        mod.lock_attr(solver_parent["scaleY"])
+        mod.lock_attr(solver_parent["scaleZ"])
+
+        commands._take_ownership(mod, solver, solver_parent)
+
+        # Default values
+        mod.set_attr(solver["positionIterations"], 4)
+        mod.set_attr(solver["gravity"], up * -982)
+        mod.set_attr(solver["spaceMultiplier"], 0.1)
+
+        if up.y:
+            mod.set_keyable(solver["gravityY"])
+            mod.set_nice_name(solver["gravityY"], "Gravity")
+        else:
+            mod.set_keyable(solver["gravityZ"])
+            mod.set_nice_name(solver["gravityZ"], "Gravity")
+
+
 def _find_solver(start):
     while start and not start.isA("rdSolver"):
         start = start["startState"].output(("rdGroup", "rdSolver"))

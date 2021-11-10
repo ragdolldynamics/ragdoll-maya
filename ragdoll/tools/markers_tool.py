@@ -975,13 +975,19 @@ def create_solver():
                               name="rHudShape",
                               parent=solver_parent)
 
+        # Hide in outliner and channel box
         mod.set_attr(hud["hiddenInOutliner"], True)
+        mod.set_attr(hud["isHistoricallyInteresting"], 0)
+
         mod.set_attr(solver["version"], internal.version())
         mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
         mod.connect(solver["ragdollId"], hud["solver"])
         mod.connect(time1["outTime"], solver["currentTime"])
         mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
 
+        mod.set_keyable(solver_parent["scaleX"], False)
+        mod.set_keyable(solver_parent["scaleY"], False)
+        mod.set_keyable(solver_parent["scaleZ"], False)
         mod.lock_attr(solver_parent["scaleX"])
         mod.lock_attr(solver_parent["scaleY"])
         mod.lock_attr(solver_parent["scaleZ"])
@@ -999,6 +1005,8 @@ def create_solver():
         else:
             mod.set_keyable(solver["gravityZ"])
             mod.set_nice_name(solver["gravityZ"], "Gravity")
+
+    return solver
 
 
 def _find_solver(start):
@@ -1038,6 +1046,13 @@ def create_distance_constraint(parent, child, opts=None):
 
         mod.set_attr(con["minimum"], distance)
         mod.set_attr(con["maximum"], distance)
+
+        # Inherit the rotate pivot
+        mod.set_attr(con["parentOffset"],
+                     parent_transform["rotatePivot"].as_vector())
+        mod.set_attr(con["childOffset"],
+                     child_transform["rotatePivot"].as_vector())
+
         mod.connect(parent["ragdollId"], con["parentMarker"])
         mod.connect(child["ragdollId"], con["childMarker"])
 

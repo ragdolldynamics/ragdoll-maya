@@ -123,7 +123,7 @@ def has_upgrade(node, from_version):
         return from_version < 20210411
 
     if node.type() == "rdSolver":
-        return from_version < 20211024
+        return from_version < 20211112
 
     if node.type() == "rdMarker":
         return from_version < 20211007
@@ -233,6 +233,10 @@ def solver(node, from_version, to_version):
 
     if from_version < 20211024:
         _solver_20210928_20211024(node)
+        upgraded = True
+
+    if from_version < 20211112:
+        _solver_20211024_20211112(node)
         upgraded = True
 
     return upgraded
@@ -383,6 +387,22 @@ def _solver_20210928_20211007(solver):
 
 def _solver_20210928_20211024(solver):
     log.info("Upgrading %s to 2021.10.24" % solver)
+
+
+def _solver_20211024_20211112(solver):
+    """rdHud node was added"""
+    log.info("Upgrading %s to 2021.10.24" % solver)
+
+    with cmdx.DagModifier() as mod:
+        parent = solver.parent()
+        hud = mod.create_node("rdHud",
+                              name="rHudShape",
+                              parent=parent)
+
+        mod.set_attr(hud["hiddenInOutliner"], True)
+        mod.set_attr(hud["isHistoricallyInteresting"], False)
+
+        mod.connect(solver["ragdollId"], hud["solver"])
 
 
 def _marker_20210928_20211007(marker):

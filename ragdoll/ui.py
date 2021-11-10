@@ -36,7 +36,8 @@ log = logging.getLogger("ragdoll")
 
 self = sys.modules[__name__]
 self._maya_window = None
-self._dpi = None
+
+px = MQtUtil.dpiScale
 
 # Expose some utility to interactive.py
 isValid = shiboken2.isValid
@@ -142,34 +143,6 @@ def MayaWindow():
             return None
 
     return self._maya_window
-
-
-def px(value):
-    """Return a scaled value, for HDPI resolutions"""
-
-    if not self._dpi:
-        # We can get system DPI from a window handle,
-        # but I haven't figured out how to get a window handle
-        # without first making a widget. So here we make one
-        # as invisibly as we can, as an invisible tooltip.
-        # This doesn't create a taskbar icon nor changes focus
-        # and in fact *should* happen without any noticeable effect
-        # to the user. Welcome to provide a less naughty alternative
-        any_widget = QtWidgets.QWidget()
-        any_widget.setWindowFlags(QtCore.Qt.ToolTip)
-        any_widget.show()
-        window = any_widget.windowHandle()
-
-        # E.g. 1.5 or 2.0
-        scale = window.screen().logicalDotsPerInch() / 96.0
-        log.debug("DPI scale was %.1fx" % scale)
-
-        any_widget.deleteLater()
-
-        # Store for later
-        self._dpi = scale
-
-    return value * self._dpi
 
 
 class Player(QtWidgets.QWidget):

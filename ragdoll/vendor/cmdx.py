@@ -6498,9 +6498,16 @@ def currentTime(time=None):
 def selectedTime():
     """Return currently selected time range in MTime format"""
     from maya import mel
-    control = mel.eval('$tmpVar=$gPlayBackSlider')
-    time_range = cmds.timeControl(control, q=True, rangeArray=True)
-    time_range = list(om.MTime(t, TimeUiUnit()) for t in time_range)
+
+    try:
+        control = mel.eval('$tmpVar=$gPlayBackSlider')
+        time_range = cmds.timeControl(control, q=True, rangeArray=True)
+        time_range = list(om.MTime(t, TimeUiUnit()) for t in time_range)
+
+    except RuntimeError:
+        # Only relevant in interactive mode
+        return (minTime(), minTime() + 1)
+
     return time_range
 
 
@@ -6518,6 +6525,9 @@ def animationEndTime(time=None):
     if time is None:
         return oma.MAnimControl.animationEndTime()
     else:
+        if not isinstance(time, om.MTime):
+            time = om.MTime(time, TimeUiUnit())
+
         return oma.MAnimControl.setAnimationEndTime(time)
 
 
@@ -6525,6 +6535,9 @@ def minTime(time=None):
     if time is None:
         return oma.MAnimControl.minTime()
     else:
+        if not isinstance(time, om.MTime):
+            time = om.MTime(time, TimeUiUnit())
+
         return oma.MAnimControl.setMinTime(time)
 
 

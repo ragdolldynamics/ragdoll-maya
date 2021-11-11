@@ -228,6 +228,13 @@ def install():
     options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 
+    if (os.getenv("MAYA_ENABLE_VP2_PLUGIN_LOCATOR_LEGACY_DRAW")):
+        cmds.warning(
+            "The environment variable "
+            "MAYA_ENABLE_VP2_PLUGIN_LOCATOR_LEGACY_DRAW "
+            "won't allow Ragdoll to draw anything."
+        )
+
     if _is_interactive():
         telemetry.install()
         install_callbacks()
@@ -286,7 +293,7 @@ def uninstall():
     options.uninstall()
     cmdx.uninstall()
 
-    if not _is_standalone():
+    if _is_interactive():
         uninstall_callbacks()
 
     # Call last, for Maya to properly unload and clean up
@@ -2190,7 +2197,10 @@ def assign_single(selection=None, **opts):
     selection = cmdx.ls(selection, type=("transform", "joint"))
 
     if not selection:
-        return log.warning("Select one or more controls to assign markers to.")
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one or more controls to assign markers to."
+        )
 
     opts = dict({
         "markersCreateGround": _opt("markersCreateGround", opts),
@@ -2229,7 +2239,10 @@ def assign_group(selection=None, **opts):
     selection = cmdx.ls(selection, type=("transform", "joint"))
 
     if not selection:
-        return log.warning("Select one or more controls to assign markers to.")
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one or more controls to assign markers to."
+        )
 
     opts = dict({
         "markersCreateGround": _opt("markersCreateGround", opts),
@@ -2398,21 +2411,25 @@ def create_pose_constraint(selection=None, **opts):
 
 @contextlib.contextmanager
 def progressbar(status="Progress.. ", max_value=100):
-    import maya.mel
-    progress_bar = maya.mel.eval('$tmp = $gMainProgressBar')
+    if _is_interactive():
+        import maya.mel
+        progress_bar = maya.mel.eval('$tmp = $gMainProgressBar')
 
-    cmds.progressBar(progress_bar,
-                     edit=True,
-                     beginProgress=True,
-                     isInterruptable=True,
-                     status=status,
-                     maxValue=max_value)
+        cmds.progressBar(progress_bar,
+                         edit=True,
+                         beginProgress=True,
+                         isInterruptable=True,
+                         status=status,
+                         maxValue=max_value)
 
-    try:
-        yield progress_bar
+        try:
+            yield progress_bar
 
-    finally:
-        cmds.progressBar(progress_bar, edit=True, endProgress=True)
+        finally:
+            cmds.progressBar(progress_bar, edit=True, endProgress=True)
+
+    else:
+        yield
 
 
 @i__.with_undo_chunk
@@ -2445,6 +2462,9 @@ def snap_markers(selection=None, **opts):
 @with_exception_handling
 def record_markers(selection=None, **opts):
     opts = dict({
+        "recordRange": _opt("markersRecordRange", opts),
+        "recordCustomStartTime": _opt("markersRecordCustomStartTime", opts),
+        "recordCustomEndTime": _opt("markersRecordCustomEndTime", opts),
         "recordKinematic": _opt("markersRecordKinematic", opts),
         "recordToLayer": _opt("markersRecordToLayer", opts),
         "useSelection": _opt("markersUseSelection", opts),
@@ -2477,11 +2497,31 @@ def record_markers(selection=None, **opts):
         if solver["startState"].output(type="rdSolver") is not None:
             solvers.remove(solver)
 
-    start_time, end_time = cmdx.selected_time()
-
-    if (end_time.value - start_time.value) < 2:
+    if opts["recordRange"] == 0:
         start_time = cmdx.min_time()
         end_time = cmdx.max_time()
+
+    elif opts["recordRange"] == 1:
+        start_time = cmdx.animation_start_time()
+        end_time = cmdx.animation_end_time()
+
+    else:
+        start_time = opts["recordCustomStartTime"]
+        end_time = opts["recordCustomEndTime"]
+
+    if isinstance(start_time, int):
+        start_time = cmdx.om.MTime(start_time, cmdx.TimeUiUnit())
+
+    if isinstance(end_time, int):
+        end_time = cmdx.om.MTime(end_time, cmdx.TimeUiUnit())
+
+    # A selected time overrides it all
+    if _is_interactive():
+        a, b = cmdx.selected_time()
+
+        # Returns a single frame if nothing was selected
+        if (a.value - b.value) > 2:
+            start_time, end_time = a, b
 
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
@@ -2513,10 +2553,11 @@ def record_markers(selection=None, **opts):
                     previous_progress = progress
 
                 # Allow the user to cancel with the ESC key
-                if cmds.progressBar(p, query=True, isCancelled=True):
-                    break
+                if _is_interactive():
+                    if cmds.progressBar(p, query=True, isCancelled=True):
+                        break
 
-                cmds.progressBar(p, edit=True, step=1)
+                    cmds.progressBar(p, edit=True, step=1)
 
             total_frames += end_frame - start_frame
 
@@ -2578,10 +2619,11 @@ def extract_markers(selection=None, **opts):
                     previous_progress = progress
 
                 # Allow the user to cancel with the ESC key
-                if cmds.progressBar(p, query=True, isCancelled=True):
-                    break
+                if _is_interactive():
+                    if cmds.progressBar(p, query=True, isCancelled=True):
+                        break
 
-                cmds.progressBar(p, edit=True, step=1)
+                    cmds.progressBar(p, edit=True, step=1)
 
             total_frames += int((end_time - start_time).value)
 

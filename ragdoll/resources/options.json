@@ -771,6 +771,34 @@
         "help": "Put all simulation onto a new Animation Layer"
     },
 
+    "markersRecordRange": {
+        "enabled": false,
+        "name": "markersRecordRange",
+        "label": "Record Range",
+        "type": "Enum",
+        "items": ["Animation Range", "Full Range", "Custom"],
+        "default": 0,
+        "help": "Start recording from here."
+    },
+
+    "markersRecordCustomStartTime": {
+        "enabled": false,
+        "name": "markersRecordCustomStartTime",
+        "label": "Start Time",
+        "type": "Integer",
+        "default": 1,
+        "help": "Start recording from here."
+    },
+
+    "markersRecordCustomEndTime": {
+        "enabled": false,
+        "name": "markersRecordCustomEndTime",
+        "label": "End Time",
+        "type": "Integer",
+        "default": 100,
+        "help": "Record until this time."
+    },
+
     "markersAppendTarget": {
         "name": "markersAppendTarget",
         "label": "Append",

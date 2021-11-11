@@ -398,6 +398,7 @@ class _Recorder(object):
             "resetMarkers": False,
             "experimental": False,
             "maintainOffset": True,
+            "keepConstraints": False,
             "includeKinematic": False,
         }, **(opts or {}))
 
@@ -410,6 +411,12 @@ class _Recorder(object):
 
         if end_time is None:
             end_time = cmdx.max_time()
+
+        if isinstance(start_time, int):
+            start_time = cmdx.om.MTime(start_time, cmdx.TimeUiUnit())
+
+        if isinstance(end_time, int):
+            end_time = cmdx.om.MTime(end_time, cmdx.TimeUiUnit())
 
         # We're only ever interested in whole frames
         solver_start_frame = int(solver_start_time.value)
@@ -496,6 +503,9 @@ class _Recorder(object):
 
         for progress in self._cache_to_curves(marker_to_dagnode):
             yield ("transferring", 50 + progress * 0.50)
+
+        # if self._opts["keepConstraints"]:
+        #     self._attach(marker_to_dagnode)
 
     def snap(self, _force=False):
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
@@ -614,6 +624,7 @@ class _Recorder(object):
 
             tx, ty, tz = {}, {}, {}
             rx, ry, rz = {}, {}, {}
+            s = cmdx.Vector(1, 1, 1)
 
             for frame, values in self._cache[marker].items():
                 matrix = values["outputMatrix"]
@@ -634,6 +645,9 @@ class _Recorder(object):
                 ry[frame] = r.y
                 rz[frame] = r.z
 
+                if frame == self._start_frame:
+                    s = tm.scale()
+
             with cmdx.DagModifier() as mod:
                 mod.set_attr(dagnode["tx"], tx)
                 mod.set_attr(dagnode["ty"], ty)
@@ -641,6 +655,7 @@ class _Recorder(object):
                 mod.set_attr(dagnode["rx"], rx)
                 mod.set_attr(dagnode["ry"], ry)
                 mod.set_attr(dagnode["rz"], rz)
+                mod.set_attr(dagnode["scale"], s)
 
             progress += 1
             percentage = 100 * progress / total
@@ -801,7 +816,7 @@ def record(solver, opts=None):
 
     recorder = _Recorder(solver, opts)
     for message, progress in recorder.record():
-        pass
+        print(message)
 
 
 def snap(solver, opts=None, _force=False):
@@ -1001,10 +1016,8 @@ def create_solver():
 
         if up.y:
             mod.set_keyable(solver["gravityY"])
-            mod.set_nice_name(solver["gravityY"], "Gravity")
         else:
             mod.set_keyable(solver["gravityZ"])
-            mod.set_nice_name(solver["gravityZ"], "Gravity")
 
     return solver
 
@@ -1369,21 +1382,24 @@ def _generate_kinematic_hierarchy(solver, tips=False):
     find_roots()
 
     # Recursively create childhood
-    def recurse(mod, root, parent=None):
+    def recurse(mod, marker, parent=None):
         parent = marker_to_dagnode.get(parent)
-        name = root.name() + "_jnt"
+        name = marker.name() + "_jnt"
 
-        joint = mod.create_node("joint", name=name, parent=parent)
-        marker_to_dagnode[root] = joint
+        dagnode = mod.create_node("joint", name=name, parent=parent)
+        marker_to_dagnode[marker] = dagnode
 
-        children = root["ragdollId"].outputs(type="rdMarker", plugs=True)
+        children = marker["ragdollId"].outputs(type="rdMarker", plugs=True)
+
+        # This won't look good for anything scaled
+        mod.set_attr(dagnode["radius"], 0.0)
 
         for plug in children:
             if plug.name() != "parentMarker":
                 continue
 
             child = plug.node()
-            recurse(mod, child, root)
+            recurse(mod, child, marker)
 
     def extend_tips(mod):
         for marker, dagnode in marker_to_dagnode.items():

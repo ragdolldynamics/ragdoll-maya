@@ -255,8 +255,8 @@ def create_lollipop(markers):
             mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
-def _find_markers(solver):
-    markers = []
+def _find_markers(solver, markers=None):
+    markers = markers if markers is not None else []
 
     for entity in [el.input() for el in solver["inputStart"]]:
         if not entity:
@@ -271,7 +271,7 @@ def _find_markers(solver):
         elif entity.isA("rdSolver"):
             # A solver will have markers and groups of its own
             # that we need to iterate over again.
-            _find_markers(entity)
+            _find_markers(entity, markers)
 
     return markers
 
@@ -1352,26 +1352,7 @@ def edit_constraint_frames(marker, opts=None):
 
 
 def _generate_kinematic_hierarchy(solver, tips=False):
-    def find_inputs(solver):
-        markers = []
-        for entity in [el.input() for el in solver["inputStart"]]:
-            if not entity:
-                continue
-
-            if entity.isA("rdMarker"):
-                markers.append(entity)
-
-            elif entity.isA("rdGroup"):
-                markers.extend(el.input() for el in entity["inputStart"])
-
-            elif entity.isA("rdSolver"):
-                # A solver will have markers and groups of its own
-                # that we need to iterate over again.
-                find_inputs(entity)
-
-        return markers
-
-    markers = find_inputs(solver)
+    markers = _find_markers(solver)
     marker_to_dagnode = {}
     roots = []
 

@@ -140,3 +140,41 @@ def test_rotate_axis():
     ri.record_markers()
 
     assert_almost_equals(b["rz"].read(time=50), cmdx.radians(-48.0), 1)
+
+
+def test_joint_orient():
+    _new()
+
+    with cmdx.DagModifier() as mod:
+        a = mod.create_node("joint", name="a")
+        b = mod.create_node("joint", name="b", parent=a)
+        c = mod.create_node("joint", name="c", parent=b)
+        tip = mod.create_node("joint", name="tip", parent=c)
+
+        mod.set_attr(a["jointOrientZ"], cmdx.radians(45))
+        mod.set_attr(b["jointOrientZ"], cmdx.radians(-45))
+        mod.set_attr(c["jointOrientZ"], cmdx.radians(-45))
+        mod.set_attr(a["ty"], 3.0)
+        mod.set_attr(b["tx"], 5.0)
+        mod.set_attr(c["tx"], 5.0)
+        mod.set_attr(tip["tx"], 5.0)
+
+    cmds.select(str(a), str(b), str(c))
+    ri.assign_group()
+
+    # Give them some droop
+    group = cmdx.ls(type="rdGroup")[0]
+    group["driveStiffness"] = 0.01
+
+    # We've got a bridge-like shape
+    #
+    #   b      c
+    #   .-----.
+    #  /       \
+    # . a       \
+    #
+    cmdx.min_time(1)
+    cmdx.max_time(25)
+    ri.record_markers(**{"markersIgnoreJoints": False})
+
+    assert_almost_equals(b["rz"].read(time=25), cmdx.radians(-13.0), 1)

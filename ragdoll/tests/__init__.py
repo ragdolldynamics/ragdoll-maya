@@ -48,7 +48,7 @@ def _rewind(scene):
 
 def _save():
     __.fname = cmds.file("test.ma", rename=True)
-    cmds.file(save=True, force=True)
+    cmds.file(type="mayaAscii", save=True, force=True)
 
 
 def _load():

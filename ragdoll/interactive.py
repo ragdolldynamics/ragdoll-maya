@@ -2570,6 +2570,11 @@ def record_markers(selection=None, **opts):
         fade=True
     )
 
+    # The native recorded nodes aren't updated for some reason
+    if _is_interactive():
+        from PySide2 import QtCore
+        QtCore.QTimer.singleShot(100, cmds.refresh)
+
     return kSuccess
 
 

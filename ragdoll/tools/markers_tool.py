@@ -752,7 +752,10 @@ class _Recorder(object):
 
         # The cheeky little bakeResults changes our selection
         selection = cmds.ls(selection=True)
-        destinations = [str(d) for d in self._dst_to_marker]
+        destinations = [
+            str(d) for d, m in self._dst_to_marker.items()
+            if m["recordTranslation"] or m["recordRotation"]
+        ]
         cmds.bakeResults(*destinations, **kwargs)
         cmds.select(selection)
 
@@ -986,17 +989,17 @@ def create_solver():
         solver = mod.create_node("rdSolver",
                                  name="rSolverShape",
                                  parent=solver_parent)
-        hud = mod.create_node("rdHud",
-                              name="rHudShape",
-                              parent=solver_parent)
+        canvas = mod.create_node("rdCanvas",
+                                 name="rCanvasShape",
+                                 parent=solver_parent)
 
         # Hide in outliner and channel box
-        mod.set_attr(hud["hiddenInOutliner"], True)
-        mod.set_attr(hud["isHistoricallyInteresting"], 0)
+        mod.set_attr(canvas["hiddenInOutliner"], True)
+        mod.set_attr(canvas["isHistoricallyInteresting"], 0)
 
         mod.set_attr(solver["version"], internal.version())
         mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
-        mod.connect(solver["ragdollId"], hud["solver"])
+        mod.connect(solver["ragdollId"], canvas["solver"])
         mod.connect(time1["outTime"], solver["currentTime"])
         mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
 

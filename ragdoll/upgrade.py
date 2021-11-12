@@ -390,19 +390,19 @@ def _solver_20210928_20211024(solver):
 
 
 def _solver_20211024_20211112(solver):
-    """rdHud node was added"""
+    """rdCanvas node was added"""
     log.info("Upgrading %s to 2021.10.24" % solver)
 
     with cmdx.DagModifier() as mod:
         parent = solver.parent()
-        hud = mod.create_node("rdHud",
-                              name="rHudShape",
-                              parent=parent)
+        canvas = mod.create_node("rdCanvas",
+                                 name="rCanvasShape",
+                                 parent=parent)
 
-        mod.set_attr(hud["hiddenInOutliner"], True)
-        mod.set_attr(hud["isHistoricallyInteresting"], False)
+        mod.set_attr(canvas["hiddenInOutliner"], True)
+        mod.set_attr(canvas["isHistoricallyInteresting"], False)
 
-        mod.connect(solver["ragdollId"], hud["solver"])
+        mod.connect(solver["ragdollId"], canvas["solver"])
 
 
 def _marker_20210928_20211007(marker):

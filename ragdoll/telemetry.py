@@ -92,7 +92,9 @@ def save():
 def upload():
     """Send anonymous telemetry to Ragdoll's server"""
     dump = json.dumps(__.telemetry_data)
+    cmds.ragdollReport(init=True)
     cmds.ragdollReport(json=dump)
+    cmds.ragdollReport(destroy=True)
 
 
 def on_exit():

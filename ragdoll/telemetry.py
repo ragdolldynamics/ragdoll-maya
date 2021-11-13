@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import copy
+import errno
 import logging
 import datetime
 import platform
@@ -80,8 +81,20 @@ def gather():
 def save():
     """Write telemetry to ~/.ragdoll/telemetry_<date>.json"""
     date = datetime.datetime.now().strftime("%d-%m-%Y-%H%M%S")
-    fname = os.path.expanduser("~/.ragdoll")
-    fname = os.path.join(fname, "telemetry_%s.json" % date)
+    dirname = os.path.expanduser("~/.ragdoll")
+
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            # Already exists, that's great
+            pass
+
+        else:
+            # Uh oh, probably a problem with permissions
+            return log.debug("Wasn't able to create ~/.ragdoll directory")
+
+    fname = os.path.join(dirname, "telemetry_%s.json" % date)
 
     with open(fname, "w") as f:
         json.dump(__.telemetry_data, f)

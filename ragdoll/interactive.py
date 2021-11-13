@@ -610,9 +610,9 @@ def install_menu():
         divider("Create")
 
         item("assignMarker", assign_single, assign_marker_options,
-             label="Assign Single")
+             label="Assign Individual")
         item("assignGroup", assign_group, assign_group_options,
-             label="Assign Group")
+             label="Assign Hierarchy")
 
         divider("Constrain")
 

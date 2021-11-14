@@ -622,10 +622,8 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, label="Pin")
-
-        if c.RAGDOLL_DEVELOPER:
-            item("poseConstraint",
-                 create_pose_constraint, label="Pose")
+        # item("mimicConstraint",
+        #      create_marker_mimic_constraint, label="Mimic")
 
         divider("Record")
 
@@ -2366,6 +2364,43 @@ def create_pin_constraint(selection=None, **opts):
 
         con = markers_.create_pin_constraint(a)
         cons += [con.path()]
+
+    cmds.select(cons)
+
+    return True
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def create_marker_mimic_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    if len(selection) < 1:
+        raise i__.UserWarning(
+            "Nothing selected",
+            "Select a root for the mimic to sprout from."
+        )
+
+    if len(selection) > 1:
+        raise i__.UserWarning(
+            "Too many selected",
+            "The mimic will walk the hierarchy from where you start, "
+            "generating a new hierarchy for you. Pick a place to start."
+        )
+
+    root = selection[0]
+
+    if root.isA(cmdx.kDagNode):
+        root = root["message"].output(type="rdMarker")
+
+    if not (root and root.isA("rdMarker")):
+        raise i__.UserWarning(
+            "No marker found",
+            "Could not find a marker associated with '%s'" % selection[0]
+        )
+
+    cons = markers_.create_mimic_constraint(root)
+    cons = [con.path() for con in cons]
 
     cmds.select(cons)
 

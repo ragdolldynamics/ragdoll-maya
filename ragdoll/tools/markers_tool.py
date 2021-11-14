@@ -1231,6 +1231,67 @@ def create_pin_constraint(child, opts=None):
     return con
 
 
+@internal.with_undo_chunk
+def create_mimic_constraint(root, opts=None):
+    assert root.isA("rdMarker"), "%s was not a marker" % root.type()
+
+    solver = _find_solver(root)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % root
+    )
+
+    marker_to_dagnode = _generate_kinematic_hierarchy(
+        solver, root=root, tips=True)
+
+    # Align kinematic hierarchy to worldspace simulation
+    marker_to_matrix = {}
+    for marker in marker_to_dagnode.keys():
+        matrix = marker["outputMatrix"].as_matrix()
+        marker_to_matrix[marker] = matrix
+
+    with cmdx.DagModifier() as mod:
+        for marker, dagnode in marker_to_dagnode.items():
+            parent = marker["parentMarker"].input(type="rdMarker")
+            matrix = marker_to_matrix[marker]
+            parent_matrix = marker_to_matrix.get(parent, cmdx.Mat4())
+            local_matrix = matrix * parent_matrix.inverse()
+
+            tm = cmdx.Tm(local_matrix)
+            t = tm.translation()
+            r = tm.rotation()
+
+            mod.set_attr(dagnode["translate"], t)
+            mod.set_attr(dagnode["rotate"], r)
+
+    cons = []
+    for marker, transform in marker_to_dagnode.items():
+        source_name = transform.name(namespace=False)
+
+        name = internal.unique_name("%s_rMimic" % source_name)
+        shape_name = internal.shape_name(name)
+
+        with cmdx.DagModifier() as mod:
+            con = commands._rdpinconstraint(mod, shape_name, parent=transform)
+
+            # More suitable default values
+            mod.set_attr(con["linearStiffness"], 0)
+
+            parent = marker["parentMarker"].input(type="rdMarker")
+
+            if parent:
+                mod.connect(parent["ragdollId"], con["parentMarker"])
+
+            mod.connect(marker["ragdollId"], con["childMarker"])
+            mod.connect(transform["matrix"], con["targetMatrix"])
+
+            commands._take_ownership(mod, con, transform)
+            add_constraint(mod, con, solver)
+
+            cons.append(con)
+
+    return cons
+
+
 def add_constraint(mod, con, solver):
     assert con["startState"].output() != solver, (
         "%s already a member of %s" % (con, solver)
@@ -1390,19 +1451,20 @@ def edit_constraint_frames(marker, opts=None):
     return parent_frame, child_frame
 
 
-def _generate_kinematic_hierarchy(solver, tips=False):
+def _generate_kinematic_hierarchy(solver, root=None, tips=False):
     markers = _find_markers(solver)
     marker_to_dagnode = {}
-    roots = []
 
     def find_roots():
+        roots = []
         for marker in markers:
             if marker["parentMarker"].input(type="rdMarker"):
                 continue
 
             roots.append(marker)
+        return roots
 
-    find_roots()
+    roots = find_roots() if root is None else [root]
 
     # Recursively create childhood
     def recurse(mod, marker, parent=None):

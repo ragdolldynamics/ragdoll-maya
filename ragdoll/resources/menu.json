@@ -662,11 +662,11 @@
         ]
     },
 
-    "poseConstraint": {
-        "label": "Pose Constraint",
-        "icon": "softpin.png",
-        "summary": "Softly constrain the position and orientation of one marker in to another",
-        "description": "Create a new pose constraint between the two selected markers.",
+    "mimicConstraint": {
+        "label": "Mimic Constraint",
+        "icon": "mimic.png",
+        "summary": "Generate a hierarchy of local soft pins",
+        "description": "Create a new mimic starting at the selected marker.",
         "options": [
         ]
     },

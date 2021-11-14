@@ -11,6 +11,7 @@
     <div class="hboxlayout align-center">
         <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=windows" class="button red"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Windows</b></a>
         <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=linux" class="button blue"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>Linux</b></a>
+        <a style="max-height: 40px;" href="https://ragdolldynamics.com/download?platform=linux" class="button green"><div class="image"><img src=https://user-images.githubusercontent.com/2152766/126961293-8ab863bf-65c8-4e89-a25d-9bcbe4a63627.png></div><b>MacOS</b></a>
     </div>
     <p class="text-align-center">Ragdoll <b>{{ config.latest_version }}</b> awaits.<br>
     <a href="https://files.ragdolldynamics.com">Previous versions</a></p>
@@ -54,11 +55,18 @@ Ragdoll ships as a Maya [Module](https://around-the-corner.typepad.com/adn/2012/
     ```
 
 ??? info "Installation for MacOS"
-    Sorry, MacOS is currently *not supported*.
+    On MacOS, installation and upgrades are done in the same fashion.
 
-    Let us know this is important to you, and priorities can be shifted.
+    1. Copy the contents of `/modules` into `/Users/Shared/Autodesk/modules/maya`
+    2. Restart Maya
 
-    contact@ragdolldynamics.com
+    You should end up with something like this.
+
+    ```bash
+    /Users/Shared/Autodesk/modules/maya/Ragdoll-2021_11_15.mod
+    ```
+
+    ![image](https://user-images.githubusercontent.com/2152766/141652364-0323ab89-197d-4a23-ac96-313d8f002258.png)
 
 The plug-in is now available via the Plug-in Manager.
 

@@ -1,0 +1,48 @@
+uniform mat4 gWvpXf : WorldViewProjection;
+
+/* Data from application vertex buffer */
+attribute ToVertex {
+    vec3 inPosition   : POSITION;
+    vec4 inColor      : COLOR0;
+};
+
+attribute ToFragment {
+    vec4 WorldPosition  : TEXCOORD0;
+    vec4 ObjectColor    : COLOR0;
+};
+
+/* Data output by the fragment shader */
+attribute ToScreen  {
+    vec4 outColor : COLOR0;
+};
+
+
+GLSLShader ShaderVertex
+{
+    void main()
+    {
+        ObjectColor = inColor;
+
+        WorldPosition = gWvpXf * vec4(inPosition, 1);
+        WorldPosition.z -= 0.00011;
+
+        gl_Position = WorldPosition;
+    }
+}
+
+GLSLShader ShaderColor
+{
+    void main()
+    {
+        outColor = ObjectColor;
+    }
+}
+
+technique Main
+{
+    pass p0
+    {
+        VertexShader (in ToVertex, out ToFragment) = ShaderVertex;
+        PixelShader (in ToFragment, out ToScreen) = ShaderColor;
+    }
+}

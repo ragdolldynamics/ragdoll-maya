@@ -4,7 +4,19 @@ title: Animation Capture pt. 4/4
 description: Markers 1.0
 ---
 
-Highlight for this release is **Performance and Mac**, and is the final part of the new [Markers](/releases/2021.09.27/) which are now able to do everything Rigids could, and more.
+![image](https://user-images.githubusercontent.com/2152766/141471283-3a771240-f80d-4745-844d-6f0c0ed87bc5.png)
+
+Highlight for this release is **Markers part 4 of 4**!
+
+- [**ADDED** Ragdoll for MacOS](#ragdoll-for-macos) You heard it right, it's here!
+- [**ADDED** Robust Rendering](#robust-rendering) Rendering on some hardware, especially in Maya 2019, was whack sometimes. No longer!
+- [**ADDED** Robust Recording](#robust-recording) More resilient to locked controls and custom rotation axes
+- [**ADDED** Robust Caching](#caching-start-frame) Works as expected
+- [**ADDED** Snap to Simulation](#snap-to-simulation) Snap your character to wherever the simulation is, for quick and natural posing
+- [**ADDED** Extract Simulation](#extract-simulation) Get the raw data as a baked joint hierarchy, super fast!
+- [**ADDED** Frameskip Method](#frameskip-method) Now accessible per-solver, as an attribute
+- [**FIXED** Unloading Ragdoll on Linux](#unloading-on-linux) Guaranteed to crash, but no more!
+- [**UPDATED** `PATH` and Windows](#path) If you don't know what this is, you don't have to worry about it
 
 !!! into "In with the new, out with the old"
     The next few releases will slowly but surely replace Rigids with Markers. So if there is anything you find yourself unable to do with Markers, let us know and we'll get that in there as soon as possible.
@@ -12,40 +24,160 @@ Highlight for this release is **Performance and Mac**, and is the final part of 
     - [Chat](https://ragdolldynamics.com/chat)
     - [Contact](https://ragdolldynamics.com/contact)
 
-- [**ADDED** Ragdoll for Mac](#ragdoll-for-mac) You heard it right, it's here!
-- [**ADDED** Robust Recording](#robust-recording) More resilient to locked controls and custom rotation axes
-- [**ADDED** Robust Caching](#caching-start-frame) Works as expected
-- [**ADDED** Robust Rendering](#robust-rendering) Rendering on some hardware, especially in Maya 2019, was whack sometimes. No longer!
-- [**ADDED** Snap to Simulation](#snap-to-simulation) Snap your character to wherever the simulation is, for quick and natural posing
-- [**ADDED** Extract Simulation](#extract-simulation) Get the raw data as a baked joint hierarchy, super fast!
-- [**FIXED** Unloading Ragdoll on Linux](#unloading-on-linux) Could easily cause a crash
-- [**UPDATED** `PATH` and Windows](#path) If you don't know what this is, you don't have to worry about it
+<br>
+
+### Showcase
+
+Let's start off with some eye candy. 😇
+
+**Piggyback Ride**
+
+Thought it was fun to see how the simulation would look with the previous simulation as input!
+
+https://user-images.githubusercontent.com/2152766/141471408-a7737ab1-c517-4d50-8ad9-6e4399dd2216.mp4 controls
+
+**Facebook Meta**
+
+Courtesy of [Electric Theatre Collective](https://electrictheatre.tv/), where [Andras Ormos](https://www.linkedin.com/in/andrasormos/) used Ragdoll for the CG elements of Facebook's latest ad about Meta (the rest are live-action puppetry!)
+
+[![image](https://user-images.githubusercontent.com/2152766/141679473-4b63bac4-8453-4202-9e6c-9a3c72325051.png)](https://www.youtube.com/watch?v=G2W9YVkkn9U)
+
+https://user-images.githubusercontent.com/2152766/141655583-0f124261-3492-4cb2-9442-0e9f8022a129.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/141655590-321b1c9a-e64c-439f-9946-248fcccff754.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/141655608-5ea0c1f9-bc78-49da-b0bc-f9ebf88a286b.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/141655612-3dd19df8-6f0d-45ed-9968-71c86e79fdac.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/141655640-88fd9ac2-02cc-4425-94e9-0e1c40a5a55b.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/141655633-c9d14b2e-1253-49ca-ae8c-e91153dfe1cd.mp4 controls
 
 <br>
 
-### Ragdoll for Mac
+### Recap
 
-There is now an option to download Ragdoll for Mac!
+We did it! We're at part 4 out of 4 of the new Markers.
 
-If you are a Mac user, please let us know how you get along. The builds were made on Big Sur and should work well with Big Sur, but Autodesk recommends El Capitan for Maya 2018 (which appears ancient!).
+When this all started, it wasn't clear whether Markers would be up to the task of completely replacing Rigids; it could have been that we still needed Rigids for certain tasks. But at this point it's safe to say Markers is applicable to *everything* rigids can do. Which is why Rigids are now to be considered *deprecated*.
+
+#### Deprecating Rigids
+
+The following few releases will be about transitioning from Rigids to Markers. The tutorials on the left-hand side here will be updated, the documentation too and you're encouraged to
+
+<br>
+
+### Ragdoll for MacOS
+
+There is now an option to download Ragdoll for **MacOS**! 🍎
+
+<div class="hboxlayout">
+<a href="https://learn.ragdolldynamics.com/download" class="button red"><b>Download for Mac</b></a>
+</div>
+
+!!! info "Heads Up"
+    If you are a Mac user, please let us know how you get along. The builds were made on Big Sur and should work well with Big Sur, but Autodesk recommends *El Capitan* which we can build for, just let us know.
+
+https://user-images.githubusercontent.com/2152766/141682643-56a31237-47a6-41a8-aacd-2530fe0fe7ba.mp4 controls
+
+<br>
+
+### Robust Rendering
+
+This release has taken quite a while, and not because of MacOS support but because of *rendering*.
+
+In short, we've had to throw out and rebuild a significant chunk of Ragdoll for this release. Everything related to lines, everything!
+
+![image](https://user-images.githubusercontent.com/2152766/141658240-dfafc61a-b80f-4899-a949-77c5a5f28c38.png)
+
+The reason is that an unlucky few of you have had the following experience with Ragdoll.
+
+https://user-images.githubusercontent.com/2152766/140603516-8783164c-4030-48eb-9ec7-0a071626f154.mp4 controls
+
+> Those lines don't look quite right.. 🤔
+
+In short, the reason for this is that the Maya API for drawing lines ends up looking different across various graphics cards and versions of Maya. Maya 2019 was especially egregious.
+
+But let's dig deeper.
+
+<br>
+
+#### Digging Deeper
+
+!!! note "Animator?"
+    This next part is mostly for techies, feel free to [skip ahead.](#robust-recording)
+
+Whenever Ragdoll drew shapes, like capsules and convex hulls, it used part of Maya's drawing API called `MRenderItem`. Lines on the other hand - like those for limits and guides - were drawn using a simplified API called `MUIDrawManager`.
+
+```cpp
+drawManager->circle(point, radius);
+drawManager->line(pointA, pointB, thickness);
+// And so on..
+```
+
+Which is a fantastic, well-designed API that has worked great for the past year. Until it didn't. As it happens, this API is broken.. Reports were coming in from all across the globe about lines looking like.. Well like this.
+
+https://user-images.githubusercontent.com/2152766/141658511-ccdb3393-8d58-4543-91dd-80df010593cb.mov controls
+
+Some if it I could replicate, this here is Maya 2019 in which the behavior is erratic. But the same could be said for some hardware and driver combinations; most of which I have never been able to replicate here.
+
+This version throws all of that out the window, and reimplements it from scratch. It's a pity, because the API was very easy to work with and a great way to get started rendering in Maya.
+
+That said, our new API is not only *much faster* but also *much more powerful*. You can expect to see a lot of new 2D rendering, including fully interactive UI elements in 3D space.
+
+Until then, if you've been having issues with Ragdoll and lines, you can now breathe easy.
+
+https://user-images.githubusercontent.com/2152766/140603518-d68f1b83-a20f-403f-89b9-be2073ccd25c.mp4 controls
+
+!!! note "Caveat"
+    This is great and all, but it no longer supports **DirectX**.
+
+    In the previous release, we already started moving away from DirectX, and if you've been using it you would have gotten some warnings about it. If not, then you've got nothing to worry about for this release.
+
+    OpenGL is where the action is at, and is supported equally on each platform; including MacOS!
+
+<br>
 
 <br>
 
 ### Robust Recording
 
-Recording now defaults to ending up on an Animation Layer, with an option not to. It is also 2x faster or more, and also less sensitive to quirks in a rig or skeletal hierarchy.
+Recording now automatically ends up on an Animation Layer, with only the simulated controls associated with it, with an option to not do that as well. It is also **at least 2x faster** and less sensitive to quirks in a rig or skeletal hierarchy.
+
+Here are the things it didn't take into account before but does now.
 
 - [x] Uniform Scale
-- [ ] Non-uniform Scale
-- [ ] Negative Scale
-- [ ] Rotate Pivot
-- [ ] Scale Pivot
-- [ ] Rotate Axis
-- [ ] Joint Orient
+- [x] Non-uniform Scale
+- [x] Negative Uniform scale
+- [x] Negative Non-uniform Scale
+- [x] Rotate Pivot
+- [x] Scale Pivot
+- [x] Rotate Axis
+- [x] Joint Orient
+
+And that should cover it!
+
+!!! info "Important"
+    Recording is the most important aspect of Markers; if you can't get the simulation *out* then it's all for nothing. So do reach out via the..
+
+    - [chat](https://ragdolldynamics.com/chat)
+    - or [contact form](https://ragdolldynamics.com/contact)
+
+    ..if you have any issues with this, and a fix will be crafted in a hot minute.
+
+#### Performance
+
+I mentioned a 200% increase in performance, didn't I? Let's have a *quick* look (pun!).
 
 **Before**
 
-49 fps.
+A solid 49 fps.
 
 https://user-images.githubusercontent.com/2152766/139644573-9d9c9f23-7c73-4ee0-a47d-4aa92f4c4863.mp4 controls
 
@@ -55,26 +187,97 @@ https://user-images.githubusercontent.com/2152766/139644573-9d9c9f23-7c73-4ee0-a
 
 https://user-images.githubusercontent.com/2152766/139644578-03717acb-26cf-411f-aef7-b1b9cb34f602.mp4 controls
 
+At the end of the day, the main bottlenecks out of Ragdoll's hands:
+
+1. Running the simulation
+2. Evaluating the rig
+3. Twice (!)
+4. Overhead from the recording
+
+Sometimes, the simulation is really fast; it will usually be the fastest of the three. Sometimes, evaluating the rig is fast; such as if there are no keyframes and no fancy processing like follicles or spline IK. But the overhead from recording should approach zero as time goes on.
+
+About (3), Ragdoll must evaluate your rig twice. Once to provide the simulation with your animation, and a second time to bake the resulting simulation back onto your controls.
+
+![image](https://user-images.githubusercontent.com/2152766/141677675-eda28e37-5268-4866-8dc4-1f0791308bcb.png)
+
+!!! note "Why so slow?"
+    Interestingly, this is what made Active Rigid and Active Chain so slow. It was doing recording every frame, whether you wanted to or not. It was how the simulation was made visible to you; by continuously recording it.
+
+    With Markers, we delay the recording until you hit `Record Simulation`, which is the primary way in which they enable us to reap this crazy amount of performance out of Maya.
+
 <br>
 
 ### Robust Caching
 
+Several improvements were made to Caching, introduced in the last version.
+
+- [x] More intuitive visual aid
+- [x] Caching from the Start Frame
+- [x] Continuing cache after visiting the Start Frame
+
 Caching whilst standing on the start frame could cause hiccups on occasion, this release fixes that.
+
+**Before**
+
+There was also a minor issue whereby if you cached half-way, revisited the start frame and then went back to resume caching, it would resume from the wrong spot and thus break the cache.
+
+In either of these cases, one could disable and re-enable the cache to "fix" it, but now you don't have to!
+
+https://user-images.githubusercontent.com/2152766/139645240-34a7f89e-d0c4-4cfd-825c-5bef215191db.mp4 controls
 
 > Notice how it doesn't update the cache when standing on the start frame?
 
-https://user-images.githubusercontent.com/2152766/139645240-34a7f89e-d0c4-4cfd-825c-5bef215191db.mp4 controls
+**After**
+
+https://user-images.githubusercontent.com/2152766/141681213-9dfd4dea-5874-4c99-8b3f-9aa6f899b3da.mp4 controls
+
+And, like before, you can enable caching via the solver. The only difference is that the menu item automatically plays through the entire timeline for you.
+
+https://user-images.githubusercontent.com/2152766/141681215-e0f7da11-2802-4c81-bd0f-08cf028b1f41.mp4 controls
 
 <br>
 
 ### Snap to Simulation
 
+Yet another way to work with physics, by transferring individual poses from the solver into your animation. You can use it to pose or layout a scene.
 
 https://user-images.githubusercontent.com/2152766/141302109-6818b04d-9b57-4378-bdea-e62b98220f16.mp4 controls
 
+
 https://user-images.githubusercontent.com/2152766/141302185-df7ee9d0-567e-4a52-a9d3-46fcfee33eeb.mp4 controls
 
+
 https://user-images.githubusercontent.com/2152766/141302197-4c895c4a-8e34-486e-8835-a91ffa50ff99.mp4 controls
+
+!!! note "Coming Up"
+    An upcoming release will enable you to advance time in the simulation, without affecting time in Maya. Such that you can "relax" a pose, for example. :D
+
+<br>
+
+### Frameskip Method
+
+Ragdoll needs a consistent progression of time to provide reliably results. So per default, if it notices a frame being *skipped*, it kindly pauses and waits until you revisit the last simulated frame.
+
+Alternatively, you can let it look the other way and pretend time has progressed linearly, like nCloth and countless other solvers do.
+
+#### Pause
+
+The default. It's safe, predictable, but requires `Play Every Frame` to work.
+
+https://user-images.githubusercontent.com/2152766/141657769-bc44ac55-8481-4185-8e00-9a1b98cd1b9a.mp4 controls
+
+#### Ignore
+
+The nCloth and nHair default, of trying its best to simulate even though it wasn't given the frames inbetween. Unpredictable, unreliable but may handle playing along with sound.
+
+https://user-images.githubusercontent.com/2152766/141657770-e74b4e4f-173a-4193-825d-6af10d725816.mp4 controls
+
+Aside from not giving you the same result each time you play, if too many frames are skipped your simulation can completely explode. You can semi-work around this by increasing the number of substeps, forcing more simulation frames to fill for the missing frames.
+
+https://user-images.githubusercontent.com/2152766/141657771-d4da158a-bf10-4158-a9e8-3980614c6d69.mp4 controls
+
+!!! warning "Non-deterministic"
+    Bear in mind that the `Ignore` method cannot give you the same results each playthrough. The `Pause` method is guaranteed to give you the same results, and are identical to what you get when you `Record Simulation` too.
 
 <br>
 
@@ -91,30 +294,9 @@ https://user-images.githubusercontent.com/2152766/139657721-576c5b8f-e852-4e96-a
 
 <br>
 
-### Robust Rendering
+#### A Debugging Companion
 
-Whenever Ragdoll drew shapes, like capsules and convex hulls, it used part of Maya's drawing API called `MRenderItem`. Lines on the other hand - like those for limits and guides - were drawn using a simplified API called `MUIDrawManager`.
-
-```cpp
-drawManager->circle(point, radius);
-drawManager->line(pointA, pointB, thickness);
-// And so on..
-```
-
-Which is a fantastic, well-designed API that has worked great for the past year. Until it didn't. As it happens, this API is broken.. Reports were coming in from all across the globe about lines looking like.. Well like this.
-
-https://user-images.githubusercontent.com/2152766/140603516-8783164c-4030-48eb-9ec7-0a071626f154.mp4 controls
-
-Some if it I could replicate, this here is Maya 2019 in which the behavior is erratic. But the same could be said for some hardware and driver combinations; most of which I have never been able to replicate here.
-
-This version throws all of that out the window, and reimplements it from scratch. It's a pity, because the API is very easy to work with and a great way to get started rendering in Maya.
-
-That said, our new API is not only *much faster* but also *much more powerful*. You can expect to see a lot of new 2D rendering, including fully interactive UI elements in 3D space.
-
-Until then, if you've been having issues with Ragdoll and lines, you can now breathe easy.
-
-https://user-images.githubusercontent.com/2152766/140603518-d68f1b83-a20f-403f-89b9-be2073ccd25c.mp4 controls
-
+It can also be used for situations where `Record Simulation` doesn't do what you need it to. Negative scale, for example, is something Ragdoll still struggles with. But, the extracted skeleton will be a no-fuss joint hierarchy, with no scale, and guaranteed to match the simulation exactly. So you can extract it, and constrain your rig to it.
 
 <br>
 

@@ -369,7 +369,7 @@ class _Recorder(object):
     1. Run and store the simulation as worldspace matrices
     2. Create and apply simulation onto a new FK hierarchy as keyframes
     3. Constrain destination controls to FK hierarchy
-    4. Call cmds.bakeResults
+    4. Call cmds.bakeResults()
     5. Delete constraints and FK hierarchy
 
     2, 3 and 5 are very wasteful and should not be necessary, and
@@ -451,6 +451,7 @@ class _Recorder(object):
 
         self._opts = opts
 
+    @internal.with_undo_chunk
     def record(self):
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
@@ -510,8 +511,9 @@ class _Recorder(object):
 
     def snap(self, _force=False):
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
-        marker_to_matrix = {}
 
+        # Align kinematic hierarchy to worldspace simulation
+        marker_to_matrix = {}
         for marker in marker_to_dagnode.keys():
             matrix = marker["outputMatrix"].as_matrix()
             marker_to_matrix[marker] = matrix
@@ -612,7 +614,17 @@ class _Recorder(object):
 
     @internal.with_timing
     def _cache_to_curves(self, marker_to_dagnode):
-        """Convert worldspace matrices into translate/rotate channels"""
+        r"""Convert worldspace matrices into translate/rotate channels
+
+                                 ___ z
+        x |______       ____    /
+          |   ___\_____/____\__/
+        y |--/--  \___/      \
+          | /   \________     \_____ x
+          |/             \__________ y
+        z o--------------------------
+
+        """
 
         assert self._cache, "Must call `_sim_to_cache()` first"
 
@@ -663,6 +675,25 @@ class _Recorder(object):
             yield percentage
 
     def _attach(self, marker_to_dagnode):
+        """Constrain destination controls to extracted simulated hierarchy
+
+                 o
+                 |
+              o--o--o
+             /   |   \
+            /    |    \
+           o   o-o-o   o
+          /    |   |    \
+         /     |   |     \
+        o      |   |      o
+               o   o
+               |   |
+               |   |
+               |   |
+             --o   o--
+
+        """
+
         new_constraints = []
 
         # Maintain offset from here, markers and controls

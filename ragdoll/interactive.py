@@ -2438,7 +2438,7 @@ def snap_markers(selection=None, **opts):
     opts = dict({
         "useSelection": _opt("markersUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
-        "maintainOffset": _opt("markersRecordMaintainOffset", opts),
+        "maintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)
@@ -2472,7 +2472,7 @@ def record_markers(selection=None, **opts):
         "recordReset": _opt("markersRecordReset", opts),
         "recordSimplify": _opt("markersRecordSimplify", opts),
         "recordFilter": _opt("markersRecordFilter", opts),
-        "recordMaintainOffset": _opt("markersRecordMaintainOffset", opts),
+        "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)

@@ -722,11 +722,12 @@
         "help": "Make all markers kinematic once recording is complete."
     },
 
-    "markersRecordMaintainOffset": {
-        "name": "markersRecordMaintainOffset",
+    "markersRecordMaintainOffset2": {
+        "name": "markersRecordMaintainOffset2",
         "label": "Maintain Offset",
-        "type": "Boolean",
-        "default": true,
+        "type": "Enum",
+        "items": ["Off", "From Retargeting", "From Start"],
+        "default": 2,
         "help": "Should I keep the offset between marker and control as I record?"
     },
 

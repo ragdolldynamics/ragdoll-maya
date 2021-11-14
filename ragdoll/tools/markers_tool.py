@@ -397,7 +397,7 @@ class _Recorder(object):
             "ignoreJoints": False,
             "resetMarkers": False,
             "experimental": False,
-            "maintainOffset": True,
+            "maintainOffset": constants.FromRetargeting,
             "keepConstraints": False,
             "includeKinematic": False,
         }, **(opts or {}))
@@ -499,7 +499,8 @@ class _Recorder(object):
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.50)
 
-        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        marker_to_dagnode = _generate_kinematic_hierarchy(
+            self._solver, tips=True)
 
         for progress in self._cache_to_curves(marker_to_dagnode):
             yield ("transferring", 50 + progress * 0.50)
@@ -664,6 +665,10 @@ class _Recorder(object):
     def _attach(self, marker_to_dagnode):
         new_constraints = []
 
+        # Maintain offset from here, markers and controls
+        # are guaranteed to be aligned here.
+        cmdx.current_time(self._solver_start_frame)
+
         for index, (dst, marker) in enumerate(self._dst_to_marker.items()):
             src = marker_to_dagnode.get(marker, None)
 
@@ -695,13 +700,15 @@ class _Recorder(object):
 
             skip_rotate = skip_rotate or "none"
             skip_translate = skip_translate or "none"
+            maintain = self._opts["maintainOffset"] == constants.FromStart
 
             con = cmds.parentConstraint(
                 src.shortest_path(),
                 dst.shortest_path(),
 
-                # We'll manually set the offset
-                maintainOffset=False,
+                # Either from wherever it's being constrained
+                # or from the offset at the time of being retargeted
+                maintainOffset=maintain,
 
                 # Account for locked channels
                 skipTranslate=skip_translate,
@@ -710,9 +717,10 @@ class _Recorder(object):
 
             con = cmdx.encode(con[0])
 
-            with cmdx.DagModifier() as mod:
-                mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)
-                mod.set_attr(con["target"][0]["targetOffsetRotate"], r)
+            if self._opts["maintainOffset"] == constants.FromRetargeting:
+                with cmdx.DagModifier() as mod:
+                    mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)
+                    mod.set_attr(con["target"][0]["targetOffsetRotate"], r)
 
             # Pull to refresh
             dst["worldMatrix"][0].as_matrix()
@@ -1374,9 +1382,6 @@ def _generate_kinematic_hierarchy(solver, tips=False):
         marker_to_dagnode[marker] = dagnode
 
         children = marker["ragdollId"].outputs(type="rdMarker", plugs=True)
-
-        # This won't look good for anything scaled
-        mod.set_attr(dagnode["radius"], 0.0)
 
         for plug in children:
             if plug.name() != "parentMarker":

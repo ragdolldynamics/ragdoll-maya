@@ -681,10 +681,10 @@
             "markersRecordCustomStartTime",
             "markersRecordCustomEndTime",
             "markersRecordFilter",
+            "markersRecordMaintainOffset2",
             "markersRecordToLayer",
             "markersUseSelection",
             "markersIgnoreJoints",
-            "markersRecordMaintainOffset",
             "markersRecordKinematic",
             "markersRecordReset"
         ]
@@ -698,7 +698,7 @@
         "options": [
             "markersUseSelection",
             "markersIgnoreJoints",
-            "markersRecordMaintainOffset"
+            "markersRecordMaintainOffset2"
         ]
     },
 

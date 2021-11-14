@@ -141,3 +141,8 @@ DisplayFriction = 5
 DisplayRestitution = 6
 DisplayVelocity = 7
 DisplayContacts = 8
+
+# Record
+Off = 0
+FromRetargeting = 1
+FromStart = 2

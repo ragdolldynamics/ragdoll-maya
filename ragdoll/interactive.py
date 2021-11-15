@@ -653,6 +653,10 @@ def install_menu():
         with submenu("Utilities", icon="magnet.png"):
             item("extractMarkers", extract_markers)
             item("createLollipop", create_lollipop)
+            item("markerReplaceMesh",
+                 replace_marker_mesh,
+                 replace_marker_mesh_options)
+            item("markersAutoLimit", auto_limit)
 
             item("editConstraintFrames",
                  edit_marker_constraint_frames,
@@ -2201,27 +2205,31 @@ def assign_single(selection=None, **opts):
         )
 
     opts = dict({
-        "markersCreateGround": _opt("markersCreateGround", opts),
-        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
-        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
+        "createGround": _opt("markersCreateGround", opts),
+        "createObjectSet": _opt("markersCreateObjectSet", opts),
+        "createLollipop": _opt("markersCreateLollipop", opts),
+        "autoLimit": _opt("markersAutoLimit", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["markersCreateGround"])
+    solver, ground = _find_current_solver(opts["createGround"])
     markers = []
 
     try:
         for transform in selection:
-            markers.extend(tools.assign_markers([transform], solver))
+            new_markers = markers_.assign([transform], solver, {
+                "autoLimit": opts["autoLimit"]
+            })
+            markers.extend(new_markers)
     except RuntimeError as e:
         raise i__.UserWarning("Already assigned", str(e))
 
-    if opts["markersCreateLollipop"]:
-        tools.create_lollipop(markers)
+    if opts["createLollipop"]:
+        markers_.create_lollipop(markers)
 
     if ground:
         _fit_ground(ground, markers)
 
-    if opts["markersCreateObjectSet"]:
+    if opts["createObjectSet"]:
         _add_to_objset(markers)
 
     cmds.select(list(t.shortest_path() for t in selection))
@@ -2243,27 +2251,32 @@ def assign_group(selection=None, **opts):
         )
 
     opts = dict({
-        "markersCreateGround": _opt("markersCreateGround", opts),
-        "markersCreateObjectSet": _opt("markersCreateObjectSet", opts),
-        "markersCreateLollipop": _opt("markersCreateLollipop", opts),
+        "createGround": _opt("markersCreateGround", opts),
+        "createObjectSet": _opt("markersCreateObjectSet", opts),
+        "createLollipop": _opt("markersCreateLollipop", opts),
+        "autoLimit": _opt("markersAutoLimit", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["markersCreateGround"])
+    solver, ground = _find_current_solver(opts["createGround"])
 
     try:
-        assigned = tools.assign_markers(selection, solver)
+        assigned = tools.assign_markers(selection, solver, {
+            "autoLimit": opts["autoLimit"]
+        })
+
     except markers_.AlreadyAssigned as e:
         raise i__.UserWarning("Already assigned", str(e))
+
     except Exception as e:
         raise i__.UserWarning("An unexpected error occurred", str(e))
 
-    if opts["markersCreateLollipop"]:
+    if opts["createLollipop"]:
         tools.create_lollipop(assigned)
 
     if ground:
         _fit_ground(ground, assigned)
 
-    if opts["markersCreateObjectSet"]:
+    if opts["createObjectSet"]:
         _add_to_objset(assigned)
 
     cmds.select(list(t.shortest_path() for t in selection))
@@ -2899,6 +2912,37 @@ def create_lollipop(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
+def auto_limit(selection=None, **opts):
+    selection = selection or cmdx.sl()
+    markers = set()
+
+    for marker in selection:
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
+
+        if marker and marker.isA("rdMarker"):
+            markers.add(marker)
+
+    if not markers:
+        raise i__.UserWarning(
+            "No markers",
+            "Select one or more markers to automatically find limits for."
+        )
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            markers_._auto_limit(mod, marker)
+
+    log.info(
+        "Successfully transferred locked channels "
+        "into %d markers" % len(markers)
+    )
+
+    return kSuccess
+
+
 def cache_all(selection=None, **opts):
     solvers = _filtered_selection("rdSolver", selection)
     solvers = solvers or cmdx.ls(type="rdSolver")
@@ -3158,6 +3202,71 @@ def replace_mesh(selection=None, **opts):
             )
 
     commands.replace_mesh(rigids[0], meshes[0], opts=opts)
+
+    return kSuccess
+
+
+@with_exception_handling
+def replace_marker_mesh(selection=None, **opts):
+    opts = {
+        "exclusive": _opt("replaceMeshExclusive", opts),
+        "maintainOffset": _opt("replaceMeshMaintainOffset", opts),
+    }
+
+    meshes = (
+        _filtered_selection("mesh", selection) +
+        _filtered_selection("nurbsCurve", selection) +
+        _filtered_selection("nurbsSurface", selection)
+    )
+
+    markers = []
+    for node in selection or cmdx.selection():
+        if node.isA("rdMarker"):
+            markers.append(node)
+
+        elif node.isA(cmdx.kDagNode):
+            marker = node["message"].output(type="rdMarker")
+            if marker is not None:
+                markers.append(marker)
+
+    if len(markers) < 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "No marker selected. Select 1 mesh and 1 marker, in any order."
+        )
+
+    if len(markers) > 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "2 or more markers selected. Pick one."
+        )
+
+    if len(meshes) < 1:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "No meshes selected. Select 1 mesh and 1 marker."
+        )
+
+    if len(meshes) > 1:
+        existing_geo = markers[0]["inputGeometry"].input()
+        print("existing geo: %s" % existing_geo)
+
+        if existing_geo in meshes:
+            meshes.remove(existing_geo)
+
+        # Still got more?
+        if len(meshes) > 1:
+            log.warning(
+                "%s are all selected"
+                % ", ".join(str(m) for m in meshes)
+            )
+
+            raise i__.UserWarning(
+                "Selection Problem",
+                "2 or more meshes selected, pick one."
+            )
+
+    markers_.replace_mesh(markers[0], meshes[0], opts=opts)
 
     return kSuccess
 
@@ -4187,23 +4296,12 @@ def create_character_options(*args):
     return window
 
 
-def markers_beta(selection=None, **opts):
-    MessageBox(
-        "Markers Beta 0.25",
-        "This is part 1 out of 4 for markers - powerful but incomplete.",
-        buttons=ui.OkButton,
-        icon=ui.InformationIcon
-    )
-
-    return kSuccess
-
-
-def markers_beta_options(selection=None, **opts):
-    return _Window("markersBeta", markers_beta)
-
-
 def create_muscle_options(*args):
     return _Window("muscle", create_muscle)
+
+
+def replace_marker_mesh_options(*args):
+    return _Window("markerReplaceMesh", replace_marker_mesh)
 
 
 def create_dynamic_control_options(*args):

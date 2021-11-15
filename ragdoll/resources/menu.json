@@ -610,6 +610,7 @@
         "options": [
             "markersCreateGround",
             "markersCreateObjectSet",
+            "markersAutoLimit",
             "markersCreateLollipop"
         ]
     },
@@ -622,6 +623,7 @@
         "options": [
             "markersCreateGround",
             "markersCreateObjectSet",
+            "markersAutoLimit",
             "markersCreateLollipop"
         ]
     },
@@ -702,6 +704,15 @@
         ]
     },
 
+    "markersAutoLimit": {
+        "label": "Auto Limit",
+        "icon": "orient_constraint.png",
+        "summary": "Automatically transfer locked rotate channels into Ragdoll limits",
+        "description": "Determine how to replicate the locked Maya channels in physics using the rotate limits of a marker.",
+        "options": [
+        ]
+    },
+
     "extractMarkers": {
         "label": "Extract Simulation",
         "icon": "exoskeleton2.png",
@@ -745,6 +756,16 @@
         "summary": "Change the parent of this marker",
         "description": "",
         "options": [
+        ]
+    },
+
+    "markerReplaceMesh": {
+        "label": "Replace Mesh",
+        "icon": "replace.png",
+        "summary": "Replace input of the 'Mesh' shape type with another polygonal or NURBS mesh.",
+        "description": "Substitute the current input of the 'Mesh' shape type with another. Also taking worldspace into account, so the mesh can be anywhere in the scene, under any group or voodoo magic.",
+        "options": [
+            "replaceMeshMaintainOffset"
         ]
     },
 

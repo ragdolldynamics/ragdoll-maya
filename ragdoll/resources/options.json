@@ -706,6 +706,14 @@
         "help": "Do not record to joints, these are typically read-only."
     },
 
+    "markersAutoLimit": {
+        "name": "markersAutoLimit",
+        "label": "Auto Limit",
+        "type": "Boolean",
+        "default": true,
+        "help": "Transfer the locked state of rotate XYZ into locked limits."
+    },
+
     "markersUseSelection": {
         "name": "markersUseSelection",
         "label": "Use Selection",

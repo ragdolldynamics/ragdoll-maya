@@ -9,8 +9,12 @@ log = logging.getLogger("ragdoll")
 AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 
 
-def assign(transforms, solver):
+def assign(transforms, solver, opts=None):
     assert len(transforms) > 0, "Nothing to assign to"
+
+    opts = dict({
+        "autoLimit": None,
+    }, **(opts or {}))
 
     if len(transforms) == 1:
         other = transforms[0]["message"].output(type="rdMarker")
@@ -196,6 +200,9 @@ def assign(transforms, solver):
             # Currently unused, markers compute their own frames
             reset_constraint_frames(dgmod, marker)
 
+            if opts["autoLimit"]:
+                _auto_limit(dgmod, marker)
+
             markers[transform] = marker
 
     return list(markers.values())
@@ -253,6 +260,52 @@ def create_lollipop(markers):
 
             # Hide from channelbox
             mod.set_attr(curve["isHistoricallyInteresting"], False)
+
+
+def _auto_limit(mod, marker):
+    dst = marker["dst"][0].input()
+
+    # Everything is unlocked
+    if not any(dst["r" + axis].locked for axis in "xyz"):
+        return
+
+    # Lock everything, immovable
+    if all(dst["r" + axis].locked for axis in "xyz"):
+        mod.set_attr(marker["limitType"], 2)
+        mod.set_attr(marker["limitAxis"], 0)
+        mod.set_attr(marker["limitRangeX"], -1)
+
+    else:
+        if dst["rx"].locked and dst["rz"].locked:
+            mod.set_attr(marker["limitType"], 2)
+            mod.set_attr(marker["limitAxis"], 0)
+
+        elif dst["rx"].locked and dst["ry"].locked:
+            mod.set_attr(marker["limitType"], 2)
+            mod.set_attr(marker["limitAxis"], 1)
+            mod.set_attr(marker["limitRotationY"], cmdx.radians(90))
+
+        elif dst["ry"].locked and dst["rz"].locked:
+            mod.set_attr(marker["limitType"], 2)
+            mod.set_attr(marker["limitAxis"], 1)
+
+        elif dst["rx"].locked:
+            mod.set_attr(marker["limitType"], 1)  # Ragdoll
+            mod.set_attr(marker["limitAxis"], 0)
+            mod.set_attr(marker["limitRangeX"], -1)
+
+        elif dst["ry"].locked:
+            mod.set_attr(marker["limitType"], 1)
+            mod.set_attr(marker["limitAxis"], 1)
+            mod.set_attr(marker["limitRangeX"], -1)
+
+        elif dst["rz"].locked:
+            mod.set_attr(marker["limitType"], 1)
+            mod.set_attr(marker["limitAxis"], 2)
+            mod.set_attr(marker["limitRangeX"], -1)
+
+        else:
+            log.warning("No limits were locked, this seems like a bug")
 
 
 def _find_markers(solver, markers=None):
@@ -532,7 +585,11 @@ class _Recorder(object):
                 mod.set_attr(dagnode["translate"], t)
                 mod.set_attr(dagnode["rotate"], r)
 
+        # Temporarily forcibly use the retargeted offset for now
+        old = self._opts["maintainOffset"]
+        self._opts["maintainOffset"] = constants.FromRetargeting
         cons = self._attach(marker_to_dagnode)
+        self._opts["maintainOffset"] = old
 
         if _force:
             cmds.dgdirty(allPlugs=True)
@@ -1505,3 +1562,76 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
             extend_tips(mod)
 
     return marker_to_dagnode
+
+
+def replace_mesh(marker, mesh, opts=None):
+    """Replace the 'Mesh' shape type in `marker` with `mesh`.
+
+    Arguments:
+        marker (cmdx.Node): Rigid whose mesh to replace
+        mesh (cmdx.Node): Mesh to replace with
+        clean (bool, optional): Remove other inputs, such as curve
+            or surface node. Multiple inputs are supported, so this
+            is optional. Defaults to True.
+
+    """
+
+    assert isinstance(marker, cmdx.Node), "%s was not a cmdx.Node" % marker
+    assert isinstance(mesh, cmdx.Node), "%s was not a cmdx.Node" % mesh
+    assert marker.isA("rdMarker"), "%s was not a 'rdMarker' node" % marker
+    assert mesh.isA(("mesh", "nurbsCurve", "nurbsSurface")), (
+        "%s must be either 'mesh', 'nurbsSurface' or 'nurbsSurface'" % mesh
+    )
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+    }, **(opts or {}))
+
+    with cmdx.DGModifier(interesting=False) as mod:
+        if opts["maintainOffset"]:
+            # Bake vertex positions with its current world matrix
+            tg = mod.create_node("transformGeometry")
+
+            # We can't connect to this directly, as it changes over time.
+            # We're only interested in a snapshot of its location.
+            transform = marker["src"].input(type=cmdx.kDagNode)
+            mesh_world_matrix = mesh["worldMatrix"][0].as_matrix()
+            parent_inverse_matrix = transform["wim"][0].as_matrix()
+            relative_matrix = mesh_world_matrix * parent_inverse_matrix
+            mod.set_attr(tg["transform"], relative_matrix)
+
+            if mesh.type() == "mesh":
+                mod.connect(mesh["outMesh"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            elif mesh.type() == "nurbsCurve":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            elif mesh.type() == "nurbsSurface":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            else:
+                raise TypeError("Unsupported mesh type '%s'" % mesh.type())
+
+            # Remove this node along with the associated marker
+            commands._take_ownership(mod, marker, tg)
+
+            # TODO: Also check whether there already is such a node,
+            # so we can reuse it rather than keep spamming them.
+
+        else:
+            if mesh.isA("mesh"):
+                mod.connect(mesh["outMesh"], marker["inputGeometry"])
+
+            elif mesh.isA("nurbsCurve"):
+                mod.connect(mesh["local"], marker["inputGeometry"])
+
+            elif mesh.isA("nurbsSurface"):
+                mod.connect(mesh["local"], marker["inputGeometry"])
+
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
+
+    return True

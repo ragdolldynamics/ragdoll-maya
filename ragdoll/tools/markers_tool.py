@@ -563,6 +563,104 @@ class _Recorder(object):
         #     self._attach(marker_to_dagnode)
 
     def snap(self, _force=False):
+        if self._opts["maintainOffset"] == constants.FromStart:
+            return self._snap_from_start()
+        else:
+            return self._snap_from_retarget()
+
+    def _snap_from_start(self):
+        """Maintain offset from the start frame
+
+        We are currently:
+
+        1. Storing the current world matrix
+        2. Storing the start world matrix
+        3. Creating a kinematic hierarchy
+        4. Keying it at start -> current
+        5. Visiting the start frame
+        6. Constraining, maintaining offset
+        7. Rewinding to current frame
+        8. Deleting all
+
+        This is incredibly convoluted.. todo, find a better way.
+
+        """
+
+        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+
+        initial_time = cmdx.current_time()
+        start_frame = self._solver_start_frame
+        current_frame = int(initial_time.value)
+
+        # Align kinematic hierarchy to worldspace simulation
+        marker_to_start_matrix = {}
+        marker_to_current_matrix = {}
+
+        for marker, dagnode in marker_to_dagnode.items():
+            src = marker["dst"][0].input(type=cmdx.kDagNode)
+            matrix = src["worldMatrix"][0].as_matrix(
+                time=self._solver_start_frame)
+            marker_to_start_matrix[marker] = matrix
+
+        for marker in marker_to_dagnode.keys():
+            matrix = marker["outputMatrix"].as_matrix()
+            marker_to_current_matrix[marker] = matrix
+
+        with cmdx.DagModifier() as mod:
+            for marker, dagnode in marker_to_dagnode.items():
+                tx, ty, tz = {}, {}, {}
+                rx, ry, rz = {}, {}, {}
+
+                parent = marker["parentMarker"].input(type="rdMarker")
+                matrix = marker_to_start_matrix[marker]
+                parent_matrix = marker_to_start_matrix.get(parent, cmdx.Mat4())
+                local_matrix = matrix * parent_matrix.inverse()
+
+                tm = cmdx.Tm(local_matrix)
+                t = tm.translation()
+                r = tm.rotation()
+
+                tx[start_frame] = t.x
+                ty[start_frame] = t.y
+                tz[start_frame] = t.z
+
+                rx[start_frame] = r.x
+                ry[start_frame] = r.y
+                rz[start_frame] = r.z
+
+                matrix = marker_to_current_matrix[marker]
+                parent_matrix = marker_to_current_matrix.get(
+                    parent, cmdx.Mat4())
+                local_matrix = matrix * parent_matrix.inverse()
+
+                tm = cmdx.Tm(local_matrix)
+                t = tm.translation()
+                r = tm.rotation()
+
+                tx[current_frame] = t.x
+                ty[current_frame] = t.y
+                tz[current_frame] = t.z
+
+                rx[current_frame] = r.x
+                ry[current_frame] = r.y
+                rz[current_frame] = r.z
+
+                mod.set_attr(dagnode["translateX"], tx)
+                mod.set_attr(dagnode["translateY"], ty)
+                mod.set_attr(dagnode["translateZ"], tz)
+                mod.set_attr(dagnode["rotateX"], rx)
+                mod.set_attr(dagnode["rotateY"], ry)
+                mod.set_attr(dagnode["rotateZ"], rz)
+
+        cons = self._attach(marker_to_dagnode)
+
+        temp = []
+        temp.extend(str(con) for con in cons)
+        temp.extend(str(node) for node in marker_to_dagnode.values())
+
+        cmds.delete(temp)
+
+    def _snap_from_retarget(self, _force=False):
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
 
         # Align kinematic hierarchy to worldspace simulation
@@ -586,10 +684,7 @@ class _Recorder(object):
                 mod.set_attr(dagnode["rotate"], r)
 
         # Temporarily forcibly use the retargeted offset for now
-        old = self._opts["maintainOffset"]
-        self._opts["maintainOffset"] = constants.FromRetargeting
         cons = self._attach(marker_to_dagnode)
-        self._opts["maintainOffset"] = old
 
         if _force:
             cmds.dgdirty(allPlugs=True)
@@ -755,6 +850,7 @@ class _Recorder(object):
 
         # Maintain offset from here, markers and controls
         # are guaranteed to be aligned here.
+        initial_time = cmdx.current_time()
         cmdx.current_time(self._solver_start_frame)
 
         for index, (dst, marker) in enumerate(self._dst_to_marker.items()):
@@ -816,6 +912,8 @@ class _Recorder(object):
             dst["rotate"].read()
 
             new_constraints.append(con)
+
+        cmdx.current_time(initial_time)
 
         return new_constraints
 

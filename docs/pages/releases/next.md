@@ -249,6 +249,15 @@ About (3), Ragdoll must evaluate your rig twice. Once to provide the simulation 
 
     With Markers, we delay the recording until you hit `Record Simulation`, which is the primary way in which they enable us to reap this crazy amount of performance out of Maya.
 
+#### Recording Locked Channels
+
+Locked channels are a work-in-progress and may cause the resulting animation to flip hapazardly. This will be fixed in a future release, and do shout out in the [chat](https://ragdolldynamics.com/chat) if this bothers you so we know what to prioritise.
+
+??? info "Why is this hard?"
+    For the techies out there, taking a worldmatrix with possible rotation around all axes and getting a rotation only along one axis is hard. I expect it will involve projecting the orientation along a plane relative the locked axes. The result would be approximate, but likely accurate enough to reflect what the artist is looking for.
+
+    If you know about this, [find me in the chat!](https://ragdolldynamics.com/chat)
+
 <br>
 
 ### Robust Caching
@@ -295,6 +304,9 @@ https://user-images.githubusercontent.com/2152766/141302197-4c895c4a-8e34-486e-8
 
 !!! note "Coming Up"
     An upcoming release will enable you to advance time in the simulation, without affecting time in Maya. Such that you can "relax" a pose, for example. 😁
+
+!!! note "Caveat"
+    Careful about locked rotate channels, Ragdoll currently cannot record onto only the unlocked channels.
 
 <br>
 

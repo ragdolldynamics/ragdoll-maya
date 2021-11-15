@@ -15,6 +15,9 @@ Highlight for this release is **Markers part 4 of 4**!
 - [**ADDED** Snap to Simulation](#snap-to-simulation) Snap your character to wherever the simulation is, for quick and natural posing
 - [**ADDED** Extract Simulation](#extract-simulation) Get the raw data as a baked joint hierarchy, super fast!
 - [**ADDED** Frameskip Method](#frameskip-method) Now accessible per-solver, as an attribute
+- [**ADDED** Replace Mesh](#replace-mesh) An old friend has returned, for Markers
+- [**ADDED** Auto Limit](#auto-limit) Transfer locked Maya channels into physics
+- [**FIXED** Scale Mastery](#scale-mastery) Negative, non-uniform, you name it
 - [**FIXED** Unloading Ragdoll on Linux](#unloading-on-linux) Guaranteed to crash, but no more!
 - [**UPDATED** `PATH` and Windows](#path) If you don't know what this is, you don't have to worry about it
 
@@ -63,13 +66,56 @@ https://user-images.githubusercontent.com/2152766/141655633-c9d14b2e-1253-49ca-a
 
 ### Recap
 
-We did it! We're at part 4 out of 4 of the new Markers.
+We did it! We're at part 4 out of 4 of the new Markers. Just about. 🥰
 
-When this all started, it wasn't clear whether Markers would be up to the task of completely replacing Rigids; it could have been that we still needed Rigids for certain tasks. But at this point it's safe to say Markers is applicable to *everything* rigids can do. Which is why Rigids are now to be considered *deprecated*.
+These are the things scheduled for the next release.
 
-#### Deprecating Rigids
+| Next Release | Description
+|:------------------|:---------------
+| Interactive Manipulators | Editing shapes is hard, constraints too. And limits.
+| Export & Import | Rigids could be exported and later imported, Markers does not have this ability yet
+| Forces | Next up, native Maya fields for Ragdoll
+| Mechanical Constraints | Like vehicle suspension are nowhere to be seen just yet.
 
-The following few releases will be about transitioning from Rigids to Markers. The tutorials on the left-hand side here will be updated, the documentation too and you're encouraged to
+This release here was intended to round off the interactive manipulators - so that you didn't have to fiddle around the channel box to edit shapes, constraints and limits - but we ran into a wall with our drawing API (see [Robust Rendering](#robust-rendering) below) which led us to throw *everything* out and start from scratch. 😔
+
+On the upside, we've now got a *significantly* stronger foundation upon which to build manipulators, you will see these in action in the *next* release. Part 5 out of 4! 🥰
+
+#### New Terminology
+
+A few things found a more representative name in this release.
+
+| Before        |       | After
+|:--------------|:------|:---------------
+| Guide         | `-->` | Pose
+| Input Type    | `-->` | Behaviour
+| Assign Single | `-->` | Assign Individual
+| Assign Group  | `-->` | Assign Hierarchy
+
+!!! hint "What does it mean?"
+    Still fuzzy on what "assign" means? Refer back to the introductory tutorials from the last release here. (hint: it's motion capture terminology)
+
+    - [Introductory Tutorials](/releases/2021.10.25/#new-tutorials)
+
+![image](https://user-images.githubusercontent.com/2152766/141692495-0a6b5c56-77f3-46be-b63f-7d5858f186b8.png) ![image](https://user-images.githubusercontent.com/2152766/141692511-2c258d6b-b1d2-4302-be79-983149b583ff.png)
+
+#### Future of Rigids
+
+When Markers was [first discovered](/releases/2021.09.27/), it wasn't clear whether they would live alongside Rigids, or replace them. But at this point it's safe to say Markers is applicable to *everything* rigids can do with far greater performance and usability.
+
+Which is why from this release onwards `Rigids` are now to be considered **deprecated**.
+
+> Long live Markers!
+
+The following few releases will be about transitioning from Rigids to Markers. Tutorials will be updated, the documentation too and you're encouraged to start using Markers for your everyday animation tasks.
+
+Rigids will live on for the next few releases and eventually end up in a `Legacy` sub-menu until being completely removed in February 2022.
+
+!!! note "February 2022 Deadline"
+    If you didn't read the above, remember this date for when `Active Rigid` and `Active Chain` goes bye-bye.
+
+    ![cause-kansas-is-going-bye-bye](https://user-images.githubusercontent.com/2152766/141692614-f9d8b5c4-1675-4505-90ed-362165e37463.gif)
+
 
 <br>
 
@@ -82,7 +128,7 @@ There is now an option to download Ragdoll for **MacOS**! 🍎
 </div>
 
 !!! info "Heads Up"
-    If you are a Mac user, please let us know how you get along. The builds were made on Big Sur and should work well with Big Sur, but Autodesk recommends *El Capitan* which we can build for, just let us know.
+    If you are a Mac user, please let us know how you get along. The builds were made on Big Sur and should work well with Big Sur, but Autodesk recommends *El Capitan*.
 
 https://user-images.githubusercontent.com/2152766/141682643-56a31237-47a6-41a8-aacd-2530fe0fe7ba.mp4 controls
 
@@ -121,7 +167,7 @@ drawManager->line(pointA, pointB, thickness);
 // And so on..
 ```
 
-Which is a fantastic, well-designed API that has worked great for the past year. Until it didn't. As it happens, this API is broken.. Reports were coming in from all across the globe about lines looking like.. Well like this.
+Which is a fantastic, well-designed API that has worked great for the past year. Until it didn't. As it happens, this API is broken.. Reports were coming in from all across the globe about lines looking like.. Well, like this.
 
 https://user-images.githubusercontent.com/2152766/141658511-ccdb3393-8d58-4543-91dd-80df010593cb.mov controls
 
@@ -144,13 +190,11 @@ https://user-images.githubusercontent.com/2152766/140603518-d68f1b83-a20f-403f-8
 
 <br>
 
-<br>
-
 ### Robust Recording
 
-Recording now automatically ends up on an Animation Layer, with only the simulated controls associated with it, with an option to not do that as well. It is also **at least 2x faster** and less sensitive to quirks in a rig or skeletal hierarchy.
+Recording now automatically ends up on an Animation Layer per default, with only the simulated controls associated with it. It is also **at least 2x faster** and less sensitive to quirks in a rig or skeletal hierarchy.
 
-Here are the things it didn't take into account before but does now.
+Here are the things it didn't take into account before, but does now.
 
 - [x] Uniform Scale
 - [x] Non-uniform Scale
@@ -187,14 +231,14 @@ https://user-images.githubusercontent.com/2152766/139644573-9d9c9f23-7c73-4ee0-a
 
 https://user-images.githubusercontent.com/2152766/139644578-03717acb-26cf-411f-aef7-b1b9cb34f602.mp4 controls
 
-At the end of the day, the main bottlenecks out of Ragdoll's hands:
+At the end of the day, the main bottlenecks are out of Ragdoll's hands:
 
 1. Running the simulation
 2. Evaluating the rig
 3. Twice (!)
 4. Overhead from the recording
 
-Sometimes, the simulation is really fast; it will usually be the fastest of the three. Sometimes, evaluating the rig is fast; such as if there are no keyframes and no fancy processing like follicles or spline IK. But the overhead from recording should approach zero as time goes on.
+Sometimes, the simulation is really fast; it will usually be the fastest of the four. Other times, evaluating the rig is fast; such as if there are no keyframes and no fancy processing like follicles or spline IK. But the overhead from recording should approach zero as time goes on.
 
 About (3), Ragdoll must evaluate your rig twice. Once to provide the simulation with your animation, and a second time to bake the resulting simulation back onto your controls.
 
@@ -250,13 +294,13 @@ https://user-images.githubusercontent.com/2152766/141302185-df7ee9d0-567e-4a52-a
 https://user-images.githubusercontent.com/2152766/141302197-4c895c4a-8e34-486e-8835-a91ffa50ff99.mp4 controls
 
 !!! note "Coming Up"
-    An upcoming release will enable you to advance time in the simulation, without affecting time in Maya. Such that you can "relax" a pose, for example. :D
+    An upcoming release will enable you to advance time in the simulation, without affecting time in Maya. Such that you can "relax" a pose, for example. 😁
 
 <br>
 
 ### Frameskip Method
 
-Ragdoll needs a consistent progression of time to provide reliably results. So per default, if it notices a frame being *skipped*, it kindly pauses and waits until you revisit the last simulated frame.
+Ragdoll needs a consistent progression of time to provide reliable results. So per default, if it notices a frame being *skipped*, it kindly pauses and waits until you revisit the last simulated frame.
 
 Alternatively, you can let it look the other way and pretend time has progressed linearly, like nCloth and countless other solvers do.
 
@@ -287,24 +331,65 @@ Get data out of the solver and into a baked joint hierarchy.
 
 You can use this to build a library of animations, or to handle the retargeting from simulation to animation manually by just constraining to the resulting joint hierarchy.
 
+https://user-images.githubusercontent.com/2152766/139657721-576c5b8f-e852-4e96-a9ed-dad4933920ff.mp4 controls
+
 !!! note "Performance"
     Notice how fast this is!
-
-https://user-images.githubusercontent.com/2152766/139657721-576c5b8f-e852-4e96-a9ed-dad4933920ff.mp4 controls
 
 <br>
 
 #### A Debugging Companion
 
-It can also be used for situations where `Record Simulation` doesn't do what you need it to. Negative scale, for example, is something Ragdoll still struggles with. But, the extracted skeleton will be a no-fuss joint hierarchy, with no scale, and guaranteed to match the simulation exactly. So you can extract it, and constrain your rig to it.
+It can also be used for situations where `Record Simulation` doesn't do what you need it to. The extracted skeleton will be a plain joint hierarchy, with no scale, and guaranteed to match the simulation exactly. So you can extract it, and constrain your rig to it.
+
+<br>
+
+### Replace Mesh
+
+You can now replace the original geometry assigned to your marker, just like you could with Rigids.
+
+https://user-images.githubusercontent.com/2152766/141688044-c2de9054-e2c1-4758-80c2-95c337de47e6.mp4 controls
+
+<br>
+
+### Auto Limits
+
+Markers are now able to infer which axes to lock in the simulation, based on the locked channels of your control or joint.
+
+https://user-images.githubusercontent.com/2152766/141749188-f0c5e734-3d5f-49c2-afb3-c2707f05223c.mp4 controls
+
+Notice in this example how some of the channels are locked. With the `Auto Limit` option checked, the corresponding limit axes will be locked too, such as to prevent the simulation from rotating around those axes.
+
+If you forget or want to detect locked axes on an existing marker, you can use the Utility option too.
+
+https://user-images.githubusercontent.com/2152766/141749191-bd5206e0-8802-48de-b580-587dfe6f0153.mp4 controls
+
+<br>
+
+### Scale Mastery
+
+Simplified and more robust, scale now handles well for all manner of shapes.
+
+https://user-images.githubusercontent.com/2152766/141695284-e517ecfe-08cb-4d2d-a1dd-343d842e9d54.mp4 controls
+
+<br>
+
+### Unloading on Linux
+
+Linux users wasn't able to unload and later *reload* Ragdoll, without experiencing a fatal crash. This was a problem related to the dynamic licencing library not letting go of its TCP handle and forcing the plug-in to remain loaded, even though you kindly asked it to unload.
+
+This has now been fixed, and the plug-in can safely be unloaded and reloaded and unloaded and reloaded over and over and over again. Enjoy!
 
 <br>
 
 ### PATH and Windows
 
+!!! info "For TDs"
+    The following is meant for administrators and TDs
+
 With the introduction of Mac support a change was made to the way LimeLM - the licencing software used by Ragdoll - is distributed. Rather than being statically linked on Linux and dynamically linked but programatically located on Windows, it is now dynamically linked and automatically located on all platforms.
 
-> note "Windows Only"
+!!! note "Windows Only"
     This only applies to Windows. Linux and Mac references the libraries relative the plug-in location. In short, you don't have to worry about it.
 
 You don't have to care about this, unless you are on Windows and care about what's on your `PATH` to which this happens.

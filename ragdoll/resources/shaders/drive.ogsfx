@@ -24,7 +24,7 @@ GLSLShader ShaderVertex
         ObjectColor = inColor;
 
         WorldPosition = gWvpXf * vec4(inPosition, 1);
-        WorldPosition.z -= 0.00011;
+        WorldPosition.z -= 0.0002;
 
         gl_Position = WorldPosition;
     }

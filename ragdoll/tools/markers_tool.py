@@ -871,49 +871,67 @@ class _Recorder(object):
             t = tm.translation(cmdx.sPostTransform)
             r = tm.rotation()
 
-            skip_rotate = []
-            skip_translate = []
+            skip_rotate = set()
+            skip_translate = set()
 
             for chan, plug in zip("xyz", dst["rotate"]):
                 if plug.locked:
-                    skip_rotate.append(chan)
+                    skip_rotate.add(chan)
 
             for chan, plug in zip("xyz", dst["translate"]):
                 if plug.locked:
-                    skip_translate.append(chan)
+                    skip_translate.add(chan)
 
-            skip_rotate = skip_rotate or "none"
-            skip_translate = skip_translate or "none"
             maintain = self._opts["maintainOffset"] == constants.FromStart
 
-            con = cmds.parentConstraint(
-                src.shortest_path(),
-                dst.shortest_path(),
+            if skip_translate != {"x", "y", "z"}:
+                pcon = cmds.parentConstraint(
+                    src.shortest_path(),
+                    dst.shortest_path(),
 
-                # Either from wherever it's being constrained
-                # or from the offset at the time of being retargeted
-                maintainOffset=maintain,
+                    # Either from wherever it's being constrained
+                    # or from the offset at the time of being retargeted
+                    maintainOffset=maintain,
 
-                # Account for locked channels
-                skipTranslate=skip_translate,
-                skipRotate=skip_rotate,
-            )
+                    # Account for locked channels
+                    skipTranslate=skip_translate or "none",
+                    skipRotate=list("xyz"),
+                )
 
-            con = cmdx.encode(con[0])
+                pcon = cmdx.encode(pcon[0])
+                new_constraints.append(pcon)
 
-            if self._opts["maintainOffset"] == constants.FromRetargeting:
-                with cmdx.DagModifier() as mod:
-                    mod.set_attr(con["target"][0]["targetOffsetTranslate"], t)
-                    mod.set_attr(con["target"][0]["targetOffsetRotate"], r)
+                if self._opts["maintainOffset"] == constants.FromRetargeting:
+                    with cmdx.DagModifier() as mod:
+                        target = pcon["target"][0]
+                        mod.set_attr(target["targetOffsetTranslate"], t)
+
+            if skip_rotate != {"x", "y", "z"}:
+                ocon = cmds.orientConstraint(
+                    src.shortest_path(),
+                    dst.shortest_path(),
+
+                    # Either from wherever it's being constrained
+                    # or from the offset at the time of being retargeted
+                    maintainOffset=maintain,
+
+                    # Account for locked channels
+                    skip=skip_rotate or "none",
+                )
+
+                ocon = cmdx.encode(ocon[0])
+                new_constraints.append(ocon)
+
+                if self._opts["maintainOffset"] == constants.FromRetargeting:
+                    with cmdx.DagModifier() as mod:
+                        mod.set_attr(ocon["offset"], r)
+
+            cmdx.current_time(initial_time)
 
             # Pull to refresh
             dst["worldMatrix"][0].as_matrix()
             dst["translate"].read()
             dst["rotate"].read()
-
-            new_constraints.append(con)
-
-        cmdx.current_time(initial_time)
 
         return new_constraints
 

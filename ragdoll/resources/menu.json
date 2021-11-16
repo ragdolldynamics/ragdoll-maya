@@ -524,7 +524,6 @@
             "validateLegacyOpenGL",
             "validateScalePivot",
             "validatePlaybackSpeed",
-            "useShaders",
             "reloadShaders",
             "useUIDrawManager"
         ]
@@ -701,6 +700,15 @@
             "markersUseSelection",
             "markersIgnoreJoints",
             "markersRecordMaintainOffset2"
+        ]
+    },
+
+    "markersManipulator": {
+        "label": "Manipulator",
+        "icon": "manipulator.png",
+        "summary": "Interactively edit the contents of a solver",
+        "description": "Toggle visibility of the various manipulators accessible to you, such that you can edit them interactively rather than via the Channel Box.",
+        "options": [
         ]
     },
 

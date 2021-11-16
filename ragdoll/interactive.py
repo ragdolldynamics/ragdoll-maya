@@ -228,13 +228,6 @@ def install():
     options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
 
-    if (os.getenv("MAYA_ENABLE_VP2_PLUGIN_LOCATOR_LEGACY_DRAW")):
-        cmds.warning(
-            "The environment variable "
-            "MAYA_ENABLE_VP2_PLUGIN_LOCATOR_LEGACY_DRAW "
-            "won't allow Ragdoll to draw anything."
-        )
-
     if _is_interactive():
         telemetry.install()
         install_callbacks()

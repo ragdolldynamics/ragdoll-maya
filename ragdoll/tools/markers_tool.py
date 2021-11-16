@@ -721,7 +721,7 @@ class _Recorder(object):
 
         initial_time = cmdx.current_time()
 
-        total = self._solver_start_frame - self._end_frame
+        total = self._end_frame - self._solver_start_frame
         for frame in range(self._solver_start_frame, self._end_frame):
             if self._opts["experimental"]:
                 # This does run faster, but at what cost?
@@ -759,7 +759,8 @@ class _Recorder(object):
                     self._cache[marker][frame]["recordTranslation"] = False
                     self._cache[marker][frame]["recordRotation"] = False
 
-            percentage = 100 * float(frame - self._start_frame) / total
+            progress = frame - self._solver_start_frame
+            percentage = 100.0 * progress / total
             yield percentage
 
         cmdx.current_time(initial_time)

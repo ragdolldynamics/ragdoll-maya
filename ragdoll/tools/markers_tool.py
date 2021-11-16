@@ -926,12 +926,12 @@ class _Recorder(object):
                     with cmdx.DagModifier() as mod:
                         mod.set_attr(ocon["offset"], r)
 
-            cmdx.current_time(initial_time)
-
             # Pull to refresh
             dst["worldMatrix"][0].as_matrix()
             dst["translate"].read()
             dst["rotate"].read()
+
+        cmdx.current_time(initial_time)
 
         return new_constraints
 

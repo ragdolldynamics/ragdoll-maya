@@ -895,7 +895,7 @@ class _Recorder(object):
                     maintainOffset=maintain,
 
                     # Account for locked channels
-                    skipTranslate=skip_translate or "none",
+                    skipTranslate=list(skip_translate) or "none",
                     skipRotate=list("xyz"),
                 )
 
@@ -917,7 +917,7 @@ class _Recorder(object):
                     maintainOffset=maintain,
 
                     # Account for locked channels
-                    skip=skip_rotate or "none",
+                    skip=list(skip_rotate) or "none",
                 )
 
                 ocon = cmdx.encode(ocon[0])

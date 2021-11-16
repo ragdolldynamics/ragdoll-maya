@@ -600,6 +600,8 @@ def install_menu():
     item("fluid")
 
     with submenu("Markers", icon="control.png"):
+        # item("markersManipulator", markers_manipulator)
+
         divider("Create")
 
         item("assignMarker", assign_single, assign_marker_options,
@@ -1051,7 +1053,8 @@ def validate_playbackspeed():
         return kSuccess
 
     def fix_it():
-        cmds.playbackOptions(playbackSpeed=0.0)
+        cmds.playbackOptions(playbackSpeed=0.0, maxPlaybackSpeed=1)
+
         log.info("Playing every frame")
         return kSuccess
 
@@ -1078,8 +1081,9 @@ def validate_legacy_opengl():
         return kSuccess
 
     opengl_legacy = cmds.optionVar(query="vp2RenderingEngine") == "OpenGL"
+    direct_x = cmds.optionVar(query="vp2RenderingEngine") == "DirectX11"
 
-    if not opengl_legacy:
+    if not (opengl_legacy or direct_x):
         return kSuccess
 
     def fix_it():
@@ -1093,16 +1097,16 @@ def validate_legacy_opengl():
 
     return ui.warn(
         option="validate_legacy_opengl",
-        title="Legacy OpenGL Detected",
+        title="Unsupported Rendering Engine Detected",
         message=(
-            "Your viewport is set to render in Legacy OpenGL, which is "
-            "incompatible with the Ragdoll renderer. Changing renderer "
-            "requires a restart of Maya."
+            "Your viewport is set to render in either DirectX or "
+            "Legacy OpenGL, which is incompatible with the Ragdoll "
+            "renderer.\n\nNOTE: Changing renderer requires a restart of Maya."
         ),
         call_to_action="Go to Maya Preferences to change this.",
         actions=[
             ("Ignore", lambda: True),
-            ("Play Every Frame", fix_it),
+            ("Fix it", fix_it),
             ("Cancel", lambda: False)
         ]
     )
@@ -2156,6 +2160,12 @@ def _fit_ground(ground, markers):
 
 
 def _find_current_solver(create_ground=True):
+    if not validate_playbackspeed():
+        return
+
+    if not validate_legacy_opengl():
+        return
+
     solver = cmdx.ls(type="rdSolver")
     ground = None
 
@@ -2183,6 +2193,44 @@ def _add_to_objset(markers):
             index = objset["dnSetMembers"].next_available_index()
             mod.connect(marker["message"], objset["dnSetMembers"][index])
             mod.do_it()
+
+
+@with_exception_handling
+def markers_manipulator(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    if len(selection) > 0:
+        solvers = []
+        for a in selection:
+            if a.isA(cmdx.kDagNode):
+                a = a["message"].output(type="rdSolver")
+
+            if not (a and a.isA("rdSolver")):
+                raise i__.UserWarning(
+                    "Not a marker",
+                    "%s wasn't a marker" % selection[0]
+                )
+
+            con = markers_.create_pin_constraint(a)
+            solvers += [con.path()]
+
+    else:
+        solvers = cmdx.ls(type="rdSolver")
+
+    if len(solvers) < 1:
+        raise i__.UserWarning(
+            "No solver found",
+            "No solver found to manipulate."
+        )
+
+    if len(solvers) > 1:
+        log.warning(
+            "Multiple solvers selected, manipulating %s" % solvers[0]
+        )
+
+    cmds.select(str(solvers[0]))
+    cmds.setToolTo("ShowManips")
+    log.info("Manipulating %s" % solvers[0])
 
 
 @i__.with_undo_chunk

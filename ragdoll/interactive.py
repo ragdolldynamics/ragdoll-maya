@@ -600,7 +600,7 @@ def install_menu():
     item("fluid")
 
     with submenu("Markers", icon="control.png"):
-        # item("markersManipulator", markers_manipulator)
+        item("markersManipulator", markers_manipulator)
 
         divider("Create")
 
@@ -2231,6 +2231,8 @@ def markers_manipulator(selection=None, **opts):
     cmds.select(str(solvers[0]))
     cmds.setToolTo("ShowManips")
     log.info("Manipulating %s" % solvers[0])
+
+    return kSuccess
 
 
 @i__.with_undo_chunk

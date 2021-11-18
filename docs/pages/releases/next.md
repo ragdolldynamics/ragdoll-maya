@@ -9,6 +9,7 @@ description: Out of the Channel Box and into the Viewport!
 Highlight for this release is **Markers part 4 of 4**!
 
 - [**ADDED** Interactive Manipulators](#interactive-manipulators) Edit things faster and visually with these new tricks
+- [**ADDED** Faster & Cleaner Deltas] Pose Deltas are now cleaner and more performant (up to 10x)
 
 <br>
 
@@ -18,3 +19,8 @@ Highlight for this release is **Markers part 4 of 4**!
 
 ### Interactive Manipulators
 
+<br>
+
+### Faster Deltas
+
+Deltas are the triangular-looking shapes drawn to visualise the difference between your animation and the current simulation. They are now only drawn when there is at least *some* difference, which means the vast majority of them in a complex scene are now not drawn, speeding up your viewport significantly.

@@ -1077,7 +1077,7 @@ def validate_playbackspeed():
 
 @requires_ui
 def validate_legacy_opengl():
-    if not options.read("validateLegacyOpenGL"):
+    if not options.read("validateLegacyOpenGL2"):
         return kSuccess
 
     opengl_legacy = cmds.optionVar(query="vp2RenderingEngine") == "OpenGL"
@@ -1096,7 +1096,7 @@ def validate_legacy_opengl():
         return False
 
     return ui.warn(
-        option="validate_legacy_opengl",
+        option="validateLegacyOpenGL2",
         title="Unsupported Rendering Engine Detected",
         message=(
             "Your viewport is set to render in either DirectX or "

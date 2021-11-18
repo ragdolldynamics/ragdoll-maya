@@ -877,8 +877,8 @@
         "default": true,
         "help": "Check whether Maya is evaluating in Parallel or Serial whenever creating a new scene, as DG is slow and error-prone."
     },
-    "validateLegacyOpenGL": {
-        "name": "validateLegacyOpenGL",
+    "validateLegacyOpenGL2": {
+        "name": "validateLegacyOpenGL2",
         "label": "Validate Legacy OpenGL",
         "type": "Boolean",
         "default": true,

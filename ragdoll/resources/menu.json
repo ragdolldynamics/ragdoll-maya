@@ -521,7 +521,7 @@
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",
-            "validateLegacyOpenGL",
+            "validateLegacyOpenGL2",
             "validateScalePivot",
             "validatePlaybackSpeed",
             "reloadShaders",

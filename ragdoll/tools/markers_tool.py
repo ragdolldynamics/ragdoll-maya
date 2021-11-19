@@ -239,9 +239,6 @@ def create_lollipop(markers):
             scale = list(sorted(marker["shapeExtents"].read()))[1]
             mod.set_attr(lol["scale"], scale * 0.25)
 
-            # Take over from here
-            mod.connect(lol["parentMatrix"][0], marker["inputMatrix"])
-
             # Make shape
             mod.do_it()
             curve = cmdx.curve(

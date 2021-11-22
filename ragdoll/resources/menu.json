@@ -524,6 +524,7 @@
             "validateLegacyOpenGL2",
             "validateScalePivot",
             "validatePlaybackSpeed",
+            "validateLayerOverride",
             "reloadShaders",
             "useUIDrawManager"
         ]

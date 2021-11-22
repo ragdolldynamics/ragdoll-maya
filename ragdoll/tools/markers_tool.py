@@ -950,14 +950,6 @@ class _Recorder(object):
             "bakeOnOverrideLayer": self._opts["toLayer"]
         }
 
-        # Selected layer takes priority
-        layer = cmds.treeView("AnimLayerTabanimLayerEditor",
-                              query=True, selectItem=True)
-
-        if layer and layer[0] != "BaseAnimation":
-            kwargs["destinationLayer"] = layer[0]
-            kwargs["bakeOnOverrideLayer"] = False
-
         initial_time = cmdx.current_time()
 
         # The cheeky little bakeResults changes our selection

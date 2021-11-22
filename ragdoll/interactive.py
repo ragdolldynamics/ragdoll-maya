@@ -1076,6 +1076,42 @@ def validate_playbackspeed():
 
 
 @requires_ui
+def validate_layer_override():
+    if not options.read("validateLayerOverride"):
+        return kSuccess
+
+    layer = cmds.treeView("AnimLayerTabanimLayerEditor",
+                          query=True, selectItem=True)
+
+    if not layer or layer == ["BaseAnimation"]:
+        return kSuccess
+
+    if cmds.animLayer(layer[0], query=True, override=True):
+        return kSuccess
+
+    def fix_it():
+        cmds.animLayer(layer[0], edit=True, override=True)
+        log.info("%s was set to Override" % layer[0])
+        return kSuccess
+
+    return ui.warn(
+        option="validateLayerOverride",
+        title="Selected Layer",
+        message=(
+            "The selected layer is set to 'Additive' mode, which is "
+            "incompatible with Record Simulation. It must be set to "
+            "'Override'"
+        ),
+        call_to_action="What would you like to do?",
+        actions=[
+            ("Ignore", lambda: True),
+            ("Set to Override", fix_it),
+            ("Cancel", lambda: False)
+        ]
+    )
+
+
+@requires_ui
 def validate_legacy_opengl():
     if not options.read("validateLegacyOpenGL2"):
         return kSuccess

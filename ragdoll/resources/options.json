@@ -926,6 +926,12 @@
         "default": false,
         "help": "Let the user know of a Ragdoll limitation, that scale is unsupported."
     },
+    "validateLayerOverride": {
+        "name": "validateLayerOverride",
+        "type": "Boolean",
+        "default": true,
+        "help": "Make sure the animation layer is set to Override on 'Record Simulation', not Additive."
+    },
     "sceneScale": {
         "name": "sceneScale",
         "type": "Float",

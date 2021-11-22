@@ -1037,5 +1037,12 @@
         "type": "String",
         "default": "",
         "help": "Absolute path to where fonts are located."
+    },
+    "iconPath": {
+        "name": "iconPath",
+        "label": "Icon Path",
+        "type": "String",
+        "default": "",
+        "help": "Absolute path to where icons are located."
     }
 }

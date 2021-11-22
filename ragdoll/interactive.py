@@ -469,6 +469,7 @@ def install_plugin():
 
     options.write("shaderPath", _resource("shaders"))
     options.write("fontPath", _resource("fonts"))
+    options.write("iconPath", _resource("icons"))
 
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)

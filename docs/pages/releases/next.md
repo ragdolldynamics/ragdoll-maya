@@ -8,9 +8,10 @@ description: Out of the Channel Box and into the Viewport!
 
 Highlight for this release is **Markers part 4 of 4**!
 
-- [**ADDED** Interactive Manipulators](#interactive-manipulators) Edit things faster and visually with these new tricks
-- [**ADDED** Faster & Cleaner Deltas] Pose Deltas are now cleaner and more performant (up to 10x)
-- [**FIXED** Lollipop Hierarchy] Lollipops could break a hierarchy of markers, but no more
+- [**ADDED** Manipulator](#manipulators) Edit things faster and visually with these new tricks
+- [**ADDED** Faster & Cleaner Deltas](#clean-deltas) Pose Deltas are now cleaner and more performant (up to 10x)
+- [**FIXED** Disappearing Limits](#disappearing-limaits) Two solvers, one removed, caused limit indicators to vanish
+- [**FIXED** Lollipop Hierarchy](#lollipop-hierarchy) Lollipops could break a hierarchy of markers, but no more
 
 <br>
 
@@ -18,13 +19,28 @@ Highlight for this release is **Markers part 4 of 4**!
 
 <br>
 
-### Interactive Manipulators
+### Manipulator
+
+Common values can now be edited interactively via the viewport, using the new `Manipulator`.
+
+#### Multi-select
+#### Symmetry
+#### Undo/Redo
+#### Fit-to-view
 
 <br>
 
 ### Faster Deltas
 
 Deltas are the triangular-looking shapes drawn to visualise the difference between your animation and the current simulation. They are now only drawn when there is at least *some* difference, which means the vast majority of them in a complex scene are now not drawn, speeding up your viewport significantly.
+
+<br>
+
+### Disappearing Limits
+
+The limit indicator is drawn using a 2D drawing API which is initialised whenever a Solver is created. It was however *uninitialized* whenever *any* Solver was deleted, so if you had 2 solvers you were out of luck. A re-open of the scene would fix it, but it was annoying and incorrect.
+
+This has now been fixed.
 
 <br>
 

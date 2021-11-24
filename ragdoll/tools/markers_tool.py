@@ -1191,12 +1191,14 @@ def create_solver():
         solver = mod.create_node("rdSolver",
                                  name="rSolverShape",
                                  parent=solver_parent)
+
+        canvas_parent = mod.create_node("transform", name="rCanvas")
         canvas = mod.create_node("rdCanvas",
                                  name="rCanvasShape",
-                                 parent=solver_parent)
+                                 parent=canvas_parent)
 
         # Hide in outliner and channel box
-        mod.set_attr(canvas["hiddenInOutliner"], True)
+        mod.set_attr(canvas_parent["hiddenInOutliner"], True)
         mod.set_attr(canvas["isHistoricallyInteresting"], 0)
 
         mod.set_attr(solver["version"], internal.version())

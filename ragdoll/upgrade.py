@@ -52,6 +52,7 @@ def upgrade_all():
         "rdMarker": marker,
         "rdGroup": group,
         "rdSolver": solver,
+        "rdCanvas": canvas,
     }
 
     upgraded_count = 0
@@ -130,6 +131,9 @@ def has_upgrade(node, from_version):
 
     if node.type() == "rdGroup":
         return from_version < 20211007
+
+    if node.type() == "rdCanvas":
+        return from_version < 20211129
 
 
 def scene(node, from_version, to_version):
@@ -237,6 +241,16 @@ def solver(node, from_version, to_version):
 
     if from_version < 20211112:
         _solver_20211024_20211112(node)
+        upgraded = True
+
+    return upgraded
+
+
+def canvas(node, from_version, to_version):
+    upgraded = False
+
+    if from_version < 20211129:
+        _canvas_20211024_20211129(node)
         upgraded = True
 
     return upgraded
@@ -391,7 +405,7 @@ def _solver_20210928_20211024(solver):
 
 def _solver_20211024_20211112(solver):
     """rdCanvas node was added"""
-    log.info("Upgrading %s to 2021.10.24" % solver)
+    log.info("Upgrading %s to 2021.11.12" % solver)
 
     with cmdx.DagModifier() as mod:
         parent = solver.parent()
@@ -403,6 +417,16 @@ def _solver_20211024_20211112(solver):
         mod.set_attr(canvas["isHistoricallyInteresting"], False)
 
         mod.connect(solver["ragdollId"], canvas["solver"])
+
+
+def _canvas_20211024_20211129(canvas):
+    """rdCanvas was give its own transform node"""
+    log.info("Upgrading %s to 2021.11.29" % canvas)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name="rCanvas")
+        mod.parent(canvas, transform)
+        mod.set_attr(transform["hiddenInOutliner"], True)
 
 
 def _marker_20210928_20211007(marker):

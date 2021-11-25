@@ -10,8 +10,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveStiffness";
             editorTemplate -addControl "driveDampingRatio";
-            editorTemplate -addControl "driveAbsoluteLinear";
-            editorTemplate -addControl "driveAbsoluteAngular";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Record" -collapse true;
@@ -23,7 +21,16 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "destinationTransform";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Default Shape" -collapse false;
+        editorTemplate -beginLayout "Advanced Pose" -collapse true;
+            editorTemplate -addControl "driveInterpolation";
+            editorTemplate -addControl "driveAbsoluteLinear";
+            editorTemplate -addControl "driveAbsoluteAngular";
+            editorTemplate -addControl "driveAngularAmountTwist";
+            editorTemplate -addControl "driveAngularAmountSwing";
+            editorTemplate -addControl "driveAbsoluteLinearAmount";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Default Shape" -collapse true;
             editorTemplate -addControl "collide";
             editorTemplate -addControl "shapeType";
             editorTemplate -addControl "mass";
@@ -37,15 +44,15 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "shapeRotation";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Default Limit" -collapse false;
+        editorTemplate -beginLayout "Default Limit" -collapse true;
             editorTemplate -addControl "limitType";
             editorTemplate -addControl "limitAxis";
             editorTemplate -addControl "limitRotation";
             editorTemplate -addControl "limitRange";
             editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "limitStiffness";
-            editorTemplate -addControl "limitDampingRatio";
-            editorTemplate -addControl "limitLinearLock";
+
+            editorTemplate -addControl "limitLinearMotion";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;

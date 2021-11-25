@@ -423,6 +423,10 @@ def _canvas_20211024_20211129(canvas):
     """rdCanvas was give its own transform node"""
     log.info("Upgrading %s to 2021.11.29" % canvas)
 
+    # Already done
+    if not canvas.sibling(type="rdSolver"):
+        return
+
     with cmdx.DagModifier() as mod:
         transform = mod.create_node("transform", name="rCanvas")
         mod.parent(canvas, transform)

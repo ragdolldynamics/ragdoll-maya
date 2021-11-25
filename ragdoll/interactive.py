@@ -590,202 +590,72 @@ def install_menu():
          # Programatically displayed during logging
          visible=False)
 
+    item("markersManipulator", markers_manipulator)
+
     divider("Create")
 
-    item("activeRigid", create_active_rigid, create_rigid_options)
-    item("activeChain", create_active_chain, create_chain_options)
-    item("passiveRigid", create_passive_rigid, create_passive_options)
-    item("tissue")
-    item("cloth")
-    item("muscle", create_muscle, create_muscle_options)
-    item("fluid")
+    item("assignMarker", assign_single, assign_marker_options,
+         label="Assign Individual")
+    item("assignGroup", assign_group, assign_group_options,
+         label="Assign Hierarchy")
 
-    with submenu("Markers", icon="control.png"):
-        item("markersManipulator", markers_manipulator)
+    divider("Constrain")
 
-        divider("Create")
+    item("fixedConstraint",
+         create_fixed_constraint, label="Weld")
+    item("distanceConstraint",
+         create_distance_constraint, label="Distance")
+    item("pinConstraint",
+         create_pin_constraint, label="Pin")
 
-        item("assignMarker", assign_single, assign_marker_options,
-             label="Assign Individual")
-        item("assignGroup", assign_group, assign_group_options,
-             label="Assign Hierarchy")
+    divider("Record")
 
-        divider("Constrain")
+    item("recordMarkers", record_markers, record_markers_options)
 
-        item("fixedConstraint",
-             create_fixed_constraint, label="Weld")
-        item("distanceConstraint",
-             create_distance_constraint, label="Distance")
-        item("pinConstraint",
-             create_pin_constraint, label="Pin")
-        # item("mimicConstraint",
-        #      create_marker_mimic_constraint, label="Mimic")
-
-        divider("Record")
-
-        item("recordMarkers", record_markers, record_markers_options)
-
-        item("snapMarkers", snap_markers, snap_markers_options)
-
-        divider("Manipulate")
-
-        with submenu("Cache", icon="bake.png"):
-            item("cacheSolver", cache_all, label="Cache")
-            item("uncacheSolver", uncache, label="Uncache")
-
-        with submenu("Edit", icon="kinematic.png"):
-            item("reassignMarker", reassign_marker, label="Reassign")
-            item("retargetMarker", retarget_marker, retarget_marker_options,
-                 label="Retarget")
-            item("reparentMarker", reparent_marker, label="Reparent")
-            item("untargetMarker", untarget_marker, label="Untarget")
-
-        with submenu("Link", icon="link.png"):
-            item("linkSolver", link_solver)
-            item("unlinkSolver", unlink_solver)
-
-        divider("Utilities")
-
-        with submenu("Utilities", icon="magnet.png"):
-            item("extractMarkers", extract_markers)
-            item("createLollipop", create_lollipop)
-            item("markerReplaceMesh",
-                 replace_marker_mesh,
-                 replace_marker_mesh_options)
-            item("markersAutoLimit", auto_limit)
-
-            item("editConstraintFrames",
-                 edit_marker_constraint_frames,
-                 label="Edit Pivots")
-
-        with submenu("Select", icon="select.png"):
-            item("parentMarker", select_parent_marker, label="Parent")
-            item("childMarkers", select_child_markers, label="Children")
+    item("snapMarkers", snap_markers, snap_markers_options)
 
     divider("Manipulate")
 
-    with submenu("Constraints", icon="constraint.png"):
-        item("point", create_point_constraint,
-             _constraint_options(c.PointConstraint))
-        item("orient", create_orient_constraint,
-             _constraint_options(c.OrientConstraint))
-        item("parent", create_parent_constraint,
-             _constraint_options(c.ParentConstraint))
-        item("hinge", create_hinge_constraint,
-             _constraint_options(c.HingeConstraint))
-        item("socket", create_socket_constraint,
-             _constraint_options(c.SocketConstraint))
+    with submenu("Cache", icon="bake.png"):
+        item("cacheSolver", cache_all, label="Cache")
+        item("uncacheSolver", uncache, label="Uncache")
 
-        divider("Utilities")
+    with submenu("Edit", icon="kinematic.png"):
+        item("reassignMarker", reassign_marker, label="Reassign")
+        item("retargetMarker", retarget_marker, retarget_marker_options,
+             label="Retarget")
+        item("reparentMarker", reparent_marker, label="Reparent")
+        item("untargetMarker", untarget_marker, label="Untarget")
 
-        item("ignoreContacts", ignore_contacts_constraint,
-             _constraint_options(c.IgnoreContactsConstraint))
-
-        item("animationConstraint", create_animation_constraint,
-             create_animation_constraint_options)
-
-        divider("Gizmos")
-
-        item("editConstraintFrames",
-             edit_constraint_frames,
-             label="Edit Pivots")
-
-        item("constraintEditor", show_constraint_editor)
-
-    with submenu("Controls", icon="control.png"):
-        item("hardPin", create_hard_pin,
-             create_hard_pin_options)
-        item("softPin", create_soft_pin,
-             create_soft_pin_options)
-        item("mimic", create_mimic, create_mimic_options)
-        item("motor")
-        item("actuator")
-        item("trigger")
-
-    with submenu("Forces", icon="turbulence.png"):
-        item("push", create_push_force, create_push_force_options)
-        item("pull", create_pull_force, create_pull_force_options)
-        item("directional", create_uniform_force, create_uniform_force_options)
-        item("wind", create_turbulence_force, create_turbulence_force_options)
-
-        divider()
-
-        item("visualiser", create_slice)
-        item("assignToSelected", assign_force)
+    with submenu("Link", icon="link.png"):
+        item("linkSolver", link_solver)
+        item("unlinkSolver", unlink_solver)
 
     divider("Utilities")
 
-    with submenu("Animation", icon="animation.png"):
-        item("bakeSimulation", bake_simulation, bake_simulation_options)
-
-        divider("I/O")
-
-        item("openPhysics", open_physics, open_physics_options)
-        item("exportPhysics", export_physics, export_physics_options)
-        item("importPhysics", import_physics_from_file, import_physics_options)
-        item("applyPhysics")
-
-        divider("Utilities")
-
-        item("multiplySelected",
-             multiply_selected,
-             multiply_selected_options)
-
-        item("createDynamicControl",
-             create_dynamic_control,
-             create_dynamic_control)
-
-    with submenu("Rigging", icon="rigging.png"):
-        divider("Gizmos")
-
-        item("editShape", edit_shape, edit_shape_options)
-        item("editConstraintFrames", edit_constraint_frames)
-
-        divider()
-
-        item("duplicateSelected", duplicate_selected)
-        item("transferAttributes", transfer_selected)
-        item("replaceMesh", replace_mesh, replace_mesh_options)
-
-        if c.RAGDOLL_DEVELOPER:
-            divider("Development")
-            item("convertToPolygons", convert_to_polygons)
-
-        divider("Scene Management")
-
-        item("extractFromScene", extract_from_scene)
-        item("moveToScene", move_to_scene)
-        item("combineScenes", combine_scenes)
-
-        divider("Initial State")
-
-        item("setInitialState", set_initial_state,
-             set_initial_state_options)
-        item("clearInitialState", clear_initial_state,
-             clear_initial_state_options)
+    with submenu("Utilities", icon="magnet.png"):
+        item("markerReplaceMesh",
+             replace_marker_mesh,
+             replace_marker_mesh_options)
+        item("extractMarkers", extract_markers)
+        item("createLollipop", create_lollipop)
+        item("markersAutoLimit", auto_limit)
+        item("editConstraintFrames",
+             edit_marker_constraint_frames,
+             label="Edit Pivots")
 
     with submenu("Select", icon="select.png"):
-        item("selectRigids", select_rigids, select_rigids_options)
-        item("selectConstraints",
-             select_constraints,
-             select_constraints_options)
-        item("selectControls", select_controls, select_controls_options)
-        item("selectScenes", select_scenes, select_scenes_options)
         item("selectMarkers", select_markers)
         item("selectGroups", select_groups)
         item("selectSolvers", select_solvers)
+
+        item("parentMarker", select_parent_marker, label="Marker Parent")
+        item("childMarkers", select_child_markers, label="Marker Children")
 
     with submenu("System", icon="system.png"):
         divider("Scene")
 
         item("deleteAllPhysics", delete_physics, delete_physics_options)
-
-        divider("Evaluation")
-
-        item("freezeEvaluation", freeze_evaluation, freeze_evaluation_options)
-        item("unfreezeEvaluation",
-             unfreeze_evaluation,
-             unfreeze_evaluation_options)
 
         divider()
 
@@ -802,6 +672,136 @@ def install_menu():
             item("loggingInfo", logging_info)
             item("loggingWarning", logging_warning)
             item("loggingDebug", logging_debug)
+
+    with submenu("Legacy", icon="legacy.png"):
+        divider("Create")
+
+        item("activeRigid", create_active_rigid, create_rigid_options)
+        item("activeChain", create_active_chain, create_chain_options)
+        item("passiveRigid", create_passive_rigid, create_passive_options)
+        item("tissue")
+        item("cloth")
+        item("muscle", create_muscle, create_muscle_options)
+        item("fluid")
+
+        divider("Manipulate")
+
+        with submenu("Constraints", icon="constraint.png"):
+            item("point", create_point_constraint,
+                 _constraint_options(c.PointConstraint))
+            item("orient", create_orient_constraint,
+                 _constraint_options(c.OrientConstraint))
+            item("parent", create_parent_constraint,
+                 _constraint_options(c.ParentConstraint))
+            item("hinge", create_hinge_constraint,
+                 _constraint_options(c.HingeConstraint))
+            item("socket", create_socket_constraint,
+                 _constraint_options(c.SocketConstraint))
+
+            divider("Utilities")
+
+            item("ignoreContacts", ignore_contacts_constraint,
+                 _constraint_options(c.IgnoreContactsConstraint))
+
+            item("animationConstraint", create_animation_constraint,
+                 create_animation_constraint_options)
+
+            divider("Gizmos")
+
+            item("editConstraintFrames",
+                 edit_constraint_frames,
+                 label="Edit Pivots")
+
+            item("constraintEditor", show_constraint_editor)
+
+        with submenu("Controls", icon="control.png"):
+            item("hardPin", create_hard_pin,
+                 create_hard_pin_options)
+            item("softPin", create_soft_pin,
+                 create_soft_pin_options)
+            item("mimic", create_mimic, create_mimic_options)
+            item("motor")
+            item("actuator")
+            item("trigger")
+
+        with submenu("Forces", icon="turbulence.png"):
+            item("push", create_push_force, create_push_force_options)
+            item("pull", create_pull_force, create_pull_force_options)
+            item("directional",
+                 create_uniform_force,
+                 create_uniform_force_options)
+            item("wind",
+                 create_turbulence_force,
+                 create_turbulence_force_options)
+
+            divider()
+
+            item("visualiser", create_slice)
+            item("assignToSelected", assign_force)
+
+        divider("Utilities")
+
+        with submenu("Animation", icon="animation.png"):
+            item("bakeSimulation", bake_simulation, bake_simulation_options)
+
+            divider("I/O")
+
+            item("openPhysics", open_physics, open_physics_options)
+            item("exportPhysics", export_physics, export_physics_options)
+            item("importPhysics",
+                 import_physics_from_file,
+                 import_physics_options)
+            item("applyPhysics")
+
+            divider("Utilities")
+
+            item("multiplySelected",
+                 multiply_selected,
+                 multiply_selected_options)
+
+            item("createDynamicControl",
+                 create_dynamic_control,
+                 create_dynamic_control)
+
+        with submenu("Rigging", icon="rigging.png"):
+            divider("Gizmos")
+
+            item("editShape", edit_shape, edit_shape_options)
+            item("editConstraintFrames", edit_constraint_frames)
+
+            divider()
+
+            item("duplicateSelected", duplicate_selected)
+            item("transferAttributes", transfer_selected)
+            item("replaceMesh", replace_mesh, replace_mesh_options)
+
+            if c.RAGDOLL_DEVELOPER:
+                divider("Development")
+                item("convertToPolygons", convert_to_polygons)
+
+            divider("Scene Management")
+
+            item("extractFromScene", extract_from_scene)
+            item("moveToScene", move_to_scene)
+            item("combineScenes", combine_scenes)
+
+            divider("Initial State")
+
+            item("setInitialState", set_initial_state,
+                 set_initial_state_options)
+            item("clearInitialState", clear_initial_state,
+                 clear_initial_state_options)
+
+        with submenu("Select", icon="select.png"):
+            item("selectRigids", select_rigids, select_rigids_options)
+            item("selectConstraints",
+                 select_constraints,
+                 select_constraints_options)
+            item("selectControls", select_controls, select_controls_options)
+            item("selectScenes", select_scenes, select_scenes_options)
+            item("selectMarkers", select_markers)
+            item("selectGroups", select_groups)
+            item("selectSolvers", select_solvers)
 
     divider()
 
@@ -1170,7 +1170,11 @@ def _filtered_selection(node_type, selection=None):
     shapes = []
     for node in selection:
         if node.isA(cmdx.kDagNode):
-            shapes += node.shapes(node_type)
+            for shape in node.shapes(node_type):
+                if "intermediateObject" in shape and shape["io"]:
+                    log.info("Skipped intermediate shape %s" % shape)
+                    continue
+                shapes += [shape]
 
     shapes = filter(None, shapes)
     shapes = list(shapes) + selection
@@ -3291,6 +3295,7 @@ def replace_marker_mesh(selection=None, **opts):
     opts = {
         "exclusive": _opt("replaceMeshExclusive", opts),
         "maintainOffset": _opt("replaceMeshMaintainOffset", opts),
+        "maintainHistory": _opt("replaceMeshMaintainHistory", opts),
     }
 
     meshes = (
@@ -3329,7 +3334,6 @@ def replace_marker_mesh(selection=None, **opts):
 
     if len(meshes) > 1:
         existing_geo = markers[0]["inputGeometry"].input()
-        print("existing geo: %s" % existing_geo)
 
         if existing_geo in meshes:
             meshes.remove(existing_geo)

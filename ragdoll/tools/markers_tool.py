@@ -1694,7 +1694,35 @@ def replace_mesh(marker, mesh, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
+        "maintainHistory": False,
     }, **(opts or {}))
+
+    # Clone input mesh. We aren't able to simply connect to the
+    # transformGeometry and disconnect it, because it appears
+    # to flush its data on disconnect. So we need a dedicated
+    # mesh for this.
+    if not opts["maintainHistory"]:
+        with cmdx.DagModifier(interesting=False) as mod:
+            copy = mod.create_node(mesh.type(),
+                                   name=mesh.name() + "Orig",
+                                   parent=mesh.parent())
+
+            if mesh.type() == "mesh":
+                a, b = "outMesh", "inMesh"
+
+            elif mesh.type() == "nurbsCurve":
+                a, b = "local", "create"
+
+            elif mesh.type() == "nurbsSurface":
+                a, b = "local", "create"
+
+            mod.connect(mesh[a], copy[b])
+            mod.do_it()
+            cmds.refresh(force=True)
+            mod.disconnect(copy["inMesh"])
+            mod.set_attr(copy["intermediateObject"], True)
+
+            mesh = copy
 
     with cmdx.DGModifier(interesting=False) as mod:
         if opts["maintainOffset"]:

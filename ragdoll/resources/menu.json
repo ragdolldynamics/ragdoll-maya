@@ -774,7 +774,8 @@
         "summary": "Replace input of the 'Mesh' shape type with another polygonal or NURBS mesh.",
         "description": "Substitute the current input of the 'Mesh' shape type with another. Also taking worldspace into account, so the mesh can be anywhere in the scene, under any group or voodoo magic.",
         "options": [
-            "replaceMeshMaintainOffset"
+            "replaceMeshMaintainOffset",
+            "replaceMeshMaintainHistory"
         ]
     },
 

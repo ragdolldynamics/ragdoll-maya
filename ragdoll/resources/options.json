@@ -446,6 +446,13 @@
         "default": true,
         "help": "Use the worldspace position of the mesh to be replaced."
     },
+    "replaceMeshMaintainHistory": {
+        "name": "replaceMeshMaintainHistory",
+        "label": "Maintain History",
+        "type": "Boolean",
+        "default": false,
+        "help": "Allow changes to be made to the original mesh."
+    },
 
 
     "#": "----------------",

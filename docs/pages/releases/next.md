@@ -10,8 +10,11 @@ Highlight for this release is **Markers part 4 of 4**!
 
 - [**ADDED** Manipulator](#manipulators) Edit things faster and visually with these new tricks
 - [**ADDED** Faster & Cleaner Deltas](#clean-deltas) Pose Deltas are now cleaner and more performant (up to 10x)
+- [**ADDED** Independent Pose Axes](#separate-translate-xyz-amount) Control X, Y and Z axes independently
 - [**FIXED** Disappearing Limits](#disappearing-limaits) Two solvers, one removed, caused limit indicators to vanish
 - [**FIXED** Lollipop Hierarchy](#lollipop-hierarchy) Lollipops could break a hierarchy of markers, but no more
+- [**FIXED** Replace Intermediate Mesh](#replace-intermediate-mesh) Intermediate meshes could make Replace Mesh more complicated
+- [**FIXED** White Window on Maya Exit](#maya-exit) Ragdoll could sometime prevent Maya from exiting properly
 
 <br>
 
@@ -24,9 +27,29 @@ Highlight for this release is **Markers part 4 of 4**!
 Common values can now be edited interactively via the viewport, using the new `Manipulator`.
 
 #### Multi-select
+
+Hold `Shift` to select and manipulate *multiple* markers at once.
+
 #### Symmetry
+
+Toggle `Enable Symmetry` to manipulate markers symmetrically along the world X axis. Change the axis using the Axis dropdown.
+
 #### Undo/Redo
+
+Changes made using the manipulator is undoable as you would expect, no surprises, except it currently does not let you undo the selection itself like normal Maya selection does; this will be addressed in a future release.
+
 #### Fit-to-view
+
+Tap the `F` key to fit any selected marker(s) to the view, like you would expect from selected Maya nodes.
+
+!!! hint "Pro Tip"
+    This now also applies to the *solver* itself, such that you can fit the entire contents of a physics solver in view.
+
+#### Select Node
+
+Selecting a marker using the manipulator displays the name of the corresponding Maya node, clicking on it will select this Maya node to make edits to it via the Channel Box or Attribute Editor - without leaving the manipulator.
+
+With `Symmetry` enabled, the mirrored marker will be included in the selection, and with multiple markers selected an additional icon will appear to let select all nodes.
 
 <br>
 
@@ -57,3 +80,49 @@ https://user-images.githubusercontent.com/2152766/142628177-f078f326-6e3e-4c68-b
 **After**
 
 https://user-images.githubusercontent.com/2152766/142628180-2ea5d1aa-5560-4599-abf9-0604b50eb7bc.mp4 controls
+
+<br>
+
+### Replace Intermediate Mesh
+
+In the previous release, if a mesh had a second "intermediate" mesh it would be more difficult to use it with the `Replace Mesh` command.
+
+**Before**
+
+https://user-images.githubusercontent.com/2152766/143280183-d076b432-28fe-41f2-b9ca-f303bd3a44cf.mp4
+
+**After**
+
+Here's it working with intermediate shapes, and the new `Maintain History` option which was always true in the previous release.
+
+https://user-images.githubusercontent.com/2152766/143287859-778c4252-0ef1-43fb-a13d-190500cbf185.mp4
+
+Without it, modifications to the original mesh are ignored; such as a skinned mesh.
+
+https://user-images.githubusercontent.com/2152766/143287863-4adffedd-74e7-49ad-b1f5-4b7b16bae9f4.mp4
+
+<br>
+
+### Separate Translate XYZ Amount
+
+The `Pose Stiffness` in `World` space affected each axis equally.
+
+You can now control each axis independently, to for example follow an input animation closely along the ground plane, the X and Z-axes, but allow for it to deviate along the Y-axis,
+
+https://user-images.githubusercontent.com/2152766/143435579-ec64ddad-d567-4ab2-ab85-89eb7da150e3.mp4 controls
+
+<br>
+
+### Separate Twist and Swing Amount
+
+The `Pose Stiffness` and `Pose Damping` parameters of Markers apply to both Swing and Twist - that is, rotations around the X and YZ axes.
+
+You can now control these independently, for an even finer control over the resulting simulation.
+
+https://user-images.githubusercontent.com/2152766/143433769-325b7cbb-ae24-49f5-a32d-a5896e55e4c5.mp4 controls
+
+<br>
+
+### Maya Exit
+
+![image](https://user-images.githubusercontent.com/2152766/143432430-1249fac5-bbbe-4681-a021-a37146f534b5.png)

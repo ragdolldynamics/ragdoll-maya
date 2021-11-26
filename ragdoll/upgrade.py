@@ -127,7 +127,7 @@ def has_upgrade(node, from_version):
         return from_version < 20211112
 
     if node.type() == "rdMarker":
-        return from_version < 20211007
+        return from_version < 20211129
 
     if node.type() == "rdGroup":
         return from_version < 20211007
@@ -213,6 +213,10 @@ def marker(node, from_version, to_version):
 
     if from_version < 20211007:
         _marker_20210928_20211007(node)
+        upgraded = True
+
+    if from_version < 20211129:
+        _marker_20211007_20211129(node)
         upgraded = True
 
     return upgraded
@@ -423,14 +427,18 @@ def _canvas_20211024_20211129(canvas):
     """rdCanvas was give its own transform node"""
     log.info("Upgrading %s to 2021.11.29" % canvas)
 
+    solver = canvas.sibling(type="rdSolver")
+
     # Already done
-    if not canvas.sibling(type="rdSolver"):
+    if solver is None:
         return
 
     with cmdx.DagModifier() as mod:
         transform = mod.create_node("transform", name="rCanvas")
         mod.parent(canvas, transform)
         mod.set_attr(transform["hiddenInOutliner"], True)
+        mod.connect(canvas["ragdollId"], solver["canvas"])
+        mod.disconnect(canvas["solver"])
 
 
 def _marker_20210928_20211007(marker):
@@ -469,6 +477,13 @@ def _marker_20210928_20211007(marker):
                 offset = src["worldMatrix"][0].as_matrix()
                 offset *= dst["worldInverseMatrix"][0].as_matrix()
                 mod.set_attr(marker["offsetMatrix"][index], offset)
+
+
+def _marker_20211007_20211129(marker):
+    log.info("Upgrading %s to 2021.11.29" % marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["originMatrix"], marker["inputMatrix"].as_matrix())
 
 
 def _group_20210928_20211007(group):

@@ -149,6 +149,8 @@ def assign(transforms, solver, opts=None):
             dgmod.set_attr(marker["color"], internal.random_color())
             dgmod.set_attr(marker["version"], internal.version())
 
+            dgmod.set_attr(marker["originMatrix"], transform["worldMatrix"][0])
+
             dgmod.connect(transform["message"], marker["src"])
             dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(time1["outTime"], marker["currentTime"])

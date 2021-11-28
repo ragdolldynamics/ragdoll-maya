@@ -592,7 +592,7 @@ def install_menu():
 
     item("markersManipulator", markers_manipulator)
 
-    divider("Create")
+    divider("Markers")
 
     item("assignMarker", assign_single, assign_marker_options,
          label="Assign Individual")
@@ -616,16 +616,16 @@ def install_menu():
 
     divider("Manipulate")
 
-    with submenu("Cache", icon="bake.png"):
-        item("cacheSolver", cache_all, label="Cache")
-        item("uncacheSolver", uncache, label="Uncache")
-
     with submenu("Edit", icon="kinematic.png"):
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
         item("reparentMarker", reparent_marker, label="Reparent")
         item("untargetMarker", untarget_marker, label="Untarget")
+
+    with submenu("Cache", icon="bake.png"):
+        item("cacheSolver", cache_all, label="Cache")
+        item("uncacheSolver", uncache, label="Uncache")
 
     with submenu("Link", icon="link.png"):
         item("linkSolver", link_solver)

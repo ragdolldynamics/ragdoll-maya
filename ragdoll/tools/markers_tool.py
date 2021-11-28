@@ -149,7 +149,8 @@ def assign(transforms, solver, opts=None):
             dgmod.set_attr(marker["color"], internal.random_color())
             dgmod.set_attr(marker["version"], internal.version())
 
-            dgmod.set_attr(marker["originMatrix"], transform["worldMatrix"][0])
+            dgmod.set_attr(marker["originMatrix"],
+                           transform["worldMatrix"][0].as_matrix())
 
             dgmod.connect(transform["message"], marker["src"])
             dgmod.connect(transform["message"], marker["dst"][0])
@@ -1205,7 +1206,7 @@ def create_solver():
 
         mod.set_attr(solver["version"], internal.version())
         mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
-        mod.connect(solver["ragdollId"], canvas["solver"])
+        mod.connect(canvas["ragdollId"], solver["canvas"])
         mod.connect(time1["outTime"], solver["currentTime"])
         mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
 

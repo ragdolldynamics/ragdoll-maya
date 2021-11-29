@@ -15,6 +15,7 @@ Highlight for this release is **Markers part 4 of 4**!
 - [**FIXED** Lollipop Hierarchy](#lollipop-hierarchy) Lollipops could break a hierarchy of markers, but no more
 - [**FIXED** Replace Intermediate Mesh](#replace-intermediate-mesh) Intermediate meshes could make Replace Mesh more complicated
 - [**FIXED** White Window on Maya Exit](#maya-exit) Ragdoll could sometime prevent Maya from exiting properly
+- [**ADDED** Customise Recording](#customise-recording) An advanced topic for big pipelines
 
 <br>
 
@@ -34,9 +35,45 @@ Hold `Shift` to select and manipulate *multiple* markers at once.
 
 Toggle `Enable Symmetry` to manipulate markers symmetrically along the world X axis. Change the axis using the Axis dropdown.
 
-#### Undo/Redo
+**Translation**
 
-Changes made using the manipulator is undoable as you would expect, no surprises, except it currently does not let you undo the selection itself like normal Maya selection does; this will be addressed in a future release.
+Translations are fully symmetrical, regardless of the orientation of the mirrored half of your rig.
+
+**Rotation**
+
+Rotations are half-symmetrical; if your rig is mirrored so is the manipulator. But that is not always the case and those cases will be addressed in a future release.
+
+https://user-images.githubusercontent.com/2152766/143677487-6ba46a4c-0099-4ab9-b64e-e92c22bde0d5.mp4 controls
+
+#### World Symmetry
+
+#### Pose Symmetry
+
+Sometimes, a character had markers assigned whilst in its T-pose or A-pose - a symmetrical pose - but later referenced and animated into a pose that is no longer symmetrical.
+
+The `Pose` mode enables edits to remain symmetrical in this case.
+
+
+
+
+| Axis | Description
+|:-----|:------
+| `World` | As the name suggests, World implies looking at the worldspace position of your selection with a negative X, Y or Z value. E.g. if your selection is at `Translate X = 5` then it will try and find another selection at `Translate X = -5`. If one is found, this is affected as well.
+| `Pose` |
+
+**Multiple Rigs**
+
+If two or more characters are present in the scene, and they were all rigged in the same pose, at the center of the world, then Ragdoll will only look at markers in the same `rdGroup` as the selected marker.
+
+<br>
+
+#### Undo & Redo
+
+No surprises here.
+
+Changes made using the manipulator is undoable as you would expect, with the exception that it currently does not let you undo *the selection itself* like normal Maya selection does; this will be addressed in a future release.
+
+<br>
 
 #### Fit-to-view
 
@@ -126,3 +163,13 @@ https://user-images.githubusercontent.com/2152766/143433769-325b7cbb-ae24-49f5-a
 ### Maya Exit
 
 ![image](https://user-images.githubusercontent.com/2152766/143432430-1249fac5-bbbe-4681-a021-a37146f534b5.png)
+
+<br>
+
+### Customised Recording
+
+Some rigs don't work with Maya's default Parent and Orient constraint. As a result, neither does `Record Simulation` or `Snap to Simulation` because those commands use these default constraints.
+
+If this is you, then I have good news. You can now override the command responsible for creating these constraints with one that uses your custom in-house constraints instead.
+
+- [Custom Attach](/custom-attach)

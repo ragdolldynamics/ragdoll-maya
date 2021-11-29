@@ -854,7 +854,7 @@ class _Recorder(object):
         initial_time = cmdx.current_time()
         cmdx.current_time(self._solver_start_frame)
 
-        for index, (dst, marker) in enumerate(self._dst_to_marker.items()):
+        for dst, marker in self._dst_to_marker.items():
             src = marker_to_dagnode.get(marker, None)
 
             if not src:

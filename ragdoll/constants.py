@@ -146,3 +146,7 @@ DisplayContacts = 8
 Off = 0
 FromRetargeting = 1
 FromStart = 2
+
+# Cache
+StaticCache = 1
+DynamicCache = 2

@@ -640,9 +640,6 @@ def install_menu():
         item("extractMarkers", extract_markers)
         item("createLollipop", create_lollipop)
         item("markersAutoLimit", auto_limit)
-        item("editConstraintFrames",
-             edit_marker_constraint_frames,
-             label="Edit Pivots")
 
     with submenu("Select", icon="select.png"):
         item("selectMarkers", select_markers)

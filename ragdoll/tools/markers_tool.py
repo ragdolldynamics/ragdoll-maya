@@ -763,6 +763,11 @@ class _Recorder(object):
             percentage = 100.0 * progress / total
             yield percentage
 
+        # Enable cache, for replay
+        with cmdx.DagModifier() as mod:
+            # It may be locked or connected
+            mod.try_set_attr(self._solver["cache"], constants.StaticCache)
+
         cmdx.current_time(initial_time)
 
     @internal.with_timing

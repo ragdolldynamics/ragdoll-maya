@@ -128,16 +128,7 @@ def assign(transforms, solver, opts=None):
             if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["inputType"], constants.InputKinematic)
 
-            # Root or lone object
-            if not parent_marker:
-                dgmod.lock_attr(marker["limitType"])
-                dgmod.lock_attr(marker["limitAxis"])
-                dgmod.lock_attr(marker["limitRotation"])
-                dgmod.lock_attr(marker["limitRange"])
-                dgmod.lock_attr(marker["limitOffset"])
-                dgmod.lock_attr(marker["limitStiffness"])
-                dgmod.lock_attr(marker["limitDampingRatio"])
-
+            dgmod.set_attr(marker["limitType"], 3)  # Custom
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
             dgmod.set_attr(marker["shapeLength"], geo.length)
@@ -159,6 +150,16 @@ def assign(transforms, solver, opts=None):
             dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
+
+            # Root or lone object
+            # if not parent_marker:
+            #     marker["limitType"].lock_and_hide()
+            #     marker["limitAxis"].lock_and_hide()
+            #     marker["limitRotation"].lock_and_hide()
+            #     marker["limitRange"].lock_and_hide()
+            #     marker["limitOffset"].lock_and_hide()
+            #     marker["limitStiffness"].lock_and_hide()
+            #     marker["limitDampingRatio"].lock_and_hide()
 
             # For the offset, we need to store the difference between
             # the source and destination transforms. At the time of
@@ -200,7 +201,7 @@ def assign(transforms, solver, opts=None):
             # Keep next_available_index() up-to-date
             dgmod.do_it()
 
-            # Currently unused, markers compute their own frames
+            # Used as a basis for angular limits
             reset_constraint_frames(dgmod, marker)
 
             if opts["autoLimit"]:
@@ -269,43 +270,16 @@ def _auto_limit(mod, marker):
     if not any(dst["r" + axis].locked for axis in "xyz"):
         return
 
-    # Lock everything, immovable
-    if all(dst["r" + axis].locked for axis in "xyz"):
-        mod.set_attr(marker["limitType"], 2)
-        mod.set_attr(marker["limitAxis"], 0)
+    mod.set_attr(marker["limitType"], 3)
+
+    if dst["rx"].locked:
         mod.set_attr(marker["limitRangeX"], -1)
 
-    else:
-        if dst["rx"].locked and dst["rz"].locked:
-            mod.set_attr(marker["limitType"], 2)
-            mod.set_attr(marker["limitAxis"], 0)
+    if dst["ry"].locked:
+        mod.set_attr(marker["limitRangeY"], -1)
 
-        elif dst["rx"].locked and dst["ry"].locked:
-            mod.set_attr(marker["limitType"], 2)
-            mod.set_attr(marker["limitAxis"], 1)
-            mod.set_attr(marker["limitRotationY"], cmdx.radians(90))
-
-        elif dst["ry"].locked and dst["rz"].locked:
-            mod.set_attr(marker["limitType"], 2)
-            mod.set_attr(marker["limitAxis"], 1)
-
-        elif dst["rx"].locked:
-            mod.set_attr(marker["limitType"], 1)  # Ragdoll
-            mod.set_attr(marker["limitAxis"], 0)
-            mod.set_attr(marker["limitRangeX"], -1)
-
-        elif dst["ry"].locked:
-            mod.set_attr(marker["limitType"], 1)
-            mod.set_attr(marker["limitAxis"], 1)
-            mod.set_attr(marker["limitRangeX"], -1)
-
-        elif dst["rz"].locked:
-            mod.set_attr(marker["limitType"], 1)
-            mod.set_attr(marker["limitAxis"], 2)
-            mod.set_attr(marker["limitRangeX"], -1)
-
-        else:
-            log.warning("No limits were locked, this seems like a bug")
+    if dst["rz"].locked:
+        mod.set_attr(marker["limitRangeZ"], -1)
 
 
 def _find_markers(solver, markers=None):
@@ -1482,8 +1456,17 @@ def add_constraint(mod, con, solver):
     mod.do_it()
 
 
-def reset_constraint_frames(mod, con):
-    """Reset constraint frames"""
+def reset_constraint_frames(mod, con, **opts):
+    """Reset constraint frames
+
+    Options:
+        symmetrical (bool): Keep limits visually consistent when inverted
+
+    """
+
+    opts = dict(opts, **{
+        "symmetrical": True,
+    })
 
     assert con and isinstance(con, cmdx.Node), (
         "%s was not a cmdx instance" % con
@@ -1492,9 +1475,6 @@ def reset_constraint_frames(mod, con):
     if con.isA("rdMarker"):
         parent = con["parentMarker"].input(type="rdMarker")
         child = con
-    elif con.isA("rdConstraint"):
-        parent = con["parentRigid"].input(type="rdMarker")
-        child = con["childRigid"].input(type="rdMarker")
 
     if parent is not None:
         parent_matrix = parent["inputMatrix"].as_matrix()
@@ -1509,10 +1489,37 @@ def reset_constraint_frames(mod, con):
     child_frame.translateBy(rotate_pivot)
     child_frame = child_frame.as_matrix()
 
-    child_tm = cmdx.Tm(rest_matrix)
-    child_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
+    # Reuse the shape offset to determine
+    # the direction in which each axis is facing.
+    main_axis = child["shapeOffset"].as_vector()
+    x_axis = cmdx.Vector(1, 0, 0)
+    y_axis = cmdx.Vector(0, 1, 0)
 
-    parent_frame = child_tm.as_matrix() * parent_matrix.inverse()
+    if any(axis < 0 for axis in main_axis):
+        if main_axis.x < 0:
+            flip = cmdx.Quaternion(cmdx.pi, y_axis)
+
+        elif main_axis.y < 0:
+            flip = cmdx.Quaternion(cmdx.pi, x_axis)
+
+        else:
+            flip = cmdx.Quaternion(cmdx.pi, x_axis)
+
+        if opts["symmetrical"] and main_axis.x < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, x_axis)
+
+        if opts["symmetrical"] and main_axis.y < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, y_axis)
+
+        if opts["symmetrical"] and main_axis.z < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, y_axis)
+
+        child_frame = cmdx.Tm(child_frame)
+        child_frame.rotateBy(flip)
+        child_frame = child_frame.as_matrix()
+
+    # Align parent matrix to wherever the child matrix is
+    parent_frame = child_frame * rest_matrix * parent_matrix.inverse()
 
     mod.set_attr(con["parentFrame"], parent_frame)
     mod.set_attr(con["childFrame"], child_frame)
@@ -1588,9 +1595,6 @@ def edit_constraint_frames(marker, opts=None):
         "Could not find source transform for %s and/or %s" % (
             parent_marker, child_marker)
     )
-
-    parent = parent.parent()
-    child = child.parent()
 
     with cmdx.DagModifier() as mod:
         parent_frame = mod.create_node("transform",

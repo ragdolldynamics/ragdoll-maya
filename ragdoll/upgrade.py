@@ -32,9 +32,6 @@ RAGDOLL_PLUGIN_NAME = os.path.basename(RAGDOLL_PLUGIN)
 def upgrade_all():
     print("Updating..")
 
-    # Fetch node types from the horses mouth
-    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-
     # Also fetch plug-in version from the same mouth, rather
     # than rely on what's coming out of interactive.py. Since
     # upgrading should work headless too!
@@ -44,43 +41,40 @@ def upgrade_all():
     # Debug builds come with a `.debug` suffix, e.g. `2020.10.15.debug`
     current_version = int("".join(version_str.split(".")[:3]))
 
-    nodetype_to_upgrade = {
-        "rdScene": scene,
-        "rdRigid": rigid,
-        "rdRigidMultiplier": rigid_multiplier,
-        "rdConstraintMultiplier": constraint_multiplier,
-        "rdMarker": marker,
-        "rdGroup": group,
-        "rdSolver": solver,
-        "rdCanvas": canvas,
-    }
+    nodetype_to_upgrade = (
+        ("rdScene", scene),
+        ("rdRigid", rigid),
+        ("rdRigidMultiplier", rigid_multiplier),
+        ("rdConstraintMultiplier", constraint_multiplier),
+        ("rdMarker", marker),
+        ("rdGroup", group),
+        ("rdSolver", solver),
+        ("rdCanvas", canvas),
+    )
 
     upgraded_count = 0
 
-    for node in cmdx.ls(type=all_nodetypes):
-        node_version = node["version"].read()
+    for nodetype, func in nodetype_to_upgrade:
+        for node in cmdx.ls(type=nodetype):
+            node_version = node["version"].read()
 
-        func = nodetype_to_upgrade.get(node.type())
-        if func is None:
-            continue
+            if node_version >= current_version:
+                continue
 
-        if node_version >= current_version:
-            continue
+            try:
+                upgraded = func(node, node_version, current_version)
 
-        try:
-            upgraded = func(node, node_version, current_version)
+            except Exception as e:
+                log.debug(traceback.format_exc())
+                log.warning(e)
+                log.warning("Bug, had trouble upgrading")
+                continue
 
-        except Exception as e:
-            log.debug(traceback.format_exc())
-            log.warning(e)
-            log.warning("Bug, had trouble upgrading")
-            continue
-
-        else:
-            if upgraded:
-                upgraded_count += 1
-                with cmdx.DGModifier() as mod:
-                    mod.set_attr(node["version"], current_version)
+            else:
+                if upgraded:
+                    upgraded_count += 1
+                    with cmdx.DGModifier() as mod:
+                        mod.set_attr(node["version"], current_version)
 
     return upgraded_count
 

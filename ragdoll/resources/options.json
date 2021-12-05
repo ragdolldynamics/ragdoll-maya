@@ -1051,5 +1051,34 @@
         "type": "String",
         "default": "",
         "help": "Absolute path to where icons are located."
+    },
+    "manipulatorDisplayOptions": {
+        "name": "manipulatorDisplayOptions",
+        "label": "Display Manipulator Options",
+        "type": "Boolean",
+        "default": true,
+        "help": "Default mode for display of options for the various modes."
+    },
+    "manipulatorDisplayHelp": {
+        "name": "manipulatorDisplayHelp",
+        "label": "Display Manipulator Help",
+        "type": "Boolean",
+        "default": true,
+        "help": "Display some help text whenever the manipulator is active."
+    },
+    "manipulatorSymmetry": {
+        "name": "manipulatorSymmetry",
+        "label": "Manipulator Symmetry",
+        "type": "Boolean",
+        "default": true,
+        "help": "Whether or not the manipulator should mirror itself."
+    },
+    "manipulatorSymmetryAxis": {
+        "name": "manipulatorSymmetryAxis",
+        "label": "Manipulator Symmetry Axis",
+        "type": "Enum",
+        "items": ["World X", "World Y", "World Z", "Pose X", "Pose Y", "Pose Z"],
+        "default": 3,
+        "help": "The axis across which symmetry should look for the selected marker."
     }
 }

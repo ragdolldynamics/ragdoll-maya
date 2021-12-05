@@ -2238,24 +2238,7 @@ def _add_to_objset(markers):
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
     selection = selection or cmdx.sl()
-
-    if len(selection) > 0:
-        solvers = []
-        for a in selection:
-            if a.isA(cmdx.kDagNode):
-                a = a["message"].output(type="rdSolver")
-
-            if not (a and a.isA("rdSolver")):
-                raise i__.UserWarning(
-                    "Not a marker",
-                    "%s wasn't a marker" % selection[0]
-                )
-
-            con = markers_.create_pin_constraint(a)
-            solvers += [con.path()]
-
-    else:
-        solvers = cmdx.ls(type="rdSolver")
+    solvers = cmdx.ls(type="rdSolver")
 
     if len(solvers) < 1:
         raise i__.UserWarning(
@@ -2265,7 +2248,7 @@ def markers_manipulator(selection=None, **opts):
 
     if len(solvers) > 1:
         log.warning(
-            "Multiple solvers selected, manipulating %s" % solvers[0]
+            "Multiple solvers found, manipulating %s" % solvers[0]
         )
 
     cmds.select(str(solvers[0]))

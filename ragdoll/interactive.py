@@ -595,9 +595,11 @@ def install_menu():
     divider("Markers")
 
     item("assignMarker", assign_single, assign_marker_options,
-         label="Assign Individual")
+         label="Assign")
     item("assignGroup", assign_group, assign_group_options,
-         label="Assign Hierarchy")
+         label="Assign and Connect")
+    item("assignGroup", assign_group, assign_group_options,
+         label="Assign to Hierarchy")
 
     divider("Constrain")
 

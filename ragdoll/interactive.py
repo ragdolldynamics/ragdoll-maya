@@ -642,6 +642,7 @@ def install_menu():
         item("extractMarkers", extract_markers)
         item("createLollipop", create_lollipop)
         item("markersAutoLimit", auto_limit)
+        item("resetMarkerConstraintFrames", reset_marker_constraint_frames)
 
     with submenu("Select", icon="select.png"):
         item("selectMarkers", select_markers)
@@ -2889,6 +2890,24 @@ def reassign_marker(selection=None, **opts):
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["src"])
         mod.connect(b["worldMatrix"][0], a["inputMatrix"])
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_marker_constraint_frames(selection=None, **opts):
+    for node in selection or cmdx.sl():
+        marker = node
+
+        if marker.isA(cmdx.kDagNode):
+            marker = node["message"].output(type="rdMarker")
+
+        if not (marker and marker.type() == "rdMarker"):
+            continue
+
+        with cmdx.DGModifier() as mod:
+            markers_.reset_constraint_frames(mod, marker)
+
     return kSuccess
 
 

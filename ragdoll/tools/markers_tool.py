@@ -128,7 +128,6 @@ def assign(transforms, solver, opts=None):
             if len(transforms) > 1 and not parent_marker:
                 dgmod.set_attr(marker["inputType"], constants.InputKinematic)
 
-            dgmod.set_attr(marker["limitType"], 3)  # Custom
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
             dgmod.set_attr(marker["shapeLength"], geo.length)
@@ -269,8 +268,6 @@ def _auto_limit(mod, marker):
     # Everything is unlocked
     if not any(dst["r" + axis].locked for axis in "xyz"):
         return
-
-    mod.set_attr(marker["limitType"], 3)
 
     if dst["rx"].locked:
         mod.set_attr(marker["limitRangeX"], -1)

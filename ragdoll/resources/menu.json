@@ -768,6 +768,13 @@
         ]
     },
 
+    "resetMarkerConstraintFrames": {
+        "label": "Reset Constraint Frames",
+        "icon": "reset_constraint.png",
+        "summary": "Reset constraint frames to their defaults",
+        "description": "Set the frames of a constraint such that twist rotates a rigid along its length."
+    },
+
     "markerReplaceMesh": {
         "label": "Replace Mesh",
         "icon": "replace.png",

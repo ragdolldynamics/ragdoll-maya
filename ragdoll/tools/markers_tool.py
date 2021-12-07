@@ -1453,7 +1453,7 @@ def add_constraint(mod, con, solver):
     mod.do_it()
 
 
-def reset_constraint_frames(mod, con, **opts):
+def reset_constraint_frames(mod, marker, **opts):
     """Reset constraint frames
 
     Options:
@@ -1465,13 +1465,13 @@ def reset_constraint_frames(mod, con, **opts):
         "symmetrical": True,
     })
 
-    assert con and isinstance(con, cmdx.Node), (
-        "%s was not a cmdx instance" % con
+    assert marker and isinstance(marker, cmdx.Node), (
+        "%s was not a cmdx instance" % marker
     )
 
-    if con.isA("rdMarker"):
-        parent = con["parentMarker"].input(type="rdMarker")
-        child = con
+    if marker.isA("rdMarker"):
+        parent = marker["parentMarker"].input(type="rdMarker")
+        child = marker
 
     if parent is not None:
         parent_matrix = parent["inputMatrix"].as_matrix()
@@ -1480,7 +1480,7 @@ def reset_constraint_frames(mod, con, **opts):
         parent_matrix = cmdx.Matrix4()
 
     rotate_pivot = child["rotatePivot"].as_vector()
-    rest_matrix = child["inputMatrix"].as_matrix()
+    child_matrix = child["inputMatrix"].as_matrix()
 
     child_frame = cmdx.Tm()
     child_frame.translateBy(rotate_pivot)
@@ -1489,26 +1489,40 @@ def reset_constraint_frames(mod, con, **opts):
     # Reuse the shape offset to determine
     # the direction in which each axis is facing.
     main_axis = child["shapeOffset"].as_vector()
+
+    # The offset isn't necessarily only in one axis, it may have
+    # small values in each axis. The largest axis is the one that
+    # we are most likely interested in.
+    main_axis_abs = cmdx.Vector(
+        abs(main_axis.x),
+        abs(main_axis.y),
+        abs(main_axis.z),
+    )
+
+    largest_index = list(main_axis_abs).index(max(main_axis_abs))
+    largest_axis = cmdx.Vector()
+    largest_axis[largest_index] = main_axis[largest_index]
+
     x_axis = cmdx.Vector(1, 0, 0)
     y_axis = cmdx.Vector(0, 1, 0)
 
-    if any(axis < 0 for axis in main_axis):
-        if main_axis.x < 0:
+    if any(axis < 0 for axis in largest_axis):
+        if largest_axis.x < 0:
             flip = cmdx.Quaternion(cmdx.pi, y_axis)
 
-        elif main_axis.y < 0:
+        elif largest_axis.y < 0:
             flip = cmdx.Quaternion(cmdx.pi, x_axis)
 
         else:
             flip = cmdx.Quaternion(cmdx.pi, x_axis)
 
-        if opts["symmetrical"] and main_axis.x < 0:
+        if opts["symmetrical"] and largest_axis.x < 0:
             flip *= cmdx.Quaternion(cmdx.pi, x_axis)
 
-        if opts["symmetrical"] and main_axis.y < 0:
+        if opts["symmetrical"] and largest_axis.y < 0:
             flip *= cmdx.Quaternion(cmdx.pi, y_axis)
 
-        if opts["symmetrical"] and main_axis.z < 0:
+        if opts["symmetrical"] and largest_axis.z < 0:
             flip *= cmdx.Quaternion(cmdx.pi, y_axis)
 
         child_frame = cmdx.Tm(child_frame)
@@ -1516,10 +1530,12 @@ def reset_constraint_frames(mod, con, **opts):
         child_frame = child_frame.as_matrix()
 
     # Align parent matrix to wherever the child matrix is
-    parent_frame = child_frame * rest_matrix * parent_matrix.inverse()
+    parent_frame = child_frame * child_matrix * parent_matrix.inverse()
 
-    mod.set_attr(con["parentFrame"], parent_frame)
-    mod.set_attr(con["childFrame"], child_frame)
+    mod.set_attr(marker["limitRange"], (cmdx.pi / 4, cmdx.pi / 4, cmdx.pi / 4))
+    mod.set_attr(marker["parentFrame"], parent_frame)
+    mod.set_attr(marker["childFrame"], child_frame)
+    mod.set_attr(marker["limitType"], 999)  # Custom
 
 
 def get_local_pos_rot(world_matrix, dag_node):

@@ -2893,10 +2893,20 @@ def reassign_marker(selection=None, **opts):
     return kSuccess
 
 
+def _selection(selection=None):
+    result = []
+    for node in selection or cmdx.selection():
+        if isinstance(node, str):
+            node = cmdx.encode(node)
+
+        result.append(node)
+    return result
+
+
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_marker_constraint_frames(selection=None, **opts):
-    for node in selection or cmdx.sl():
+    for node in _selection(selection):
         marker = node
 
         if marker.isA(cmdx.kDagNode):

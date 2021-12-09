@@ -51,7 +51,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitRange";
             editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "limitStiffness";
-            editorTemplate -addControl "limitDamping";
+            editorTemplate -addControl "limitDampingRatio";
 
             editorTemplate -addControl "limitLinearMotion";
         editorTemplate -endLayout;

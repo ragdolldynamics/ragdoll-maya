@@ -3635,27 +3635,28 @@ def _interpret_shape2(shape):
 
         if gen.type() == "polyCube":
             geo.shape_type = c.BoxShape
-            geo.extents.x = gen["width"]
-            geo.extents.y = gen["height"]
-            geo.extents.z = gen["depth"]
+            geo.extents.x = gen["width"].read()
+            geo.extents.y = gen["height"].read()
+            geo.extents.z = gen["depth"].read()
 
         elif gen.type() == "polySphere":
             geo.shape_type = c.SphereShape
-            geo.radius = gen["radius"]
+            geo.radius = gen["radius"].read()
 
         elif gen.type() == "polyPlane":
             geo.shape_type = c.BoxShape
-            geo.extents.x = gen["width"]
-            geo.extents.z = gen["height"]
+            geo.extents.x = gen["width"].read()
+            geo.extents.z = gen["height"].read()
 
             # Align top of box with plane
-            geo.extents.y = 0.01
-            geo.shape_offset.y = -0.005
+            average_size = (geo.extents.x + geo.extents.z) / 2.0
+            geo.extents.y = average_size / 40.0
+            geo.shape_offset.y = -geo.extents.y / 2.0
 
         elif gen.type() == "polyCylinder" and gen["roundCap"]:
             geo.shape_type = c.CylinderShape
-            geo.radius = gen["radius"]
-            geo.length = gen["height"]
+            geo.radius = gen["radius"].read()
+            geo.length = gen["height"].read()
 
             # Align with Maya's cylinder/capsule axis
             # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0

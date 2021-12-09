@@ -257,6 +257,7 @@
         "icon": "com.png"
     },
     "createDynamicControl": {
+        "hidden": true,
         "label": "Create Dynamic Control",
         "icon": "dynamic_control.png",
         "summary": "Create a new <b>dynamic</b> control from the currently selected <i>regular</i> control(s).",
@@ -593,19 +594,10 @@
     "#": "---------",
 
 
-    "markersBeta": {
-        "label": "Markers v0.75",
-        "icon": "internals.png",
-        "summary": "Markers version 3 out of 4, powerful but incomplete. Follow the release notes for latest up-to-date information.",
-        "description": "The Markers features just left Alpha and is generally made available, but isn't yet complete. It'll be followed by one more round of polish, tooling and performance improvements.",
-        "options": [
-        ]
-    },
-
     "assignMarker": {
-        "label": "Assign Marker",
+        "label": "Assign",
         "icon": "marker.png",
-        "summary": "Capture this node",
+        "summary": "Assign marker to this node",
         "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
             "markersCreateGround",
@@ -616,9 +608,23 @@
     },
 
     "assignGroup": {
-        "label": "Assign Group",
+        "label": "Assign and Connect",
         "icon": "marker_group.png",
-        "summary": "Capture this group of nodes",
+        "summary": "Assign marker to this group of nodes",
+        "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
+        "options": [
+            "markersCreateGround",
+            "markersCreateObjectSet",
+            "markersAutoLimit",
+            "markersCreateLollipop"
+        ]
+    },
+
+    "assignHierarchy": {
+        "label": "Assign to Hierarchy",
+        "enable": false,
+        "icon": "ragdoll.png",
+        "summary": "Assign marker to this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
             "markersCreateGround",
@@ -759,10 +765,10 @@
         ]
     },
 
-    "reparentMarker": {
-        "label": "Reparent Marker",
+    "reconnectMarker": {
+        "label": "Reconnect Marker",
         "icon": "reparent.png",
-        "summary": "Change the parent of this marker",
+        "summary": "Change the connection of this marker",
         "description": "",
         "options": [
         ]
@@ -892,18 +898,22 @@
 
     "loggingOff": {
         "label": "Logging Off",
+        "hidden": true,
         "summary": "Stay quiet."
     },
     "loggingDebug": {
         "label": "More Logging",
+        "hidden": true,
         "summary": "Print all messages you can think of."
     },
     "loggingInfo": {
         "label": "Default Logging",
+        "hidden": true,
         "summary": "Print only messages that may be interesting, but probably aren't."
     },
     "loggingWarning": {
         "label": "Less Logging",
+        "hidden": true,
         "summary": "Don't print anything unless it's something I need to pay attention to."
     }
 }

@@ -594,23 +594,11 @@ def install_menu():
 
     divider("Markers")
 
-    item("assignMarker", assign_single, assign_marker_options,
-         label="Assign")
-    item("assignGroup", assign_group, assign_group_options,
-         label="Assign and Connect")
-    item("assignGroup", assign_group, assign_group_options,
-         label="Assign to Hierarchy")
+    item("assignMarker", assign_single, assign_marker_options)
+    item("assignGroup", assign_and_connect, assign_and_connect_options)
+    item("assignHierarchy")
 
-    divider("Constrain")
-
-    item("fixedConstraint",
-         create_fixed_constraint, label="Weld")
-    item("distanceConstraint",
-         create_distance_constraint, label="Distance")
-    item("pinConstraint",
-         create_pin_constraint, label="Pin")
-
-    divider("Record")
+    divider("Transfer")
 
     item("recordMarkers", record_markers, record_markers_options)
 
@@ -618,11 +606,19 @@ def install_menu():
 
     divider("Manipulate")
 
+    with submenu("Constrain", icon="constraint.png"):
+        item("distanceConstraint",
+             create_distance_constraint, label="Distance")
+        item("pinConstraint",
+             create_pin_constraint, label="Pin")
+        item("fixedConstraint",
+             create_fixed_constraint, label="Weld")
+
     with submenu("Edit", icon="kinematic.png"):
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
-        item("reparentMarker", reparent_marker, label="Reparent")
+        item("reconnectMarker", reconnect_marker, label="Reparent")
         item("untargetMarker", untarget_marker, label="Untarget")
 
     with submenu("Cache", icon="bake.png"):
@@ -648,6 +644,8 @@ def install_menu():
         item("selectMarkers", select_markers)
         item("selectGroups", select_groups)
         item("selectSolvers", select_solvers)
+
+        divider()
 
         item("parentMarker", select_parent_marker, label="Marker Parent")
         item("childMarkers", select_child_markers, label="Marker Children")
@@ -2115,8 +2113,12 @@ def create_mimic(selection=None, **opts):
 
 
 def _make_ground(solver):
+    grid_size = cmds.optionVar(query="gridSize")
+
     plane, gen = map(cmdx.encode, cmds.polyPlane(
         name="rGround",
+        width=grid_size * 2,
+        height=grid_size * 2,
         subdivisionsHeight=1,
         subdivisionsWidth=1,
         axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
@@ -2293,9 +2295,6 @@ def assign_single(selection=None, **opts):
     if opts["createLollipop"]:
         markers_.create_lollipop(markers)
 
-    if ground:
-        _fit_ground(ground, markers)
-
     if opts["createObjectSet"]:
         _add_to_objset(markers)
 
@@ -2307,7 +2306,7 @@ def assign_single(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def assign_group(selection=None, **opts):
+def assign_and_connect(selection=None, **opts):
     selection = selection or cmdx.selection()
     selection = cmdx.ls(selection, type=("transform", "joint"))
 
@@ -2339,9 +2338,6 @@ def assign_group(selection=None, **opts):
 
     if opts["createLollipop"]:
         tools.create_lollipop(assigned)
-
-    if ground:
-        _fit_ground(ground, assigned)
 
     if opts["createObjectSet"]:
         _add_to_objset(assigned)
@@ -2798,7 +2794,7 @@ def retarget_marker(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def reparent_marker(selection=None, **opts):
+def reconnect_marker(selection=None, **opts):
     try:
         a, b = selection or cmdx.sl()
     except ValueError:
@@ -3028,7 +3024,7 @@ def auto_limit(selection=None, **opts):
 
     with cmdx.DagModifier() as mod:
         for marker in markers:
-            markers_._auto_limit(mod, marker)
+            markers_.auto_limit(mod, marker)
 
     log.info(
         "Successfully transferred locked channels "
@@ -4407,8 +4403,8 @@ def assign_marker_options(*args):
     return _Window("assignMarker", assign_single)
 
 
-def assign_group_options(*args):
-    return _Window("assignGroup", assign_group)
+def assign_and_connect_options(*args):
+    return _Window("assignGroup", assign_and_connect)
 
 
 def record_markers_options(*args):
@@ -4480,3 +4476,4 @@ def export_physics_options(*args):
 # Backwards compatibility
 create_rigid = create_active_rigid
 create_collider = create_passive_rigid
+assign_group = assign_and_connect

@@ -150,16 +150,6 @@ def assign(transforms, solver, opts=None):
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
 
-            # Root or lone object
-            # if not parent_marker:
-            #     marker["limitType"].lock_and_hide()
-            #     marker["limitAxis"].lock_and_hide()
-            #     marker["limitRotation"].lock_and_hide()
-            #     marker["limitRange"].lock_and_hide()
-            #     marker["limitOffset"].lock_and_hide()
-            #     marker["limitStiffness"].lock_and_hide()
-            #     marker["limitDampingRatio"].lock_and_hide()
-
             # For the offset, we need to store the difference between
             # the source and destination transforms. At the time of
             # creation, these are the same.
@@ -204,7 +194,10 @@ def assign(transforms, solver, opts=None):
             reset_constraint_frames(dgmod, marker)
 
             if opts["autoLimit"]:
-                _auto_limit(dgmod, marker)
+                auto_limit(dgmod, marker)
+
+            # No limits on per default
+            dgmod.set_attr(marker["limitRange"], (0, 0, 0))
 
             markers[transform] = marker
 
@@ -262,7 +255,7 @@ def create_lollipop(markers):
             mod.set_attr(curve["isHistoricallyInteresting"], False)
 
 
-def _auto_limit(mod, marker):
+def auto_limit(mod, marker):
     dst = marker["dst"][0].input()
 
     # Everything is unlocked
@@ -477,6 +470,12 @@ class _Recorder(object):
 
     @internal.with_undo_chunk
     def record(self):
+
+        # Enable cache, for replay
+        with cmdx.DagModifier() as mod:
+            # It may be locked or connected
+            mod.try_set_attr(self._solver["cache"], constants.StaticCache)
+
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
@@ -733,11 +732,6 @@ class _Recorder(object):
             progress = frame - self._solver_start_frame
             percentage = 100.0 * progress / total
             yield percentage
-
-        # Enable cache, for replay
-        with cmdx.DagModifier() as mod:
-            # It may be locked or connected
-            mod.try_set_attr(self._solver["cache"], constants.StaticCache)
 
         cmdx.current_time(initial_time)
 

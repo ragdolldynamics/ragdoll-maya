@@ -103,18 +103,20 @@ This sometimes worked, sometimes not. This release fixes that, covering all comb
 
 More of this!
 
+<br>
+
 #### 1D, 2D and 3D Limits
 
-Ragdoll has a preference as to which axes you use for limits.
+Ragdoll used to have a preference as to which axes you use for limits.
 
 1. `X` is great for 1D limits, like a hinge, elbow or knee
 2. `YZ` is great for 2D limits, like a shoulder or hip
 
-But `XY` is no good. `XZ` is also bad. And god forbid you should attempt use `Y` or `Z` for a hinge limit. Ragdoll would try, but try in vain.
+But `XY` is no good. `XZ` is also bad. And god forbid you should attempt use `Y` or `Z` as a hinge limit. Ragdoll would try, but try in vain.
 
 Knowing which combination to use is not easy, and now you no longer have to. Pick an axis, any axis or combination of axes and Ragdoll will figure things out on its end. You don't have to worry about it.
 
-As an added bonus, the limit axis now aligns with your Maya axis!
+As an added bonus, the limit axis now (more easily) aligns with your Maya axis!
 
 Here's a table to make this absolutely clear. 🥰
 
@@ -123,6 +125,16 @@ Here's a table to make this absolutely clear. 🥰
 | `X`           | = | `X`
 | `Y`           | = | `Y`
 | `Z`           | = | `Z`
+
+There is one edgecase however.
+
+1. Asymmetrical limit
+
+That is, if a limb is allowed to move more in one direction than another. Take a knee for example. Typically modelled at one extreme of its limits.
+
+... image ...
+
+A *symmetrical* limit means it would be allowed to move equal in both directions, but the model normally does not allow it. One option is to model your character at the rest position of every limb. Something not uncommon to games and lovingly referred to as the cradle pose.
 
 <br>
 

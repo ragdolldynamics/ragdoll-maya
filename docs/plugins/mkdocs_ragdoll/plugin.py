@@ -123,6 +123,9 @@ def menu_all(markdown):
         if not value.get("enable", True):
             continue
 
+        if value.get("hidden"):
+            continue
+
         row = MENU_TEMPLATE.format(**{
             "label": value.get("label", camel_to_title(key)),
             "icon": icon(value),

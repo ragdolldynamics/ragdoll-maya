@@ -16,31 +16,22 @@ nav:
   - Home: index.md
   - Overview: overview.md
   - Documentation:
-    # - Solver: documentation/solver.md
-    - Active Rigid: documentation/active_rigid.md
-    - Active Chain: documentation/active_chain.md
-    - Active Character: documentation/character.md
+    - Marker: documentation/marker.md
+    - Group: documentation/group.md
+    - Solver: documentation/solver.md
+    - Manipulator: documentation/manipulator.md
     - Constraints: documentation/constraints.md
-    - Soft Pin: documentation/soft_pin.md
-    - Hard Pin: documentation/hard_pin.md
-    - Mimic: documentation/mimic.md
-    - Forces: documentation/forces.md
-    - Bake Simulation: documentation/bake_simulation.md
-    - Import Physics: documentation/import_physics.md
-    - Export Physics: documentation/export_physics.md
-    # - Cached Playback: documentation/cached_playback.md
-    - Scene Management: documentation/scene_management.md
-    # - Rewind & Resume: documentation/rewind_resume.md
-    - Cycle Protection: documentation/cycle_protection.md
-    - Pivot Editor: documentation/pivot_editor.md
-    - Debugging Tips: documentation/debugging_tips.md
-    - Performance Tips: documentation/performance_tips.md
-    # - Workflow Tips: documentation/workflow_tips.md
+    - Record Simulation: documentation/record_simulation.md
+    - Snap to Simulation: documentation/snap_to_simulation.md
+    - Retargeting: documentation/retargeting.md
+    - Cache: documentation/cache.md
+    - Link: documentation/link.md
+    - Utilities: documentation/utilities.md
   - Tutorials:
-    - Bouncing Ball: tutorials/bouncing_ball.md
-    - Rally Car: tutorials/rally_car.md
-    - Manikin: tutorials/manikin.md
-    - Dynamic Tail: tutorials/dynamic_tail.md
+    - Basic Manikin: tutorials/manikin.md
+    - Manikin Ragdoll: tutorials/manikin_ragdoll.md
+    - Manikin & IK: tutorials/manikin_ik.md
+    - Partial Manikin: tutorials/manikin_partial.md
   - Download: download.md
   - Examples: examples.md
   - Menu Reference: menu.md
@@ -51,6 +42,27 @@ nav:
   - Licencing: licencing.md
   - Serialisation: serialisation.md
   - About: about.md
+  - Legacy:
+    - Active Rigid: documentation/active_rigid.md
+    - Active Chain: documentation/active_chain.md
+    - Active Character: documentation/character.md
+    - Constraints: documentation/old_constraints.md
+    - Soft Pin: documentation/soft_pin.md
+    - Hard Pin: documentation/hard_pin.md
+    - Mimic: documentation/mimic.md
+    - Forces: documentation/forces.md
+    - Bake Simulation: documentation/bake_simulation.md
+    - Import Physics: documentation/import_physics.md
+    - Export Physics: documentation/export_physics.md
+    - Scene Management: documentation/scene_management.md
+    - Cycle Protection: documentation/cycle_protection.md
+    - Pivot Editor: documentation/pivot_editor.md
+    - Debugging Tips: documentation/debugging_tips.md
+    - Performance Tips: documentation/performance_tips.md
+    - Tutorials:
+      - Bouncing Ball: tutorials/bouncing_ball.md
+      - Rally Car: tutorials/rally_car.md
+      - Manikin: tutorials/old_manikin.md
 
 icons:
   - Active Rigid: icons/rigid.png

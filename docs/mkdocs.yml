@@ -28,10 +28,11 @@ nav:
     - Link: documentation/link.md
     - Utilities: documentation/utilities.md
   - Tutorials:
-    - Basic Manikin: tutorials/manikin.md
-    - Manikin Ragdoll: tutorials/manikin_ragdoll.md
-    - Manikin & IK: tutorials/manikin_ik.md
-    - Partial Manikin: tutorials/manikin_partial.md
+    - Videos: tutorials/videos.md
+    - Manikin: tutorials/manikin.md
+    - Full Ragdoll: tutorials/manikin_ragdoll.md
+    - IK: tutorials/manikin_ik.md
+    - Mocap Chap: tutorials/mocap_chap.md
   - Download: download.md
   - Examples: examples.md
   - Menu Reference: menu.md

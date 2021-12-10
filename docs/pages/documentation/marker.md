@@ -28,7 +28,7 @@ Here is a typical data pipeline for motion capture, from real-life actor to fina
 | **5**  | Joints drive a typical character rig
 | **6**  | Rig drives final geometry for render
 
-Each "marker" is a dud. Nothing of any complexity. Something for the camera(s) to recognise and track as it moves through space. Once tracked, it's able to translate this marker from a 2D image into a 3D position, and continues to do so for each marker, for the real processing to take place inside software.
+Each "marker" is a dud. Nothing of any complexity. Something for the camera(s) to recognise and track as it moves through space. Once tracked, it's able to translate this marker from a 2D image into a 3D position, and continues to do so for each marker. The real processing to take place inside software.
 
 Once the capture is complete, the human actor can remove the markers and go enjoy the rest of their day. The rest is up to the computer.
 
@@ -42,213 +42,91 @@ Animation Capture is just like that, but in **reverse**. Instead of capturing a 
 |-----:|:-----------
 | **1** | Markers are attached to a character rig
 | **2** | Markers are "captured"
-| **3** | A rigid is generated for each marker
-| **4** | A hierarchy of constraints is generated
+| **3** | A rigid body is generated for each marker
+| **4** | A hierarchy of constraints is generated to connect them
 | **5** | Simulation is **recorded** back onto the original character rig
 
 Unlike motion capture, we'd like the result mapped back onto our character rig again, which is how animators iterate with physics.
 
 <br>
 
-#### Demo 1 - Basics
+#### Example 1 - Basics
 
-Ok, enough prelude, let's dive in.
+Here's how to simulate a box.
 
-**Before**
+1. Select box
+2. Run `Assign`
 
-Here's what life was like before, with `Active Rigid`.
+https://user-images.githubusercontent.com/2152766/145576767-70432ee7-6ab4-4231-b74f-03c05107ac59.mp4 controls
 
-https://user-images.githubusercontent.com/2152766/134164228-cb35df45-ad68-4217-bb5f-8fa389a232da.mp4 controls
+Once you're happy with what you see..
 
-**After**
+1. Run `Record Simulation`
 
-And here's life with `Markers`.
-
-https://user-images.githubusercontent.com/2152766/134164221-d80135db-96b9-48ed-9ec0-1b8af73c8f86.mp4 controls
-
-Notice how the channels are left alone?
-
-This is the key difference between `Marker` and `Rigid`. Although you still provide Ragdoll with controls, Ragdoll no longer *drives* your controls directly. Instead, it *shows* you what they would look like *if* they were driven with physics.
-
-Once you're happy with what you see, you `Record`.
-
-https://user-images.githubusercontent.com/2152766/134164217-883c0635-6103-42da-87a1-0e9cd145aa1f.mp4 controls
+https://user-images.githubusercontent.com/2152766/145576770-c5b8c0f0-b497-4bb7-80fa-38d4db6168d3.mp4 controls
 
 <br>
 
-#### Demo 2 - Ragdoll
+#### Example 2 - Ragdoll
 
-Let's have a look at how `Markers` work with a full ragdoll.
+Here's how to setup a full Ragdoll.
 
 **1. Setup hierarchy**
 
-The first step is nothing new, you've seen it before.
+Select controls in the order you'd like them attached.
 
-https://user-images.githubusercontent.com/2152766/134213480-bcf2f185-f0f1-4ab5-9f5c-9a72f108e7d3.mp4 controls
+https://user-images.githubusercontent.com/2152766/145582365-c6d88809-1695-40be-81c0-c6f77005cd27.mp4 controls
 
 **2. Edit shapes**
 
-This too, it's second nature by now.
+Fit the shapes to your character model.
 
-https://user-images.githubusercontent.com/2152766/134213470-fa51e083-cfb9-494d-8f1b-2fb795a7ed9d.mp4 controls
+https://user-images.githubusercontent.com/2152766/145582368-19d6d039-497a-4687-aa14-a9e1d1e2da3f.mp4 controls
 
-!!! info "Except!"
-    Notice how the shapes overlap? That's ok! No longer will you have to worry about self-intersecting shapes. Unless you want it to, with the new `Self Collide` attribute. :D I'll touch on this a bit more below, under #self-collide
+**3. Record**
 
-!!! hint "Double Except!"
-    Release 4/4 in this series will deal with the channel box, and make editing these values interactive in the viewport for a superior experience and a lot less clicks and fiddling with numbers.
+Once your happy with the way the simulation looks, record it back onto your rig.
 
-**3. Animate**
-
-Now things are getting interesting. To keep our viewport clean, we can offset the simulation slightly. The offset is purely visual and won't affect the simulation or subsequent recording.
-
-https://user-images.githubusercontent.com/2152766/134213467-b0b9bae6-6778-409d-ad1a-4277e89961f9.mp4 controls
-
-**4. Record**
-
-Finally, and this is what separates `Markers` from `Rigids`, we record our simulation back onto our controls.
-
-https://user-images.githubusercontent.com/2152766/134213465-5739f9b5-a391-474d-b6ee-608a6e7c0194.mp4 controls
+https://user-images.githubusercontent.com/2152766/145582370-7cad0c4e-213d-4699-afa3-7c6762d198ce.mp4 controls
 
 <br>
 
-#### Demo 3 - Inverse Kinematics
-
-That last example was contrived. No rig is without IK, so how does `Markers` work here?
-
-**1. No IK**
-
-Since we put markers on the FK controls, Ragdoll doesn't know about what the IK controls are doing.
-
-https://user-images.githubusercontent.com/2152766/134312071-0eeb5ced-6bab-4793-9edd-6f5747ceb3ed.mp4 controls
-
-**2. Reassign**
-
-So let's put markers on the *joints* driven by both IK and FK, such that when you switch between the two, Ragdoll knows how to follow along. So let's `Reassign`.
-
-https://user-images.githubusercontent.com/2152766/134312058-20f64011-954c-4d7b-b201-3950655449c0.mp4 controls
-
-**3. Retarget**
-
-But recording still targets our original FK controls, and what we want is to record our IK controls. So we can `Retarget`.
-
-https://user-images.githubusercontent.com/2152766/134312048-5e9100d8-ce55-4fa1-b704-2201182733db.mp4 controls
-
-**4. Record Translation**
-
-Unlike FK, IK isn't just rotation, but translation too. So let's tell Ragdoll to record the translation from these markers too.
-
-https://user-images.githubusercontent.com/2152766/134312041-fdaaad31-5273-44f4-891c-d1a80739de20.mp4 controls
-
-And there you have it! This works with IK, SpineIK, Follicles, Geometry Constraints; *anything* you can throw at it.
-
-<br>
-
-#### Demo 4 - Real World Example
-
-Here's a work-in-progress animation from [Christopher Page](https://www.linkedin.com/in/3dsketchbook/) (thanks for lending it to me!) Let's see how we can use Ragdoll to help improve upon it.
-
-**1. The Problem**
-
-Notice how the elbow intersects the table as he moves his torso around? A difficult problem and moving target as you need to keep tweaking both the torso and hand IK handle to tune your animation.
-
-https://user-images.githubusercontent.com/2152766/134319921-6e96ef8c-1226-47b4-b3db-7f076047c62a.mp4 controls
-
-**2. Isolate Timeline**
-
-Since this animation is over 600 frames, we'll isolate our work to a small portion of it. For both performance and cleanliness; Ragdoll will only record onto the current timeline (or selected portion of it).
-
-https://user-images.githubusercontent.com/2152766/134319912-57c3a8c6-3488-4129-9b1e-9567f77a0752.mp4 controls
-
-**3. Assign Markers**
-
-Like before, we'll assign markers to the underlying skeleton to respect what the IK solver does. We'll also make the hand `Kinematic` to respect the original animation exactly. The clavicle is also `Kinematic` per default, as it was the first assigned control - and is thus the "root" of our dynamic hierarchy.
-
-https://user-images.githubusercontent.com/2152766/134319902-dc446cae-37c4-4c86-a746-2fd19364160c.mp4 controls
-
-**4. Include Table**
-
-Since we're interacting with the table, we'll include this too. Also `Kinematic`, no dynamics will be affecting it, and also as a `Box` shape to speed up and improve the stability of the simulation.
-
-https://user-images.githubusercontent.com/2152766/134319896-0ddd0f5b-8e64-4f59-a93a-2fafc58b9994.mp4 controls
-
-**5. Tune Shapes**
-
-Next we'll isolate contacts with just the elbow area, to respect the hand and lower arm animation.
-
-https://user-images.githubusercontent.com/2152766/134319889-6f7403cd-fec2-4fae-8b78-0efabf5afb04.mp4 controls
-
-**6. Tune Material**
-
-In this case, we'd like for the elbow to slide across the table, no friction.
-
-??? info "More Realism?"
-    In the real world, there would be friction and it could come in handy here too. But what should we expect from the elbow rubbing against the table? We should include the torso for this as well, which you absolutely can (and maybe should!). But to keep things simple, we'll let the clavicle preserve it's original animation exactly.
-
-https://user-images.githubusercontent.com/2152766/134319878-d57ce899-bd03-4eb3-b97f-2e4dd5761f74.mp4 controls
-
-**7. Retargeting**
-
-Ragdoll will record onto the nodes you originally assign, but like before we want recording to go elsewhere; from joints to IK controls.
-
-https://user-images.githubusercontent.com/2152766/134319871-2c804a4d-26b1-4a8f-932c-722aeb98189f.mp4 controls
-
-**8. Record Translation**
-
-Likewise, we'd also like translation included. And we don't care for the shoulder and clavicle animation; all we want is the IK handle and Pole Vector.
-
-https://user-images.githubusercontent.com/2152766/134319865-dc88b9a9-bb8d-48df-9ec0-f3f5fe760903.mp4 controls
-
-**9. Record Simulation**
-
-We're all set! Let's hit `Record`!
-
-https://user-images.githubusercontent.com/2152766/134319858-e82de1cc-4ed7-4dea-be07-8e59acc078af.mp4 controls
-
-**10. Before And After**
-
-And there we go! 2 minutes or less, and you've got a reusable setup for correcting the elbow whenever the animation changes. IK is intact and you can keep working with keyframes. Keeping Ragdoll attached to your rig has *zero* impact on performance (as you can see by looking at the fps counter near the bottom of the two comparisons), and once hidden it has no impact on your Outliner either. All clean!
-
-https://user-images.githubusercontent.com/2152766/134319855-66c960d7-9d74-4bbf-bde4-5e813c7123cd.mp4 controls
-
-Here's one more I couldn't find room for, an earlier version of the animation with *stepped keys* and finger simulation. Look at all that juicy finger interaction with the table. 😊
-
-https://user-images.githubusercontent.com/2152766/134513003-7b25c2d1-87e8-4853-a89d-a73b3a5ba2e2.mp4 controls
-
-> Rig and Model courtesy of Ramon Arango - [Apollo Rig](https://ramonarango.gumroad.com/l/ArtemisApolloRig)
-
-<br>
-
-#### Input Type
+### Behaviour
 
 In the above examples, I mentioned `Kinematic` and you probably spotted a few other options too, like `Inherit` and `Pose Match`. What are those?
 
-The `Input Type` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Pose`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Off`?
+The `Behaviour` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Pose`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Initial State`?
 
-The `Input Type` can be set either for a whole group of markers, or each marker individually.
+The `Behaviour` can be set either for a whole group of markers, or each marker individually.
 
 | Type | Description
 |:-----|:-----------
-| Inherit  | Do whatever the group is doing, or `Kinematic` if there is no group
-| Initial State  | Do nothing, just fall under gravity
-| Kinematic | Follow the input *exactly*, physics need not apply
-| Pose Match | Follow the input approximately, with some `Stiffness` and `Damping`
+| Inherit       | Do whatever the group is doing, or `Kinematic` if there is no group
+| Initial State | Do nothing, just fall under gravity
+| Kinematic     | Follow the input *exactly*, physics need not apply
+| Pose Match    | Follow the input approximately, with some `Stiffness` and `Damping`
 
-**Initial State**
+<br>
+
+#### Initial State
 
 Treat the input as a starting position, but nothing else.
 
 https://user-images.githubusercontent.com/2152766/134478792-d7f4fc46-fea0-468a-9ec0-7737072263a1.mp4 controls
 
-**Kinematic**
+<br>
+
+#### Kinematic
 
 Follow the input exactly, no exceptions. Not even collisions.
 
 https://user-images.githubusercontent.com/2152766/134478795-daa12066-c151-4fd5-a762-443b60a7fc45.mp4 controls
 
-**Pose Match**
+<br>
 
-Follow the local angles of the input.
+#### Pose Match
+
+Follow the local pose of your animation.
 
 https://user-images.githubusercontent.com/2152766/134478800-e90f8928-b590-4b91-a314-bdcd9152cfef.mp4 controls
 
@@ -256,17 +134,19 @@ https://user-images.githubusercontent.com/2152766/134478800-e90f8928-b590-4b91-a
 
 #### Pose Space
 
-Now let's talk about a few things you *haven't* seen yet.
+Pose matching happens in either `Local` or `World` space.
 
 https://user-images.githubusercontent.com/2152766/134329974-7beb86d9-5660-44ba-b3f8-036ccc3aec28.mp4 controls
 
 > Look, it's Ragdoll Blaine!
 
-So what's happening here? Well, it *looks* like a [Soft Pin](/documentation/soft_pin/) to his head, along with a slight `Pose Strength` on the rest of his body. But unlike the `Rigid`, another significant advantage to `Markers` is their ability to capture both local *and worldspace* position and orientation of your controls. And because of this, you are able to interactively choose whether a marker should look at the *Worldspace* or *Localspace* position of your controls.
+This is an example of **Worldspace Pose Matching**. Ragdoll will try and reach the worldspace position and orientation of your rig, rather than only looking at the relative angles between each limb.
+
+Here's another example of the difference between `Local` and `World`space.
 
 https://user-images.githubusercontent.com/2152766/134331199-c381ab43-4055-4e7a-a190-68d2acd0668f.mp4 controls
 
-Notice how with a `Pose Space = -1` the controls arms remain relative the torso. And with `Pose Space = 1` they instead follow the *worldspace* orientation of the controls. Just like a Soft Pin.
+Notice how in `Local` space, the controls arms remain relative the torso. And with `World` space they instead follow the *worldspace* orientation of the controls.
 
 This attribute is also **animatable**, and is how you can transition from animation into simulation and back again.
 
@@ -326,3 +206,107 @@ https://user-images.githubusercontent.com/2152766/136034921-e9fd364b-9889-430c-8
 Finally, for the very specific cases of wanting two or more markers to overlap. Notice how we give both the ground and 3 of the boxes an `Overlap Group = 5`.
 
 https://user-images.githubusercontent.com/2152766/136040503-66728dee-d4f9-4411-bd08-9bf18043c334.mp4 controls
+
+<br>
+
+### Material
+
+Each marker has a "material" to control how it interacts with other markers.
+
+<br>
+
+#### Mass
+
+How much influence one marker should have over another during contact.
+
+<video autoplay="autoplay" loop="loop" width="100%">
+   <source src="https://user-images.githubusercontent.com/2152766/127736547-195a18f6-6567-4cdc-995e-d6fa0f7ef963.mp4" type="video/mp4">
+</video>
+
+!!! hint "Pro tip 1 - Misconception about Mass"
+    A common misconception in physics is that `Mass` affects how *quickly* something falls to the ground. But in Ragdoll - like in real-life - mass is only relevant during interaction with another marker and when forces are applied, like `Guide Strength`.
+
+    Have a look at this video of a bowling ball falling in a vacuum alongside a feather.
+
+    [<img class="poster" width=300 src=https://user-images.githubusercontent.com/2152766/127608727-07d0c3c2-d281-4290-93cf-392852f2d595.png>](https://www.youtube.com/watch?v=frZ9dN_ATew)
+
+??? hint "Pro tip 2 - Making something fall faster"
+    So how *do* you make something fall faster?
+
+    1. Decrease `Scene Scale` under the solver node
+    2. Increase `Gravity`, also under the solver node
+
+    To make something "bend" faster, like an arm flexing, that would be controlled via the `Guide Strength` and typically what causes it to reach a given speed and then stay there is governed by the `Rotate Damping`. That's how much of any motion should be cancelled out, to stabilise the motion. A very *fast* motion would have very little damping, but then also run the risk of "overshooting". That is, of passing the point at which you wanted it to reach.
+
+<br>
+
+#### Friction
+
+Control how much resistance should be added between two rigids rubbing against each other.
+
+![friction2](https://user-images.githubusercontent.com/2152766/127735361-da060dc4-45c8-4699-a672-0253d177d723.gif)
+
+<br>
+
+#### Bounciness
+
+Control how much rigids should *repel* each other when coming into contact.
+
+![restitution](https://user-images.githubusercontent.com/2152766/127735506-36003376-4a70-41b2-bbb8-47c974d44278.gif)
+
+!!! hint "Values beyond 1.0"
+    Here's a tip!
+
+    Bounciness can be greater than 1.0, which means they will *gain* energy during contact.
+
+    In practice, energy will always dissipate in some way. The most-bouncy character in the gif above has a bounciness of `2.0`, which in theory means that for every contact it should fly `200%` faster away than it did coming in, and keep doing this forever.
+
+<br>
+
+#### Center of Mass
+
+If you try and balance something on your finger, but the "center of mass" is off center, it would fall over.
+
+![image](https://user-images.githubusercontent.com/2152766/99946359-25471500-2d6e-11eb-8c29-5d39e69f05ee.png)
+
+It is the point at which the weight of an object is equal in all directions.
+
+Ragdoll automatically computes this point based on what the shape looks like. For meshes, it will *voxelise* your geometry to figure out the physically accurate volumetric center of mass, assuming the density of the object is uniform throughout (rather than hollow or variadic, like swiss cheese).
+
+You now override this point using the attribute `Center of Mass` found under the Advanced tab.
+
+![ragdollcom](https://user-images.githubusercontent.com/2152766/99946517-64756600-2d6e-11eb-8446-469ea68073b4.gif)
+![ragdollcom2](https://user-images.githubusercontent.com/2152766/99946522-663f2980-2d6e-11eb-9a5e-9aa9bf7c301a.gif)
+
+**Guidelines**
+
+- For realistic results, leave it at `0` to compute the point automatically based on the shape
+- For full control, override it
+
+<br>
+
+#### Angular Mass
+
+In real life, if you spin a broom 180 degrees along its length; that's easy. But if you spin it 180 degrees along any other axis, like a ninja, it's considerably heavier.
+
+<img width=400 src=https://user-images.githubusercontent.com/2152766/99944546-f67b6f80-2d6a-11eb-93b1-47a49deba0d5.png>
+
+The reason is something called "angular mass", also known as ["moment of inertia"](https://en.wikipedia.org/wiki/Moment_of_inertia). It's like mass, but in terms of rotation rather than position. The broom has a *low* angular mass along its length axis. It takes more *force* to affect a "heavier" axis than a lighter one which is why a broom spins more easily along its length.
+
+This effect happens in Ragdoll too and is typically automatically computed for you based on the shape you use. If it looks like the broom, it will act like a broom.
+
+With this release, you can now customise this for greater control of your rotations.
+
+![ragdollangularmass](https://user-images.githubusercontent.com/2152766/99944815-6db10380-2d6b-11eb-9def-dba375a7e743.gif)
+
+When would you want to do that?
+
+1. Your shape looks like a broom, but you want it to act like a box
+2. Your shape doesn't look like a broom, but you would like it to act like one
+
+Or any combination in between. :) Generally, a broom or any thin shape is more easily spun along its length, so you may find **stability** in setting your angular mass to `(1.0, 1.0, 1.0)`, at the expense of realism.
+
+**Guidelines**
+
+- For realistic results, leave it at `-1` to automatically compute the angular mass
+- For full control, override it

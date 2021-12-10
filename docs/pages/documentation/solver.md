@@ -54,12 +54,12 @@ Aside from not giving you the same result each time you play, if too many frames
 https://user-images.githubusercontent.com/2152766/141657771-d4da158a-bf10-4158-a9e8-3980614c6d69.mp4 controls
 
 !!! warning "Non-deterministic"
-    Bear in mind that the `Ignore` method cannot give you the same results each playthrough. The `Pause` method is guaranteed to give you the same results, and are identical to what you get when you `Record Simulation` too.
+    Bear in mind that the `Ignore` method cannot give you the same results each playthrough. The `Pause` method is guaranteed to give you the same results, and are identical to what you get when you use the `Record Simulation` or `Cache` commands.
 
 
 ### Auto Time
 
-Rather than having to specify which frame to start simulating at, Ragdoll can now keep track of your animation start frame. Either the start of the *range*, or the full timeline. Or, you can still set a `Custom` start time for when you do care about specifics.
+Rather than having to specify which frame to start simulating at, Ragdoll can keep track of your animation start frame. Either the start of the *range*, or the full timeline. Or, you can still set a `Custom` start time for when you do care about specifics.
 
 ![image](https://user-images.githubusercontent.com/2152766/136388759-8cf91122-c779-4425-9c5b-492597595262.png)
 

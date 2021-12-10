@@ -11,9 +11,9 @@ order: 41
 
 ### Manikin Ragdoll
 
-In the [previous tutorial](/tutorials/manikin) we turns a character rig into a ragdoll, driven by your animation.
+In the [previous tutorial](/tutorials/manikin) we assigned markers onto a rig such that you can achieve overlapping motion.
 
-That's enough for most things, but sometimes you don't want any animation. You just want to drop a ragdoll someplace dangerous and watch it go.
+That's enough for some things, but other times you don't want *any* animation. You just want to drop a ragdoll someplace dangerous and watch it go.
 
 !!! success "Version 1.1 - Up to date"
     Written for Ragdoll `2021.12.10` and above.
@@ -43,8 +43,8 @@ Either continue from the [last tutorial](/tutorials/manikin) or start anew with 
 https://user-images.githubusercontent.com/2152766/129519170-59d6a109-e9eb-4fd0-87ef-f120050c9d7e.mp4 controls
 
 <div class="hboxlayout justify-left">
-<a href="https://files.ragdolldynamics.com/api/public/dl/8CKfRSk3/manikin_rigging_v001_publish.zip" class="button blue"><b>Download Manikin</b></a>
-<a href="https://files.ragdolldynamics.com/api/public/dl/01lBKSdb/manikin_walkthrough_v003.zip" class="button red"><b>Download Final Scene</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/Q96vbUR5/manikin.zip" class="button blue"><b>Download Manikin</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/J2SLBN2T/manikin_ragdoll_final.zip" class="button red"><b>Download Final Scene</b></a>
 </div>
 
 <br>

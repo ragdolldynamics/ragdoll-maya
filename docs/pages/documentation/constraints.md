@@ -91,6 +91,6 @@ https://user-images.githubusercontent.com/2152766/138226874-2fafa5c1-f8c3-4143-b
 
 #### Pin
 
-Similar to the `Soft Pin` used with Rigids, this creates a new position and orientation a marker will try and reach. It's exactly what you get using `Guide Space = World` on the markers themselves, but with the convenience of a new transform you can animate. They will both try and pull on the marker, greatest stiffness wins!
+Pin the translation and/or rotation of a Marker in worldspace.
 
 https://user-images.githubusercontent.com/2152766/138454713-ceaedf52-3777-4af8-81de-e543318316f5.mp4 controls

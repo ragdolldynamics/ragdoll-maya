@@ -22,6 +22,22 @@ Highlight for this release is **Manipulators**!
 
 ### Showcase
 
+**Ragdoll in 30 Seconds**
+
+A brief overview of what Ragdoll is.
+
+https://user-images.githubusercontent.com/2152766/145581522-2f229741-45c4-43f2-9c3b-5ffb5bb29fc5.mp4 controls
+
+**Mocap Chap**
+
+Footage from the [new tutorial](/tutorials/mocap_chap)
+
+https://user-images.githubusercontent.com/2152766/145550133-4d9daedc-478c-44db-8a65-5a248b26e67b.mp4 controls
+
+
+https://user-images.githubusercontent.com/2152766/145550147-56714786-3ac9-44b8-b73f-b85d34e53bf4.mp4 controls
+
+
 <br>
 
 ### Manipulators
@@ -168,6 +184,14 @@ This has now been fixed.
 
 <br>
 
+#### Ground Fits Grid
+
+Previous releases would put a ground underneath the first assigned controls, with a size relative the size of your selection.
+
+Turns out, this wasn't great in practice and usually ended up being too small. In this release, the ground inherits whatever size your viewport grid is.
+
+<br>
+
 ### Lollipop Hierarchy
 
 The `Create Lollipop` option of Markers generates an extra control shape in the viewport that you can use to manipulate a marker. The goal being to make it easier to spot a marker in a potentially busy channel box.
@@ -201,6 +225,25 @@ https://user-images.githubusercontent.com/2152766/143287859-778c4252-0ef1-43fb-a
 Without it, modifications to the original mesh are ignored; such as a skinned mesh.
 
 https://user-images.githubusercontent.com/2152766/143287863-4adffedd-74e7-49ad-b1f5-4b7b16bae9f4.mp4
+
+<br>
+
+### Transform Limits
+
+Recording onto transforms with Maya's native limits on them could result in this.
+
+![image](https://user-images.githubusercontent.com/2152766/145573500-5ef2fe21-c9dd-4be6-9334-7b8569bb3e47.png)
+
+https://user-images.githubusercontent.com/2152766/145573213-02aa2922-20d6-4d22-ae26-d6a9f7986dfb.mp4 controls
+
+This has now been fixed.
+
+??? question "How?"
+    Since you asked, they are simply disabled. I've never seen or heard of anyone actually using these and was surprised to find they were in active use by the native motion capture library that ships with Maya.
+
+    If you or anyone you know *do* use them, let me know and they will be given support.
+
+https://user-images.githubusercontent.com/2152766/145573224-60f74627-fc6d-4ffc-8558-4be6560279b1.mp4 controls
 
 <br>
 

@@ -41,15 +41,9 @@ Or, select an explicit range interactively.
 
 https://user-images.githubusercontent.com/2152766/134327093-ba62588e-d14f-4ff9-9b75-05d4230dbdb6.mp4 controls
 
-**Intelligent Range**
-
-A `Kinematic` marker is entirely animated, so there's no need to actually record those. Ragdoll will ensure only non-kinematic frames are recorded, so you can do things like this.
-
-https://user-images.githubusercontent.com/2152766/134504192-3514f235-1f9c-4ce8-83e5-6704bf3036df.mp4 controls
-
 **Record to Animation Layer**
 
-Ragdoll will record to whichever layer is currently active.
+Ragdoll will record to a layer per default.
 
 https://user-images.githubusercontent.com/2152766/134775996-ea2ce5d1-8638-4d43-94f7-f7635585f532.mp4 controls
 

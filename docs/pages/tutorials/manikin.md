@@ -51,8 +51,8 @@ Follow this tutorial either using our provided Manikin rig, or your own characte
 https://user-images.githubusercontent.com/2152766/129519170-59d6a109-e9eb-4fd0-87ef-f120050c9d7e.mp4 controls
 
 <div class="hboxlayout justify-left">
-<a href="https://files.ragdolldynamics.com/api/public/dl/8CKfRSk3/manikin_rigging_v001_publish.zip" class="button blue"><b>Download Manikin</b></a>
-<a href="https://files.ragdolldynamics.com/api/public/dl/01lBKSdb/manikin_walkthrough_v003.zip" class="button red"><b>Download Final Scene</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/Q96vbUR5/manikin.zip" class="button blue"><b>Download Manikin</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/7PBY38gw/manikin1_final.zip" class="button red"><b>Download Final Scene</b></a>
 </div>
 
 <br>
@@ -106,6 +106,13 @@ Let's start with the Torso.
 
 This will produce our first `Group`, which is a collection of connected `Markers`.
 
+!!! hint "New Concept"
+    **Group**
+
+    The `rdGroup` node contains attributes that affect all contained markers. It's where you'd edit the overall look and feel of your character, like how stiff it should be and whether or not body parts should collide with each other.
+
+    Each Marker can either **inherit** or otherwise override these values.
+
 https://user-images.githubusercontent.com/2152766/145268730-9c58b545-63f8-4de7-8dd6-4a3e8e4a70a1.mp4 controls
 
 <br>
@@ -122,18 +129,16 @@ Next we will continue from the `torso_ctl` and out into the arms.
 1. Run `Assign and Connect`
 
 ??? question "Is the order important?"
-    Yes, the order in which you *select* will determine how the rigids are **connected**.
+    Yes, the order in which you *select* will determine how the markers are **connected**.
 
-    Your first selection is extra important, as it determines whether to start a *new* chain, like for the `hip_ctl`, or to *continue* from an existing chain, like the `torso_ctl`.
+    Your first selection is extra important, as it determines whether to start a *new* group, like for the `hip_ctl`, or to *add to* an existing group, like the `torso_ctl`.
 
     In this case, we would very much like our arm to be connected to the torso.
 
 ??? question "Can I skip the clavicles?"
-    Yes, if you have extra controls - such as `twist` or `bend` -  you do *not* have to include these. So long as there is a natural parent/child relationship between your controls, Ragdoll should behave just fine.
+    Yes, if you have extra controls - such as `twist` or `bend` - you can skip these if you don't care to simulate them.
 
     Simply skip over them as you select, from `torso_ctl` directly to `L_upperarm_ctl`.
-
-    In this tutorial however, we will use the clavicles to demonstrate a physical aspect of the Manikin which allows the arm to rotate in a very specific way.
 
 https://user-images.githubusercontent.com/2152766/145269586-121c8a06-5021-4f77-99a6-8373e23f6af4.mp4 controls
 
@@ -157,6 +162,8 @@ Now let's continue down the hips and into the legs.
 2. Shift select `L_foot_ctl`
 3. Run `Assign and Connect`
 
+We will address those *long* feet shortly. 👃
+
 https://user-images.githubusercontent.com/2152766/145269594-29ca3623-b5bf-4cb9-ba4e-13fc5cb88fef.mp4 controls
 
 <br>
@@ -168,6 +175,11 @@ That's enough setup, let's drop him!
 1. Select `hip_ctl`
 2. Set `Behavior = Initial State`
 3. Drop the Manikin a few times
+
+!!! hint "New Concept"
+    **Behaviour**
+
+    Each Marker has a "behaviour", which tells Ragdoll it should interpret the control it has been assigned. Should it fall with gravity? Should it try and match the pose? Should it remain fully animated, even in simulation?
 
 https://user-images.githubusercontent.com/2152766/145350753-c9a74397-6e5c-41ed-b06b-03e596860952.mp4 controls
 
@@ -192,10 +204,10 @@ https://user-images.githubusercontent.com/2152766/145351245-e409ff65-9c6e-4f43-8
 
 The shape of each collider affects your simulation in 2 ways.
 
-- Contact Points
-- Rotation Mass
+- **Contact Points**
+- **Rotation Mass**
 
-The contact point can be important if your character interacts with an environment or another character.
+The contact point can be important if your character interacts with an environment or another character. Like in this case where the feet are incorrectly colliding with the ground because of a bad shape.
 
 https://user-images.githubusercontent.com/2152766/145351664-8d20a42e-f2d1-434f-8154-dd0729a008fa.mp4 controls
 
@@ -210,6 +222,9 @@ https://user-images.githubusercontent.com/2152766/145358819-b3131cc7-bea3-461c-9
 This shape has vastly different dimensions in the X, Y and Z directions, resulting in a different rotation mass for each one. As a result, the effort required to rotate it in each axis differs too.
 
 In practice, you'll find this for just about any limb on a character, which is typically longer in one axis. For our Manikin, this is especially true for the default clavicle shapes.
+
+!!! hint "Override Rotate Mass"
+    In some cases, you have a shape but want it to act like a different shape. `Rotate Mass` is very similar to normal `Mass`, except in 3 dimensions. Where the position of an object is affected equal in X, Y and Z directions, rotations have 3 separate masses.
 
 <br>
 

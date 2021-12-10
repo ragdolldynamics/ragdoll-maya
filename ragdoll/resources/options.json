@@ -709,7 +709,7 @@
         "name": "markersIgnoreJoints",
         "label": "Ignore Joints",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Do not record to joints, these are typically read-only."
     },
 

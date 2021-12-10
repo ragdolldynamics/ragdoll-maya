@@ -7,6 +7,7 @@ from maya import cmds
 
 log = logging.getLogger("ragdoll")
 AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
+LockedTransformLimits = type("LockedTransformLimits", (RuntimeError,), {})
 
 
 def assign(transforms, solver, opts=None):
@@ -470,6 +471,11 @@ class _Recorder(object):
 
     @internal.with_undo_chunk
     def record(self):
+        if not self._validate_transform_limits():
+            raise LockedTransformLimits(
+                "There were transform limits, "
+                "Ragdoll cannot cope with these. See above."
+            )
 
         # Enable cache, for replay
         with cmdx.DagModifier() as mod:
@@ -797,6 +803,45 @@ class _Recorder(object):
             percentage = 100 * progress / total
             yield percentage
 
+    def _validate_transform_limits(self):
+        """Ragdoll cannot cope with Maya's concept of limits"""
+
+        limits = (
+            "minRotXLimitEnable",
+            "minRotYLimitEnable",
+            "minRotZLimitEnable",
+            "maxRotXLimitEnable",
+            "maxRotYLimitEnable",
+            "maxRotZLimitEnable",
+        )
+
+        enabled = set()
+        for dagnode in self._dst_to_marker.keys():
+            for limit in limits:
+                if dagnode[limit]:
+                    enabled.add((dagnode, limit))
+
+        if not enabled:
+            return True
+
+        try:
+            # Leave a breadcrumb in this rare circumstance
+            log.debug(
+                "Disabling native transform limits, these are unsupported:"
+            )
+
+            with cmdx.DagModifier() as mod:
+                for dagnode, limit in enabled:
+                    log.debug("%s.%s" % (dagnode.shortest_path(), limit))
+                    mod.set_attr(dagnode[limit], False)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc(e)
+            return False
+
+        return True
+
     def _attach(self, marker_to_dagnode):
         """Constrain destination controls to extracted simulated hierarchy
 
@@ -994,7 +1039,7 @@ def record(solver, opts=None):
 
     recorder = _Recorder(solver, opts)
     for message, progress in recorder.record():
-        print(message)
+        log.info(message)
 
 
 def snap(solver, opts=None, _force=False):

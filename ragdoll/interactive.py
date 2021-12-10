@@ -618,7 +618,7 @@ def install_menu():
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
-        item("reconnectMarker", reconnect_marker, label="Reparent")
+        item("reconnectMarker", reconnect_marker, label="Reconnect")
         item("untargetMarker", untarget_marker, label="Untarget")
 
     with submenu("Cache", icon="bake.png"):
@@ -2640,7 +2640,7 @@ def record_markers(selection=None, **opts):
     total_frames = 0
     timer = i__.Timer("record")
     for solver in solvers:
-        with timer as duration, progressbar() as p, refresh_suspended():
+        with timer as duration, progressbar() as p:
             recorder = markers_._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
@@ -2683,8 +2683,7 @@ def record_markers(selection=None, **opts):
 
     # The native recorded nodes aren't updated for some reason
     if _is_interactive():
-        from PySide2 import QtCore
-        QtCore.QTimer.singleShot(100, cmds.refresh)
+        cmds.currentTime(cmds.currentTime(query=True))
 
     return kSuccess
 

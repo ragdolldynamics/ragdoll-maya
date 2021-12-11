@@ -7,11 +7,13 @@ icon: "marker_black.png"
     <img class="hero-image" src=/car12.png>
 </div>
 
-The fundamental building block to Ragdoll, for "reverse motion capture" or Animation Capture.
+Markers form the fundamental building block of Ragdoll, to achieve **Animation Capture** a.k.a. "reverse motion capture".
 
 <br>
 
 ### Animation Capture
+
+> Capture your character rig, as though it was a live action actor.
 
 Inspired by Motion Capture - Animation Capture is a new way to think about and work with physics in Maya. To learn about it, let's first understand how Motion Capture generally works.
 
@@ -28,7 +30,7 @@ Here is a typical data pipeline for motion capture, from real-life actor to fina
 | **5**  | Joints drive a typical character rig
 | **6**  | Rig drives final geometry for render
 
-Each "marker" is a dud. Nothing of any complexity. Something for the camera(s) to recognise and track as it moves through space. Once tracked, it's able to translate this marker from a 2D image into a 3D position, and continues to do so for each marker. The real processing to take place inside software.
+Each "Marker" is a dud. Nothing of any complexity. Something for the camera(s) to recognise and track as it moves through space. Once tracked, it's able to translate this Marker from a 2D image into a 3D position, and continues to do so for each Marker. The real processing to take place inside software.
 
 Once the capture is complete, the human actor can remove the markers and go enjoy the rest of their day. The rest is up to the computer.
 
@@ -42,7 +44,7 @@ Animation Capture is just like that, but in **reverse**. Instead of capturing a 
 |-----:|:-----------
 | **1** | Markers are attached to a character rig
 | **2** | Markers are "captured"
-| **3** | A rigid body is generated for each marker
+| **3** | A rigid body is generated for each Marker
 | **4** | A hierarchy of constraints is generated to connect them
 | **5** | Simulation is **recorded** back onto the original character rig
 
@@ -61,7 +63,7 @@ https://user-images.githubusercontent.com/2152766/145576767-70432ee7-6ab4-4231-b
 
 Once you're happy with what you see..
 
-1. Run `Record Simulation`
+3. Run `Record Simulation`
 
 https://user-images.githubusercontent.com/2152766/145576770-c5b8c0f0-b497-4bb7-80fa-38d4db6168d3.mp4 controls
 
@@ -97,7 +99,7 @@ In the above examples, I mentioned `Kinematic` and you probably spotted a few ot
 
 The `Behaviour` is how Ragdoll should interpret the controls you assign. Did you mean for them remain animated, i.e. `Kinematic`? Or should they follow the control around, i.e. `Pose`? Or should they just fall with gravity, ignoring the original control altogether, i.e. `Initial State`?
 
-The `Behaviour` can be set either for a whole group of markers, or each marker individually.
+The `Behaviour` can be set either for a whole group of markers, or each Marker individually.
 
 | Type | Description
 |:-----|:-----------
@@ -187,7 +189,7 @@ Let's have a look at a few scenarios.
 
 #### Collide with Everything
 
-In this example, every marker is part of the same group. The group has `Self Collide = Off`, which is fine for just about every marker *except the fingers*. In that case, we *do* want self-collision, so they are given the group `-1`.
+In this example, every Marker is part of the same group. The group has `Self Collide = Off`, which is fine for just about every Marker *except the fingers*. In that case, we *do* want self-collision, so they are given the group `-1`.
 
 https://user-images.githubusercontent.com/2152766/136033654-9e84313f-d2f8-4e97-a14f-600154dfd709.mp4 controls
 
@@ -211,20 +213,20 @@ https://user-images.githubusercontent.com/2152766/136040503-66728dee-d4f9-4411-b
 
 ### Material
 
-Each marker has a "material" to control how it interacts with other markers.
+Each Marker has a "material" to control how it interacts with other markers.
 
 <br>
 
 #### Mass
 
-How much influence one marker should have over another during contact.
+How much influence one Marker should have over another during contact.
 
 <video autoplay="autoplay" loop="loop" width="100%">
    <source src="https://user-images.githubusercontent.com/2152766/127736547-195a18f6-6567-4cdc-995e-d6fa0f7ef963.mp4" type="video/mp4">
 </video>
 
 !!! hint "Pro tip 1 - Misconception about Mass"
-    A common misconception in physics is that `Mass` affects how *quickly* something falls to the ground. But in Ragdoll - like in real-life - mass is only relevant during interaction with another marker and when forces are applied, like `Guide Strength`.
+    A common misconception in physics is that `Mass` affects how *quickly* something falls to the ground. But in Ragdoll - like in real-life - mass is only relevant during interaction with another Marker and when forces are applied, like `Guide Strength`.
 
     Have a look at this video of a bowling ball falling in a vacuum alongside a feather.
 

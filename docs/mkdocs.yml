@@ -34,7 +34,7 @@ nav:
     - IK: tutorials/manikin_ik.md
     - Mocap Chap: tutorials/mocap_chap.md
   - Download: download.md
-  - Examples: examples.md
+  # - Examples: examples.md
   - Menu Reference: menu.md
   - Node Reference: nodes.md
   - API Reference: api.md

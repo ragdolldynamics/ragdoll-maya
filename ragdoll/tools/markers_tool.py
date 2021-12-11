@@ -1210,18 +1210,17 @@ def create_solver():
                                  name="rSolverShape",
                                  parent=solver_parent)
 
-        canvas_parent = mod.create_node("transform", name="rCanvas")
         canvas = mod.create_node("rdCanvas",
                                  name="rCanvasShape",
-                                 parent=canvas_parent)
+                                 parent=solver_parent)
 
         # Hide in outliner and channel box
-        mod.set_attr(canvas_parent["hiddenInOutliner"], True)
+        mod.set_attr(canvas["hiddenInOutliner"], True)
         mod.set_attr(canvas["isHistoricallyInteresting"], 0)
 
         mod.set_attr(solver["version"], internal.version())
         mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
-        mod.connect(canvas["ragdollId"], solver["canvas"])
+        mod.connect(solver["ragdollId"], canvas["solver"])
         mod.connect(time1["outTime"], solver["currentTime"])
         mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
 

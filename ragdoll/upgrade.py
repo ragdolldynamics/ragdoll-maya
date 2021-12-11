@@ -247,10 +247,6 @@ def solver(node, from_version, to_version):
 def canvas(node, from_version, to_version):
     upgraded = False
 
-    if from_version < 20211129:
-        _canvas_20211024_20211129(node)
-        upgraded = True
-
     return upgraded
 
 
@@ -415,24 +411,6 @@ def _solver_20211024_20211112(solver):
         mod.set_attr(canvas["isHistoricallyInteresting"], False)
 
         mod.connect(solver["ragdollId"], canvas["solver"])
-
-
-def _canvas_20211024_20211129(canvas):
-    """rdCanvas was give its own transform node"""
-    log.info("Upgrading %s to 2021.11.29" % canvas)
-
-    solver = canvas.sibling(type="rdSolver")
-
-    # Already done
-    if solver is None:
-        return
-
-    with cmdx.DagModifier() as mod:
-        transform = mod.create_node("transform", name="rCanvas")
-        mod.parent(canvas, transform)
-        mod.set_attr(transform["hiddenInOutliner"], True)
-        mod.connect(canvas["ragdollId"], solver["canvas"])
-        mod.disconnect(canvas["solver"])
 
 
 def _marker_20210928_20211007(marker):

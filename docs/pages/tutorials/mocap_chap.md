@@ -1,7 +1,7 @@
 ---
 title: Mocap Chap
 description: Learn how to simulate only part of a character
-icon: "ragdoll_black.png"
+icon: "mocap_black.png"
 order: 43
 ---
 

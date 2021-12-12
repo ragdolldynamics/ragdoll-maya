@@ -1,12 +1,12 @@
 ---
 title: Manikin and IK
 description: Learn how to simulate IK controls
-icon: "ragdoll_black.png"
+icon: "chain_black.png"
 order: 42
 ---
 
-<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401314-a78576ca-cc51-4976-8b37-d5482d74fc38.jpg">
-    <source src="https://user-images.githubusercontent.com/2152766/129716006-ca769612-8a14-4fff-9305-683fe00f26f4.mp4" type="video/mp4">
+<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/145708966-91805ac3-a6ea-473d-b27f-b2173f8236e2.png">
+    <source src="https://user-images.githubusercontent.com/2152766/145708943-123c151d-a76f-4594-9b69-167e7258d587.mp4" type="video/mp4">
 </video>
 
 ### Manikin and IK

@@ -4,14 +4,14 @@ icon: "record_black.png"
 ---
 
 <div class="hero-container">
-    <img class="hero-image" src=/car12.png>
+    <img class="hero-image" src=/car8.png>
 </div>
 
-The fundamental building block to Ragdoll, for "reverse motion capture" or Animation Capture.
+Convert a simulation into keyframes using `Record Simulation`.
 
 <br>
 
-### Overview
+### Record Simulation
 
 Markers can be recorded all together, or independently. For example, say you wanted animation from frame 1-100, simulate 101-150 and return to animation from 151-200. You can do that.
 

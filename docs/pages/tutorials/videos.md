@@ -1,8 +1,8 @@
 ---
 title: Manikin I
 description: Make your own motion reference
-icon: "ragdoll_black.png"
-order: 40
+icon: "camera_black.png"
+order: 30
 ---
 
 <video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401314-a78576ca-cc51-4976-8b37-d5482d74fc38.jpg">
@@ -14,7 +14,7 @@ order: 40
 Learn by watching.
 
 !!! into "Heads up"
-    These were recorded just before Markers were finalised, but are still applicable to 2021.12.10 and above.
+    These were recorded just before Markers were finalised, but are still applicable to 2021.12.12 and above.
 
 <table>
 <tr>

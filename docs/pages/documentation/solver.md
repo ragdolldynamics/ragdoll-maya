@@ -4,10 +4,10 @@ icon: "solver_black.png"
 ---
 
 <div class="hero-container">
-    <img class="hero-image" src=/car12.png>
+    <img class="hero-image" src=/yoga13.png>
 </div>
 
-Ragdolls are combined into what's called a "group", with attributes to control the overall behavior of all contained Markers.
+Markers connect to a solver, and anything connected to one solver is able to interact.
 
 <br>
 
@@ -19,6 +19,8 @@ The `rdSolver` node is akin to the motion capture camera(s). It'll monitor any m
 
 - ✔️ Real-time
 - ✔️ Deterministic
+- ✔️ Rewind and Resume
+- ✔️ Caching
 - ✔️ Support for scale
 - ✔️ Support for non-uniform scale
 - ✔️ Support for negative scale
@@ -27,7 +29,7 @@ The `rdSolver` node is akin to the motion capture camera(s). It'll monitor any m
 - ✔️ Support for space switching
 - ✔️ Support for follicles
 - ✔️ Support for native Maya constraints
-- ✔️ Support for ...
+- ✔️ And more
 
 <br>
 

@@ -4,10 +4,10 @@ icon: "snap_black.png"
 ---
 
 <div class="hero-container">
-    <img class="hero-image" src=/car12.png>
+    <img class="hero-image" src=/car10.png>
 </div>
 
-The fundamental building block to Ragdoll, for "reverse motion capture" or Animation Capture.
+Snap a character to wherever the simulation is currently at.
 
 <br>
 

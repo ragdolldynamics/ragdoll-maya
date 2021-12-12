@@ -9,7 +9,7 @@ repo_name: mottosso/ragdoll
 repo_url: https://github.com/mottosso/ragdoll
 edit_uri: edit/main/docs/pages
 
-copyright: "Copyright &copy; 2020-2021 mottosso"
+copyright: "Copyright &copy; 2020-2022 mottosso"
 
 # Page tree
 nav:
@@ -47,7 +47,7 @@ nav:
     - Active Rigid: documentation/active_rigid.md
     - Active Chain: documentation/active_chain.md
     - Active Character: documentation/character.md
-    - Constraints: documentation/old_constraints.md
+    - Constraints: documentation/legacy_constraints.md
     - Soft Pin: documentation/soft_pin.md
     - Hard Pin: documentation/hard_pin.md
     - Mimic: documentation/mimic.md
@@ -61,9 +61,9 @@ nav:
     - Debugging Tips: documentation/debugging_tips.md
     - Performance Tips: documentation/performance_tips.md
     - Tutorials:
-      - Bouncing Ball: tutorials/bouncing_ball.md
-      - Rally Car: tutorials/rally_car.md
-      - Manikin: tutorials/old_manikin.md
+      - Bouncing Ball: tutorials/legacy_bouncing_ball.md
+      - Rally Car: tutorials/legacy_rally_car.md
+      - Manikin: tutorials/legacy_manikin.md
 
 icons:
   - Active Rigid: icons/rigid.png
@@ -122,5 +122,11 @@ markdown_extensions:
 
 plugins:
   - search
-  - git-revision-date
+  # - git-revision-date
   - mkdocs-ragdoll
+  - mkdocs-redirects:
+      use_directory_urls: false
+      redirect_maps:
+          "tutorials/bouncing_ball/": "/tutorials/legacy_bouncing_ball/"
+          "tutorials/rally_car/": "/tutorials/legacy_rally_car/"
+          "tutorials/dynamic_tail/": "/tutorials/legacy_dynamic_tail/"

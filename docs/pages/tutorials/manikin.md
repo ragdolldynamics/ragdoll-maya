@@ -5,8 +5,8 @@ icon: "ragdoll_black.png"
 order: 40
 ---
 
-<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401314-a78576ca-cc51-4976-8b37-d5482d74fc38.jpg">
-    <source src="https://user-images.githubusercontent.com/2152766/129716006-ca769612-8a14-4fff-9305-683fe00f26f4.mp4" type="video/mp4">
+<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/145709207-470d897f-b025-498d-8ebf-c9217ca6a047.png">
+    <source src="https://user-images.githubusercontent.com/2152766/145709200-b65f5328-832d-4f15-a2d2-166bc766b452.mp4" type="video/mp4">
 </video>
 
 ### Manikin

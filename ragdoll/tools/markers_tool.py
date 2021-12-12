@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from .. import commands, internal, constants
 from ..vendor import cmdx
@@ -836,8 +837,7 @@ class _Recorder(object):
                     mod.set_attr(dagnode[limit], False)
 
         except Exception as e:
-            import traceback
-            traceback.print_exc(e)
+            log.debug(traceback.format_exc(e))
             return False
 
         return True
@@ -869,7 +869,7 @@ class _Recorder(object):
         initial_time = cmdx.current_time()
         cmdx.current_time(self._solver_start_frame)
 
-        for dst, marker in self._dst_to_marker.items():
+        for dst, marker in self._dst_to_marker.copy().items():
             src = marker_to_dagnode.get(marker, None)
 
             if not src:
@@ -901,18 +901,24 @@ class _Recorder(object):
             maintain = self._opts["maintainOffset"] == constants.FromStart
 
             if skip_translate != {"x", "y", "z"}:
-                pcon = cmds.parentConstraint(
-                    src.shortest_path(),
-                    dst.shortest_path(),
+                try:
+                    pcon = cmds.parentConstraint(
+                        src.shortest_path(),
+                        dst.shortest_path(),
 
-                    # Either from wherever it's being constrained
-                    # or from the offset at the time of being retargeted
-                    maintainOffset=maintain,
+                        # Either from wherever it's being constrained
+                        # or from the offset at the time of being retargeted
+                        maintainOffset=maintain,
 
-                    # Account for locked channels
-                    skipTranslate=list(skip_translate) or "none",
-                    skipRotate=list("xyz"),
-                )
+                        # Account for locked channels
+                        skipTranslate=list(skip_translate) or "none",
+                        skipRotate=list("xyz"),
+                    )
+
+                except RuntimeError:
+                    self._dst_to_marker.pop(dst)
+                    log.debug(traceback.format_exc())
+                    log.warning("Unable to attach %s -> %s" % (src, dst))
 
                 pcon = cmdx.encode(pcon[0])
                 new_constraints.append(pcon)
@@ -923,17 +929,24 @@ class _Recorder(object):
                         mod.set_attr(target["targetOffsetTranslate"], t)
 
             if skip_rotate != {"x", "y", "z"}:
-                ocon = cmds.orientConstraint(
-                    src.shortest_path(),
-                    dst.shortest_path(),
+                try:
+                    ocon = cmds.orientConstraint(
+                        src.shortest_path(),
+                        dst.shortest_path(),
 
-                    # Either from wherever it's being constrained
-                    # or from the offset at the time of being retargeted
-                    maintainOffset=maintain,
+                        # Either from wherever it's being constrained
+                        # or from the offset at the time of being retargeted
+                        maintainOffset=maintain,
 
-                    # Account for locked channels
-                    skip=list(skip_rotate) or "none",
-                )
+                        # Account for locked channels
+                        skip=list(skip_rotate) or "none",
+                    )
+
+                except RuntimeError:
+                    self._dst_to_marker.pop(dst)
+                    log.debug(traceback.format_exc())
+                    log.warning("Unable to attach %s -> %s" % (src, dst))
+                    continue
 
                 ocon = cmdx.encode(ocon[0])
                 new_constraints.append(ocon)

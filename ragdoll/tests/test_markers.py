@@ -305,19 +305,12 @@ def test_locked_rotate_channels():
     group = cmdx.ls(type="rdGroup")[0]
     group["driveStiffness"] = 0.01
 
-    # Unlock automatically locked limit
-    for marker in cmdx.ls(type="rdMarker"):
-
-        # Ground is locked
-        if marker["limitRangeX"].locked:
-            continue
-
-        marker["limitRangeX"] = 0.0
-
     cmdx.min_time(1)
     cmdx.max_time(50)
 
     ri.record_markers()
 
     cmdx.current_time(50)
-    assert_almost_equals(b["rz"].read(), cmdx.radians(-54.0), 1)
+
+    # The default limit around the remaining unlocked axis is 45 degrees
+    assert_almost_equals(b["rz", cmdx.Degrees].read(), -45.0, 0)

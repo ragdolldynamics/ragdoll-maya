@@ -269,14 +269,30 @@ def auto_limit(mod, marker):
     if not any(dst["r" + axis].locked for axis in "xyz"):
         return
 
+    locked = set()
+
     if dst["rx"].locked:
         mod.set_attr(marker["limitRangeX"], cmdx.radians(-1))
+        locked.add("rx")
 
     if dst["ry"].locked:
         mod.set_attr(marker["limitRangeY"], cmdx.radians(-1))
+        locked.add("ry")
 
     if dst["rz"].locked:
         mod.set_attr(marker["limitRangeZ"], cmdx.radians(-1))
+        locked.add("rz")
+
+    # In case of common locked combinations, give the remaining
+    # axis a visible limit.
+    if locked == {"ry", "rz"}:
+        mod.set_attr(marker["limitRangeX"], cmdx.radians(45))
+
+    if locked == {"rx", "rz"}:
+        mod.set_attr(marker["limitRangeY"], cmdx.radians(45))
+
+    if locked == {"rx", "ry"}:
+        mod.set_attr(marker["limitRangeZ"], cmdx.radians(45))
 
 
 def _find_markers(solver, markers=None):

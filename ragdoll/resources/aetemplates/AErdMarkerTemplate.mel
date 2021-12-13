@@ -20,9 +20,18 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "destinationTransform";
         editorTemplate -endLayout;
 
+        editorTemplate -beginLayout "Material" -collapse true;
+            editorTemplate -addControl "collide";
+            editorTemplate -addControl "mass";
+            editorTemplate -addControl "friction";
+            editorTemplate -addControl "restitution";
+            editorTemplate -addControl "thickness";
+            editorTemplate -addControl "collisionGroup";
+        editorTemplate -endLayout;
+
         editorTemplate -beginLayout "Advanced Pose" -collapse true;
-            editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveInterpolation";
+            editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveAngularAmountTwist";
             editorTemplate -addControl "driveAngularAmountSwing";
             editorTemplate -addControl "driveAbsoluteLinear";
@@ -31,12 +40,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Shape" -collapse true;
-            editorTemplate -addControl "collide";
             editorTemplate -addControl "shapeType";
-            editorTemplate -addControl "mass";
-            editorTemplate -addControl "friction";
-            editorTemplate -addControl "restitution";
-            editorTemplate -addControl "thickness";
             editorTemplate -addControl "shapeExtents";
             editorTemplate -addControl "shapeLength";
             editorTemplate -addControl "shapeRadius";
@@ -45,15 +49,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Limit" -collapse true;
-            editorTemplate -addControl "limitType";
-            editorTemplate -addControl "limitAxis";
-            editorTemplate -addControl "limitRotation";
-            editorTemplate -addControl "limitRange";
-            editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "limitStiffness";
             editorTemplate -addControl "limitDampingRatio";
-
-            editorTemplate -addControl "limitLinearMotion";
+            editorTemplate -addControl "limitRange";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Visualisation" -collapse true;
@@ -70,7 +68,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "angularMass";
             editorTemplate -addControl "centerOfMass";
             editorTemplate -addControl "shapeVertexLimit";
-            editorTemplate -addControl "collisionGroup";
             editorTemplate -addControl "enableCCD";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "linearDamping";
@@ -83,6 +80,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "maxDepenetrationVelocity";
             editorTemplate -addControl "limitAutoOrient";
             editorTemplate -addControl "offsetMatrix";
+            editorTemplate -addControl "limitLinearMotion";
             editorTemplate -beginLayout "Constraint Frames" -collapse true;
                 editorTemplate -addControl "parentFrame";
                 editorTemplate -addControl "childFrame";

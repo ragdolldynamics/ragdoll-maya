@@ -940,6 +940,7 @@ class _Recorder(object):
                     self._dst_to_marker.pop(dst)
                     log.debug(traceback.format_exc())
                     log.warning("Unable to attach %s -> %s" % (src, dst))
+                    continue
 
                 pcon = cmdx.encode(pcon[0])
                 new_constraints.append(pcon)

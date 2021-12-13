@@ -222,11 +222,15 @@ def install():
     if __.installed:
         return
 
+    options.install()
     install_telemetry() if c.RAGDOLL_TELEMETRY else None
     install_logger()
     install_plugin()
-    options.install()
     licence.install(c.RAGDOLL_AUTO_SERIAL)
+
+    options.write("shaderPath", _resource("shaders"))
+    options.write("fontPath", _resource("fonts"))
+    options.write("iconPath", _resource("icons"))
 
     if _is_interactive():
         telemetry.install()
@@ -262,6 +266,10 @@ def install():
 
             first_launch2 = options.read("firstLaunch2")
             options.reset()
+
+            options.write("shaderPath", _resource("shaders"))
+            options.write("fontPath", _resource("fonts"))
+            options.write("iconPath", _resource("icons"))
 
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
@@ -466,10 +474,6 @@ def install_plugin():
     if not cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
         # May already have been loaded prior to calling install
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
-
-    options.write("shaderPath", _resource("shaders"))
-    options.write("fontPath", _resource("fonts"))
-    options.write("iconPath", _resource("icons"))
 
     # Required by tools.py
     cmds.loadPlugin("matrixNodes", quiet=True)

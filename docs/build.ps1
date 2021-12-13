@@ -8,14 +8,14 @@ rez env -e "PYTHONPATH=$(pwd)/plugins;$(pwd)/../" `
     mkdocs_git_revision_date_plugin==0.3.1 -- `
     mkdocs build --site-dir $args[0]
 
-# copy-item .\CNAME $args[0]
-# copy-item .\.nojekyll $args[0]
+copy-item .\CNAME $args[0]
+copy-item .\.nojekyll $args[0]
 
-# Write-Host "Uploading docs.."
-# pushd $args[0]
-# git add --all
-# git commit -m "Update docs"
-# git push
-# popd
+Write-Host "Uploading docs.."
+pushd $args[0]
+git add --all
+git commit -m "Update docs"
+git push
+popd
 
-# Write-Host "Success!"
+Write-Host "Success!"

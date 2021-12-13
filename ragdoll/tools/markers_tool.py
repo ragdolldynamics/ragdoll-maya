@@ -195,11 +195,11 @@ def assign(transforms, solver, opts=None):
             # Used as a basis for angular limits
             reset_constraint_frames(dgmod, marker)
 
-            if opts["autoLimit"]:
-                auto_limit(dgmod, marker)
-
             # No limits on per default
             dgmod.set_attr(marker["limitRange"], (0, 0, 0))
+
+            if opts["autoLimit"]:
+                auto_limit(dgmod, marker)
 
             markers[transform] = marker
 
@@ -258,20 +258,25 @@ def create_lollipop(markers):
 
 
 def auto_limit(mod, marker):
-    dst = marker["dst"][0].input()
+    try:
+        dst = marker["dst"][0].input()
+
+    except IndexError:
+        # It's possible there is no target
+        raise RuntimeError("No destination transform for %s" % marker)
 
     # Everything is unlocked
     if not any(dst["r" + axis].locked for axis in "xyz"):
         return
 
     if dst["rx"].locked:
-        mod.set_attr(marker["limitRangeX"], -1)
+        mod.set_attr(marker["limitRangeX"], cmdx.radians(-1))
 
     if dst["ry"].locked:
-        mod.set_attr(marker["limitRangeY"], -1)
+        mod.set_attr(marker["limitRangeY"], cmdx.radians(-1))
 
     if dst["rz"].locked:
-        mod.set_attr(marker["limitRangeZ"], -1)
+        mod.set_attr(marker["limitRangeZ"], cmdx.radians(-1))
 
 
 def _find_markers(solver, markers=None):

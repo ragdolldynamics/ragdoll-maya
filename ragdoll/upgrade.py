@@ -452,6 +452,16 @@ def _marker_20210928_20211007(marker):
 
 
 def _marker_20211007_20211129(marker):
+    """originMatrix was added
+
+    Since we can't go back in time to find out what pose they were
+    actually assigned in, we'll grab the next-best thing which is the
+    pose at scene open.
+
+    In the case of opening the original rig, this will be accurate.
+
+    """
+
     log.info("Upgrading %s to 2021.11.29" % marker)
 
     with cmdx.DagModifier() as mod:

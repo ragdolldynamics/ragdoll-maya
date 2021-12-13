@@ -3,46 +3,39 @@ title: Retargeting
 icon: "retarget_black.png"
 ---
 
-<div class="hero-container">
-    <img class="hero-image" src=/car12.png>
-</div>
+<video autoplay class="poster" muted="muted" loop="loop" width=100% poster="https://user-images.githubusercontent.com/2152766/130401392-0d4549ab-3545-46ec-98d2-6b084b2a8465.jpg">
+    <source src="https://user-images.githubusercontent.com/2152766/145724350-8e63a86b-5219-4cc9-b8d7-ecbd1ba474d2.mp4" type="video/mp4">
+</video>
 
-The fundamental building block to Ragdoll, for "reverse motion capture" or Animation Capture.
+Assign to joints, record to controls.
 
 <br>
 
 #### Retarget
 
-We've talked a lot about "retargeting". But what *is* that?
+Any moderately complex character will have parts better suited for capturing and others for recording onto.
 
-Per default, markers are recorded onto the controls you assigned, this is called `Rig to Rig`.
+For example, in order to control a simulation with IK controls, we must first assign Markers onto the underlying joints driven by those IK controls. Then, we *retarget* those joints back onto the IK controls.
 
-![image](https://user-images.githubusercontent.com/2152766/134169658-39590bbf-bbca-41dc-af3b-de20e69e9aed.png)
+https://user-images.githubusercontent.com/2152766/145726981-69480bda-62df-475a-87d5-0c243c79be8d.mp4 controls
 
-But often times, rigs are more complicated and what you want is for the simulation to look at one set of nodes, but record onto another. This is called `Joint to Rig`, but can be from any source. Even other controls (like FK to IK).
+In this example, markers are assigned to the upper body controls, but then to the joints of the lower body. We don't want keyframes on these joints, so we *retarget* these keyframes onto the IK controls.
 
-![image](https://user-images.githubusercontent.com/2152766/134169635-e0a751c8-f06b-4dac-a459-50118d04821f.png)
-
-!!! info "The Old Days"
-    Think about how you would accomplish this using the `Active Rigid` or `Active Chain` commands. That would be a *huge* pain, but not with markers!
+https://user-images.githubusercontent.com/2152766/145726993-3bfb60a2-cc13-4b95-b6f2-8fa62f0a1a7e.mp4 controls
 
 <br>
 
 #### Reassign
 
-Over in [Demo 2 - Ragdoll](#demo-2---ragdoll) we "reassigned" already marked controls. What does that mean?
+The opposite of Retarget.
 
-In that example, we've assigned our FK controls directly, which means Ragdoll would grab the translation and rotation from those controls during simulation. But what we really wanted was the IK controls.
-
-But! We couldn't just assign to the IK controls directly, since they are *indirectly* rotating a characters limbs. So instead, we `Reassign` the markers previously made onto the underlying joints that follow IK around.
-
-We then also `Retarget` them, since they would have otherwise been recorded onto the original FK controls.
+Rather than assigning to joints and retargeting to IK controls, we assign to IK controls and *reassign* to joints. Same side of a different coin, which one is better?
 
 <br>
 
-#### Reparent
+#### Reconnect
 
-Sometimes, you change your mind.
+Use `Reconnect` when you selected things in the wrong order and want a do-over.
 
 https://user-images.githubusercontent.com/2152766/134465284-f9a3bd04-9392-4f33-a161-390cbe9049d2.mp4 controls
 

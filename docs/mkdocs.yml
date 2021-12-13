@@ -61,9 +61,9 @@ nav:
     - Debugging Tips: documentation/debugging_tips.md
     - Performance Tips: documentation/performance_tips.md
     - Tutorials:
-      - Bouncing Ball: tutorials/legacy_bouncing_ball.md
-      - Rally Car: tutorials/legacy_rally_car.md
-      - Manikin: tutorials/legacy_manikin.md
+      - Bouncing Ball: legacy/bouncing_ball.md
+      - Rally Car: legacy/rally_car.md
+      - Manikin: legacy/manikin.md
 
 icons:
   - Active Rigid: icons/rigid.png
@@ -122,11 +122,11 @@ markdown_extensions:
 
 plugins:
   - search
-  # - git-revision-date
+  - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false
       redirect_maps:
-          "tutorials/bouncing_ball/": "/tutorials/legacy_bouncing_ball/"
-          "tutorials/rally_car/": "/tutorials/legacy_rally_car/"
-          "tutorials/dynamic_tail/": "/tutorials/legacy_dynamic_tail/"
+          "tutorials/bouncing_ball/": "/legacy/bouncing_ball/"
+          "tutorials/rally_car/": "/legacy/rally_car/"
+          "tutorials/dynamic_tail/": "/legacy/dynamic_tail/"

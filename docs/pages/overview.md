@@ -27,12 +27,11 @@ Depending on where you are and what you are looking for, one of these should fit
 |:--|:-------|:----------
 | ![discord][] | [Chat](https://discord.gg/JCHydekJqX) | Come join the party on Discord!
 | ![documentation][] | [Documentation](/documentation) | Read about each command available to you in Maya
-| | [Release Notes](/releases) | Every new release comes with examples of every new feature and squashed bug.
-| | Search | Top-right on this website there's a field to search for any word or phrase on this domain, including node attribute reference.
+| | [Release Notes](/releases) | Every new release has examples of every new feature and squashed bug.
+| | Search | Top of every page, you know what to do ☝️
 | | [UI Help](/menu#help) | Find help without leaving Maya
-| ![youtube][] | [YouTube Videos](https://www.youtube.com/playlist?list=PLL4XIS5Woc6nVsTdsvs0XLmiKmXVCdwXy) | Long-form walkthroughs and examples.
+| ![youtube][] | [YouTube Videos](/tutorials/videos) | Long-form walkthroughs and examples.
 | | [Tutorials](/tutorials/) | Long-form, *written* tutorials for learning Ragdoll from the ground up.
-| | [Examples](/examples) | Download and play around with some example scenes.
 | | [Reference](/menu) | The Reference page lists all menu items, item options and node attributes of Ragdoll along with descriptions and examples.
 | | [Node Reference](/nodes) | Every node is detailed in the "Nodes" section to the right, such as [`rdRigid`](/nodes/rdRigid/).
 | | [Community](https://forums.ragdolldynamics.com) | Inspire and be inspired via the Ragdoll forums

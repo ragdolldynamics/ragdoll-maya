@@ -1,6 +1,6 @@
 ---
-title: Manikin I
-description: Make your own motion reference
+title: Videos
+description: Short and sweet videos for your eyes and ears
 icon: "camera_black.png"
 order: 30
 ---

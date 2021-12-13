@@ -49,13 +49,17 @@ https://user-images.githubusercontent.com/2152766/134775996-ea2ce5d1-8638-4d43-9
 
 <br>
 
-### Transitions
+#### Transitions
 
 Let's have a look at how you would use markers to transition between simulation and animation.
 
 https://user-images.githubusercontent.com/2152766/134507548-382a0ccd-85b6-4990-b325-16dbd3b7d568.mp4 controls
 
-Notice how we're animated up until the jump, and then Ragdoll takes over. Once he approaches that box, we turn our `Guide Space` from `-1` to `1` and have him reach the target pose in worldspace. Once he's close, we switch `Input Type` to `Kinematic` and kinematically move him until we once again transition to `Guide`, this time with a `Guide Space` or `-1` for pose space.
+Notice how we're animated up until the jump, and then Ragdoll takes over.
+
+1. Once he approaches that box, we turn our `Pose Space` from `Local` to `World` and have him reach the target pose in *worldspace*.
+1. Once he's close, we switch `Behaviour` to `Kinematic` and kinematically move him.
+1. Until we once again transition to `Guide`, this time with `Pose Space = Local`.
 
 https://user-images.githubusercontent.com/2152766/134507546-49e84d32-b50a-48c6-a1b9-82410281a884.mp4 controls
 
@@ -77,7 +81,7 @@ Now Ragdoll will record onto a familiar channel, and *Maya* will handle the conv
 
 <br>
 
-### Extract Simulation
+#### Extract Simulation
 
 Get data out of the solver and into a baked joint hierarchy.
 
@@ -87,3 +91,7 @@ https://user-images.githubusercontent.com/2152766/139657721-576c5b8f-e852-4e96-a
 
 !!! note "Performance"
     Notice how fast this is!
+
+**A Debugging Companion**
+
+It can also be used for situations where `Record Simulation` doesn't do what you need it to. The extracted skeleton will be a plain joint hierarchy, with no scale, and guaranteed to match the simulation exactly. So you can extract it, and constrain your rig to it.

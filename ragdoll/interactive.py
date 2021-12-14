@@ -267,10 +267,6 @@ def install():
             first_launch2 = options.read("firstLaunch2")
             options.reset()
 
-            options.write("shaderPath", _resource("shaders"))
-            options.write("fontPath", _resource("fonts"))
-            options.write("iconPath", _resource("icons"))
-
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)

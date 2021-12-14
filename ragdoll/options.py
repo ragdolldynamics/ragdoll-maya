@@ -7,6 +7,7 @@ convenient method of Python to C++ communication.
 
 """
 
+import os
 import copy
 import logging
 from maya import cmds
@@ -14,6 +15,12 @@ from . import internal as i__, __
 from .vendor import qargparse
 
 log = logging.getLogger("ragdoll")
+
+
+def _resource(*fname):
+    dirname = os.path.dirname(__file__)
+    resdir = os.path.join(dirname, "resources")
+    return os.path.normpath(os.path.join(resdir, *fname))
 
 
 def _optionvarkey(name):
@@ -141,6 +148,10 @@ def install(reset=False):
 
         write(arg)
 
+    write("shaderPath", _resource("shaders"))
+    write("fontPath", _resource("fonts"))
+    write("iconPath", _resource("icons"))
+
 
 def uninstall():
     pass
@@ -168,6 +179,13 @@ def reset():
     install()
 
     for arg in __.optionvars.values():
+
+        # These are mandatory
+        if arg["name"] in ("shaderPath",
+                           "fontPath",
+                           "iconPath"):
+            continue
+
         var = _optionvarkey(arg["name"])  # sceneScale -> ragdollSceneScale
         prev = previous.get(var, "''")
         new = read(arg["name"])

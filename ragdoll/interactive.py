@@ -635,10 +635,25 @@ def install_menu():
         item("markerReplaceMesh",
              replace_marker_mesh,
              replace_marker_mesh_options)
+
+        divider()
+
         item("extractMarkers", extract_markers)
+
+        divider()
+
         item("createLollipop", create_lollipop)
+
+        divider()
+
+        item("toggleChannelBoxAttributes", toggle_channel_box_attributes,
+             toggle_channel_box_attributes_options)
+
+        divider()
+
         item("markersAutoLimit", auto_limit)
         item("resetMarkerConstraintFrames", reset_marker_constraint_frames)
+        item("editMarkerConstraintFrames", edit_marker_constraint_frames)
 
     with submenu("Select", icon="select.png"):
         item("selectMarkers", select_markers)
@@ -2278,6 +2293,9 @@ def assign_single(selection=None, **opts):
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
+        "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
+        "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
     solver, ground = _find_current_solver(opts["createGround"])
@@ -2285,8 +2303,11 @@ def assign_single(selection=None, **opts):
 
     try:
         for transform in selection:
-            new_markers = markers_.assign([transform], solver, {
-                "autoLimit": opts["autoLimit"]
+            new_markers = markers_.assign([transform], solver, opts={
+                "autoLimit": opts["autoLimit"],
+                "materialInChannelBox": bool(opts["materialInChannelBox"]),
+                "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
+                "limitInChannelBox": bool(opts["limitInChannelBox"]),
             })
             markers.extend(new_markers)
     except RuntimeError as e:
@@ -2321,13 +2342,19 @@ def assign_and_connect(selection=None, **opts):
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
+        "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
+        "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
     solver, ground = _find_current_solver(opts["createGround"])
 
     try:
-        assigned = tools.assign_markers(selection, solver, {
-            "autoLimit": opts["autoLimit"]
+        assigned = tools.assign_markers(selection, solver, opts={
+            "autoLimit": opts["autoLimit"],
+            "materialInChannelBox": opts["materialInChannelBox"],
+            "shapeInChannelBox": opts["shapeInChannelBox"],
+            "limitInChannelBox": opts["limitInChannelBox"],
         })
 
     except markers_.AlreadyAssigned as e:
@@ -2896,6 +2923,30 @@ def _selection(selection=None):
 
         result.append(node)
     return result
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def toggle_channel_box_attributes(selection=None, **opts):
+    opts = dict({
+        "materialAttributes": _opt("markersChannelBoxMaterial", opts),
+        "shapeAttributes": _opt("markersChannelBoxShape", opts),
+        "limitAttributes": _opt("markersChannelBoxLimit", opts),
+    }, **(opts or {}))
+
+    markers = cmdx.ls(type="rdMarker")
+
+    if not markers:
+        raise i__.UserWarning(
+            "No Markers Found",
+            "No markers were found to toggle attributes on."
+        )
+
+    visible = markers_.toggle_channel_box_attributes(markers, opts=opts)
+
+    log.info("Successfully %s attributes for %d markers" % (
+        ("hid" if visible else "showed"), len(markers)
+    ))
 
 
 @i__.with_undo_chunk
@@ -4424,6 +4475,10 @@ def set_initial_state_options(*args):
 
 def clear_initial_state_options(*args):
     return _Window("clearInitialState", clear_initial_state)
+
+
+def toggle_channel_box_attributes_options(*args):
+    return _Window("toggleChannelBoxAttributes", toggle_channel_box_attributes)
 
 
 def _st_options(key, typ):

@@ -600,10 +600,18 @@
         "summary": "Assign marker to this node",
         "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
+            "basicsSeparator",
+
             "markersCreateGround",
             "markersCreateObjectSet",
             "markersAutoLimit",
-            "markersCreateLollipop"
+            "markersCreateLollipop",
+
+            "channelBoxSeparator",
+
+            "markersChannelBoxMaterial",
+            "markersChannelBoxShape",
+            "markersChannelBoxLimit"
         ]
     },
 
@@ -613,10 +621,18 @@
         "summary": "Assign marker to this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
+            "basicsSeparator",
+
             "markersCreateGround",
             "markersCreateObjectSet",
             "markersAutoLimit",
-            "markersCreateLollipop"
+            "markersCreateLollipop",
+
+            "channelBoxSeparator",
+
+            "markersChannelBoxMaterial",
+            "markersChannelBoxShape",
+            "markersChannelBoxLimit"
         ]
     },
 
@@ -779,6 +795,25 @@
         "icon": "reset_constraint.png",
         "summary": "Reset constraint frames to their defaults",
         "description": "Set the frames of a constraint such that twist rotates a rigid along its length."
+    },
+
+    "editMarkerConstraintFrames": {
+        "label": "Edit Constraint Frames",
+        "icon": "frame.png",
+        "summary": "Edit constraint frames manually",
+        "description": "Generate two locators to manipulate the parent and child frames of a Marker. This is an advanced topic, use at your own risk, and use Reset Constraint Frames if making a mistake."
+    },
+
+    "toggleChannelBoxAttributes": {
+        "label": "Toggle Channel Box Attributes",
+        "icon": "attributes.png",
+        "summary": "Expose (or unexpose) more attributes for your Markers",
+        "description": "Make non-keyable attributes relevant to authoring of Markers visible in the Channel Box, such as Mass and Length.",
+        "options": [
+            "markersChannelBoxMaterial",
+            "markersChannelBoxShape",
+            "markersChannelBoxLimit"
+        ]
     },
 
     "markerReplaceMesh": {

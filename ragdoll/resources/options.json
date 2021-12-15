@@ -823,6 +823,44 @@
         "help": "Should I <b>replace</b> the current target, or add another?"
     },
 
+    "basicsSeparator": {
+        "name": "basicsSeparator",
+        "label": "Basics",
+        "type": "Separator",
+        "default": ""
+    },
+
+    "channelBoxSeparator": {
+        "name": "channelBoxSeparator",
+        "label": "Channel Box",
+        "type": "Separator",
+        "default": ""
+    },
+
+    "markersChannelBoxMaterial": {
+        "name": "markersChannelBoxMaterial",
+        "label": "Material Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Show material attributes in Channel Box, like Mass and Friction"
+    },
+
+    "markersChannelBoxShape": {
+        "name": "markersChannelBoxShape",
+        "label": "Shape Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Show shape attributes in Channel Box, like Radius and Extents"
+    },
+
+    "markersChannelBoxLimit": {
+        "name": "markersChannelBoxLimit",
+        "label": "Limit Attributes",
+        "type": "Boolean",
+        "default": false,
+        "help": "Show limit attributes in Channel Box, like Stiffness and Range"
+    },
+
 
     "#": "----------------",
     "#": " Global options ",

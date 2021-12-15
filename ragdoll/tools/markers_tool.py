@@ -16,7 +16,12 @@ def assign(transforms, solver, opts=None):
 
     opts = dict({
         "autoLimit": None,
+        "materialInChannelBox": True,
+        "shapeInChannelBox": True,
+        "limitInChannelBox": False,
     }, **(opts or {}))
+
+    print(opts)
 
     if len(transforms) == 1:
         other = transforms[0]["message"].output(type="rdMarker")
@@ -203,7 +208,15 @@ def assign(transforms, solver, opts=None):
 
             markers[transform] = marker
 
-    return list(markers.values())
+    markers = list(markers.values())
+
+    toggle_channel_box_attributes(markers, opts={
+        "materialAttributes": opts["materialInChannelBox"],
+        "shapeAttributes": opts["shapeInChannelBox"],
+        "limitAttributes": opts["limitInChannelBox"],
+    })
+
+    return markers
 
 
 def create_lollipop(markers):
@@ -1869,3 +1882,68 @@ def replace_mesh(marker, mesh, opts=None):
         mod.set_attr(marker["shapeType"], constants.MeshShape)
 
     return True
+
+
+def toggle_channel_box_attributes(markers, opts=None):
+    assert markers, "No markers were passed"
+
+    opts = dict({
+        "materialAttributes": True,
+        "shapeAttributes": True,
+        "limitAttributes": True,
+    }, **(opts or {}))
+
+    # Attributes to be toggled
+    material_attrs = (
+        ".collide",
+        ".mass",
+        ".friction",
+        ".restitution",
+    )
+
+    shape_attrs = (
+        ".shapeType",
+        ".shapeExtentsX",
+        ".shapeExtentsY",
+        ".shapeExtentsZ",
+        ".shapeLength",
+        ".shapeRadius",
+        ".shapeOffsetX",
+        ".shapeOffsetY",
+        ".shapeOffsetZ",
+        ".shapeRotationX",
+        ".shapeRotationY",
+        ".shapeRotationZ",
+    )
+
+    limit_attrs = (
+        ".limitStiffness",
+        ".limitDampingRatio",
+        ".limitRangeX",
+        ".limitRangeY",
+        ".limitRangeZ",
+    )
+
+    attrs = []
+
+    if opts["materialAttributes"]:
+        attrs += material_attrs
+
+    if opts["shapeAttributes"]:
+        attrs += shape_attrs
+
+    if opts["limitAttributes"]:
+        attrs += limit_attrs
+
+    if not attrs:
+        log.warning("Nothing to toggle")
+        return False
+
+    # Determine whether to show or hide attributes
+    visible = markers[0][attrs[0][1:]].channel_box
+
+    for marker in markers:
+        for attr in attrs:
+            cmds.setAttr(str(marker) + attr, channelBox=not visible)
+
+    return not visible

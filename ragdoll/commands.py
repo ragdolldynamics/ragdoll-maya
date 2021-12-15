@@ -3649,9 +3649,14 @@ def _interpret_shape2(shape):
             geo.extents.z = gen["height"].read()
 
             # Align top of box with plane
-            average_size = (geo.extents.x + geo.extents.z) / 2.0
-            geo.extents.y = average_size / 40.0
-            geo.shape_offset.y = -geo.extents.y / 2.0
+            if gen["axisY"]:
+                average_size = (geo.extents.x + geo.extents.y) / 2.0
+                geo.extents.y = average_size / 40.0
+                geo.shape_offset.y = -geo.extents.y / 2.0
+            else:
+                average_size = (geo.extents.x + geo.extents.y) / 2.0
+                geo.extents.z = average_size / 40.0
+                geo.shape_offset.z = -geo.extents.z / 2.0
 
         elif gen.type() == "polyCylinder" and gen["roundCap"]:
             geo.shape_type = c.CylinderShape

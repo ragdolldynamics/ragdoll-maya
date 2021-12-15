@@ -232,8 +232,10 @@ In practice, you'll find this for just about any limb on a character, which is t
 
 With this in mind, let's tune some shapes.
 
-1. Select `rSolver`
-2. Press `T` on your keyboard
+1. Run `Manipulator` from the `Ragdoll` menu
+
+!!! note "Alternatively"
+    Select a `rMarker` node in the Channel Box, or the `rGroup` node in your Outliner, and hit the `T` key on your keyboard. You can also select the *shape* of the `rSolver` node.
 
 This brings up the [**Manipulator**](/documentation/manipulator) interface, where you can manipulate shapes using mouse gestures.
 
@@ -280,6 +282,6 @@ https://user-images.githubusercontent.com/2152766/145383834-69a72a25-0e85-442a-b
 
 In the next tutorial, we'll take this a bit further. As you play around with the `Pose Stiffness` on either the `rGroup` or individual `rMarker` nodes, you'll find some limbs start to misbehave. Especially the knees and elbows, that normally won't allow rotations past a certain angle in a real human (or Manikin for that matter!). That isn't the case here, because we've left out a critical part of any complete ragdoll.
 
-- [Limits](/tutorials/manikin2)
+- [Full Ragdoll](/tutorials/manikin_ragdoll)
 
 See you there!

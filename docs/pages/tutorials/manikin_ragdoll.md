@@ -75,8 +75,7 @@ https://user-images.githubusercontent.com/2152766/145369873-2c71510c-9baa-4f42-8
 
 Ok, great. The Z axis should rotate but X and Y should be locked.
 
-1. Select `rSolver`
-1. Press `T`
+1. Run `Ragdoll -> Manipulator`
 1. Select the lower leg
 1. Switch to `Limit Mode`
 1. Enable limits around `X`, `Y` and `Z`
@@ -103,8 +102,7 @@ Something like that should do the trick.
 
 Let's keep the clavicles simple. We'll allow only 1 axis of rotation by locking the others.
 
-1. Select `rSolver`
-2. Press `T`
+1. Run `Ragdoll -> Manipulator`
 3. Edit the clavicle
 
 https://user-images.githubusercontent.com/2152766/145388216-00037e3b-a9d8-43b5-afae-2469c9b678e4.mp4 controls
@@ -116,8 +114,7 @@ https://user-images.githubusercontent.com/2152766/145388216-00037e3b-a9d8-43b5-a
 
 We'll lock the `X` and `Y` axes of the lower arm like we did for the lower leg.
 
-1. Select `rSolver`
-2. Press `T`
+1. Run `Ragdoll -> Manipulator`
 3. Edit the lower arm
 4. Edit the hand
 
@@ -129,8 +126,7 @@ https://user-images.githubusercontent.com/2152766/145388218-cc4eed3f-717a-4da3-8
 
 Both the hip and spine should be allowed to rotate around all three axes, so we can leave these at their default values for now.
 
-1. Select `rSolver`
-2. Press `T`
+1. Run `Ragdoll -> Manipulator`
 3. Edit the hip and spine
 
 https://user-images.githubusercontent.com/2152766/145388208-d4229b41-8b0b-4143-8a06-02ce220d2da3.mp4 controls

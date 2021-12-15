@@ -29,7 +29,7 @@ https://user-images.githubusercontent.com/2152766/145726993-3bfb60a2-cc13-4b95-b
 
 The opposite of Retarget.
 
-Rather than assigning to joints and retargeting to IK controls, we assign to IK controls and *reassign* to joints. Same side of a different coin, which one is better?
+Rather than assigning to joints and retargeting to IK controls, we assign to IK controls and *reassign* to joints. Same coin, different side; which one do you prefer?
 
 <br>
 
@@ -42,3 +42,9 @@ https://user-images.githubusercontent.com/2152766/134465284-f9a3bd04-9392-4f33-a
 Success!
 
 https://user-images.githubusercontent.com/2152766/134465285-87eacea9-4b93-4526-980e-585bbc92151b.mp4 controls
+
+<br>
+
+#### Untarget
+
+For when you don't want anything recorded for this Marker. Useful for utility Markers, like twist joints or extra spine controls or just Markers without a corresponding control.

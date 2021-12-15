@@ -21,6 +21,9 @@ nav:
     - Solver: documentation/solver.md
     - Manipulator: documentation/manipulator.md
     - Constraints: documentation/constraints.md
+    # - Forces: documentation/forces.md
+    # - Import Physics: documentation/import_physics.md
+    # - Export Physics: documentation/export_physics.md
     - Record Simulation: documentation/record_simulation.md
     - Snap to Simulation: documentation/snap_to_simulation.md
     - Retargeting: documentation/retargeting.md
@@ -44,22 +47,22 @@ nav:
   - Serialisation: serialisation.md
   - About: about.md
   - Legacy:
-    - Active Rigid: documentation/active_rigid.md
-    - Active Chain: documentation/active_chain.md
-    - Active Character: documentation/character.md
-    - Constraints: documentation/legacy_constraints.md
-    - Soft Pin: documentation/soft_pin.md
-    - Hard Pin: documentation/hard_pin.md
-    - Mimic: documentation/mimic.md
-    - Forces: documentation/forces.md
-    - Bake Simulation: documentation/bake_simulation.md
-    - Import Physics: documentation/import_physics.md
-    - Export Physics: documentation/export_physics.md
-    - Scene Management: documentation/scene_management.md
-    - Cycle Protection: documentation/cycle_protection.md
-    - Pivot Editor: documentation/pivot_editor.md
-    - Debugging Tips: documentation/debugging_tips.md
-    - Performance Tips: documentation/performance_tips.md
+    - Active Rigid: legacy/active_rigid.md
+    - Active Chain: legacy/active_chain.md
+    - Active Character: legacy/character.md
+    - Constraints: legacy/legacy_constraints.md
+    - Soft Pin: legacy/soft_pin.md
+    - Hard Pin: legacy/hard_pin.md
+    - Mimic: legacy/mimic.md
+    - Forces: legacy/forces.md
+    - Bake Simulation: legacy/bake_simulation.md
+    - Import Physics: legacy/import_physics.md
+    - Export Physics: legacy/export_physics.md
+    - Scene Management: legacy/scene_management.md
+    - Cycle Protection: legacy/cycle_protection.md
+    - Pivot Editor: legacy/pivot_editor.md
+    - Debugging Tips: legacy/debugging_tips.md
+    - Performance Tips: legacy/performance_tips.md
     - Tutorials:
       - Bouncing Ball: legacy/bouncing_ball.md
       - Rally Car: legacy/rally_car.md
@@ -122,11 +125,27 @@ markdown_extensions:
 
 plugins:
   - search
-  - git-revision-date
+  # - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false
       redirect_maps:
+          "documentation/active_rigid/": "/legacy/active_rigid/"
+          "documentation/active_chain/": "/legacy/active_chain/"
+          "documentation/bake_simulation/": "/legacy/bake_simulation/"
+          "documentation/character/": "/legacy/character/"
+          "documentation/cycle_protection/": "/legacy/cycle_protection/"
+          "documentation/debugging_tips/": "/legacy/debugging_tips/"
+          "documentation/legacy_forces/": "/legacy/forces/"
+          "documentation/hard_pin/": "/legacy/hard_pin/"
+          "documentation/import_physics/": "/legacy/import_physics/"
+          "documentation/export_physics/": "/legacy/export_physics/"
+          "documentation/mimic/": "/legacy/mimic/"
+          "documentation/performance_tips/": "/legacy/performance_tips/"
+          "documentation/pivot_editor/": "/legacy/pivot_editor/"
+          "documentation/scene_management/": "/legacy/scene_management/"
+          "documentation/shapes/": "/legacy/shapes/"
+          "documentation/soft_pin/": "/legacy/soft_pin/"
           "tutorials/bouncing_ball/": "/legacy/bouncing_ball/"
           "tutorials/rally_car/": "/legacy/rally_car/"
           "tutorials/dynamic_tail/": "/legacy/dynamic_tail/"

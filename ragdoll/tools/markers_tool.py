@@ -21,8 +21,6 @@ def assign(transforms, solver, opts=None):
         "limitInChannelBox": False,
     }, **(opts or {}))
 
-    print(opts)
-
     if len(transforms) == 1:
         other = transforms[0]["message"].output(type="rdMarker")
 

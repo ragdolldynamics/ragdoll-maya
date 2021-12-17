@@ -226,15 +226,21 @@ def activation_request_to_file(key, fname):
 
     if status == STATUS_OK:
         log.info(
-            "Successfully generated %s\n"
+            "Successfully generated '%s'\n"
             "Send this file to licencing@ragdolldynamics.com"
             % fname
         )
 
+    elif not os.path.exists(os.path.dirname(fname)):
+        log.error("The directory at '%s' does not appear to exist" % fname)
+
     else:
         log.error(
-            "There was a problem! Send us this error code "
-            "(%s) and tell us what you did." % status
+            "There was a problem with '%s'! "
+            "Send this error message (%s) "
+            "and the steps you took to get here to "
+            "licencing@ragdolldynamics.com." % (
+                fname, status)
         )
 
     return status
@@ -246,10 +252,15 @@ def activate_from_file(fname):
     if status == STATUS_OK:
         log.info("Successfully activated Ragdoll!")
 
+    elif not os.path.exists(fname):
+        log.error("%s does not appear to exist!" % fname)
+
     else:
         log.error(
-            "There was a problem! Send us this error code "
-            "(%s) and tell us what you did." % status
+            "There was a problem with '%s'! It seems to exist, "
+            "but may not be valid. Send us this error message (%s) "
+            "and tell us the steps you took to get here." % (
+                fname, status)
         )
 
     return status

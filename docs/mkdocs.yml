@@ -36,6 +36,7 @@ nav:
     - Full Ragdoll: tutorials/manikin_ragdoll.md
     - IK: tutorials/manikin_ik.md
     - Mocap Chap: tutorials/mocap_chap.md
+    - Rookie Wasp: tutorials/rookie_wasp.md
   - Download: download.md
   # - Examples: examples.md
   - Menu Reference: menu.md
@@ -125,7 +126,7 @@ markdown_extensions:
 
 plugins:
   - search
-  # - git-revision-date
+  - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false

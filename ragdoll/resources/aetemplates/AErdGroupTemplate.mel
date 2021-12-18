@@ -4,7 +4,11 @@ global proc AErdGroupTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "Input" -collapse false;
+            editorTemplate -beginNoOptimize;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "selfCollide";
+            editorTemplate -endNoOptimize;
+
             editorTemplate -addControl "inputType";
             editorTemplate -addControl "driveSpace";
             editorTemplate -addControl "driveSpaceCustom";

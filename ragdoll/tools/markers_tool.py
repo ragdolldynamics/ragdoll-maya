@@ -155,6 +155,13 @@ def assign(transforms, solver, opts=None):
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
 
+            if opts.get("density"):
+                dgmod.do_it()  # Solidify shapeExtents from above
+
+                mass = _compute_mass(marker, solver, density=opts["density"])
+
+                dgmod.set_attr(marker["mass"], mass)
+
             # For the offset, we need to store the difference between
             # the source and destination transforms. At the time of
             # creation, these are the same.
@@ -1266,6 +1273,7 @@ def create_solver():
 
         mod.set_attr(solver["version"], internal.version())
         mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
+        mod.set_attr(solver["maxMassRatio"], 1)  # 10 ^ 1
         mod.connect(solver["ragdollId"], canvas["solver"])
         mod.connect(time1["outTime"], solver["currentTime"])
         mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
@@ -1897,6 +1905,7 @@ def toggle_channel_box_attributes(markers, opts=None):
         ".mass",
         ".friction",
         ".restitution",
+        ".displayType",
     )
 
     shape_attrs = (
@@ -1945,3 +1954,52 @@ def toggle_channel_box_attributes(markers, opts=None):
             cmds.setAttr(str(marker) + attr, channelBox=not visible)
 
     return not visible
+
+
+def _compute_mass(marker, solver, density=constants.WaterDensity):
+    """Use the shape extents as an approximate volume
+
+    Also taking into consideration that joints must be
+    comparable to meshes. Mass unit is kg, whereas lengths
+    are in centimeters.
+
+    """
+
+    # Reference:
+    # https://www.engineeringtoolbox.com/density-materials-d_1652.html
+    densities = {
+        constants.WaterDensity: 993,
+        constants.WoodDensity: 200,
+        constants.FeatherDensity: 16,
+        constants.AirDensity: 12,
+    }
+
+    density = densities.get(
+        density,
+
+        # Default
+        constants.WaterDensity
+    )
+
+    # Approximate via bounding box
+    extents = marker["shapeExtents"].as_vector()
+    extents *= 0.01  # From cm to m
+
+    scale = cmdx.Tm(marker["inputMatrix"].as_matrix()).scale()
+    extents.x *= scale.x
+    extents.y *= scale.y
+    extents.z *= scale.z
+
+    # Take overall solver scale into account too
+    scene_scale = max(0.01, solver["spaceMultiplier"].read())
+
+    # Guard against zero widths, like circles
+    extents.x = max(0.1 * scene_scale, extents.x)
+    extents.y = max(0.1 * scene_scale, extents.y)
+    extents.z = max(0.1 * scene_scale, extents.z)
+
+    return (
+        extents.x *
+        extents.y *
+        extents.z
+    ) * density / scene_scale

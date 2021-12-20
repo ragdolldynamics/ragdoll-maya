@@ -861,6 +861,14 @@
         "help": "Show limit attributes in Channel Box, like Stiffness and Range"
     },
 
+    "markersDensity": {
+        "name": "markersDensity",
+        "label": "Density",
+        "type": "Enum",
+        "default": 1,
+        "items": ["Off", "Water", "Wood", "Feather", "Air"],
+        "help": "Use the volume and density of the shape to determine its mass."
+    },
 
     "#": "----------------",
     "#": " Global options ",

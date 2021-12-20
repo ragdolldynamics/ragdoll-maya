@@ -606,6 +606,7 @@
             "markersCreateObjectSet",
             "markersAutoLimit",
             "markersCreateLollipop",
+            "markersDensity",
 
             "channelBoxSeparator",
 
@@ -627,6 +628,7 @@
             "markersCreateObjectSet",
             "markersAutoLimit",
             "markersCreateLollipop",
+            "markersDensity",
 
             "channelBoxSeparator",
 

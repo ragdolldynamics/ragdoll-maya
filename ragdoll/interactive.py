@@ -2293,6 +2293,7 @@ def assign_single(selection=None, **opts):
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
@@ -2305,6 +2306,7 @@ def assign_single(selection=None, **opts):
         for transform in selection:
             new_markers = markers_.assign([transform], solver, opts={
                 "autoLimit": opts["autoLimit"],
+                "density": opts["density"],
                 "materialInChannelBox": bool(opts["materialInChannelBox"]),
                 "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
                 "limitInChannelBox": bool(opts["limitInChannelBox"]),
@@ -2342,6 +2344,7 @@ def assign_and_connect(selection=None, **opts):
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
@@ -2352,6 +2355,7 @@ def assign_and_connect(selection=None, **opts):
     try:
         assigned = tools.assign_markers(selection, solver, opts={
             "autoLimit": opts["autoLimit"],
+            "density": opts["density"],
             "materialInChannelBox": opts["materialInChannelBox"],
             "shapeInChannelBox": opts["shapeInChannelBox"],
             "limitInChannelBox": opts["limitInChannelBox"],

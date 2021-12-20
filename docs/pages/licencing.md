@@ -211,36 +211,42 @@ data = licence.data()
 
 Haven't got no internet?
 
-No problem, here's what you need to do.
+No problem, here's what you do.
 
-1. Generate an "activation request", a file
-2. Send us this file, via [email](mailto:licencing@ragdolldynamics.com)
-3. Receive a "activation response", another file
+1. Generate an **"activation request"** file
+2. Send the contents of this file, or the file itself to licencing@ragdolldynamics.com
+3. Receive a **"activation response"** file
 4. Activate using this file
 
 It requires pasting some *Python* commands into the **Maya Script Editor**.
 
-**Generate Request**
+**1. Generate Request**
 
 ```py
+from maya import cmds
 from ragdoll import licence
 key = "YOUR-VERY-LONG-KEY-HERE"
-fname = r"c:\ragdoll_activation_request.xml"
-licence.activation_request_to_file(key, fname)
+fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=0)
+licence.activation_request_to_file(key, fname[0]) if fname else cmds.warning("Cancelled")
 ```
 
-**Email Us**
+**2. Email Us**
 
-Send this file to licencing@ragdolldynamics.com. We'll abrakadabra this file before you can say [Taumatawhakatangi­hangakoauauotamatea­turipukakapikimaunga­horonukupokaiwhen­uakitanatahu](https://en.wikipedia.org/wiki/Taumatawhakatangi%C2%ADhangakoauauotamatea%C2%ADturipukakapikimaunga%C2%ADhoronukupokaiwhen%C2%ADuakitanatahu).
+Either send the file, or the contents of the file, to licencing@ragdolldynamics.com.
 
-**Activate**
+**3. Receive a response**
+
+We'll abrakadabra this file before you can say [Taumatawhakatangi­hangakoauauotamatea­turipukakapikimaunga­horonukupokaiwhen­uakitanatahu](https://en.wikipedia.org/wiki/Taumatawhakatangi%C2%ADhangakoauauotamatea%C2%ADturipukakapikimaunga%C2%ADhoronukupokaiwhen%C2%ADuakitanatahu).
+
+**4. Activate**
 
 Once you've got a response, activate your licence like this.
 
 ```py
+from maya import cmds
 from ragdoll import licence
-fname = r"c:\ragdoll_activation_response.xml"
-licence.activate_from_file(fname)
+fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=1)
+licence.activate_from_file(fname[0]) if fname else cmds.warning("Cancelled")
 ```
 
 <br>
@@ -254,8 +260,9 @@ The process is similar to activation.
 **Generate Request**
 
 ```py
+from maya import cmds
 from ragdoll import licence
-fname = r"c:\ragdoll_deactivation_request.xml"
+fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=0)
 licence.deactivation_request_to_file(fname)
 ```
 

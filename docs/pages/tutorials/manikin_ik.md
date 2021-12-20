@@ -11,7 +11,7 @@ order: 42
 
 ### Manikin and IK
 
-In the [previous tutorial](/tutorials/manikin_ragdoll) we turn a character rig into a ragdoll, driven by your animation.
+In the [previous tutorial](/tutorials/manikin_ragdoll) we turned a character rig into a ragdoll, driven by your animation.
 
 In this tutorial, we'll have a look at how we apply this to the IK controls of a rig.
 
@@ -108,7 +108,7 @@ Because we did not assign to our IK controls, we'll need to retarget the joints 
 
 https://user-images.githubusercontent.com/2152766/145432601-6815ab3f-fe74-42bb-96b2-bac55cf28e99.mp4 controls
 
-Now when we record, our retargetd IK controls will be getting keyframes from our simulated IK joints.
+Now when we record, our retargeted IK controls will be getting keyframes from our simulated IK joints.
 
 !!! tip "Not Just IK"
     This will work between *any* controls or joints. Even from one rig to another, or more complex IK like Spline IK. The `Record Simulation` command uses a native Maya `Parent Constraint` between the assigned and retargeted controls, so anywhere you could manually do this will work with this command.

@@ -1,104 +1,107 @@
 ---
-hidden: true
-title: Interactive Manipulators
-description: Out of the Channel Box and into the Viewport!
+title: Christmas
+description: ...
 ---
 
 Minor maintenance release.
 
-- [**FIXED** Unselectable Viewport Icons](#robust-viewport-icons) Happened from time to time
-- [**FIXED** Clean Channel Box](#clean-channel-box) An option to clean or not to clean
-- [**FIXED** Legacy Viewport](#legacy-viewport) A rare case of unselectable widgets in the Manipulator UI.
-- [**FIXED** Overlap Group for non Grouped Markers](#collision-group) Markers not part of a group would have trouble respecting its overlap group
-- [**ADDED**](#edit-constraint-frames) Fine-grained control over unconvenitional orientations
+- [**FIXED** Crash on Deleted Mesh](#crash-on-deleted-mesh) Replace a mesh, delete it and crash no more.
+- [**FIXED** Mandarin Serial Number](#mandarin-serial-number) Unicode mishap led to a non-sensical message
+- [**FIXED** Delta Drawing Bug](#delta-drawing-bug) Funny drawing in the viewport has been fixed
+- [**ADDED** Max Mass Ratio](#max-mass-ratio) Keeping you safe
 
 <br>
 
 ### Showcase
 
-As is tradition, we must start with candy. Now. it's only been 2 days so all I have for you today is this amazing piece of animation here. 😅
+Let's start with the good stuff.
 
-**Wyvern 2**
+**DMV Lady**
 
-Follow-up to the WIP from last release from The Wizard, a.k.a. Jason Snyman.
+Courtesy of Dragana Mandic.
 
-- https://www.linkedin.com/posts/jason-snyman-84711b1_maya-animation-simulation-activity-6876796400018051072-HZv5
+- [On LinkedIn](https://www.linkedin.com/posts/dragana-mandi%C4%87-a6a6a2111_dynamics-animation-simulation-activity-6878674478977568768-SlbE)
 
-https://user-images.githubusercontent.com/2152766/146225647-8a978dc3-a237-4f6b-b59e-dc82f1bb02a8.mp4 controls
-
-**Wasp**
-
-Here's a response to a question on LinkedIn about whether or not you can use Ragdoll to make animation cycles. So here are 3 parts.
-
-1. The finished cycle
-2. The input animation
-3. The default simulation, before cycling it
-
-Total time spent 1h, including rigging and skinning. The model is a default Maya model from the Content Browser.
-
-https://user-images.githubusercontent.com/2152766/146225143-d7a878bd-3524-4fda-891b-644f8afd0b7a.mp4 controls
+https://user-images.githubusercontent.com/2152766/146805387-bffea211-5dd7-4cd8-ad30-d5b1fb75c3f2.mp4 controls
 
 <br>
 
-### Robust Viewport Icons
+### Trial Key
 
-The viewport icons would sometimes be unselectable.
+It has come to my attention that the first thing every new user of Ragdoll sees is this dialog, with this message for a serial number.
 
-![ui](https://user-images.githubusercontent.com/2152766/145959389-93393227-f1b8-4a3d-96f8-bc1fdfc85c72.gif)
+![image](https://user-images.githubusercontent.com/2152766/146526900-6815e9ad-4da3-4531-bb2c-bb0e239affff.png)
 
-This was due to Maya being unable to provide Ragdoll with the correct "Active View", which Ragdoll uses to map your mouse to 3D. This has now been fixed, by no longer relying on the Active View.
+According to my Mandarin-speaking friends, this is jibberish (or at least should be!) and is a result of badly translated Unicode to ASCII characters.
 
-<br>
+This has now been fixed!
 
-### Clean Channel Box
-
-With the manipulator in the last release, the Channel Box saw a huge spring cleaning.
-
-| Before | After
-|:-------|:-----
-| ![image](https://user-images.githubusercontent.com/2152766/145183746-43dc99ab-bdf5-44b1-87d9-2cd548967cfd.png) | ![image](https://user-images.githubusercontent.com/2152766/145186788-2f6e6de5-f6f9-49a0-8048-e24ea09a03e3.png)
-
-It was, however, a little too aggressive. Some of the attributes were still useful, especially for making sweeping changes across lots of markers at once. So in this release, you know have the option of:
-
-1. Having these attributes visible on `Assign` via the Option Dialog
-2. Toggling these attributes on/off via `Ragdoll -> Utilities -> Toggle Marker Attributes`
-
-
+![image](https://user-images.githubusercontent.com/2152766/146527505-c79a897c-74cc-4e4c-b3c3-becae0ebd99d.png)
 
 <br>
 
-### Legacy Viewport
+### Delta Drawing Bug
 
-More specifically, the environment variable `MAYA_ENABLE_VP2_PLUGIN_LOCATOR_LEGACY_DRAW`, is still in use in some studios. This variable would cause the Manipulator UI to be unselectable.
+The worldspace deltas were drawn separate from the marker they affected, which could produce a jarring effect especially when the solver position had been offset.
 
-https://user-images.githubusercontent.com/2152766/146153487-23b86735-76f3-4a33-ba14-e3075afb1c10.mp4 controls
+**Before**
+
+https://user-images.githubusercontent.com/2152766/146639337-8df8d52e-8e6f-4d87-94f8-5973b03a7f1e.mp4 controls
+
+**After**
 
 This has now been fixed.
 
-<br>
+https://user-images.githubusercontent.com/2152766/146639364-34dcba69-b174-4950-8431-19303fb343f4.mp4 controls
 
-### Collision Group
-
-Long markers, like free boxes and other environment assets and props have an `Overlap Group` like any other. But unless they are also part of a group, they would sometimes not respect the `Overlap Group`, requiring a scene re-open in order to take effect.
-
-This has now been fixed.
+!!! info "More Performance"
+    As an added bonus, we're now also doing 2 matrix multiplications less *per frame*, *per marker*. That kind of thing adds up quickly.
 
 <br>
 
-### Edit Constraint Frames
+### Auto Mass
 
-The previous release simplified limits by a lot, but there are still cases where the default orientation of some rig controls ends up in a funny situation.
+Ragdoll can now compute a suitable mass of each Marker, based on the geometric shape you give it.
 
-https://user-images.githubusercontent.com/2152766/146166397-79adb644-a922-4fad-9c5d-a372b22bda2d.mp4 controls
+In a word, big objects become heavy, small objects become light.
 
-!!! info "Note"
-    This does *not* matter to the simulation. It is only a rendering artefact.
+**Before**
 
-To make this a little easier to work with, you can rotate the entire limit like this.
+https://user-images.githubusercontent.com/2152766/146757327-507ea062-d4e7-45dd-b9a1-59406340fc89.mp4 controls
 
-https://user-images.githubusercontent.com/2152766/146166283-937400e5-5de8-43a4-b02a-9db822c91639.mp4 controls
+**After**
 
-!!! info "Note"
-    You don't need the locators once you are done editing them, you should definitely delete them.
+https://user-images.githubusercontent.com/2152766/146757333-b56046c7-467f-4edf-91b8-45d260ffc101.mp4 controls
 
-This will be made redundant in a future version as it gets much too technical and too easy to shoot yourself in the foot. If you make a mistake, delete the locators and call `Reset Constraint Frames` in the same menu to start again.
+<br>
+
+### Max Mass Ratio
+
+With `Auto Mass`, there's a chance Markers get Ragdoll into a situation it does not like; namely that the difference between masses are too great.
+
+??? info "Give me the technical details"
+    As you wish. :)
+
+    Ragdoll doesn't like differences any greater than 10x, sometimes 100x, else it can fail or become unstable. For example, if your character has a mass of 100kg, and the foot Marker has a mass of 0.5kg, that's a ratio of 100/0.5 = 200x which is far greater than Ragdoll would like. As a result, the body would *crush* the foot which would be unable to properly hold the entire body up.
+
+    Up until now, the masses on all Markers have had a default value of 1kg. Meaning that regardless of the *size* of a Marker - be it the torso, the head or tip of a finger - it would always have a mass of 1.0. As a result, *hands* would typically end up far heavier than the rest of the body.
+
+**Before**
+
+Here's an example of the solver failing. There are three identical chains, the tip of the last one having a mass of 10,000. That's 10,000x greater then each link in the chain. As a result, Markers separate; that is incorrect.
+
+https://user-images.githubusercontent.com/2152766/146761954-6218f6bf-9fbe-4100-b831-589fd7d94914.mp4 controls
+
+**After**
+
+If we limit the maximum ratio to just 1000x, we get the correct behavior. You can also see how it affected the other two chains. They now behave more similarly, because in order to ensure a mass ratio across the whole system, the mass of their tips need to be reduced as well.
+
+https://user-images.githubusercontent.com/2152766/146761956-211ce2b6-42b6-4f70-a9de-42326b4fb17c.mp4 controls
+
+
+The new `Max Mass Ratio` attribute protects against these situations, letting you give objects a suitable mass and only have to worry about which should weigh more, and which should weigh less. Ragdoll will balance everything out before passing it along to be simulated.
+
+!!! info "What are the consequences?"
+    Sometimes, large mass ratios are what you want. For example, a heavy weight on a string tends to do quite well with ratios up to 1000x. But markers being crushed by another marker 1000x its weight tends to not do as well.
+
+    So the result is less of an effect at the extreme ratios.

@@ -164,7 +164,6 @@ You now know enough to construct *any* character of *any* anatomy!
 
 - ✔️ How to *limit* the motion between two limbs
 - ✔️ How to tune the minimum and maximum bound of each limit
-- ✔️ How to replace default collision shapes with your own meshes
 
 As you tune, try dropping the Manikin from different heights and angles. Put an obstacle underneath for more detail and to catch more edge cases. Once you are unable to produce an unnatural pose, you are done!
 
@@ -175,8 +174,8 @@ https://user-images.githubusercontent.com/2152766/145396017-3175104f-f488-45c9-9
 For your reference, here is the completed scene with the Manikin file referenced.
 
 <div class="hboxlayout justify-left">
-<a href="https://files.ragdolldynamics.com/api/public/dl/8CKfRSk3/manikin_rigging_v001_publish.zip" class="button blue"><b>Download Manikin</b></a>
-<a href="https://files.ragdolldynamics.com/api/public/dl/01lBKSdb/manikin_walkthrough_v003.zip" class="button red"><b>Download Final Scene</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/Q96vbUR5/manikin.zip" class="button blue"><b>Download Manikin</b></a>
+<a href="https://files.ragdolldynamics.com/api/public/dl/J2SLBN2T/manikin_ragdoll_final.zip" class="button red"><b>Download Final Scene</b></a>
 </div>
 
 <br>

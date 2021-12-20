@@ -79,7 +79,7 @@ The plug-in is now available via the Plug-in Manager.
 **Everything ok?**
 
 ??? bug "No menu"
-    You've booted up Maya, but there is no menu, what gives?
+    You've booted up Maya, loaded the plug-in via the Plug-in Manager, but there is no menu, what gives?
 
     Maya Modules work in mysterious ways. Try installing it the old fashioned way.
 

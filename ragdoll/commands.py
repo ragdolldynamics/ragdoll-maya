@@ -2557,7 +2557,8 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
         # Joints for example ship with this attribute built-in, very convenient
         elif "radius" in root:
-            radius = root["radius"].read()
+            joint_scale = cmds.jointDisplayScale(query=True)
+            radius = root["radius"].read() * joint_scale
 
         # If we don't have that, try and establish one from the bounding box
         else:

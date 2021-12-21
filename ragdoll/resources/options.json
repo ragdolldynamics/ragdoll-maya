@@ -865,8 +865,8 @@
         "name": "markersDensity",
         "label": "Density",
         "type": "Enum",
-        "default": 1,
-        "items": ["Off", "Water", "Wood", "Feather", "Air"],
+        "default": 2,
+        "items": ["Off", "Wood", "Flesh", "Uranium", "Black Hole", "Custom"],
         "help": "Use the volume and density of the shape to determine its mass."
     },
 

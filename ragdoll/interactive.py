@@ -2144,6 +2144,8 @@ def _make_ground(solver):
     with cmdx.DagModifier() as mod:
         mod.set_attr(marker["inputType"], c.InputKinematic)
         mod.set_attr(marker["displayType"], c.DisplayWire)
+        mod.set_attr(marker["densityType"], c.DensityOff)
+        mod.set_attr(marker["mass"], 0.01)
 
         mod.set_attr(plane["overrideEnabled"], True)
         mod.set_attr(plane["overrideShading"], False)
@@ -2237,6 +2239,14 @@ def _find_current_solver(create_ground=True):
         ground = _make_ground(solver)
 
     return solver, ground
+
+
+def _find_solver_for(marker):
+    assert marker and marker.isA("rdMarker"), "%s wasn't a marker" % marker
+    output = marker["startState"].output()
+    while output and output is not marker and not output.isA("rdSolver"):
+        output = output["startState"].output()
+    return output
 
 
 def _add_to_objset(markers):

@@ -511,23 +511,13 @@
             "scale",
             "sceneScale",
             "cacheMedia",
-            "frameskipHandling",
-            "autoInitialState",
-            "autoReturnToStart",
-            "cycleProtection",
-            "ogsReset",
-            "maya2018ConsolidateWorldFix",
-            "skinweightsFix",
-            "useProxyAttributes",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",
             "validateLegacyOpenGL2",
             "validateScalePivot",
             "validatePlaybackSpeed",
-            "validateLayerOverride",
-            "reloadShaders",
-            "useUIDrawManager"
+            "reloadShaders"
         ]
     },
     "selectInvalidConstraints": {
@@ -600,13 +590,11 @@
         "summary": "Assign marker to this node",
         "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
-            "basicsSeparator",
-
+            "markersDensity",
+            "markersAutoLimit",
             "markersCreateGround",
             "markersCreateObjectSet",
-            "markersAutoLimit",
             "markersCreateLollipop",
-            "markersDensity",
 
             "channelBoxSeparator",
 
@@ -743,6 +731,7 @@
         "summary": "Automatically transfer locked rotate channels into Ragdoll limits",
         "description": "Determine how to replicate the locked Maya channels in physics using the rotate limits of a marker.",
         "options": [
+            "markersDensity"
         ]
     },
 

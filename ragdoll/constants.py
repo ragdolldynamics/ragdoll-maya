@@ -150,3 +150,10 @@ FromStart = 2
 # Cache
 StaticCache = 1
 DynamicCache = 2
+
+DensityOff = 0
+DensityWood = 1
+DensityFlesh = 2
+DensityUranium = 3
+DensityBlackHole = 4
+DensityCustom = 5

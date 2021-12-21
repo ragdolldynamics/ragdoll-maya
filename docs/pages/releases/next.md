@@ -1,14 +1,19 @@
 ---
+hidden: true
 title: Christmas
 description: ...
 ---
 
 Minor maintenance release.
 
+- [**ADDED** Ragdoll Complete](#ragdoll-complete) A closer look at Ragdoll Complete vs. Unlimited
+- [**ADDED** Density](#density) Automatically compute the mass based on shape volumes
 - [**FIXED** Crash on Deleted Mesh](#crash-on-deleted-mesh) Replace a mesh, delete it and crash no more.
 - [**FIXED** Mandarin Serial Number](#mandarin-serial-number) Unicode mishap led to a non-sensical message
 - [**FIXED** Delta Drawing Bug](#delta-drawing-bug) Funny drawing in the viewport has been fixed
+- [**FIXED** Shape Sync](#shape-sync) Changes to shape properties outside of the start frame could leave Ragdoll and Maya out of sync
 - [**ADDED** Max Mass Ratio](#max-mass-ratio) Keeping you safe
+- [**ADDED** Profiler View](#profiler-view) An in-depth look at where Ragdoll spends its time
 
 <br>
 
@@ -26,44 +31,60 @@ https://user-images.githubusercontent.com/2152766/146805387-bffea211-5dd7-4cd8-a
 
 <br>
 
-### Trial Key
+### Ragdoll Complete
 
-It has come to my attention that the first thing every new user of Ragdoll sees is this dialog, with this message for a serial number.
+This release introduces differences between the Unlimited and Complete versions of Ragdoll.
 
-![image](https://user-images.githubusercontent.com/2152766/146526900-6815e9ad-4da3-4531-bb2c-bb0e239affff.png)
+Up until now, there has been virtually no difference between Complete and Unlimited; customers of Ragdoll Complete has been able to enjoy parallelism and pipeline tooling suitable for large pipelines, but leaving of Early Access also means stepping into the world as a 1.0, a finished product.
 
-According to my Mandarin-speaking friends, this is jibberish (or at least should be!) and is a result of badly translated Unicode to ASCII characters.
+Here's an overview of what you can expect from now on.
 
-This has now been fixed!
-
-![image](https://user-images.githubusercontent.com/2152766/146527505-c79a897c-74cc-4e4c-b3c3-becae0ebd99d.png)
-
-<br>
-
-### Delta Drawing Bug
-
-The worldspace deltas were drawn separate from the marker they affected, which could produce a jarring effect especially when the solver position had been offset.
-
-**Before**
-
-https://user-images.githubusercontent.com/2152766/146639337-8df8d52e-8e6f-4d87-94f8-5973b03a7f1e.mp4 controls
-
-**After**
-
-This has now been fixed.
-
-https://user-images.githubusercontent.com/2152766/146639364-34dcba69-b174-4950-8431-19303fb343f4.mp4 controls
-
-!!! info "More Performance"
-    As an added bonus, we're now also doing 2 matrix multiplications less *per frame*, *per marker*. That kind of thing adds up quickly.
+|                      | Trial      | Personal  | Complete | Unlimited | Batch
+|:---------------------|:-----------|:-----------|:---------|:----------|:---------
+| Commercial Use       | ❌         | ❌         | ✔️      | ✔️        | ✔️
+| Interactive Tools    | ✔️         | ✔️         | ✔️      | ✔️        | ❌
+| Python API           | ✔️         | ✔️         | ❌      | ✔️        | ❌
+| Multi-Threading      | ✔️         | ✔️         | ❌      | ✔️        | ❌
+| JSON Import/Export   | ✔️         | ✔️         | ❌      | ✔️        | ❌
+| Per-process Licence  | ❌         | ❌         | ❌       | ❌       | ✔️
+| Perpetual Pricing    | ❌         | £99        | £499     | £1299     | £199
+| Floating Licence     | ❌         | ❌         | £750     | £1950     | £250
+| Monthly Pricing      | ❌         | ❌         | £55      | £80       | £20
+| Annual Upgrade Plan  | ❌         | £0         | £250     | £650      | £99
 
 <br>
 
-### Auto Mass
+### Export
 
-Ragdoll can now compute a suitable mass of each Marker, based on the geometric shape you give it.
+A few months ago, the export and import of physics [was introduced](). Then [Markers happened](), and now it's back!
+
+<br>
+
+### Density
+
+Ragdoll can now compute a suitable mass of each Marker, based on the shape and a density of your choosing.
+
+| Density    | Value
+|:-----------|:------------
+| `Off`        | Do not compute, use the `Mass` attribute
+| `Wood`       | 0.2 grams per cubic centimeter
+| `Flesh`      | 1.0g/cm3
+| `Uranium`    | 19.0g/cm3
+| `Black Hole` | Very very dense
 
 In a word, big objects become heavy, small objects become light.
+
+https://user-images.githubusercontent.com/2152766/146945079-396470bc-7af0-43fe-96ee-2009e64ac328.mp4 controls
+
+Choose between various densities either at creation-time or afterwards via the new `Density` attribute.
+
+https://user-images.githubusercontent.com/2152766/146948273-726f27dc-eecb-45d4-8a5a-567d05447afe.mp4 controls
+
+The computed mass updates interactively as you change the size and type of your shape, including convex hulls!
+
+https://user-images.githubusercontent.com/2152766/146948277-f5511ded-8dc4-4136-9b40-e788c20c686a.mp4 controls
+
+Mass is computed based on the *volume* of your shape, along with a density of your choosing.
 
 **Before**
 
@@ -105,3 +126,56 @@ The new `Max Mass Ratio` attribute protects against these situations, letting yo
     Sometimes, large mass ratios are what you want. For example, a heavy weight on a string tends to do quite well with ratios up to 1000x. But markers being crushed by another marker 1000x its weight tends to not do as well.
 
     So the result is less of an effect at the extreme ratios.
+
+<br>
+
+### Trial Key
+
+It has come to my attention that the first thing every new user of Ragdoll sees is this dialog, with this message for a serial number.
+
+![image](https://user-images.githubusercontent.com/2152766/146526900-6815e9ad-4da3-4531-bb2c-bb0e239affff.png)
+
+According to my Mandarin-speaking friends, this is jibberish (or at least should be!) and is a result of badly translated Unicode to ASCII characters.
+
+This has now been fixed!
+
+![image](https://user-images.githubusercontent.com/2152766/146527505-c79a897c-74cc-4e4c-b3c3-becae0ebd99d.png)
+
+<br>
+
+### Delta Drawing Bug
+
+The worldspace deltas were drawn separate from the marker they affected, which could produce a jarring effect especially when the solver position had been offset.
+
+**Before**
+
+https://user-images.githubusercontent.com/2152766/146639337-8df8d52e-8e6f-4d87-94f8-5973b03a7f1e.mp4 controls
+
+**After**
+
+This has now been fixed.
+
+https://user-images.githubusercontent.com/2152766/146639364-34dcba69-b174-4950-8431-19303fb343f4.mp4 controls
+
+!!! info "More Performance"
+    As an added bonus, we're now also doing 2 matrix multiplications less *per frame*, *per marker*. That kind of thing adds up quickly.
+
+<br>
+
+### Shape Sync
+
+If you play, pause and then change the `Shape` from `Box` to `Capsule` nothing happens. Because the shape, like many other attributes, can only be changed on the start frame.
+
+But, when you later returned to the start frame, the shape would *still* not update. This has now been fixed.
+
+<br>
+
+### Profiler View
+
+Mostly meant to keep the development of Ragdoll fast and interactive, you can now spot where most time is spent via the built-in Maya Profiler.
+
+https://user-images.githubusercontent.com/2152766/146942224-d88c9ec1-d58f-4213-ad63-2d3f11a91ccf.mp4 controls
+
+Here's what one frame of this looks like; 5 ms to both simulate and render Ragdoll in the viewport.
+
+![image](https://user-images.githubusercontent.com/2152766/146941905-b56fd84a-5cbf-4bfc-84fd-63ecfaabb2a6.png)

@@ -412,6 +412,15 @@ def _on_licence_expired(clientData=None):
     cmds.evalDeferred(welcome_user)
 
 
+def _on_nonkeyable_keyed(clientData=None):
+    """Called on attempted keyframining of a non-keyable attribute"""
+
+    cmds.evalDeferred(lambda: ui.notify(
+        "Non-keyable Attrbute",
+        "This attribute cannot be keyframed"
+    ))
+
+
 def install_callbacks():
     __.callbacks.append(
         om.MSceneMessage.addCallback(
@@ -446,6 +455,11 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollLicenceExpiredEvent", _on_licence_expired)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollNonKeyableEvent", _on_nonkeyable_keyed)
     )
 
 
@@ -4067,6 +4081,9 @@ def select_invalid_constraints(selection=None, **opts):
 
 
 def show_explorer(selection=None):
+    if not json.loads(cmds.ragdollDump()):
+        return
+
     def get_fresh_dump(*args, **kwargs):
         return json.loads(cmds.ragdollDump(*args, **kwargs))
 

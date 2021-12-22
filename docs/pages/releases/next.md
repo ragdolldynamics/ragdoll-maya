@@ -8,12 +8,13 @@ Minor maintenance release.
 
 - [**ADDED** Ragdoll Complete](#ragdoll-complete) A closer look at Ragdoll Complete vs. Unlimited
 - [**ADDED** Density](#density) Automatically compute the mass based on shape volumes
-- [**FIXED** Crash on Deleted Mesh](#crash-on-deleted-mesh) Replace a mesh, delete it and crash no more.
-- [**FIXED** Mandarin Serial Number](#mandarin-serial-number) Unicode mishap led to a non-sensical message
+- [**ADDED** Truly Non-keyable](#truly-non-keyable) Feedback on whether or not an attribute is keyable or not
+- [**FIXED** Mandarin Serial Number](#mandarin-serial-number) Unicode mishap led to a non-sensical message in Mandarin
 - [**FIXED** Delta Drawing Bug](#delta-drawing-bug) Funny drawing in the viewport has been fixed
 - [**FIXED** Shape Sync](#shape-sync) Changes to shape properties outside of the start frame could leave Ragdoll and Maya out of sync
 - [**ADDED** Max Mass Ratio](#max-mass-ratio) Keeping you safe
 - [**ADDED** Profiler View](#profiler-view) An in-depth look at where Ragdoll spends its time
+- [**FIXED** Crash on Deleted Mesh](#crash-on-deleted-mesh) Replace a mesh, delete it and crash no more.
 
 <br>
 
@@ -94,9 +95,11 @@ https://user-images.githubusercontent.com/2152766/146757327-507ea062-d4e7-45dd-b
 
 https://user-images.githubusercontent.com/2152766/146757333-b56046c7-467f-4edf-91b8-45d260ffc101.mp4 controls
 
+![image](https://user-images.githubusercontent.com/2152766/147099761-2cb88dcf-e23f-491f-8801-21cf6ccfde87.png)
+
 <br>
 
-### Max Mass Ratio
+#### Max Mass Ratio
 
 With `Auto Mass`, there's a chance Markers get Ragdoll into a situation it does not like; namely that the difference between masses are too great.
 
@@ -129,7 +132,19 @@ The new `Max Mass Ratio` attribute protects against these situations, letting yo
 
 <br>
 
-### Trial Key
+### Truly Non-keyable
+
+Some Ragdoll attributes are keyable, others are not. Which is which? Impossible to say. Until now!
+
+https://user-images.githubusercontent.com/2152766/147100689-228d7408-0f1c-4a57-a4d5-442d8284a5cc.mp4 controls
+
+On attempting to keyframe a non-keyable attribute, you'll now see an error message along with a visual cue things might not work out the way you expect. As opposed to happily setting that keyframe but then ignoring it once the simulation starts, like it used to.
+
+A little quality of life for ya'!
+
+<br>
+
+### Mandarin Serial Number
 
 It has come to my attention that the first thing every new user of Ragdoll sees is this dialog, with this message for a serial number.
 

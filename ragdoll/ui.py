@@ -3434,6 +3434,238 @@ class PivotEditor(QtWidgets.QDialog):
         return super(PivotEditor, self).closeEvent(event)
 
 
+class Notification(QtWidgets.QDialog):
+    instance = None
+
+    def __init__(self, parent=None):
+        super(Notification, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setWindowFlags(QtCore.Qt.ToolTip | QtCore.Qt.FramelessWindowHint)
+        self.setWindowTitle("Notification Singleton")  # Not visible
+
+        widgets = {
+            "icon": QtWidgets.QLabel(),
+            "title": QtWidgets.QLabel(),
+            "message": QtWidgets.QLabel(),
+        }
+
+        for name, obj in widgets.items():
+            obj.setObjectName(name)
+
+        icon = _resource("icons", "attributes.png")
+        icon = QtGui.QPixmap(icon)
+        icon = icon.scaledToWidth(px(16), QtCore.Qt.SmoothTransformation)
+
+        widgets["icon"].setPixmap(icon)
+
+        spacer = QtWidgets.QWidget()
+        spacer.setFixedHeight(5)
+        layout = QtWidgets.QGridLayout(self)
+        layout.addWidget(spacer, 0, 0)
+        layout.addWidget(widgets["icon"], 1, 0)
+        layout.addWidget(widgets["title"], 1, 1)
+        layout.addWidget(widgets["message"], 2, 1)
+
+        # Align title with icon on the left-hand side
+        layout.setColumnStretch(1, 1)
+
+        # Account for icon and arrow offset in paintEvent
+        layout.setContentsMargins(px(5), px(5), px(15), px(12))
+
+        timer = QtCore.QTimer(self)
+        timer.timeout.connect(self.animate_fade_out)
+        timer.setInterval(2000)  # 2 seconds
+
+        effect = QtWidgets.QGraphicsOpacityEffect(self)
+
+        fade_in = QtCore.QPropertyAnimation(effect, b"opacity")
+        fade_in.setDuration(200)
+        fade_in.setStartValue(0.0)
+        fade_in.setEndValue(1.0)
+        fade_in.setEasingCurve(QtCore.QEasingCurve.OutCubic)
+
+        fade_out = QtCore.QPropertyAnimation(effect, b"opacity")
+        fade_out.setDuration(200)
+        fade_out.setStartValue(1.0)
+        fade_out.setEndValue(0.0)
+        fade_out.setEasingCurve(QtCore.QEasingCurve.OutCubic)
+        fade_out.finished.connect(self.close)
+
+        self._fade_in = fade_in
+        self._fade_out = fade_out
+        self._timer = timer
+        self._arrow_pos = px(20)
+
+        self.setGraphicsEffect(effect)
+        self.setStyleSheet("""
+        Notification {
+            border: transparent;
+            background: transparent;
+        }
+
+        #title {
+            font-weight: bold;
+            color: #eee;
+            color: rgb(241, 126, 46);
+        }
+
+        #message {
+            color: #ddd;
+        }
+        """)
+
+        self._widgets = widgets
+        Notification.instance = self
+        __.widgets[self.windowTitle()] = self
+
+    def shake_it(self, origin):
+        # Shake the notification, to bring attention to it
+
+        def move(start, end):
+            start = QtCore.QPoint(origin.x() + px(start), origin.y())
+            end = QtCore.QPoint(origin.x() + px(end), origin.y())
+
+            anim = QtCore.QPropertyAnimation(self, b"pos")
+            anim.setDuration(70)
+            anim.setStartValue(start)
+            anim.setEndValue(end)
+            anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
+
+            return anim
+
+        group = QtCore.QSequentialAnimationGroup(self)
+        group.insertPause(0, 200)
+        group.addAnimation(move(0, 20))
+        group.addAnimation(move(20, -20))
+        group.addAnimation(move(-20, 20))
+        group.addAnimation(move(20, 0))
+        group.start()
+
+        # Prevent garbage collection, no other reason for keeping this
+        self.__shkgrp = group
+
+    def animate_fade_in(self):
+        self._fade_out.stop()
+        self._fade_in.start()
+
+    def animate_fade_out(self):
+        self._fade_out.start()
+
+    def init(self, pos, title, message):
+        self._widgets["title"].setText(title)
+        self._widgets["message"].setText(message)
+
+        self.show()
+
+        window = self.parent()
+        relative_pos = window.mapFromGlobal(pos)
+        on_left_side = relative_pos.x() < (window.width() / 2)
+
+        self._arrow_pos = px(100)
+
+        # Take into account global position relative the Maya Window
+        if on_left_side:
+            self._arrow_pos = px(20)
+
+        pos -= QtCore.QPoint(self._arrow_pos, 0)
+
+        self.move(pos)
+
+        self.animate_fade_in()
+        self.shake_it(pos)
+
+        self._timer.start()
+
+    def paintEvent(self, event):
+        rect = event.rect()
+        painter = QtGui.QPainter(self)
+        path = QtGui.QPainterPath()
+
+        # Draw a shadow
+        offset = px(5)
+        path.moveTo(offset, offset + 10)
+        path.lineTo(offset, offset + 10)
+        path.lineTo(rect.width() - offset + 2, 10)
+        path.lineTo(rect.width(), rect.height())
+        path.lineTo(offset, rect.height())
+        path.lineTo(0, 10)
+
+        painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 0), 0))
+        painter.setBrush(QtGui.QColor(0, 0, 0, 127))
+        painter.setRenderHint(painter.Antialiasing)
+        painter.drawPath(path)
+
+        # Draw a rectangle with an arrow pointing to the menu
+        #
+        #  __/\___________
+        # |               |
+        # | icon title    |
+        # |      message  |
+        # |               |
+        # |_______________|
+        #
+        path = QtGui.QPainterPath()
+        path.moveTo(0, 10)
+        path.lineTo(0, 10)
+        path.lineTo(self._arrow_pos + px(0), 10)
+        path.lineTo(self._arrow_pos + px(5), 0)
+        path.lineTo(self._arrow_pos + px(10), 10)
+        path.lineTo(rect.width() - offset, 10)
+        path.lineTo(rect.width() - offset, rect.height() - offset)
+        path.lineTo(0, rect.height() - offset)
+        path.lineTo(0, 10)
+
+        pen = QtGui.QPen(
+            QtGui.QColor("#222"),
+            1,
+            QtCore.Qt.SolidLine,
+            QtCore.Qt.FlatCap,
+            QtCore.Qt.MiterJoin
+        )
+        painter.setPen(pen)
+        painter.setBrush(QtGui.QColor("#444"))
+        painter.drawPath(path)
+
+    def mousePressEvent(self, event):
+        self.close()
+        return super(Notification, self).mousePressEvent(event)
+
+
+def notify(title, message, pos_at_menu=False):
+    """Produce a transient balloon popup with `title` and `message`
+
+    Arguments:
+        title (str): Header of the popup, a summary of the event
+        message (str): Body of the popup, more details about the event
+
+    """
+
+    pointer = MQtUtil.mainWindow()
+    maya_win = shiboken2.wrapInstance(i__.long(pointer), QtWidgets.QMainWindow)
+
+    instance = Notification.instance
+    if instance is not None and shiboken2.isValid(instance):
+        note = instance
+    else:
+        note = Notification(parent=maya_win)
+
+    pos = QtGui.QCursor.pos()
+
+    if pos_at_menu and __.menu:
+        menu = __.menu.rsplit("|", 1)[-1]
+        menu = maya_win.findChild(QtWidgets.QMenu, menu)
+
+        # The menu won't have a position until it's been opened at least once
+        # In those cases, just use the mouse position
+        if menu is not None and menu.pos().x() > 0:
+            pos = menu.pos()
+
+    note.init(pos, title, message)
+
+    return note
+
+
 def view_to_pixmap(size=None):
     """Render currently active 3D viewport as a QPixmap"""
 

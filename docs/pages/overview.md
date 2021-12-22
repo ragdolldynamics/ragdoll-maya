@@ -62,6 +62,7 @@ Mentions of Ragdoll in the press.
 
 | Date | Source | Title
 |:-----|:-------|:---------
+| 2021-12-18 | [Escape Studios](http://escapestudiosanimation.blogspot.com/2021/12/ragdoll-dynamics-for-maya.html) | Ragdoll Dynamics for Maya
 | 2021-09-21 | [80lv](https://80.lv/articles/development-and-capabilities-of-ragdoll-dynamics/) | Development and Capabilities of Ragdoll Dynamics
 | 2021-08-03 | [CGChannel](http://www.cgchannel.com/2021/08/ragdoll-dynamics-adds-real-time-physics-to-your-maya-rigs/) | Ragdoll Dynamics adds real-time physics to your Maya rigs
 | 2021-07-30 | [CGPress](https://cgpress.org/archives/ragdoll-dynamics-plugin-for-maya.html) | Ragdoll Dynamics plugin for Maya

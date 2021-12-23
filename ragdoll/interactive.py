@@ -416,9 +416,28 @@ def _on_nonkeyable_keyed(clientData=None):
     """Called on attempted keyframining of a non-keyable attribute"""
 
     cmds.evalDeferred(lambda: ui.notify(
-        "Non-keyable Attrbute",
+        "Non-keyable Attribute",
         "This attribute cannot be keyframed"
     ))
+
+
+def _on_noncommercial(clientData=None):
+    """Called on attempted keyframining of a non-keyable attribute"""
+
+    msg = (
+        "This file was saved using a non-commercial licence of Ragdoll\n"
+        "and cannot be opened with a commercial licence.\n"
+        "\n"
+        "This Ragdoll instance has been converted to a non-commercial\n"
+        "licence, please reload the plug-in to restore your\n"
+        "commercial licence."
+    )
+
+    cmds.evalDeferred(lambda: ui.notify(
+        "Non-commercial file", msg, persistent=True
+    ))
+
+    log.warning(msg)
 
 
 def install_callbacks():
@@ -460,6 +479,11 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollNonKeyableEvent", _on_nonkeyable_keyed)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollNonCommercialEvent", _on_noncommercial)
     )
 
 

@@ -3494,7 +3494,7 @@ class Notification(QtWidgets.QDialog):
 
         self._fade_in = fade_in
         self._fade_out = fade_out
-        self._timer = timer
+        self._fade_out_timer = timer
         self._arrow_pos = px(20)
 
         self.setGraphicsEffect(effect)
@@ -3552,7 +3552,7 @@ class Notification(QtWidgets.QDialog):
     def animate_fade_out(self):
         self._fade_out.start()
 
-    def init(self, pos, title, message):
+    def init(self, pos, title, message, persistent=False):
         self._widgets["title"].setText(title)
         self._widgets["message"].setText(message)
 
@@ -3575,7 +3575,8 @@ class Notification(QtWidgets.QDialog):
         self.animate_fade_in()
         self.shake_it(pos)
 
-        self._timer.start()
+        if not persistent:
+            self._fade_out_timer.start()
 
     def paintEvent(self, event):
         rect = event.rect()
@@ -3632,7 +3633,7 @@ class Notification(QtWidgets.QDialog):
         return super(Notification, self).mousePressEvent(event)
 
 
-def notify(title, message, pos_at_menu=False):
+def notify(title, message, pos_at_menu=False, persistent=False):
     """Produce a transient balloon popup with `title` and `message`
 
     Arguments:
@@ -3661,7 +3662,7 @@ def notify(title, message, pos_at_menu=False):
         if menu is not None and menu.pos().x() > 0:
             pos = menu.pos()
 
-    note.init(pos, title, message)
+    note.init(pos, title, message, persistent)
 
     return note
 

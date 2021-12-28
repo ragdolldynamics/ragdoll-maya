@@ -428,9 +428,8 @@ def _on_noncommercial(clientData=None):
         "This file was saved using a non-commercial licence of Ragdoll\n"
         "and cannot be opened with a commercial licence.\n"
         "\n"
-        "This Ragdoll instance has been converted to a non-commercial\n"
-        "licence, please reload the plug-in to restore your\n"
-        "commercial licence."
+        "This Ragdoll instance has been converted into a non-commercial\n"
+        "licence, reload the plug-in to restore your commercial licence."
     )
 
     cmds.evalDeferred(lambda: ui.notify(

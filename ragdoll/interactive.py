@@ -432,10 +432,11 @@ def _on_noncommercial(clientData=None):
         "licence, reload the plug-in to restore your commercial licence."
     )
 
-    cmds.evalDeferred(lambda: ui.notify(
-        "Non-commercial file", msg, persistent=True
-    ))
+    def deferred():
+        ui.notify("Non-commercial file", msg, persistent=True)
+        welcome_user()
 
+    cmds.evalDeferred(deferred)
     log.warning(msg)
 
 
@@ -2663,6 +2664,13 @@ def record_markers(selection=None, **opts):
         "recordFilter": _opt("markersRecordFilter", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
+
+    if licence.data()["isNonCommercial"]:
+        raise i__.UserWarning(
+            "Commercial Licence Required",
+            "A commercial licence is required in order to "
+            "Record Simulation, Ragdoll Complete or Unlimited."
+        )
 
     solvers = _filtered_selection("rdSolver", selection)
     include = []

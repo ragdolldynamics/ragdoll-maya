@@ -1069,6 +1069,7 @@ class Options(QtWidgets.QMainWindow):
         panels["Body"].addWidget(widgets["Options"])
         panels["Body"].addWidget(widgets["Player"])
         panels["Body"].addWidget(widgets["Help"])
+        panels["Body"].setMaximumWidth(px(570))
 
         self.OptionsPage = 0
         self.PlayerPage = 1
@@ -1090,11 +1091,11 @@ class Options(QtWidgets.QMainWindow):
         layout.addWidget(widgets["Apply"])
         layout.addWidget(widgets["Close"])
 
-        layout = QtWidgets.QVBoxLayout(panels["Central"])
-        layout.addWidget(panels["Body"])
-        layout.addWidget(panels["Buttons"])
-        layout.addWidget(panels["Footer"])
-        layout.addWidget(panels["Timeline"])
+        layout = QtWidgets.QGridLayout(panels["Central"])
+        layout.addWidget(panels["Body"], 0, 0)
+        layout.addWidget(panels["Buttons"], 1, 0)
+        layout.addWidget(panels["Footer"], 2, 0)
+        layout.addWidget(panels["Timeline"], 3, 0)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
@@ -2070,6 +2071,7 @@ class DumpWidget(QtWidgets.QWidget):
         }
 
         widgets = {
+            "Path": QtWidgets.QLineEdit(),
             "TargetView": DumpView(),
         }
 
@@ -2085,17 +2087,19 @@ class DumpWidget(QtWidgets.QWidget):
 
         # Setup
 
+        widgets["Path"].setReadOnly(True)
         widgets["TargetView"].mouseMoved.connect(self.on_mouse_moved)
-
         widgets["TargetView"].setModel(models["TargetModel"])
         widgets["TargetView"].setSelectionBehavior(
             QtWidgets.QTreeView.SelectRows)
 
         # Layout
 
-        layout = QtWidgets.QHBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(widgets["Path"])
         layout.addWidget(widgets["TargetView"])
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
@@ -2137,7 +2141,22 @@ class DumpWidget(QtWidgets.QWidget):
         self.hinted.emit(tooltip or "")
 
     def on_target_changed(self, current, previous):
-        pass
+        parent = current.parent()
+        item = self._models["TargetModel"].index(current.row(), 0, parent)
+        entity = item.data(EntityRole)
+
+        if not entity:
+            return
+
+        if self._loader.registry.has(entity, "MarkerUIComponent"):
+            MarkerUi = self._loader.registry.get(entity, "MarkerUIComponent")
+            text = MarkerUi["sourceTransform"]
+        else:
+            Name = self._loader.registry.get(entity, "NameComponent")
+            text = Name["path"] or Name["value"]
+
+        path = self._widgets["Path"]
+        path.setText(text)
 
     def reset(self):
         # Reset after a given time period.
@@ -2147,8 +2166,10 @@ class DumpWidget(QtWidgets.QWidget):
         self._reset_timer.start()
 
     def _reset(self):
+        analysis = self._loader.analyse()
+
         def _transform(data, entity):
-            Name = self._loader.component(entity, "NameComponent")
+            Name = self._loader.registry.get(entity, "NameComponent")
 
             alignment = (
                 QtCore.Qt.AlignLeft,
@@ -2157,22 +2178,13 @@ class DumpWidget(QtWidgets.QWidget):
             )
 
             shape_icon = None
-            rigid_entity = entity
 
-            # Borrow a shape icon from whatever rigid this constraint applies
-            if self._loader.has(entity, "JointComponent"):
-                Joint = self._loader.component(entity, "JointComponent")
-
-                # Protect against possible (but improbable) invalid reference
-                if Joint["child"]:
-                    rigid_entity = Joint["child"]
-
-            if self._loader.has(rigid_entity, "RigidUIComponent"):
-                rigid_ui = self._loader.component(rigid_entity,
-                                                  "RigidUIComponent")
+            if self._loader.registry.has(entity, "MarkerUIComponent"):
+                marker_ui = self._loader.registry.get(entity,
+                                                     "MarkerUIComponent")
 
                 # TODO: Replace .get with []
-                shape_icon = rigid_ui.get("shapeIcon")
+                shape_icon = marker_ui.get("shapeIcon")
                 shape_icon = {
                     "joint": "maya_joint.png",
                     "mesh": "maya_mesh.png",
@@ -2183,68 +2195,65 @@ class DumpWidget(QtWidgets.QWidget):
                 shape_icon = _resource("icons", shape_icon)
                 shape_icon = QtGui.QIcon(shape_icon)
 
-            try:
-                transform = analysis["transforms"][entity]
+            occupied = entity in analysis["occupied"]
+            no_transform = entity not in analysis["entityToTransform"]
 
-            except KeyError:
+            color = self.palette().color(self.foregroundRole())
+            color.setAlpha(100)
+            grayed_out = (color, color, color)
 
+            if occupied:
                 # Dim any transform that isn't getting imported
-                color = self.palette().color(self.foregroundRole())
-                color.setAlpha(100)
-                grayed_out = (color, color, color)
+                icon = _resource("icons", "check.png")
+                icon = QtGui.QIcon(icon)
 
-                try:
-                    # Is there a transform, except it's occupied?
-                    occupied = analysis["occupied"][entity]
+                occupied = analysis["entityToTransform"][entity]
+                path = occupied.shortestPath()
 
-                except KeyError:
-                    # No, there isn't a transform for this entity
-                    icon = _resource("icons", "questionmark.png")
-                    icon = QtGui.QIcon(icon)
-                    tooltip = "No transform could be found for this rigid"
+                data[QtCore.Qt.DisplayRole] += [path]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[QtCore.Qt.ForegroundRole] = (color, color)
+                data[QtCore.Qt.TextAlignmentRole] = alignment
 
-                    data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
-                    data[QtCore.Qt.TextAlignmentRole] = alignment
-                    data[QtCore.Qt.ForegroundRole] = grayed_out
+                data[TransformRole] = occupied
+                data[OccupiedRole] = True
+                data[HintRole] += (
+                    occupied.path(),
+                    "%s already has a rigid" % path
+                )
 
-                    data[OccupiedRole] = False
-                    data[HintRole] += (
-                        Name["path"],
-                        tooltip
-                    )
+            elif no_transform:
+                # There isn't any transform for this entity
+                icon = _resource("icons", "questionmark.png")
+                icon = QtGui.QIcon(icon)
+                tooltip = "No transform could be found for this rigid"
 
-                else:
-                    icon = _resource("icons", "check.png")
-                    icon = QtGui.QIcon(icon)
-                    path = occupied.shortestPath()
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[QtCore.Qt.TextAlignmentRole] = alignment
+                data[QtCore.Qt.ForegroundRole] = grayed_out
 
-                    data[QtCore.Qt.DisplayRole] += [path]
-                    data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
-                    data[QtCore.Qt.ForegroundRole] = (color, color)
-                    data[QtCore.Qt.TextAlignmentRole] = alignment
+                data[OccupiedRole] = False
+                data[HintRole] += (
+                    Name["shortestPath"],
+                    tooltip
+                )
 
-                    data[TransformRole] = occupied
-                    data[OccupiedRole] = True
-                    data[HintRole] += (
-                        occupied.path(),
-                        "%s already has a rigid" % path
-                    )
             else:
                 icon = _resource("icons", "right.png")
                 icon = QtGui.QIcon(icon)
+                transform = analysis["entityToTransform"][entity]
 
-                data[QtCore.Qt.DecorationRole] += [shape_icon, icon]
-                data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
+                data[QtCore.Qt.DecorationRole] += [icon]
                 data[QtCore.Qt.TextAlignmentRole] = alignment
-
+                data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
                 data[TransformRole] = transform
                 data[HintRole] += (
-                    Name["path"],
-                    transform.path()
+                    Name["shortestPath"],
+                    transform.shortestPath()
                 )
 
-        def _rigid_icon(data, entity):
-            Desc = self._loader.component(
+        def _marker_icon(data, entity):
+            Desc = self._loader.registry.get(
                 entity, "GeometryDescriptionComponent"
             )
 
@@ -2258,7 +2267,7 @@ class DumpWidget(QtWidgets.QWidget):
                 Desc["type"],
 
                 # In case the format is all whack
-                "rigid.png"
+                "marker.png"
             )
 
             icon = _resource("icons", icon)
@@ -2278,230 +2287,80 @@ class DumpWidget(QtWidgets.QWidget):
                 OptionsRole: None,
             }
 
-        def _add_scenes(root_item):
-            for scene in analysis["scenes"]:
-                entity = scene["entity"]
+        solver_to_item = {}
+        group_to_item = {}
+        marker_to_item = {}
 
-                Name = self._loader.component(entity, "NameComponent")
+        def _add_solvers(root_item):
+            for entity in analysis["solvers"]:
+                Name = self._loader.registry.get(entity, "NameComponent")
                 label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "scene.png")
-                icon = QtGui.QIcon(icon)
-
-                transform_data = _default_data()
-                transform_data[QtCore.Qt.DisplayRole] += ["Scene", label]
-                transform_data[QtCore.Qt.DecorationRole] += [icon]
-                transform_data[HintRole] += ["Scene Command"]
-                transform_data[EntityRole] = entity
-                transform_data[OptionsRole] = scene["options"]
-
-                _transform(transform_data, entity)
-
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name.get("shortestPath", "")]
-                data[EntityRole] = entity
-
-                _rigid_icon(data, entity)
-                _transform(data, entity)
-
-                transform_item = qargparse.GenericTreeModelItem(transform_data)
-                entity_item = qargparse.GenericTreeModelItem(data)
-
-                root_item.addChild(transform_item)
-                transform_item.addChild(entity_item)
-
-        def _add_chains(root_item):
-            for chain in analysis["chains"]:
-                entity = chain["rigids"][0]
-
-                Name = self._loader.component(entity, "NameComponent")
-                label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "chain.png")
-                icon = QtGui.QIcon(icon)
-
-                transform_data = _default_data()
-                transform_data[QtCore.Qt.DisplayRole] += ["Chain", label]
-                transform_data[QtCore.Qt.DecorationRole] += [icon]
-                transform_data[HintRole] += ["Chain Command"]
-
-                transform_data[EntityRole] = entity
-                transform_data[OptionsRole] = chain["options"]
-
-                _transform(transform_data, entity)
-
-                chain_item = qargparse.GenericTreeModelItem(transform_data)
-                root_item.addChild(chain_item)
-
-                for entity in chain["rigids"]:
-                    Name = self._loader.component(entity, "NameComponent")
-                    label = Name["path"].rsplit("|", 1)[-1]
-                    icon = _resource("icons", "rigid.png")
-                    icon = QtGui.QIcon(icon)
-
-                    data = _default_data()
-                    data[EntityRole] = entity
-                    data[HintRole] += ["Rigid"]
-                    data[QtCore.Qt.DisplayRole] += [
-                        Name["value"], Name.get("shortestPath", "")
-                    ]
-
-                    _rigid_icon(data, entity)
-                    _transform(data, entity)
-
-                    chain_item.addChild(qargparse.GenericTreeModelItem(data))
-
-                for entity in chain["constraints"]:
-                    icon = _resource("icons", "constraint.png")
-                    icon = QtGui.QIcon(icon)
-
-                    Name = self._loader.component(entity, "NameComponent")
-
-                    data = _default_data()
-                    data[HintRole] += ["Constraint"]
-                    data[QtCore.Qt.DecorationRole] += [icon]
-                    data[QtCore.Qt.DisplayRole] += [
-                        Name["value"], Name.get("shortestPath", "")
-                    ]
-
-                    data[EntityRole] = entity
-
-                    _transform(data, entity)
-
-                    chain_item.addChild(qargparse.GenericTreeModelItem(data))
-
-        def _add_rigids(root_item):
-            for rigid in analysis["rigids"]:
-                entity = rigid["entity"]
-
-                Name = self._loader.component(entity, "NameComponent")
-                label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "rigid.png")
+                icon = _resource("icons", "solver.png")
                 icon = QtGui.QIcon(icon)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += ["Rigid", label]
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[HintRole] += ["Rigid Command"]
-
+                data[QtCore.Qt.DisplayRole] += [Name["path"], "New Solver"]
                 data[EntityRole] = entity
-                data[OptionsRole] = rigid["options"]
-
-                _transform(data, entity)
+                data[HintRole] += (
+                    Name["shortestPath"],
+                    "A new solver will be created"
+                )
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name.get("shortestPath", "")]
-                data[QtCore.Qt.DecorationRole] += []
-                data[EntityRole] = entity
+                solver_to_item[entity] = item
 
-                _rigid_icon(data, entity)
-                _transform(data, entity)
-
-                child = qargparse.GenericTreeModelItem(data)
-                item.addChild(child)
-
-        def _add_constraints(root_item):
-            for constraint in analysis["constraints"]:
-                entity = constraint["entity"]
-
-                Name = self._loader.component(entity, "NameComponent")
+        def _add_groups(root_item):
+            for entity in analysis["groups"]:
+                Name = self._loader.registry.get(entity, "NameComponent")
                 label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "constraint.png")
+                icon = _resource("icons", "suit.png")
                 icon = QtGui.QIcon(icon)
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += ["Constraint", label]
-                data[QtCore.Qt.DecorationRole] += [icon]
-                data[HintRole] += ["Constraint Command"]
                 data[EntityRole] = entity
-                data[OptionsRole] = constraint["options"]
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[QtCore.Qt.DisplayRole] += [Name["shortestPath"]]
 
-                _transform(data, entity)
+                Scene = self._loader.registry.get(entity, "SceneComponent")
+                parent_item = solver_to_item.get(Scene["entity"])
+
+                # It would be odd for a group not to be part of a solver
+                if not parent_item:
+                    parent_item = root_item
 
                 item = qargparse.GenericTreeModelItem(data)
-                root_item.addChild(item)
+                parent_item.addChild(item)
+
+                group_to_item[entity] = item
+
+        def _add_markers(root_item):
+            for entity in analysis["markers"]:
+                Name = self._loader.registry.get(entity, "NameComponent")
 
                 data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name.get("shortestPath", "")]
                 data[EntityRole] = entity
-                data[QtCore.Qt.DecorationRole] += [icon]
+                data[QtCore.Qt.DisplayRole] += [Name["value"]]
 
+                _marker_icon(data, entity)
                 _transform(data, entity)
 
-                child = qargparse.GenericTreeModelItem(data)
-                item.addChild(child)
+                Group = self._loader.registry.get(entity, "GroupComponent")
+                parent_item = group_to_item.get(Group["entity"])
 
-        def _add_rigid_multipliers(root_item):
-            for mult in analysis["rigidMultipliers"]:
-                entity = mult["entity"]
-
-                Name = self._loader.component(entity, "NameComponent")
-                label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "rigid_multiplier.png")
-                icon = QtGui.QIcon(icon)
-
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += ["Rigid Multiplier", label]
-                data[QtCore.Qt.DecorationRole] += [icon]
-                data[HintRole] += ["Rigid Multiplier Command"]
-                data[EntityRole] = entity
-                data[OptionsRole] = mult["options"]
-
-                _transform(data, entity)
+                # A marker may or may not be part of a group
+                if not parent_item:
+                    parent_item = root_item
 
                 item = qargparse.GenericTreeModelItem(data)
-                root_item.addChild(item)
+                parent_item.addChild(item)
 
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name.get("shortestPath", "")]
-                data[EntityRole] = entity
-                data[QtCore.Qt.DecorationRole] += [icon]
+                marker_to_item[entity] = item
 
-                _transform(data, entity)
-
-                child = qargparse.GenericTreeModelItem(data)
-                item.addChild(child)
-
-        def _add_constraint_multipliers(root_item):
-            for mult in analysis["constraintMultipliers"]:
-                entity = mult["entity"]
-
-                Name = self._loader.component(entity, "NameComponent")
-                label = Name["path"].rsplit("|", 1)[-1]
-                icon = _resource("icons", "constraint_multiplier.png")
-                icon = QtGui.QIcon(icon)
-
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += ["Constraint Multiplier", label]
-                data[QtCore.Qt.DecorationRole] += [icon]
-                data[HintRole] += ["Constraint Multiplier Command"]
-                data[EntityRole] = entity
-                data[OptionsRole] = mult["options"]
-
-                _transform(data, entity)
-
-                item = qargparse.GenericTreeModelItem(data)
-                root_item.addChild(item)
-
-                data = _default_data()
-                data[QtCore.Qt.DisplayRole] += [Name["value"],
-                                                Name.get("shortestPath", "")]
-                data[EntityRole] = entity
-                data[QtCore.Qt.DecorationRole] += [icon]
-
-                _transform(data, entity)
-
-                child = qargparse.GenericTreeModelItem(data)
-                item.addChild(child)
-
-        analysis = self._loader.analyse()
         root_item = qargparse.GenericTreeModelItem({
-            QtCore.Qt.DisplayRole: ("Command", "Source Node", "Target Node")
+            QtCore.Qt.DisplayRole: ("Source Node", "Target Node")
         })
 
         if not self._loader.is_valid():
@@ -2521,30 +2380,29 @@ class DumpWidget(QtWidgets.QWidget):
             self._widgets["TargetView"].setIndentation(0)
 
         else:
-            self._widgets["TargetView"].setIndentation(30)
+            _add_solvers(root_item)
+            _add_groups(root_item)
+            _add_markers(root_item)
 
-            _add_chains(root_item)
-            _add_rigids(root_item)
-            _add_constraints(root_item)
-            _add_rigid_multipliers(root_item)
-            _add_constraint_multipliers(root_item)
-            _add_scenes(root_item)
+            self._widgets["TargetView"].setIndentation(px(11))
 
         model = self._models["TargetModel"]
         model.reset(root_item)
 
         # Make sure everything is nice and tight
+        self._widgets["TargetView"].expandAll()
         self._widgets["TargetView"].resizeColumnToContents(0)
         self._widgets["TargetView"].resizeColumnToContents(1)
-        self._widgets["TargetView"].resizeColumnToContents(2)
 
 
 class ImportOptions(Options):
     def __init__(self, *args, **kwargs):
         super(ImportOptions, self).__init__(*args, **kwargs)
+        print("Import this")
         self.setWindowTitle("Import Options")
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setAttribute(QtCore.Qt.WA_StyledBackground)
+        self.setMaximumWidth(px(1700))
+        self.setMinimumWidth(px(1000))
+        self.setMinimumHeight(px(560))
 
         loader = dump_.Loader()
 
@@ -2554,14 +2412,12 @@ class ImportOptions(Options):
         }
 
         # Integrate with other options
-        layout = self.parser.layout()
+        layout = self._panels["Central"].layout()
         row = self.parser._row
         alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
 
-        layout.addWidget(QtWidgets.QLabel("Preview"), row, 0, *alignment)
-        layout.addWidget(widgets["DumpWidget"], row, 1)
-        layout.setRowStretch(9999, 0)  # Unexpand last row
-        layout.setRowStretch(row, 1)  # Expand to fill width
+        layout.addWidget(widgets["DumpWidget"], 0, 1, 4, 1)
+        layout.setColumnStretch(1, 1)  # Unexpand last row
 
         self.parser._row += 1  # For the next subclass
 

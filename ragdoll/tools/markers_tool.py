@@ -7,11 +7,28 @@ from maya import cmds
 
 
 log = logging.getLogger("ragdoll")
+
+# Exceptions thrown in this module
 AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 LockedTransformLimits = type("LockedTransformLimits", (RuntimeError,), {})
 
 
 def assign(transforms, solver, opts=None):
+    """Assign markers to `transforms` belonging to `solver`
+
+    Each marker transfers the translation and rotation of each transform
+    and generates its physical equivalent, ready for recording.
+
+    Options:
+        autoLimit (bool): Transfer locked channels into physics limits
+        density (enum): Auto-compute mass based on volume and a density,
+            such as Flesh or Wood
+        materialInChannelBox (bool): Show material attributes in Channel Box
+        shapeInChannelBox (bool): Show shape attributes in Channel Box
+        limitInChannelBox (bool): Show limit attributes in Channel Box
+
+    """
+
     assert len(transforms) > 0, "Nothing to assign to"
 
     opts = dict({
@@ -57,27 +74,8 @@ def assign(transforms, solver, opts=None):
             transforms.pop(0)
 
         if not group:
-            with cmdx.DagModifier() as mod:
-                root_name = root_transform.name(namespace=False)
-                name = internal.unique_name("%s_rGroup" % root_name)
-                shape_name = internal.shape_name(name)
-                group_parent = mod.create_node("transform", name=name)
-                group = mod.create_node("rdGroup",
-                                        name=shape_name,
-                                        parent=group_parent)
-
-                index = solver["inputStart"].next_available_index()
-                mod.set_attr(group["version"], internal.version())
-                mod.connect(group["startState"], solver["inputStart"][index])
-                mod.connect(time1["outTime"], group["currentTime"])
-                mod.connect(group["currentState"],
-                            solver["inputCurrent"][index])
-
-                if constants.RAGDOLL_DEVELOPER:
-                    mod.set_keyable(group["articulated"], True)
-                    mod.set_keyable(group["articulationType"], True)
-
-                commands._take_ownership(mod, group, group_parent)
+            name = root_transform.name(namespace=False)
+            group = create_group(name="%s_rGroup" % name, solver=solver)
 
     markers = {}
     with cmdx.DGModifier() as dgmod:
@@ -174,11 +172,7 @@ def assign(transforms, solver, opts=None):
             dgmod.lock_attr(marker["recordToExistingTangents"])
 
             if group:
-                index = group["inputCurrent"].next_available_index()
-                dgmod.connect(marker["currentState"],
-                              group["inputCurrent"][index])
-                dgmod.connect(marker["startState"],
-                              group["inputStart"][index])
+                add_to_group(dgmod, marker, group)
 
                 if parent_marker is not None:
                     dgmod.connect(parent_marker["ragdollId"],
@@ -187,12 +181,7 @@ def assign(transforms, solver, opts=None):
                 parent_marker = marker
 
             else:
-                index = solver["inputStart"].next_available_index()
-
-                dgmod.connect(marker["startState"],
-                              solver["inputStart"][index])
-                dgmod.connect(marker["currentState"],
-                              solver["inputCurrent"][index])
+                add_to_solver(dgmod, marker, solver)
 
             # Keep next_available_index() up-to-date
             dgmod.do_it()
@@ -217,6 +206,63 @@ def assign(transforms, solver, opts=None):
     })
 
     return markers
+
+
+def create_group(name, solver):
+    time1 = cmdx.encode("time1")
+
+    with cmdx.DagModifier() as mod:
+        name = internal.unique_name(name)
+        shape_name = internal.shape_name(name)
+        group_parent = mod.create_node("transform", name=name)
+        group = mod.create_node("rdGroup",
+                                name=shape_name,
+                                parent=group_parent)
+
+        index = solver["inputStart"].next_available_index()
+        mod.set_attr(group["version"], internal.version())
+        mod.connect(group["startState"], solver["inputStart"][index])
+        mod.connect(time1["outTime"], group["currentTime"])
+        mod.connect(group["currentState"],
+                    solver["inputCurrent"][index])
+
+        if constants.RAGDOLL_DEVELOPER:
+            mod.set_keyable(group["articulated"], True)
+            mod.set_keyable(group["articulationType"], True)
+
+        commands._take_ownership(mod, group, group_parent)
+
+    return group
+
+
+def remove_membership(mod, marker):
+    existing = marker["ragdollId"].outputs(
+        type=("rdGroup", "rdSolver"),
+        plugs=True
+    )
+
+    for other in existing:
+        mod.disconnect(marker["ragdollId"], other)
+
+    mod.do_it()
+
+
+def add_to_group(mod, marker, group):
+    remove_membership(mod, marker)
+
+    index = group["inputStart"].next_available_index()
+    mod.connect(marker["startState"], group["inputStart"][index])
+    mod.connect(marker["currentState"], group["inputCurrent"][index])
+    return True
+
+
+def add_to_solver(mod, marker, solver):
+    remove_membership(mod, marker)
+
+    index = solver["inputStart"].next_available_index()
+    mod.connect(marker["startState"], solver["inputStart"][index])
+    mod.connect(marker["currentState"], solver["inputCurrent"][index])
+    return True
 
 
 def create_lollipop(markers):
@@ -308,8 +354,8 @@ def auto_limit(mod, marker):
         mod.set_attr(marker["limitRangeZ"], cmdx.radians(45))
 
 
-def _find_markers(solver, markers=None):
-    markers = markers if markers is not None else []
+def _find_markers(solver):
+    markers = []
 
     for entity in [el.input() for el in solver["inputStart"]]:
         if not entity:
@@ -1248,14 +1294,20 @@ def retarget(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
-def create_solver():
+def create_solver(name=None):
+    """Create a new rdSolver node"""
+
     time1 = cmdx.encode("time1")
     up = cmdx.up_axis()
 
+    name = name or "rSolver"
+    name = internal.unique_name(name)
+    shape_name = internal.shape_name(name)
+
     with cmdx.DagModifier() as mod:
-        solver_parent = mod.create_node("transform", name="rSolver")
+        solver_parent = mod.create_node("transform", name=name)
         solver = mod.create_node("rdSolver",
-                                 name="rSolverShape",
+                                 name=shape_name,
                                  parent=solver_parent)
 
         canvas = mod.create_node("rdCanvas",
@@ -1293,6 +1345,36 @@ def create_solver():
             mod.set_keyable(solver["gravityZ"])
 
     return solver
+
+
+def create_ground(solver):
+    grid_size = cmds.optionVar(query="gridSize")
+
+    plane, gen = map(cmdx.encode, cmds.polyPlane(
+        name="rGround",
+        width=grid_size * 2,
+        height=grid_size * 2,
+        subdivisionsHeight=1,
+        subdivisionsWidth=1,
+        axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
+    ))
+
+    marker = assign([plane], solver)[0]
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["inputType"], constants.InputKinematic)
+        mod.set_attr(marker["displayType"], constants.DisplayWire)
+        mod.set_attr(marker["densityType"], constants.DensityOff)
+        mod.set_attr(marker["mass"], 0.01)
+
+        mod.set_attr(plane["overrideEnabled"], True)
+        mod.set_attr(plane["overrideShading"], False)
+        mod.set_attr(plane["overrideColor"], constants.WhiteIndex)
+
+        commands._take_ownership(mod, solver, plane)
+        commands._take_ownership(mod, solver, gen)
+
+    return marker
 
 
 def _find_solver(start):

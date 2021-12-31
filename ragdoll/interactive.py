@@ -2165,98 +2165,6 @@ def create_mimic(selection=None, **opts):
     return kSuccess
 
 
-def _make_ground(solver):
-    grid_size = cmds.optionVar(query="gridSize")
-
-    plane, gen = map(cmdx.encode, cmds.polyPlane(
-        name="rGround",
-        width=grid_size * 2,
-        height=grid_size * 2,
-        subdivisionsHeight=1,
-        subdivisionsWidth=1,
-        axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
-    ))
-
-    marker = tools.assign_markers([plane], solver)[0]
-
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(marker["inputType"], c.InputKinematic)
-        mod.set_attr(marker["displayType"], c.DisplayWire)
-        mod.set_attr(marker["densityType"], c.DensityOff)
-        mod.set_attr(marker["mass"], 0.01)
-
-        mod.set_attr(plane["overrideEnabled"], True)
-        mod.set_attr(plane["overrideShading"], False)
-        mod.set_attr(plane["overrideColor"], c.WhiteIndex)
-
-        commands._take_ownership(mod, solver, plane)
-        commands._take_ownership(mod, solver, gen)
-
-    return marker
-
-
-def _fit_ground(ground, markers):
-    positions = []
-    maximum = cmdx.Vector()
-
-    for marker in markers:
-        transform = marker["src"].input()
-        tm = transform.transform(cmdx.sWorld)
-        pos = cmdx.Point(tm.translation())
-        positions += [pos]
-        extents = marker["shapeExtents"].as_vector()
-        scale = transform.scale()
-        maximum.x = max(maximum.x, extents.x * scale.x)
-        maximum.y = max(maximum.y, extents.y * scale.y)
-        maximum.z = max(maximum.z, extents.z * scale.z)
-
-    bbox = cmdx.BoundingBox()
-
-    for pos in positions:
-        bbox.expand(pos)
-
-    thickness = sorted(maximum)[1] * 0.25
-    mid = sorted([bbox.width, bbox.height, bbox.depth])[1]
-    mid *= 1.5  # Some padding
-    mid += thickness
-
-    # Don't let it get smaller than the median extent
-    mid = max(thickness * 4, mid)
-
-    exbbox = cmdx.BoundingBox(bbox)
-    exbbox.expand(bbox.min - cmdx.Vector(mid, mid, mid))
-    exbbox.expand(bbox.max + cmdx.Vector(mid, mid, mid))
-
-    up_axis = cmdx.up_axis()
-    z = "Z" if up_axis.y else "Y"
-    y = "Y" if up_axis.y else "Z"
-
-    ground_level = 0.0
-
-    # Let things resting on the ground, rest on the ground
-    # But things intersecting the ground should be given some space.
-    if bbox.min.y <= 0:
-        ground_level = exbbox.min.y
-
-    with cmdx.DagModifier() as mod:
-        transform = ground["sourceTransform"].input()
-
-        mod.set_attr(ground["shapeOffset"], 0)
-        mod.set_attr(ground["shapeExtents"], 1)
-
-        mod.set_attr(ground["shapeExtents" + y], thickness)
-        mod.set_attr(ground["shapeOffset" + y], -thickness * 0.5)
-
-        mod.set_attr(transform["scaleX"], exbbox.width)
-        mod.set_attr(transform["scale" + y], 1)
-        mod.set_attr(transform["scale" + z], exbbox.depth)
-        mod.set_attr(transform["translateX"], exbbox.center.x)
-        mod.set_attr(transform["translate" + y], ground_level)
-        mod.set_attr(transform["translate" + z], (
-            exbbox.center.z if up_axis.y else exbbox.center.y
-        ))
-
-
 def _find_current_solver(create_ground=True):
     if not validate_playbackspeed():
         return
@@ -2265,18 +2173,17 @@ def _find_current_solver(create_ground=True):
         return
 
     solver = cmdx.ls(type="rdSolver")
-    ground = None
 
     if solver:
-        return solver[0], ground
+        return solver[0]
 
     else:
         solver = markers_.create_solver()
 
-    if create_ground:
-        ground = _make_ground(solver)
+        if create_ground:
+            markers_.create_ground(solver)
 
-    return solver, ground
+    return solver
 
 
 def _find_solver_for(marker):
@@ -2347,7 +2254,7 @@ def assign_single(selection=None, **opts):
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["createGround"])
+    solver = _find_current_solver(opts["createGround"])
     markers = []
 
     try:
@@ -2398,7 +2305,7 @@ def assign_and_connect(selection=None, **opts):
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
-    solver, ground = _find_current_solver(opts["createGround"])
+    solver = _find_current_solver(opts["createGround"])
 
     try:
         assigned = tools.assign_markers(selection, solver, opts={
@@ -4242,6 +4149,9 @@ def export_physics(selection=None, **opts):
         if not isinstance(widget, ui.ImportOptions):
             continue
 
+        if not ui.isValid(widget):
+            continue
+
         log.warning("Updating currently opened Import UI")
         widget.on_path_changed(force=True)
 
@@ -4559,29 +4469,29 @@ def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
 
 
+def legacy_import_physics_options(*args):
+    from .legacy import ui
+    win = None
+
+    def import_physics():
+        return win.do_import()
+
+    win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
+    ui.center_window(win)
+
+    return win
+
+
 def import_physics_options(*args):
     win = None
 
     def import_physics():
-        try:
-            scene = _find_current_scene(autocreate=False)
-        except cmdx.ExistError:
-            scene = None
-
-        # Protect the user from import on a bad frame
-        if scene is not None:
-            _rewind(scene)
-
-            # Protect the user from import after having changed
-            # the initial state but not actually recorded it.
-            rigids = cmdx.ls(type="rdRigid")
-            commands.set_initial_state(rigids)
-
         return win.do_import()
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
-    win.resize(win.width(), ui.px(750))
     ui.center_window(win)
+    win.resize(ui.px(1100), ui.px(560))
+
     return win
 
 

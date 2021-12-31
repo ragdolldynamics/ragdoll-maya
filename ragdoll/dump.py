@@ -9,13 +9,21 @@ dedump(dump)
 """
 
 import json
+import copy
 import logging
 
 from collections import OrderedDict as odict
 
 from maya import cmds
 from .vendor import cmdx
-from . import commands, tools, constants as c, internal as i__
+from . import (
+    commands,
+    tools,
+    constants,
+    internal
+)
+
+from .tools import markers_tool as markers_
 
 log = logging.getLogger("ragdoll")
 
@@ -45,6 +53,9 @@ def Component(comp):
         elif value["type"] == "Matrix44":
             value = cmdx.Matrix4(value["values"])
 
+        elif value["type"] == "Path":
+            value = value["value"]
+
         elif value["type"] == "Quaternion":
             value = cmdx.Quaternion(*value["values"])
 
@@ -58,6 +69,7 @@ def Component(comp):
 
 class Registry(object):
     def __init__(self, dump):
+        dump = copy.deepcopy(dump)
         dump["entities"] = {
 
             # Original JSON stores keys as strings, but the original
@@ -115,80 +127,6 @@ class Registry(object):
         return self._dump["entities"][entity]["components"]
 
 
-def dedump(dump):
-    """Recreate Maya scene from `dump`"""
-
-    with cmdx.DagModifier() as mod:
-        root = mod.createNode("transform", name="dump")
-
-    for entity, data in dump["entities"].items():
-        comps = data["components"]
-
-        if "RigidComponent" not in comps:
-            continue
-
-        Name = Component(comps["NameComponent"])
-
-        if not Name["path"]:
-            # Bad export
-            continue
-
-        Scale = Component(comps["ScaleComponent"])
-        Rest = Component(comps["RestComponent"])
-        Desc = Component(comps["GeometryDescriptionComponent"])
-
-        # Establish rigid transformation
-        tm = cmdx.TransformationMatrix(Rest["matrix"])
-
-        # Establish shape
-        if Desc["type"] in ("Cylinder", "Capsule"):
-            radius = Desc["radius"] * Scale["absolute"].x
-            length = Desc["length"] * Scale["absolute"].y
-            geo, _ = cmds.polyCylinder(axis=(1, 0, 0),
-                                       radius=radius,
-                                       height=length,
-                                       roundCap=True,
-                                       subdivisionsCaps=5)
-
-        elif Desc["type"] == "Box":
-            extents = Desc["extents"]
-            extents.x *= Scale["absolute"].x
-            extents.y *= Scale["absolute"].y
-            extents.z *= Scale["absolute"].z
-            geo, _ = cmds.polyCube(width=extents.x,
-                                   height=extents.y,
-                                   depth=extents.z)
-
-        elif Desc["type"] == "Sphere":
-            radius = Desc["radius"] * Scale["absolute"].x
-            geo, _ = cmds.polySphere(radius=radius)
-
-        else:
-            print(
-                "Unsupported shape type: %s.type=%s"
-                % (Name["path"], Desc["type"])
-            )
-            continue
-
-        with cmdx.DagModifier() as mod:
-            name = Name["path"].rsplit("|", 2)[1]
-            transform = mod.createNode("transform", name=name, parent=root)
-            transform["translate"] = tm.translation()
-            transform["rotate"] = tm.rotation()
-
-        # Establish shape transformation
-        offset = Desc["offset"]
-        offset.x *= Scale["absolute"].x
-        offset.y *= Scale["absolute"].y
-        offset.z *= Scale["absolute"].z
-
-        geo = cmdx.encode(geo)
-        geo["translate"] = offset
-        geo["rotate"] = Desc["rotation"]
-
-        transform.addChild(geo)
-
-
 def _name(Name, level=-1):
     return Name["path"].rsplit("|", 1)[level]
 
@@ -204,62 +142,20 @@ def DefaultDump():
 def DefaultState():
     return {
 
+        # Series of solver entities
+        "solvers": [],
+
+        # Series of group entities
+        "groups": [],
+
+        # Series of markers entities
+        "markers": [],
+
+        # Transforms that are already assigned
+        "occupied": [],
+
         # Map entity -> active Maya transform node
-        "transforms": {},
-
-        # Series of Scenes
-        # {
-        #    "entity": 1,
-        #
-        #    "options": {}
-        # }
-        "scenes": [],
-
-        # Series of Rigids
-        # {
-        #    "entity": 10,
-        #
-        #    "options": {}
-        # }
-        "rigids": [],
-
-        # Series of chains
-        # {
-        #    "rigids": [10, 11, 12, 13],
-        #    "constraints": [14, 15, 16]
-        #    "constraintMultipliers": [17],
-        #
-        #    "options": {},
-        # }
-        "chains": [],
-
-        # Individual constraint
-        # {
-        #    "entity": 18,
-        #    "options": {}
-        # }
-        "constraints": [],
-
-        # Controls
-        # {
-        #    "entity": 18,
-        #    "options": {}
-        # }
-        "controls": [],
-
-        # Individual constraint multiplier
-        # {
-        #    "entity": 19,
-        #    "options": {}
-        # }
-        "constraintMultipliers": [],
-
-        # Individual rigid multiplier
-        # {
-        #    "entity": 20,
-        #    "options": {}
-        # }
-        "rigidMultipliers": [],
+        "entityToTransform": {},
     }
 
 
@@ -288,31 +184,10 @@ def _smart_try_setattr(mod, plug, value):
 class Loader(object):
     """Reconstruct physics from a Ragdoll dump
 
-    Overview
-    --------
+    A "dump" is the internal data of the Ragdoll plug-in.
 
-    Hi and welcome to the Ragdoll Dump Loader!
-
-    The Loader takes each entity in a given dump and generates a Maya
-    scene graph from it. Sort of like how the "Mother Box" from the DC
-    universe is able to turn the ash of a burnt house back into a house.
-
-    It works on "transforms", which is the Maya `transform` node type
-    and the type most often used to represent Ragdoll rigid bodies.
-    Transforms can either be created from scratch or "merged" with existing
-    nodes in the currently open scene. Either based on their name, or name
-    plus some namespace.
-
-    Merging
-    -------
-
-    An animator will typically have a hierarchy of nodes in the scene to
-    which they would like physics applied. Physics was usually authored
-    separately and exported into a `.rag` file; a.k.a. a Ragdoll "dump"
-
-    In that case, references to transforms in this dump are associated
-    with transforms in the Maya scene, typically under the root node
-    an animator has got selected at the time of loading.
+    This loader reconstructs a Maya scene such that the results
+    are the same as when the dump was originally created.
 
     Arguments:
         roots (list): Path(s) that the original path must match
@@ -321,7 +196,7 @@ class Loader(object):
 
     """
 
-    SupportedSchema = "ragdoll-1.0"
+    SupportedSchema = "ragdoll-1.1"
 
     def __init__(self, opts=None):
         opts = opts or {}
@@ -336,15 +211,19 @@ class Loader(object):
         self._opts = opts
 
         # Do we need to re-analyse before use?
-        self._is_up_to_date = False
+        self._dirty = True
 
         # Is the data valid, e.g. no null-entities?
         self._invalid_reasons = []
 
-        self._dump = DefaultDump()
-
         # Transient data, updated on changes to fname and filtering
         self._state = DefaultState()
+
+        self._registry = None
+
+    @property
+    def registry(self):
+        return self._registry
 
     def read(self, fname):
         self._invalid_reasons[:] = []
@@ -372,29 +251,18 @@ class Loader(object):
             "Dump not compatible with this version of Ragdoll"
         )
 
-        dump["entities"] = odict(
-
-            # Original JSON stores keys as strings, but the original
-            # keys are integers; i.e. entity IDs
-            (Entity(entity), value)
-
-            for entity, value in sorted(
-                dump["entities"].items(), key=lambda i: i[0]
-            )
-        )
-
-        self._dump = dump
-        self._is_up_to_date = False
+        self._registry = Registry(dump)
+        self._dirty = True
 
     def set_roots(self, roots):
         self._opts["roots"][:] = roots
-        self._is_up_to_date = False
+        self._dirty = True
 
     def set_replace(self, replace):
         assert isinstance(replace, (tuple, list))
         assert all(isinstance(i, tuple) for i in replace)
         self._opts["replace"][:] = replace
-        self._is_up_to_date = False
+        self._dirty = True
 
     def set_namespace(self, namespace=None):
         # Support passing namespace with or without suffix ":"
@@ -402,15 +270,15 @@ class Loader(object):
             namespace = namespace.rstrip(":") + ":"
 
         self._opts["namespace"] = namespace
-        self._is_up_to_date = False
+        self._dirty = True
 
     def set_preserve_attributes(self, preserve):
         self._opts["preserveAttributes"] = preserve
-        self._is_up_to_date = False
+        self._dirty = True
 
     def set_preserve_control(self, preserve):
         self._opts["preserveControls"] = preserve
-        self._is_up_to_date = False
+        self._dirty = True
 
     def is_valid(self):
         return len(self._invalid_reasons) == 0
@@ -423,214 +291,51 @@ class Loader(object):
         """Fill internal state from dump with something we can use"""
 
         # No need for needless work
-        if self._is_up_to_date:
+        if not self._dirty:
             return self._state
 
-        transforms, occupied = self._find_transforms()
-        chains = self._find_chains()
-        rigids = self._find_rigids()
-        controls = self._find_controls()
-
-        # Only create a scene if it's related to an interesting rigid
-        rigid_entities = [r["entity"] for r in rigids]
-        scenes = self._find_scenes(rigid_entities)
-
-        for chain in chains:
-            scenes += self._find_scenes(chain["rigids"])
-
-        # Allow roots of chains to already have a rigid
-        # To support e.g. two legs off of the same root
-        for chain in chains:
-            root = chain["rigids"][0]
-
-            try:
-                transform = occupied.pop(root)
-                transforms[root] = transform
-
-            except KeyError:
-                # It wasn't occupied, that's OK
-                pass
-
-        # Remove duplicates
-        scenes = list({s["entity"]: s for s in scenes}.values())
-
-        if not scenes:
-            # No scenes would get made, probably filtered away
-            self._state = DefaultState()
-            return self._state
-
-        # What got created on-top of rigids and chains? These are our leftovers
-        visited = set()
-        visited.update(s["entity"] for s in scenes)
-        visited.update(r["entity"] for r in rigids)
-
-        for chain in chains:
-            visited.update(chain["rigids"])
-            visited.update(chain["constraints"])
-            visited.update(chain["constraintMultipliers"])
-
-        leftovers = self._find_leftovers(visited)
-
-        self._state.update({
-            "transforms": transforms,
-            "occupied": occupied,
-            "scenes": scenes,
-            "rigids": rigids,
-            "chains": chains,
-            "controls": controls,
-            "constraints": leftovers["constraints"],
-            "constraintMultipliers": leftovers["constraintMultipliers"],
-        })
+        self._find_solvers()
+        self._find_groups()
+        self._find_markers()
 
         self.validate()
 
-        self._is_up_to_date = True
+        self._dirty = False
         return self._state
 
     def validate(self):
         reasons = []
-
-        for entity in self.view("NameComponent", "SceneComponent"):
-            Scene = self.component(entity, "SceneComponent")
-
-            if Scene["entity"] == 0:
-                Name = self.component(entity, "NameComponent")
-                reasons += [
-                    "%s|%s didn't belong to any scene" % (
-                        Name["path"], Name["value"])
-                ]
-
-        # Sanity checks
-        for chain in self._state["chains"]:
-            all_same_scene = True
-
-            # Just warn. It'll still work, in fact it will
-            # be *repaired* by creating each link using the
-            # scene from the first link. It just might not
-            # be what the user expects.
-            if not self._validate_same_scene(chain["rigids"]):
-                all_same_scene = False
-
-            if not self._validate_same_scene(chain["constraints"]):
-                all_same_scene = False
-
-            if not all_same_scene:
-                entity = chain["rigids"][0]
-                Name = self.component(entity, "NameComponent")
-                reasons += [
-                    "Not all members of chain '%s|%s' were part "
-                    "of the same scene" % (Name["path"], Name["value"])
-                ]
-
         self._invalid_reasons[:] = reasons
 
     def report(self):
-        if not self._is_up_to_date:
+        if self._dirty:
             self.analyse()
 
         def _name(entity):
-            Name = self.component(entity, "NameComponent")
-            name = Name["path"].rsplit("|", 2)[1]
-            return name
+            Name = self._registry.get(entity, "NameComponent")
+            return Name["value"]
 
-        scenes = self._state["scenes"]
-        rigids = self._state["rigids"]
-        constraints = self._state["constraints"]
-        chains = self._state["chains"]
-        constraint_multipliers = self._state["constraintMultipliers"]
-        rigid_multipliers = self._state["rigidMultipliers"]
+        solvers = self._state["solvers"]
+        groups = self._state["groups"]
+        transforms = self._state["entityToTransform"]
 
-        if scenes:
-            log.info("Scenes:")
-            for scene in scenes:
-                log.info("  %s.." % _name(scene["entity"]))
+        if transforms:
+            log.info("Solvers:")
+            for entity, transform in transforms.items():
+                log.info("  %s -> %s.." % (_name(entity), transform))
 
-        if rigids:
-            log.info("Rigids:")
-            for rigid in rigids:
-                log.info("  %s.." % _name(rigid["entity"]))
+            log.info("Markers:")
+            for entity, transform in transforms.items():
+                log.info("  %s -> %s.." % (_name(entity), transform))
 
-        if chains:
-            log.info("Chains:")
-            for chain in chains:
-                log.info("  %s.." % _name(chain["rigids"][0]))
+            log.info("Markers:")
+            for entity, transform in transforms.items():
+                log.info("  %s -> %s.." % (_name(entity), transform))
 
-                for entity in chain["rigids"][1:]:
-                    log.info("    -o %s.." % _name(entity))
-
-        if constraints:
-            log.info("Constraints:")
-            for constraint in constraints:
-                log.info("  %s.." % _name(constraint["entity"]))
-
-        if constraint_multipliers:
-            log.info("Constraint Multipliers:")
-            for mult in constraint_multipliers:
-                log.info("  %s.." % _name(mult["entity"]))
-
-        if rigid_multipliers:
-            log.info("Rigig Multipliers:")
-            for mult in rigid_multipliers:
-                log.info("  %s.." % _name(mult["entity"]))
-
-        if not any([scenes,
-                    rigids,
-                    constraints,
-                    chains,
-                    constraint_multipliers,
-                    rigid_multipliers]):
+        if not any([transforms]):
             log.debug("Dump was empty")
 
-    @i__.with_undo_chunk
-    def load(self, merge=True):
-        """Apply JSON to existing nodes in the scene
-
-        This will accurately reflect each and every rigid body from the
-        exported file, at the expense of not being able to reproduce
-        surronding, unrelated physics nodes like `pairBlend` and various
-        matrix multiplication operations found in UI-level controls such
-        as Active Rigid and Active Chain.
-
-        It's also able to generate a scene from scratch, with no existing
-        nodes present. A so called non-merge. This can be useful for
-        debugging and "cleaning" a scene from any and all Maya-specific
-        customisations or "hacks".
-
-        Arguments:
-            merge (bool): Apply dump to existing controls in the scene,
-                otherwise generate new controls to go with the physics
-                found in this dump.
-
-        """
-
-        if not self._is_up_to_date:
-            self.analyse()
-
-        if merge:
-            transforms, occupied = self._find_transforms()
-        else:
-            transforms = self._make_transforms()
-
-        rigid_multipliers = self._load_rigid_multipliers(transforms)
-        constraint_multipliers = self._load_constraint_multipliers(transforms)
-
-        scenes = self._load_scenes(transforms)
-        rigids = self._load_rigids(scenes, transforms, rigid_multipliers)
-        constraints = self._load_constraints(
-            scenes, rigids, constraint_multipliers)
-
-        self._is_up_to_date = False
-
-        return {
-            "transforms": transforms,
-            "scenes": scenes,
-            "rigids": rigids,
-            "constraints": constraints,
-            "constraint_multipliers": constraint_multipliers,
-            "rigid_multipliers": rigid_multipliers,
-        }
-
-    @i__.with_undo_chunk
+    @internal.with_undo_chunk
     def reinterpret(self, dry_run=False):
         """Interpret dump back into the UI-commands used to create them.
 
@@ -653,188 +358,195 @@ class Loader(object):
         """
 
         # In case the user forgot or didn't know
-        if not self._is_up_to_date:
+        if self._dirty:
             self.analyse()
 
         if dry_run:
-            self.report()
-            return
+            return self.report()
 
         if not self.is_valid():
             return log.error("Dump not valid")
 
-        scenes = self._state["scenes"]
-        rigids = self._state["rigids"]
-        chains = self._state["chains"]
-        constraints = self._state["constraints"]
-        transforms = self._state["transforms"]
+        rdsolvers = self._create_solvers()
+        rdgroups = self._create_groups(rdsolvers)
+        rdmarkers = self._create_markers(rdgroups, rdsolvers)
 
-        rdscenes = self._create_scenes(scenes, transforms)
-        rdrigids = self._create_rigids(rigids, rdscenes, transforms)
-
-        rdchains = []
-        for chain in chains:
-            rdchain = self._create_chain(chain, rdscenes, transforms)
-            rdchains += [rdchain]
-
-        # Anything added on-top of new rigids and new chains, like
-        # custom constraints or multipliers, are yet to be created
-        rdconstraints = {}
-        rdmultipliers = {}
-        for chain, rdchain in zip(chains, rdchains):
-            rdrigids.update(zip(chain["rigids"],
-                                rdchain["rigids"]))
-            rdconstraints.update(zip(chain["constraints"],
-                                     rdchain["constraints"]))
-            rdmultipliers.update(zip(chain["constraintMultipliers"],
-                                     rdchain["constraintMultipliers"]))
-
-        rdconstraints.update(
-            self._create_constraints(
-                constraints,
-                rdscenes,
-                rdrigids,
-                rdmultipliers,
-                transforms
-            )
-        )
-
-        self._is_up_to_date = False
+        self._dirty = True
+        log.info("Done")
 
         return {
-            "scenes": rdscenes,
-            "rigids": rdrigids,
-            "constraints": rdconstraints,
-            "constraintMultipliers": rdmultipliers,
+            "solvers": rdsolvers.values(),
+            "groups": rdgroups.values(),
+            "markers": rdmarkers.values(),
         }
 
-    def view(self, *components):
-        """Iterate over every entity that has all of `components`"""
-        assert all(isinstance(c, cmdx.string_types) for c in components), (
-            "`components` arguments must be names of components, "
-            "e.g. 'NameComponent'"
-        )
+    def _create_solvers(self):
+        log.info("Creating solver(s)..")
 
-        for entity in self._dump["entities"]:
-            if all(self.has(entity, comp) for comp in components):
-                yield entity
+        unoccupied_markers = list(self._state["markers"])
+        for marker in self._state["occupied"]:
+            unoccupied_markers.remove(marker)
 
-    def has(self, entity, component):
-        """Return whether `entity` has `component`"""
-        assert isinstance(entity, int), "entity was not int: %r" % entity
-        assert isinstance(component, cmdx.string_types), (
-            "component was not string: %r" % component)
-        return component in self._dump["entities"][entity]["components"]
+        for marker in unoccupied_markers:
+            if marker not in self._state["entityToTransform"]:
+                unoccupied_markers.remove(marker)
 
-    def component(self, entity, component):
-        """Return `component` for `entity`
+        rdsolvers = {}
 
-        Returns:
-            dict: The component
+        for entity in self._state["solvers"]:
 
-        Raises:
-            KeyError: if `entity` does not have `component`
+            # Ensure there is at least 1 marker in it
+            is_empty = True
+            for marker in unoccupied_markers:
+                Scene = self._registry.get(marker, "SceneComponent")
+                if Scene["entity"] == entity:
+                    is_empty = False
+                    break
 
-        Example:
-            >>> s = {}
-            >>> dump = cmds.ragdollDump()
-            >>> dump["entities"][1] = {"components": {"SceneComponent": s}}
-            >>> loader = Loader(dump)
-            >>> assert s == loader.component(1, "SceneComponent")
-
-        """
-
-        try:
-            return Component(
-                self._dump["entities"][entity]["components"][component]
-            )
-
-        except KeyError:
-            Name = self._dump["entities"][entity]
-            Name = Name["components"]["NameComponent"]
-            Name = Component(Name)
-            raise KeyError("%s did not have %s" % (Name["path"], component))
-
-    def components(self, entity):
-        """Return *all* components for `entity`"""
-        return self._dump["entities"][entity]["components"]
-
-    def siblings(self, entity):
-        """Yield siblings of entity
-
-        -o root_grp
-          -o spine1_ctl
-             -o rRigid1
-             -o rConstraintMultiplier
-             -o rConstraint1    <--- `entity`
-
-        The siblings of this entity is `rRigid1` and `rConstrintMultiplier`
-
-        """
-
-        Name = self.component(entity, "NameComponent")
-        parent_path = Name["path"].rsplit("|", 1)[0]
-
-        for entity in self._dump["entities"]:
-            Name = self.component(entity, "NameComponent")
-            sibling_parent_path = Name["path"].rsplit("|", 1)[0]
-
-            if parent_path == sibling_parent_path:
-                yield entity
-
-    def _find_path(self, entity):
-        Name = self.component(entity, "NameComponent")
-
-        # Find original path, minus the rigid
-        # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
-        path = Name["path"]
-
-        for search, replace in self._opts["replace"]:
-            path = path.replace(search, replace)
-
-        return path
-
-    def _make_transforms(self):
-        transforms = {}
-
-        for entity in self.view("RigidComponent"):
-
-            # Scenes will make their own transform
-            if self.has(entity, "SolverComponent"):
+            if is_empty:
                 continue
 
-            Name = self.component(entity, "NameComponent")
-            Rest = self.component(entity, "RestComponent")
+            Name = self._registry.get(entity, "NameComponent")
+            transform_name = Name["path"].rsplit("|", 1)[-1]
+            rdsolver = markers_.create_solver(transform_name)
+            rdsolvers[entity] = rdsolver
 
-            # Find name transform name, minus the rigid
-            # E.g. |root_grp|upperArm_ctrl|rRigid4 -> upperArm_ctrl
-            name = Name["path"].rsplit("|", 2)[1]
-
+        if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
-                transform = mod.create_node("transform", name=name)
+                for entity, rdsolver in rdsolvers.items():
+                    self._apply_solver(mod, entity, rdsolver)
 
-                tm = cmdx.Tm(Rest["matrix"])
-                mod.set_attr(transform["translate"], tm.translation())
-                mod.set_attr(transform["rotate"], tm.rotation())
+        return rdsolvers
 
-            transforms[entity] = transform
+    def _create_groups(self, rdsolvers):
+        log.info("Creating group(s)..")
 
-        if not transforms:
-            raise RuntimeError("No transforms created")
+        unoccupied_markers = list(self._state["markers"])
+        for marker in self._state["occupied"]:
+            unoccupied_markers.remove(marker)
 
-        return transforms
+        for marker in unoccupied_markers:
+            if marker not in self._state["entityToTransform"]:
+                unoccupied_markers.remove(marker)
 
-    def _find_transforms(self):
+        rdgroups = {}
+
+        for entity in self._state["groups"]:
+            Scene = self._registry.get(entity, "SceneComponent")
+            rdsolver = rdsolvers.get(Scene["entity"])
+
+            if not rdsolver:
+                # Exported group wasn't part of an exported solver
+                # This would be exceedingly rare.
+                continue
+
+            # Ensure there is at least 1 marker in it
+            is_empty = True
+            for marker in unoccupied_markers:
+                Group = self._registry.get(marker, "GroupComponent")
+                if Group["entity"] == entity:
+                    is_empty = False
+                    break
+
+            if is_empty:
+                continue
+
+            Name = self._registry.get(entity, "NameComponent")
+
+            # E.g. |someCtl_rGroup
+            transform_name = Name["path"].rsplit("|", 1)[-1]
+            rdgroup = markers_.create_group(transform_name, rdsolver)
+            rdgroups[entity] = rdgroup
+
+        if self._opts["preserveAttributes"]:
+            with cmdx.DagModifier() as mod:
+                for entity, rdgroup in rdgroups.items():
+                    self._apply_group(mod, entity, rdgroup)
+
+        return rdgroups
+
+    def _create_markers(self, rdgroups, rdsolvers):
+        log.info("Creating marker(s)..")
+        rdmarkers = {}
+
+        unoccupied_markers = list(self._state["markers"])
+
+        for marker in self._state["occupied"]:
+            unoccupied_markers.remove(marker)
+
+        for entity in unoccupied_markers:
+            transform = self._state["entityToTransform"].get(entity)
+
+            if not transform:
+                continue
+
+            Scene = self._registry.get(entity, "SceneComponent")
+            rdsolver = rdsolvers.get(Scene["entity"])
+
+            if not rdsolver:
+                # Exported marker wasn't part of an exported solver
+                continue
+
+            rdmarker = markers_.assign([transform], rdsolver)
+            rdmarkers[entity] = rdmarker[0]
+
+        if self._opts["preserveAttributes"]:
+            with cmdx.DagModifier() as mod:
+                for entity, rdmarker in rdmarkers.items():
+                    self._apply_marker(mod, entity, rdmarker)
+
+        with cmdx.DagModifier() as mod:
+            log.info("Adding to group(s)..")
+            for entity, rdmarker in rdmarkers.items():
+                Group = self._registry.get(entity, "GroupComponent")
+                rdgroup = rdgroups.get(Group["entity"])
+
+                if rdgroup is not None:
+                    markers_.add_to_group(mod, rdmarker, rdgroup)
+                    mod.do_it()  # Commit to group
+
+            log.info("Reconstructing hierarchy..")
+            for entity, rdmarker in rdmarkers.items():
+                Subs = self._registry.get(entity, "SubEntitiesComponent")
+                JointComponent = self._registry.get(Subs["relative"], "JointComponent")
+                parent_entity = JointComponent["parent"]
+
+                if parent_entity:
+                    parent_rdmarker = rdmarkers[parent_entity]
+                    mod.connect(parent_rdmarker["ragdollId"], rdmarker["parentMarker"])
+
+        return rdmarkers
+
+    def _find_solvers(self):
+        solvers = self._state["solvers"]
+        solvers[:] = []
+
+        for entity in self._registry.view("SolverComponent"):
+            solvers.append(entity)
+
+    def _find_groups(self):
+        groups = self._state["groups"]
+        groups[:] = []
+
+        for entity in self._registry.view("GroupUIComponent"):
+            groups.append(entity)
+
+    def _find_markers(self):
         """Find and associate each entity with a Maya transform"""
-        transforms = {}
-        occupied = {}
+        entity_to_transform = self._state["entityToTransform"]
+        markers = self._state["markers"]
+        occupied = self._state["occupied"]
 
-        for entity in self.view():
-            Name = self.component(entity, "NameComponent")
+        entity_to_transform.clear()
+        markers[:] = []
+        occupied[:] = []
+
+        for entity in self._registry.view("MarkerUIComponent"):
+            MarkerUI = self._registry.get(entity, "MarkerUIComponent")
 
             # Find original path, minus the rigid
-            # E.g. |root_grp|upperArm_ctrl|rRigid4 -> |root_grp|upperArm_ctrl
-            path = Name["path"]
+            # E.g. |rMarker_upperArm_ctl -> |root_grp|upperArm_ctrl
+            path = MarkerUI["sourceTransform"]
 
             for search, replace in self._opts["replace"]:
                 path = path.replace(search, replace)
@@ -863,11 +575,12 @@ class Loader(object):
                     namespace = namespace.rstrip(":") + ":"
                     path = path.replace(namespace, self._opts["namespace"])
 
-            # Only filter non-scenes, as we'd like to reuse these
+            # Exclude anything not starting with any of these
             roots = self._opts["roots"]
-            if roots and not self.has(entity, "SolverComponent"):
-                if not any(path.startswith(root) for root in roots):
-                    continue
+            if roots and not any(path.startswith(root) for root in roots):
+                continue
+
+            markers.append(entity)
 
             try:
                 transform = cmdx.encode(path)
@@ -877,944 +590,173 @@ class Loader(object):
                 # It just means it can't actually be loaded onto anything.
                 continue
 
-            # Avoid the fate of double-assigning a rigid
-            # NOTE: We might want to support import of constraints
-            # onto existing rigid bodies.. but let's cross that bridge
-            if transform.shape(type="rdRigid"):
-                occupied[entity] = transform
-
-            else:
-                transforms[entity] = transform
-
-        return transforms, occupied
-
-    def _find_scenes(self, rigids):
-        """Find and associate each entity with a Maya transform"""
-
-        scenes = set()
-        for rigid in rigids:
-            Scene = self.component(rigid, "SceneComponent")
-            scenes.add(Scene["entity"])
-
-        scenes = [
-            {
-                "entity": scene,
-                "options": {}
-            }
-            for scene in scenes
-        ]
-
-        return scenes
-
-    def _find_rigids(self):
-        """Identify lone rigids"""
-
-        parents = set()
-        for rigid in self.view("RigidUIComponent"):
-            Rigid = self.component(rigid, "RigidComponent")
-
-            if Rigid.get("parentRigid"):
-                parents.add(Rigid.get("parentRigid"))
-
-        rigids = list()
-        for rigid in self.view("RigidUIComponent"):
-            Rigid = self.component(rigid, "RigidComponent")
-
-            # Ignore chains
-            if Rigid.get("parentRigid"):
-                continue
-
-            # Root of chains don't have a parent,
-            # but they are still chains.
-            if rigid in parents:
-                continue
-
-            rigids.append(rigid)
-
-        rigids = [
-            {
-                "entity": rigid,
-                "options": {}
-            }
-            for rigid in rigids
-
-        ]
-
-        # Figure out options
-        if self._opts["preserveAttributes"]:
-            for rigid in rigids:
-                Rigid = self.component(rigid["entity"], "RigidComponent")
-                rigid["options"].update({
-                    "passive": Rigid["kinematic"],
-                })
-
-        return rigids
-
-    def _find_controls(self):
-        """Identify controls"""
-
-        controls = list()
-        for control in self.view("ControlUIComponent"):
-            controls.append(control)
-
-        controls = [
-            {
-                "entity": control,
-                "options": {}
-            }
-            for control in controls
-        ]
-
-        # Figure out options
-        for control in controls:
-            # No options yet
-            control["options"].update({})
-
-        return controls
-
-    def _find_chains(self):
-        r"""Identify chains amongst rigids
-
-         o                   .                   .
-          \          .        .          o        .          .
-           \        .          .        /          .        .
-            o . . .             o------o            . . . .o
-            |       .           .       .           .       \
-            |        . . .      .        . . .      .        o---o
-            o                   .                   .
-
-
-            Chain 1               Chain 2               Chain 3
-
-        Rigids created as chains carry a `.parentRigid` attribute
-        that identifies the intended "parent" for the rigid in the chain.
-
-        Walk that attribute and find each chain in the resulting hierarchy.
-
-        Based on https://www.educative.io/edpresso
-                        /how-to-implement-depth-first-search-in-python
-
-        """
-
-        def _rigids():
-            for rigid in self.view("RigidUIComponent"):
-                yield rigid
-
-        # Create a vertex for each rigid
-        #
-        #  o
-        #              o
-        #
-        #     o      o
-        #
-        #              o   o
-        #     o
-        #
-        graph = {}  # A.k.a. adjencency list
-
-        for entity in _rigids():
-            graph[entity] = []
-
-        for entity in self.view("SolverComponent"):
-            graph[entity] = []
-
-        # Connect vertices based on the `.parentRigid` attribute
-        #
-        #  o
-        #   \          o
-        #    \        /
-        #     o------o
-        #     |       \
-        #     |        o---o
-        #     o
-        #
-        for entity in _rigids():
-            Rigid = self.component(entity, "RigidComponent")
-            Scene = self.component(entity, "SceneComponent")
-
-            # ParentRigid was added 2021.04.09
-            parent = Rigid.get("parentRigid") or Scene["entity"]
-            graph[parent].append(entity)
-
-        # Identify chains
-        #
-        #  o                   .                   .
-        #   \          .        .          o        .          .
-        #    \        .          .        /          .        .
-        #     o . . .             o------o            . . . .o
-        #     |       .           .       .           .       \
-        #     |        . . .      .        . . .      .        o---o
-        #     o                   .                   .
-        #
-        #
-        #  Chain 1               Chain 2               Chain 3
-        #
-        chains = []
-
-        def walk(graph, entity, chain=None):
-            """Depth-first search of `graph`, starting at `entity`"""
-            chain = chain or []
-            chain.append(entity)
-
-            try:
-                rigid_ui = self.component(entity, "RigidUIComponent")
-                is_root = rigid_ui.get("root", False)
-            except KeyError:
-                is_root = False
-
-            # End of chain, let's start anew
-            if not graph[entity] or is_root:
-                chains.append(list(chain))
-                chain[:] = []
-
-            for neighbour in graph[entity]:
-                walk(graph, neighbour, chain)
-
-        for scene in self.view("SolverComponent"):
-            # Chains start at the scene, but let's not *include* the scene
-            for neighbour in graph[scene]:
-                walk(graph, neighbour)
-
-        # Separate chains from individual rigids
-        for chain in chains[:]:
-            if len(chain) > 1:
-                continue
-
-            # Take care of hydras, i.e. a root with multiple heads
-            Rigid = self.component(chain[0], "RigidComponent")
-            if not Rigid["parentRigid"]:
-                chains.remove(chain)
-
-        # Consider each chain its own object, with unique constraints
-        chains = [
-            {
-                "rigids": chain,
-                "constraints": [],
-                "constraintMultipliers": [],
-
-                # Figure out what the options were at the time
-                # of creating this chain.
-                "options": {},
-
-                # If part of a tree, indicate whether this particular
-                # chain is the root of that tree.
-                "partOfTree": True,
-            }
-            for chain in chains
-        ]
-
-        # The root of this chain may or may not have a parent
-        # If it doesn't, then this is the root of a tree
-        #
-        #    o   o
-        #     \ /
-        #  o   o  <-- root of chain
-        #   \ /
-        #    o
-        #    |
-        #    o  <-- root of tree
-        #
-        for chain in chains:
-            Rigid = self.component(chain["rigids"][0], "RigidComponent")
-
-            if Rigid.get("parentRigid"):
-                chain["rigids"].insert(0, Rigid.get("parentRigid"))
-            else:
-                chain["partOfTree"] = False
-
-        # Find constraints associated to links in each chain
-        #
-        #  o link0       <-- Root, no constraint
-        #   \
-        #    \
-        #     \
-        #      \
-        #       o link1  <-- con0
-        #       |
-        #       |
-        #       |
-        #       |
-        #       o link2  <-- con1
-        #
-        for chain in chains:
-            rigid_to_constraints = {}
-
-            for rigid in chain["rigids"][1:]:
-                Rigid = self.component(rigid, "RigidComponent")
-
-                for entity in self.siblings(rigid):
-
-                    if not self.has(entity, "JointComponent"):
-                        continue
-
-                    Joint = self.component(entity, "JointComponent")
-
-                    # There may be more than one constraint to a given
-                    # rigid, if the user made a chain and *then* constrained
-                    # it some more. It is however unlikely to be two
-                    # constraints between the same two rigids. An edgecase
-                    # is having two or more constraints for independent
-                    # control of their limits and strengths.
-                    if Joint["child"] != rigid:
-                        continue
-
-                    # It's guaranteed to have the same parent as the
-                    # rigid itself; it's what makes it a chain.
-                    if Joint["parent"] != Rigid.get("parentRigid"):
-                        continue
-
-                    if rigid not in rigid_to_constraints:
-                        rigid_to_constraints[rigid] = []
-
-                    rigid_to_constraints[rigid].append(entity)
-
-            # In case there are two constraints between the same
-            # two links, we'll pick the one first in the Maya outliner
-            # hierarchy. That'll be the one created when the transform
-            # is first turned into a chain, the rest being added afterwards.
-            for rigid in chain["rigids"][1:]:
-
-                try:
-                    constraints = rigid_to_constraints[rigid]
-
-                except KeyError:
-                    # If the user removes a constraint from a chain,
-                    # and constrains it somewhere else then this constraint
-                    # will look like a chain constraint, but the parent rigid
-                    # would be different. Thus, this is not a true chain
-                    continue
-
-                assert len(constraints) > 0
-
-                # This will be the common case
-                if len(constraints) == 1:
-                    chain["constraints"] += constraints
-
-                else:
-                    indices = []
-                    for constraint in constraints:
-                        ConstraintUi = self.component(constraint,
-                                                      "ConstraintUIComponent")
-                        index = ConstraintUi["childIndex"]
-                        indices.append((index, constraint))
-
-                    chain["constraints"] += sorted(
-                        indices, key=lambda i: i[0]
-                    )[:1]
-
-            # The root *may* have a multiplier, it's optional and only
-            # occurs at the root of a tree.
-            if not chain["partOfTree"]:
-                root = chain["rigids"][0]
-                for entity in self.siblings(root):
-                    if self.has(entity, "ConstraintMultiplierUIComponent"):
-                        chain["constraintMultipliers"].append(entity)
-
-        # Figure out what options to use to recreate this chain
-        #
-        #  _______________________________________
-        # |______________________________________x|
-        # |                                       |
-        # |   o   - - - - - - -                   |
-        # |    \  __________________              |
-        # |     o ---------------                 |
-        # |        ______                         |
-        # |   --- |______|                        |
-        # |    -- o                               |
-        # |  ---- o__________                     |
-        # |   --- |__________|                    |
-        # |                                       |
-        # |_______________________________________|
-        # |            |             |            |
-        # |____________|_____________|____________|
-        # |_______________________________________|
-        #
-        #
-        if self._opts["preserveAttributes"]:
-            for chain in chains:
-                root = chain["rigids"][0]
-
-                RootRigid = self.component(root, "RigidComponent")
-                RootRigidUi = self.component(root, "RigidUIComponent")
-
-                chain["options"].update({
-                    "passiveRoot": RootRigid["kinematic"],
-                    "autoMultiplier": chain["constraintMultipliers"] != [],
-                    "defaults": {
-                        "drawShaded": RootRigidUi["shaded"],
-                    },
-                })
-
-        return chains
-
-    def _create_scenes(self, scenes, transforms):
-        rdscenes = {}
-
-        for scene in scenes:
-            Name = self.component(scene["entity"], "NameComponent")
-
-            # Support loading a dump multiple times,
-            # whilst only creating one instance of
-            # a contained scene
-            try:
-                transform = transforms[scene["entity"]]
-                rdscene = transform.shape(type="rdScene")
-
-                if rdscene:
-                    rdscenes[scene["entity"]] = rdscene
-                    continue
-
-            except KeyError:
-                # There wasn't a transform for this scene, that's OK
-                pass
-
-            name = _name(Name, -2)
-            rdscene = commands.create_scene(name=name)
-
-            if self._opts["preserveAttributes"]:
-                with cmdx.DagModifier() as mod:
-                    self._apply_scene(mod, scene["entity"], rdscene)
-
-            rdscenes[scene["entity"]] = rdscene
-
-        return rdscenes
-
-    def _create_constraints(self,
-                            constraints,
-                            scenes,
-                            rigids,
-                            multipliers,
-                            transforms):
-        entity_to_constraint = {}
-
-        for constraint in constraints:
-            entity = constraint["entity"]
-
-            if entity not in transforms:
-                continue
-
-            # These are guaranteed to be associated to any entity
-            # with a `JointComponent`
-            Name = self.component(entity, "NameComponent")
-            Joint = self.component(entity, "JointComponent")
-            ConstraintUi = self.component(entity, "ConstraintUIComponent")
-
-            parent_entity = Joint["parent"]
-            child_entity = Joint["child"]
-
-            assert parent_entity in rigids or parent_entity in scenes, (
-                "%s|%s.parentRigid=%r was not found in this dump"
-                % (Name["path"], Name["value"], parent_entity)
-            )
-
-            assert child_entity in rigids, (
-                "%s|%s.childRigid=%r was not found in this dump"
-                % (Name["path"], Name["value"], child_entity)
-            )
-
-            try:
-                parent_rigid = rigids[parent_entity]
-            except KeyError:
-                parent_rigid = scenes[parent_entity]
-
-            child_rigid = rigids[child_entity]
-
-            con = commands.create_constraint(parent_rigid, child_rigid)
-
-            with cmdx.DagModifier() as mod:
-                if self._opts["preserveAttributes"]:
-                    self._apply_constraint(mod, entity, con)
-
-                    # Restore it's name too
-                    mod.rename(con, Name["value"])
-
-                if ConstraintUi["multiplierEntity"] in multipliers:
-                    mult_entity = ConstraintUi["multiplierEntity"]
-                    multiplier = multipliers[mult_entity]
-                    mod.connect(multiplier["ragdollId"],
-                                con["multiplierNode"])
-
-            entity_to_constraint[entity] = con
-
-        return entity_to_constraint
-
-    def _create_rigids(self, rigids, rdscenes, transforms, multipliers=None):
-        multipliers = multipliers or []
-        entity_to_rigid = {}
-
-        for rigid in rigids:
-            entity = rigid["entity"]
-
-            try:
-                transform = transforms[entity]
-            except KeyError:
-                continue
-
-            Name = self.component(entity, "NameComponent")
-            RigidUi = self.component(entity, "RigidUIComponent")
-            Scene = self.component(entity, "SceneComponent")
-
-            # Scenes have a rigid component too, but we've already created it
-            if entity == Scene["entity"]:
-                continue
-
-            rdscene = rdscenes[Scene["entity"]]
-            assert isinstance(rdscene, cmdx.DagNode), rdscene
-            assert rdscene.type() == "rdScene", rdscene
-
-            rigid = commands.create_rigid(transform,
-                                          rdscene,
-                                          opts=rigid["options"])
-
-            with cmdx.DagModifier() as mod:
-                if self._opts["preserveAttributes"]:
-                    self._apply_rigid(mod, entity, rigid)
-
-                    # Restore it's name too
-                    mod.rename(rigid, Name["value"])
-
-                if RigidUi["multiplierEntity"] in multipliers:
-                    mult_entity = RigidUi["multiplierEntity"]
-                    multiplier = multipliers[mult_entity]
-                    mod.connect(multiplier["ragdollId"],
-                                rigid["multiplierNode"])
-
-            entity_to_rigid[entity] = rigid
-
-        return entity_to_rigid
-
-    def _create_chain(self, chain, rdscenes, entity_to_transform):
-        """Create `chains` for `entity_to_transform` belonging to `rdscenes`
-
-        Chains are provided as a list-of-lists, each entry being an
-        individual chain.
-
-        [
-            [2, 3, 4, 5],               <-- Rigids
-            [10, 11, 12, 13],
-            [516, 1671, 13561, 13567],
-        ]
-
-        Each entity is guaranteed to have a corresponding transform,
-        one that was either found or created for this purpose.
-
-        """
-
-        result = {
-            "rigids": [],
-            "constraints": [],
-            "constraintMultipliers": [],
-        }
-
-        root_rigid = chain["rigids"][0]
-        Name = self.component(root_rigid, "NameComponent")
-        Scene = self.component(root_rigid, "SceneComponent")
-
-        try:
-            rdscene = rdscenes[Scene["entity"]]
-        except KeyError:
-            raise ValueError(
-                "The scene for %s hasn't yet been created"
-                % Name["path"]
-            )
-
-        # Find a transform for each link in each chain
-        transforms = []
-        transform_to_link = {}
-        for link in chain["rigids"]:
-
-            try:
-                transform = entity_to_transform[link]
-
-            except KeyError:
-                # Every link needs a transform, otherwise
-                # it's not really a chain
-                return result
-
-            transform_to_link[transform] = link
-            transforms.append(transform)
-
-        # They may have all been filtered out
-        if not transforms:
-            return
-
-        # All done, it's time to get creative!
-        #
-        #              o
-        #    o        /
-        #     \      /
-        #      \  /\
-        #        /  \
-        #       /\  /  ---o
-        #      /  \/
-        #     /   /  \
-        #    /   /    \
-        #   /   /      o
-        #   \  /
-        #    \/
-        #
-        # We should have filtered these out already,
-        # they would be solo rigids.
-        assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
-
-        active_chain = tools.create_chain(transforms,
-                                          rdscene,
-                                          opts=chain["options"])
-
-        new_rigids = [
-            n for n in active_chain if n.type() == "rdRigid"
-        ]
-        new_constraints = [
-            n for n in active_chain if n.type() == "rdConstraint"
-        ]
-        new_multipliers = [
-            n for n in active_chain if n.type() == "rdConstraintMultiplier"
-        ]
-
-        if len(new_rigids) != len(chain["rigids"]):
-            word = "were" if len(new_rigids) < 2 else "was"
-            log.debug(
-                "I expected %d rigids, but %d %s created",
-                len(chain["rigids"]), word, len(new_rigids)
-            )
-
-        if len(new_constraints) != len(chain["constraints"]):
-            word = "were" if len(new_constraints) < 2 else "was"
-            log.debug(
-                "I expected %d constraints, but %d %s created",
-                len(chain["constraints"]), word, len(new_constraints)
-            )
-
-        if len(new_multipliers) != len(chain["constraintMultipliers"]):
-            word = "were" if len(new_multipliers) < 2 else "was"
-            log.debug(
-                "I expected %d multipliers, but %d %s created",
-                len(chain["constraintMultipliers"]), word, len(new_multipliers)
-            )
-
-        # This command generated a series of nodes. We'll want to map
-        # these onto entities in the exported file such that we can
-        # apply those attributes.
-        #
-        #    _____                        ______________
-        #   |\ ___\                      |             |\
-        #   | |  - | - - - - - - - - - - -o            |_\
-        #    \|____|       ___           |               |
-        #                 /   \          |               |
-        #                 \___/          |               |
-        #                    \\          |     JSON      |
-        #                     \\         |               |
-        #     | /|             `         |               |
-        #   __|/ | - - - - - - - - - - - - - -o          |
-        #      \ |                       |               |
-        #       \|                       |_______________|
-        #
-        #
-        # Map components to newly created rigids and constraints
-        entity_to_rigid = {}
-        entity_to_constraint = {}
-        entity_to_multiplier = {}
-
-        # Find which entity in our dump corresponds
-        # to the newly created rigid.
-        for rigid, new_rigid in zip(chain["rigids"], new_rigids):
-            entity_to_rigid[rigid] = new_rigid
-
-        # Next, find the corresponding constraint link
-        for constraint, new_constraint in zip(chain["constraints"],
-                                              new_constraints):
-            entity_to_constraint[constraint] = new_constraint
-
-        # Finally, there may be a multiplier at the root
-        for multiplier, new_multiplier in zip(chain["constraintMultipliers"],
-                                              new_multipliers):
-            entity_to_multiplier[multiplier] = new_multiplier
-
-        # Ok, we've mapped them all, let's get busy!
-        #
-        #    _____                        ______________
-        #   |\ ___\        write         |             |\
-        #   | |  - | <--------------------o            |_\
-        #    \|____|                     |               |
-        #                                |               |
-        #                                |               |
-        #                                |               |
-        #                                |               |
-        #     | /|         write         |               |
-        #   __|/ | <--------------------------o          |
-        #      \ |                       |               |
-        #       \|                       |_______________|
-        #
-        #
-        if self._opts["preserveAttributes"]:
-            with cmdx.DagModifier() as mod:
-                # Apply customisation to each rigid
-                for entity, rigid in entity_to_rigid.items():
-                    self._apply_rigid(mod, entity, rigid)
-
-                # Apply customisation to each constraint
-                for entity, con in entity_to_constraint.items():
-                    self._apply_constraint(mod, entity, con)
-
-                # Apply customisation to each multiplier
-                for entity, mult in entity_to_multiplier.items():
-                    self._apply_constraint_multiplier(mod, entity, mult)
-
-        result.update({
-            "rigids": new_rigids,
-            "constraints": new_constraints,
-            "constraintMultipliers": new_multipliers,
-        })
-
-        return result
-
-    def _find_leftovers(self, visited):
-
-        leftovers = {
-            "constraints": [],
-            "constraintMultipliers": [],
-        }
-
-        for entity in self._dump["entities"]:
-            if entity in visited:
-                continue
-
-            if self.has(entity, "ConstraintUIComponent"):
-                leftovers["constraints"].append({
-                    "entity": entity,
-                    "options": {}
-                })
-
-            if self.has(entity, "ConstraintMultiplierUIComponent"):
-                leftovers["constraintMultipliers"].append({
-                    "entity": entity,
-                    "options": {}
-                })
-
-        return leftovers
-
-    def _apply_scene(self, mod, entity, scene):
-        Solver = self.component(entity, "SolverComponent")
-
-        _smart_try_setattr(mod, scene["enabled"], Solver["enabled"])
-        _smart_try_setattr(mod, scene["gravity"], Solver["gravity"])
-        _smart_try_setattr(mod, scene["airDensity"], Solver["airDensity"])
-        _smart_try_setattr(mod, scene["substeps"], Solver["substeps"])
-        _smart_try_setattr(mod, scene["useGround"], Solver["useGround"])
-        _smart_try_setattr(mod, scene["groundFriction"],
-                           Solver["groundFriction"])
-        _smart_try_setattr(mod, scene["groundRestitution"],
-                           Solver["groundRestitution"])
-        _smart_try_setattr(mod, scene["bounceThresholdVelocity"],
-                           Solver["bounceThresholdVelocity"])
-        _smart_try_setattr(mod, scene["threadCount"], Solver["numThreads"])
-        _smart_try_setattr(mod, scene["enableCCD"], Solver["enableCCD"])
-        _smart_try_setattr(mod, scene["timeMultiplier"],
-                           Solver["timeMultiplier"])
-        _smart_try_setattr(mod, scene["positionIterations"],
-                           Solver["positionIterations"])
-        _smart_try_setattr(mod, scene["velocityIterations"],
-                           Solver["velocityIterations"])
-        _smart_try_setattr(mod, scene["solverType"], c.PGSSolverType
-                           if Solver["type"] == "PGS"
-                           else c.TGSSolverType)
-
-    def _apply_rigid(self, mod, entity, rigid):
-        comps = self._dump["entities"][entity]["components"]
-        Name = Component(comps["NameComponent"])
-        Desc = Component(comps["GeometryDescriptionComponent"])
-        Color = Component(comps["ColorComponent"])
-        Rigid = Component(comps["RigidComponent"])
-        RigidUi = Component(comps["RigidUIComponent"])
-
-        _smart_try_setattr(mod, rigid["mass"], Rigid["mass"])
-        _smart_try_setattr(mod, rigid["friction"], Rigid["friction"])
-        _smart_try_setattr(mod, rigid["collide"], Rigid["collide"])
-        _smart_try_setattr(mod, rigid["kinematic"], Rigid["kinematic"])
-        _smart_try_setattr(mod, rigid["linearDamping"], Rigid["linearDamping"])
-        _smart_try_setattr(mod, rigid["angularDamping"],
-                           Rigid["angularDamping"])
-        _smart_try_setattr(mod, rigid["positionIterations"],
+            entity_to_transform[entity] = transform
+
+            # Avoid assigning to already assigned transforms
+            if transform["message"].output(type="rdMarker"):
+                occupied.append(entity)
+
+        # Re-establish creation order
+        def sort(entity):
+            order = self._registry.get(entity, "OrderComponent")
+            return order["value"]
+
+        markers[:] = sorted(markers, key=sort)
+
+    def _apply_solver(self, mod, entity, solver):
+        Solver = self._registry.get(entity, "SolverComponent")
+        SolverUi = self._registry.get(entity, "SolverUIComponent")
+
+        cache_method = {
+            "Off": 0,
+            "Static": 1,
+            "Dynamic": 2,
+        }.get(Solver["cacheMethod"], 0)
+
+        frameskip_method = {
+            "Pause": 0,
+            "Ignore": 1,
+        }.get(Solver["frameskipMethod"], 0)
+
+        solver_type = {
+            "PGS": 0,
+            "TGS": 1,
+        }.get(Solver["type"], 1)
+
+        collision_type = {
+            "SAT": 0,
+            "PCM": 1,
+        }.get(Solver["collisionDetectionType"], 1)
+
+        mod.smart_set_attr(solver["solverType"], solver_type)
+        mod.smart_set_attr(solver["cache"], cache_method)
+        mod.smart_set_attr(solver["frameskipMethod"], frameskip_method)
+        mod.smart_set_attr(solver["collisionDetectionType"], collision_type)
+        mod.smart_set_attr(solver["enabled"], Solver["enabled"])
+        mod.smart_set_attr(solver["airDensity"], Solver["airDensity"])
+        mod.smart_set_attr(solver["gravity"], Solver["gravity"])
+        mod.smart_set_attr(solver["substeps"], Solver["substeps"])
+        mod.smart_set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
+        mod.smart_set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
+        mod.smart_set_attr(solver["positionIterations"], Solver["positionIterations"])
+        mod.smart_set_attr(solver["velocityIterations"], Solver["velocityIterations"])
+
+        mod.smart_set_attr(solver["linearLimitStiffness"], SolverUi["linearLimitStiffness"])
+        mod.smart_set_attr(solver["linearLimitDamping"], SolverUi["linearLimitDamping"])
+        mod.smart_set_attr(solver["angularLimitStiffness"], SolverUi["angularLimitStiffness"])
+        mod.smart_set_attr(solver["angularLimitDamping"], SolverUi["angularLimitDamping"])
+        mod.smart_set_attr(solver["linearConstraintStiffness"], SolverUi["linearConstraintStiffness"])
+        mod.smart_set_attr(solver["linearConstraintDamping"], SolverUi["linearConstraintDamping"])
+        mod.smart_set_attr(solver["angularConstraintStiffness"], SolverUi["angularConstraintStiffness"])
+        mod.smart_set_attr(solver["angularConstraintDamping"], SolverUi["angularConstraintDamping"])
+        mod.smart_set_attr(solver["linearDriveStiffness"], SolverUi["linearDriveStiffness"])
+        mod.smart_set_attr(solver["linearDriveDamping"], SolverUi["linearDriveDamping"])
+        mod.smart_set_attr(solver["angularDriveStiffness"], SolverUi["angularDriveStiffness"])
+        mod.smart_set_attr(solver["angularDriveDamping"], SolverUi["angularDriveDamping"])
+
+    def _apply_group(self, mod, entity, group):
+        GroupUi = self._registry.get(entity, "GroupUIComponent")
+
+        input_type = {
+            "Inherit": 0,
+            "Off": 1,
+            "Kinematic": 2,
+            "Drive": 3
+        }.get(GroupUi["inputType"], 3)
+
+        drive_space = {
+            "Relative": 1,
+            "Absolute": 2,
+            "Custom": 3
+        }.get(GroupUi["driveSpace"], 1)
+
+        mod.smart_set_attr(group["inputType"], input_type)
+        mod.smart_set_attr(group["driveSpace"], drive_space)
+        mod.smart_set_attr(group["enabled"], GroupUi["enabled"])
+        mod.smart_set_attr(group["selfCollide"], GroupUi["selfCollide"])
+        mod.smart_set_attr(group["driveStiffness"], GroupUi["stiffness"])
+        mod.smart_set_attr(group["driveDampingRatio"], GroupUi["dampingRatio"])
+        mod.smart_set_attr(group["driveSpaceCustom"], GroupUi["driveSpaceCustom"])
+
+    def _apply_marker(self, mod, entity, marker):
+        Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+        Color = self._registry.get(entity, "ColorComponent")
+        Rigid = self._registry.get(entity, "RigidComponent")
+        MarkerUi = self._registry.get(entity, "MarkerUIComponent")
+
+        input_type = {
+            "Inherit": 0,
+            "Off": 1,
+            "Kinematic": 2,
+            "Drive": 3
+        }.get(MarkerUi["inputType"], 0)
+
+        drive_space = {
+            "Inherit": 0,
+            "Relative": 1,
+            "Absolute": 2,
+            "Custom": 3
+        }.get(MarkerUi["driveSpace"], 0)
+
+        mod.smart_set_attr(marker["mass"], MarkerUi["mass"])
+        mod.smart_set_attr(marker["inputType"], input_type)
+        mod.smart_set_attr(marker["driveSpace"], drive_space)
+        mod.smart_set_attr(marker["driveSpaceCustom"], MarkerUi["driveSpaceCustom"])
+        mod.smart_set_attr(marker["driveStiffness"], MarkerUi["driveStiffness"])
+        mod.smart_set_attr(marker["driveDampingRatio"], MarkerUi["driveDampingRatio"])
+        mod.smart_set_attr(marker["driveAbsoluteLinear"], MarkerUi["driveAbsoluteLinear"])
+        mod.smart_set_attr(marker["driveAbsoluteAngular"], MarkerUi["driveAbsoluteAngular"])
+        mod.smart_set_attr(marker["limitStiffness"], MarkerUi["limitStiffness"])
+        mod.smart_set_attr(marker["limitDampingRatio"], MarkerUi["limitDampingRatio"])
+        mod.smart_set_attr(marker["collisionGroup"], MarkerUi["collisionGroup"])
+        mod.smart_set_attr(marker["friction"], Rigid["friction"])
+        mod.smart_set_attr(marker["restitution"], Rigid["restitution"])
+        mod.smart_set_attr(marker["collide"], Rigid["collide"])
+        mod.smart_set_attr(marker["linearDamping"], Rigid["linearDamping"])
+        mod.smart_set_attr(marker["angularDamping"], Rigid["angularDamping"])
+        mod.smart_set_attr(marker["positionIterations"],
                            Rigid["positionIterations"])
-        _smart_try_setattr(mod, rigid["velocityIterations"],
+        mod.smart_set_attr(marker["velocityIterations"],
                            Rigid["velocityIterations"])
-        _smart_try_setattr(mod, rigid["maxContactImpulse"],
+        mod.smart_set_attr(marker["maxContactImpulse"],
                            Rigid["maxContactImpulse"])
-        _smart_try_setattr(mod, rigid["maxDepenetrationVelocity"],
+        mod.smart_set_attr(marker["maxDepenetrationVelocity"],
                            Rigid["maxDepenetrationVelocity"])
-        _smart_try_setattr(mod, rigid["enableCCD"], Rigid["enableCCD"])
-        _smart_try_setattr(mod, rigid["angularMass"], Rigid["angularMass"])
-        _smart_try_setattr(mod, rigid["centerOfMass"], Rigid["centerOfMass"])
+        # mod.smart_set_attr(marker["enableCCD"], Rigid["enableCCD"])
+        mod.smart_set_attr(marker["angularMass"], Rigid["angularMass"])
+        mod.smart_set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
 
-        _smart_try_setattr(mod, rigid["shapeExtents"], Desc["extents"])
-        _smart_try_setattr(mod, rigid["shapeLength"], Desc["length"])
-        _smart_try_setattr(mod, rigid["shapeRadius"], Desc["radius"])
-        _smart_try_setattr(mod, rigid["shapeOffset"], Desc["offset"])
+        mod.smart_set_attr(marker["shapeExtents"], Desc["extents"])
+        mod.smart_set_attr(marker["shapeLength"], Desc["length"])
+        mod.smart_set_attr(marker["shapeRadius"], Desc["radius"])
+        mod.smart_set_attr(marker["shapeOffset"], Desc["offset"])
 
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
-        _smart_try_setattr(mod, rigid["shapeRotation"], rotation)
+        mod.smart_set_attr(marker["shapeRotation"], rotation)
 
-        _smart_try_setattr(mod, rigid["color"], Color["value"])
-        _smart_try_setattr(mod, rigid["drawShaded"], RigidUi["shaded"])
+        mod.smart_set_attr(marker["color"], Color["value"])
+        # mod.smart_set_attr(marker["drawShaded"], MarkerUi["shaded"])
 
         # Establish shape
         if Desc["type"] in ("Cylinder", "Capsule"):
-            _smart_try_setattr(mod, rigid["shapeType"], c.CapsuleShape)
+            mod.smart_set_attr(marker["shapeType"], constants.CapsuleShape)
 
         elif Desc["type"] == "Box":
-            _smart_try_setattr(mod, rigid["shapeType"], c.BoxShape)
+            mod.smart_set_attr(marker["shapeType"], constants.BoxShape)
 
         elif Desc["type"] == "Sphere":
-            _smart_try_setattr(mod, rigid["shapeType"], c.SphereShape)
+            mod.smart_set_attr(marker["shapeType"], constants.SphereShape)
 
         elif Desc["type"] == "ConvexHull":
-            _smart_try_setattr(mod, rigid["shapeType"], c.MeshShape)
+            mod.smart_set_attr(marker["shapeType"], constants.MeshShape)
 
         else:
+            Name = self._registry.get(entity, "NameComponent")
             log.debug(
                 "Unsupported shape type: %s.type=%s"
-                % (Name["path"], Desc["type"])
+                % (Name["name"], Desc["type"])
             )
-
-    def _apply_constraint(self, mod, entity, con):
-        data = self._dump["entities"][entity]
-        comps = data["components"]
-
-        Joint = Component(comps["JointComponent"])
-        Limit = Component(comps["LimitComponent"])
-        LimitUi = Component(comps["LimitUIComponent"])
-        Drive = Component(comps["DriveComponent"])
-        DriveUi = Component(comps["DriveUIComponent"])
-
-        # Frames are exported on worldspace, but Maya scales these by
-        # its own transform. So we'll need to compensate for that.
-        parent_rigid = con["parentRigid"].connection()
-        child_rigid = con["childRigid"].connection()
-
-        if parent_rigid:
-            parent_scale = parent_rigid.scale(cmdx.sWorld)
-
-            # Protect against possible 0-scaled transforms
-            if not any(axis == 0 for axis in parent_scale):
-                parent_frame = Joint["parentFrame"]
-                parent_frame[3 * 4 + 0] /= parent_scale.x
-                parent_frame[3 * 4 + 1] /= parent_scale.y
-                parent_frame[3 * 4 + 2] /= parent_scale.z
-
-        if child_rigid:
-            child_scale = child_rigid.scale(cmdx.sWorld)
-
-            # Protect against possible 0-scaled transforms
-            if not any(axis == 0 for axis in child_scale):
-                child_frame = Joint["childFrame"]
-                child_frame[3 * 4 + 0] /= child_scale.x
-                child_frame[3 * 4 + 1] /= child_scale.y
-                child_frame[3 * 4 + 2] /= child_scale.z
-
-        _smart_try_setattr(mod, con["parentFrame"], parent_frame)
-        _smart_try_setattr(mod, con["childFrame"], child_frame)
-        _smart_try_setattr(mod, con["disableCollision"],
-                           Joint["disableCollision"])
-
-        _smart_try_setattr(mod, con["limitEnabled"], Limit["enabled"])
-        _smart_try_setattr(mod, con["linearLimitX"], Limit["x"])
-        _smart_try_setattr(mod, con["linearLimitY"], Limit["y"])
-        _smart_try_setattr(mod, con["linearLimitZ"], Limit["z"])
-        _smart_try_setattr(mod, con["angularLimitX"], Limit["twist"])
-        _smart_try_setattr(mod, con["angularLimitY"], Limit["swing1"])
-        _smart_try_setattr(mod, con["angularLimitZ"], Limit["swing2"])
-        _smart_try_setattr(mod, con["limitStrength"], LimitUi["strength"])
-        _smart_try_setattr(mod, con["linearLimitStiffness"],
-                           LimitUi["linearStiffness"])
-        _smart_try_setattr(mod, con["linearLimitDamping"],
-                           LimitUi["linearDamping"])
-        _smart_try_setattr(mod, con["angularLimitStiffness"],
-                           LimitUi["angularStiffness"])
-        _smart_try_setattr(mod, con["angularLimitDamping"],
-                           LimitUi["angularDamping"])
-
-        _smart_try_setattr(mod, con["driveEnabled"], Drive["enabled"])
-        _smart_try_setattr(mod, con["driveStrength"], DriveUi["strength"])
-        _smart_try_setattr(mod, con["linearDriveStiffness"],
-                           DriveUi["linearStiffness"])
-        _smart_try_setattr(mod, con["linearDriveDamping"],
-                           DriveUi["linearDamping"])
-        _smart_try_setattr(mod, con["angularDriveStiffness"],
-                           DriveUi["angularStiffness"])
-        _smart_try_setattr(mod, con["angularDriveDamping"],
-                           DriveUi["angularDamping"])
-        _smart_try_setattr(mod, con["driveMatrix"], Drive["target"])
-
-    def _apply_rigid_multiplier(self, mod, entity, mult):
-        data = self._dump["entities"][entity]
-        comps = data["components"]
-
-        Mult = Component(comps["RigidMultiplierUIComponent"])
-
-        _smart_try_setattr(mod, mult["airDensity"], Mult["airDensity"])
-        _smart_try_setattr(mod, mult["linearDamping"], Mult["linearDamping"])
-        _smart_try_setattr(mod, mult["angularDamping"], Mult["angularDamping"])
-
-    def _apply_constraint_multiplier(self, mod, entity, mult):
-        data = self._dump["entities"][entity]
-        comps = data["components"]
-
-        Mult = Component(comps["ConstraintMultiplierUIComponent"])
-
-        _smart_try_setattr(mod, mult["limitStrength"],
-                           Mult["limitStrength"])
-        _smart_try_setattr(mod, mult["linearLimitStiffness"],
-                           Mult["linearLimitStiffness"])
-        _smart_try_setattr(mod, mult["linearLimitDamping"],
-                           Mult["linearLimitDamping"])
-        _smart_try_setattr(mod, mult["angularLimitStiffness"],
-                           Mult["angularLimitStiffness"])
-        _smart_try_setattr(mod, mult["angularLimitDamping"],
-                           Mult["angularLimitDamping"])
-        _smart_try_setattr(mod, mult["driveStrength"],
-                           Mult["driveStrength"])
-        _smart_try_setattr(mod, mult["linearDriveStiffness"],
-                           Mult["linearDriveStiffness"])
-        _smart_try_setattr(mod, mult["linearDriveDamping"],
-                           Mult["linearDriveDamping"])
-        _smart_try_setattr(mod, mult["angularDriveStiffness"],
-                           Mult["angularDriveStiffness"])
-        _smart_try_setattr(mod, mult["angularDriveDamping"],
-                           Mult["angularDriveDamping"])
-
-    def _has_transforms(self, rigids, transforms):
-        for rigid in rigids:
-            if rigid not in transforms:
-                Name = self.component(rigid, "NameComponent")
-                log.error("%s did not have a transform" % Name["path"])
-                return False
-        return True
-
-    def _validate_same_scene(self, entities):
-        # Sanity check, all `entities` belong to the same scene
-        scene = self.component(entities[0], "SceneComponent")["entity"]
-        same_scene = all(
-            self.component(link, "SceneComponent")["entity"] == scene
-            for link in entities[1:]
-        )
-
-        if not same_scene:
-            for link in entities:
-                Name = self.component(link, "NameComponent")
-                Scene = self.component(link, "SceneComponent")
-
-                try:
-                    SName = self.component(Scene["entity"], "NameComponent")
-                except KeyError:
-                    # This would be a bad export, a bug
-                    SName = {"shortestPath": "<None>"}
-
-                # The entity may be invalid altogether, with no path stored
-                path = Name["shortestPath"] or Name["value"]
-                log.debug("%s.scene = %s" % (path, SName["shortestPath"]))
-
-        return same_scene
 
 
 def load(fname, roots=None):

@@ -14,8 +14,8 @@ import logging
 from collections import OrderedDict as odict
 
 from maya import cmds
-from .vendor import cmdx
-from . import commands, tools, constants as c, internal as i__
+from ..vendor import cmdx
+from .. import commands, tools, constants as c, internal as i__
 
 log = logging.getLogger("ragdoll")
 

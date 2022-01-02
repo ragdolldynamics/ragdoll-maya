@@ -505,7 +505,8 @@ class Loader(object):
 
                 if parent_entity:
                     parent_rdmarker = rdmarkers[parent_entity]
-                    mod.connect(parent_rdmarker["ragdollId"], rdmarker["parentMarker"])
+                    mod.connect(parent_rdmarker["ragdollId"],
+                                rdmarker["parentMarker"])
 
         return rdmarkers
 
@@ -539,7 +540,8 @@ class Loader(object):
                 if not (rdparent and rdchild):
                     continue
 
-                rdconstraint = markers_.create_distance_constraint(rdparent, rdchild)
+                rdconstraint = markers_.create_distance_constraint(
+                    rdparent, rdchild)
                 rdconstraints[entity] = rdconstraint
 
             elif self._registry.has(entity, "FixedJointComponent"):
@@ -559,7 +561,8 @@ class Loader(object):
                 if not (rdparent and rdchild):
                     continue
 
-                rdconstraint = markers_.create_fixed_constraint(rdparent, rdchild)
+                rdconstraint = markers_.create_fixed_constraint(
+                    rdparent, rdchild)
                 rdconstraints[entity] = rdconstraint
 
             elif self._registry.has(entity, "PinJointComponent"):
@@ -717,21 +720,21 @@ class Loader(object):
         mod.set_attr(solver["substeps"], Solver["substeps"])
         mod.set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
         mod.set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
-        mod.set_attr(solver["positionIterations"], Solver["positionIterations"])
-        mod.set_attr(solver["velocityIterations"], Solver["velocityIterations"])
+        mod.set_attr(solver["poit"], Solver["positionIterations"])
+        mod.set_attr(solver["veit"], Solver["velocityIterations"])
 
-        mod.set_attr(solver["linearLimitStiffness"], SolverUi["linearLimitStiffness"])
-        mod.set_attr(solver["linearLimitDamping"], SolverUi["linearLimitDamping"])
-        mod.set_attr(solver["angularLimitStiffness"], SolverUi["angularLimitStiffness"])
-        mod.set_attr(solver["angularLimitDamping"], SolverUi["angularLimitDamping"])
-        mod.set_attr(solver["linearConstraintStiffness"], SolverUi["linearConstraintStiffness"])
-        mod.set_attr(solver["linearConstraintDamping"], SolverUi["linearConstraintDamping"])
-        mod.set_attr(solver["angularConstraintStiffness"], SolverUi["angularConstraintStiffness"])
-        mod.set_attr(solver["angularConstraintDamping"], SolverUi["angularConstraintDamping"])
-        mod.set_attr(solver["linearDriveStiffness"], SolverUi["linearDriveStiffness"])
-        mod.set_attr(solver["linearDriveDamping"], SolverUi["linearDriveDamping"])
-        mod.set_attr(solver["angularDriveStiffness"], SolverUi["angularDriveStiffness"])
-        mod.set_attr(solver["angularDriveDamping"], SolverUi["angularDriveDamping"])
+        mod.set_attr(solver["llst"], SolverUi["linearLimitStiffness"])
+        mod.set_attr(solver["lldr"], SolverUi["linearLimitDamping"])
+        mod.set_attr(solver["alst"], SolverUi["angularLimitStiffness"])
+        mod.set_attr(solver["aldr"], SolverUi["angularLimitDamping"])
+        mod.set_attr(solver["lcst"], SolverUi["linearConstraintStiffness"])
+        mod.set_attr(solver["lcdr"], SolverUi["linearConstraintDamping"])
+        mod.set_attr(solver["acst"], SolverUi["angularConstraintStiffness"])
+        mod.set_attr(solver["acdr"], SolverUi["angularConstraintDamping"])
+        mod.set_attr(solver["ldst"], SolverUi["linearDriveStiffness"])
+        mod.set_attr(solver["lddr"], SolverUi["linearDriveDamping"])
+        mod.set_attr(solver["adst"], SolverUi["angularDriveStiffness"])
+        mod.set_attr(solver["addr"], SolverUi["angularDriveDamping"])
 
     def _apply_group(self, mod, entity, group):
         GroupUi = self._registry.get(entity, "GroupUIComponent")
@@ -785,6 +788,11 @@ class Loader(object):
             mod.set_attr(con["tolerance"], Con["tolerance"])
             mod.set_attr(con["method"], method)
 
+            parent_offset = cmdx.Tm(Joint["parentFrame"]).translation()
+            child_offset = cmdx.Tm(Joint["childFrame"]).translation()
+            mod.set_attr(con["parentOffset"], parent_offset)
+            mod.set_attr(con["childOffset"], child_offset)
+
         elif self._registry.has(entity, "PinJointComponent"):
             Ui = self._registry.get(entity, "PinJointUIComponent")
 
@@ -832,11 +840,11 @@ class Loader(object):
         mod.set_attr(marker["driveSpace"], drive_space)
         mod.set_attr(marker["driveSpaceCustom"], MarkerUi["driveSpaceCustom"])
         mod.set_attr(marker["driveStiffness"], MarkerUi["driveStiffness"])
-        mod.set_attr(marker["driveDampingRatio"], MarkerUi["driveDampingRatio"])
-        mod.set_attr(marker["driveAbsoluteLinear"], MarkerUi["driveAbsoluteLinear"])
-        mod.set_attr(marker["driveAbsoluteAngular"], MarkerUi["driveAbsoluteAngular"])
-        mod.set_attr(marker["limitStiffness"], MarkerUi["limitStiffness"])
-        mod.set_attr(marker["limitDampingRatio"], MarkerUi["limitDampingRatio"])
+        mod.set_attr(marker["ddra"], MarkerUi["driveDampingRatio"])
+        mod.set_attr(marker["dral"], MarkerUi["driveAbsoluteLinear"])
+        mod.set_attr(marker["draa"], MarkerUi["driveAbsoluteAngular"])
+        mod.set_attr(marker["list"], MarkerUi["limitStiffness"])
+        mod.set_attr(marker["ldra"], MarkerUi["limitDampingRatio"])
         mod.set_attr(marker["collisionGroup"], MarkerUi["collisionGroup"])
         mod.set_attr(marker["friction"], Rigid["friction"])
         mod.set_attr(marker["restitution"], Rigid["restitution"])
@@ -846,8 +854,7 @@ class Loader(object):
         mod.set_attr(marker["positionIterations"], Rigid["positionIterations"])
         mod.set_attr(marker["velocityIterations"], Rigid["velocityIterations"])
         mod.set_attr(marker["maxContactImpulse"], Rigid["maxContactImpulse"])
-        mod.set_attr(marker["maxDepenetrationVelocity"],
-                     Rigid["maxDepenetrationVelocity"])
+        mod.set_attr(marker["mxdv"], Rigid["maxDepenetrationVelocity"])
         mod.set_attr(marker["angularMass"], Rigid["angularMass"])
         mod.set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
 

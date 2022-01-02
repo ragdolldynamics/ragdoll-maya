@@ -59,6 +59,14 @@ from . import (
 )
 from .tools import markers_tool as markers_
 
+# Backwards compatibility
+from .legacy.interactive import (
+    export_physics as legacy_export_physics,
+    export_physics_options as legacy_export_physics_options,
+    import_physics_options as legacy_import_physics_options,
+    import_physics_from_file as legacy_import_physics_from_file,
+)
+
 log = logging.getLogger("ragdoll")
 
 Warning = ValueError
@@ -642,6 +650,11 @@ def install_menu():
 
     item("snapMarkers", snap_markers, snap_markers_options)
 
+    divider("IO")
+
+    item("exportPhysics", export_physics, export_physics_options)
+    item("importPhysics", import_physics_from_file, import_physics_options)
+
     divider("Manipulate")
 
     with submenu("Constrain", icon="constraint.png"):
@@ -797,12 +810,12 @@ def install_menu():
 
             divider("I/O")
 
-            item("openPhysics", open_physics, open_physics_options)
-            item("exportPhysics", export_physics, export_physics_options)
+            item("exportPhysics",
+                 legacy_export_physics,
+                 legacy_export_physics_options)
             item("importPhysics",
-                 import_physics_from_file,
-                 import_physics_options)
-            item("applyPhysics")
+                 legacy_import_physics_from_file,
+                 legacy_import_physics_options)
 
             divider("Utilities")
 
@@ -4467,19 +4480,6 @@ select_controls_options = _st_options("selectControls", "rdControl")
 
 def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
-
-
-def legacy_import_physics_options(*args):
-    from .legacy import ui
-    win = None
-
-    def import_physics():
-        return win.do_import()
-
-    win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
-    ui.center_window(win)
-
-    return win
 
 
 def import_physics_options(*args):

@@ -1,30 +1,21 @@
 import os
-import re
 import sys
-import time
 import json
-import ctypes
 import logging
-import datetime
-import webbrowser
 
 from maya import cmds
 from maya.api import OpenMaya as om
 from maya.OpenMayaUI import MQtUtil
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from PySide2 import QtCore, QtWidgets, QtGui
-import shiboken2
 
 from .. import (
     options,
-    licence,
-    constants as c,
-    internal as i__,
-    __
+    internal,
+    ui,
 )
-from . import dump as dump_
 
-from .vendor import qargparse
+from . import dump
+from ..vendor import qargparse
 
 log = logging.getLogger("ragdoll")
 
@@ -32,6 +23,40 @@ self = sys.modules[__name__]
 self._maya_window = None
 
 px = MQtUtil.dpiScale
+
+EntityRole = QtCore.Qt.UserRole + 0
+TransformRole = QtCore.Qt.UserRole + 1
+OptionsRole = QtCore.Qt.UserRole + 2
+OccupiedRole = QtCore.Qt.UserRole + 3
+HintRole = QtCore.Qt.UserRole + 4
+PathRole = QtCore.Qt.UserRole + 5
+
+
+def _resource(*fname):
+    dirname = os.path.dirname(__file__)
+    resdir = os.path.join(dirname, "resources")
+    return os.path.normpath(os.path.join(resdir, *fname))
+
+
+def _scaled_stylesheet(style):
+    """Replace any mention of <num>px with scaled version
+
+    This way, you can still use px without worrying about what
+    it will look like at HDPI resolution.
+
+    """
+
+    output = []
+    for line in style.splitlines():
+        line = line.rstrip()
+        if line.endswith("px;"):
+            key, value = line.rsplit(" ", 1)
+            value = px(int(value[:-3]))
+            line = "%s %dpx;" % (key, value)
+        output += [line]
+    result = "\n".join(output)
+    result = result % {"res": _resource().replace("\\", "/")}
+    return result
 
 
 class DumpView(QtWidgets.QTreeView):
@@ -526,14 +551,14 @@ class DumpWidget(QtWidgets.QWidget):
         self._widgets["TargetView"].resizeColumnToContents(2)
 
 
-class ImportOptions(Options):
+class ImportOptions(ui.Options):
     def __init__(self, *args, **kwargs):
         super(ImportOptions, self).__init__(*args, **kwargs)
         self.setWindowTitle("Import Options")
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
 
-        loader = dump_.Loader()
+        loader = dump.Loader()
 
         widgets = {
             "DumpWidget": DumpWidget(loader),
@@ -620,7 +645,7 @@ class ImportOptions(Options):
 
     def do_import(self):
         try:
-            if options.read("importMethod") == Load:
+            if options.read("importMethod") == ui.Load:
                 self._loader.load()
             else:
                 self._loader.reinterpret()
@@ -643,7 +668,7 @@ class ImportOptions(Options):
 
         return True
 
-    @i__.with_timing
+    @internal.with_timing
     def reset(self):
         search_replace = self.parser.find("importSearchAndReplace")
         preserve = self.parser.find("importPreserveAttributes")
@@ -662,7 +687,7 @@ class ImportOptions(Options):
         self.on_selection_changed()
 
     def read(self, fname):
-        assert isinstance(fname, i__.string_types), "fname must be string"
+        assert isinstance(fname, internal.string_types), "fname must be string"
 
         current_path = self.parser.find("importPath")
         current_path.write(fname, notify=False)
@@ -765,7 +790,7 @@ class ImportOptions(Options):
             icon = QtGui.QIcon(icon)
 
             items = []
-            fnames = i__.sort_filenames(fnames)
+            fnames = internal.sort_filenames(fnames)
             for fname in fnames:
                 item = {
                     PathRole: fname,
@@ -836,7 +861,7 @@ class ImportOptions(Options):
                 thumbnail = thumbnail.encode("ascii")
 
                 # To QPixmap
-                qthumbnail = base64_to_pixmap(thumbnail)
+                qthumbnail = ui.base64_to_pixmap(thumbnail)
 
                 # Fit it to our widget
                 qthumbnail = qthumbnail.scaled(
@@ -849,7 +874,7 @@ class ImportOptions(Options):
 
     def on_browsed(self):
         path, suffix = QtWidgets.QFileDialog.getOpenFileName(
-            MayaWindow(),
+            ui.MayaWindow(),
             "Open Ragdoll Scene",
             options.read("lastVisitedPath"),
             "Ragdoll scene files (*.rag)"

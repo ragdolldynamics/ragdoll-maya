@@ -1980,10 +1980,12 @@ def toggle_channel_box_attributes(markers, opts=None):
     material_attrs = (
         ".collide",
         ".densityType",
-        # ".mass",
+        # ".mass",  # Auto-hidden when density is enabled
         ".friction",
         ".restitution",
         ".displayType",
+        ".collisionGroup",
+        ".maxDepenetrationVelocity",  # A.k.a. Hardness
     )
 
     shape_attrs = (

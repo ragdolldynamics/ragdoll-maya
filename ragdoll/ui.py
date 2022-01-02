@@ -925,8 +925,8 @@ class Options(QtWidgets.QMainWindow):
         super(Options, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setMouseTracking(True)  # For helptext
-        self.setMinimumWidth(px(570))
-        self.setMaximumWidth(px(570))
+        # self.setMinimumWidth(px(570))
+        # self.setMaximumWidth(px(570))
         self.setMinimumHeight(px(395))
 
         # Infer name from command
@@ -940,6 +940,8 @@ class Options(QtWidgets.QMainWindow):
             "Footer": QtWidgets.QWidget(),
             "Timeline": QtWidgets.QWidget(),
         }
+
+        panels["Body"].setFixedWidth(px(570))
 
         _Button = _with_entered_exited_signals(QtWidgets.QPushButton)
 
@@ -2071,7 +2073,9 @@ class DumpWidget(QtWidgets.QWidget):
         }
 
         widgets = {
-            "Path": QtWidgets.QLineEdit(),
+            "Collapse": QtWidgets.QPushButton(">"),
+            "SourcePath": QtWidgets.QLineEdit(),
+            "DestinationPath": QtWidgets.QLineEdit(),
             "TargetView": DumpView(),
         }
 
@@ -2086,8 +2090,14 @@ class DumpWidget(QtWidgets.QWidget):
             wid.setObjectName(name)
 
         # Setup
+        panels["Body"].setMinimumWidth(px(530))
 
-        widgets["Path"].setReadOnly(True)
+        widgets["Collapse"].setFixedWidth(px(10))
+        widgets["Collapse"].setSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                          QtWidgets.QSizePolicy.Expanding)
+
+        widgets["SourcePath"].setReadOnly(True)
+        widgets["DestinationPath"].setReadOnly(True)
         widgets["TargetView"].mouseMoved.connect(self.on_mouse_moved)
         widgets["TargetView"].setModel(models["TargetModel"])
         widgets["TargetView"].setSelectionBehavior(
@@ -2095,14 +2105,25 @@ class DumpWidget(QtWidgets.QWidget):
 
         # Layout
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(widgets["Path"])
-        layout.addWidget(widgets["TargetView"])
+        layout = QtWidgets.QGridLayout(panels["Body"])
+        layout.addWidget(QtWidgets.QLabel("Source"), 0, 0)
+        layout.addWidget(widgets["SourcePath"], 0, 1)
+        layout.addWidget(QtWidgets.QLabel("Destination"), 1, 0)
+        layout.addWidget(widgets["DestinationPath"], 1, 1)
+        layout.addWidget(widgets["TargetView"], 2, 0, 1, 2)
+        layout.addWidget(QtWidgets.QWidget(), 0, 2)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(px(5))
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.addWidget(widgets["Collapse"])
+        layout.addWidget(panels["Body"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(px(5))
 
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
+        widgets["Collapse"].clicked.connect(self.on_collapse_clicked)
 
         timer = QtCore.QTimer(parent=self)
         timer.setInterval(50.0)  # ms
@@ -2140,6 +2161,10 @@ class DumpWidget(QtWidgets.QWidget):
         tooltip = index.data(HintRole)
         self.hinted.emit(tooltip or "")
 
+    def on_collapse_clicked(self):
+        body = self._panels["Body"]
+        body.setVisible(not body.isVisible())
+
     def on_target_changed(self, current, previous):
         parent = current.parent()
         item = self._models["TargetModel"].index(current.row(), 0, parent)
@@ -2150,13 +2175,25 @@ class DumpWidget(QtWidgets.QWidget):
 
         if self._loader.registry.has(entity, "MarkerUIComponent"):
             MarkerUi = self._loader.registry.get(entity, "MarkerUIComponent")
-            text = MarkerUi["sourceTransform"]
+            source_text = MarkerUi["sourceTransform"]
         else:
             Name = self._loader.registry.get(entity, "NameComponent")
-            text = Name["path"] or Name["value"]
+            source_text = Name["path"] or Name["value"]
 
-        path = self._widgets["Path"]
-        path.setText(text)
+        source_widget = self._widgets["SourcePath"]
+        source_widget.setText(source_text)
+
+        # If there's a destination, put it in the box
+        dest_widget = self._widgets["DestinationPath"]
+
+        transform = item.data(TransformRole)
+        if transform:
+            dest_text = transform.path()
+            dest_widget.setText(dest_text)
+            dest_widget.setPlaceholderText("")
+        else:
+            dest_widget.setText("")
+            dest_widget.setPlaceholderText("No target")
 
     def reset(self):
         # Reset after a given time period.
@@ -2290,6 +2327,7 @@ class DumpWidget(QtWidgets.QWidget):
         solver_to_item = {}
         group_to_item = {}
         marker_to_item = {}
+        constraint_to_item = {}
 
         def _add_solvers(root_item):
             for entity in analysis["solvers"]:
@@ -2300,7 +2338,7 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.DisplayRole] += [Name["path"], "New Solver"]
+                data[QtCore.Qt.DisplayRole] += [label, "New Solver"]
                 data[EntityRole] = entity
                 data[HintRole] += (
                     Name["shortestPath"],
@@ -2322,7 +2360,7 @@ class DumpWidget(QtWidgets.QWidget):
                 data = _default_data()
                 data[EntityRole] = entity
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.DisplayRole] += [Name["shortestPath"]]
+                data[QtCore.Qt.DisplayRole] += [label]
 
                 Scene = self._loader.registry.get(entity, "SceneComponent")
                 parent_item = solver_to_item.get(Scene["entity"])
@@ -2337,8 +2375,10 @@ class DumpWidget(QtWidgets.QWidget):
                 group_to_item[entity] = item
 
         def _add_markers(root_item):
+            registry = self._loader.registry
+
             for entity in analysis["markers"]:
-                Name = self._loader.registry.get(entity, "NameComponent")
+                Name = registry.get(entity, "NameComponent")
 
                 data = _default_data()
                 data[EntityRole] = entity
@@ -2347,8 +2387,83 @@ class DumpWidget(QtWidgets.QWidget):
                 _marker_icon(data, entity)
                 _transform(data, entity)
 
-                Group = self._loader.registry.get(entity, "GroupComponent")
+                Group = registry.get(entity, "GroupComponent")
                 parent_item = group_to_item.get(Group["entity"])
+
+                # A marker may or may not be part of a group,
+                # but is always part of a solver.
+                if not parent_item:
+                    Scene = registry.get(entity, "SceneComponent")
+                    parent_item = solver_to_item.get(Scene["entity"])
+
+                if not parent_item:
+                    parent_item = root_item
+
+                item = qargparse.GenericTreeModelItem(data)
+                parent_item.addChild(item)
+
+                marker_to_item[entity] = item
+
+        def _add_constraints(root_item):
+            registry = self._loader.registry
+
+            for entity in analysis["constraints"]:
+                Name = registry.get(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
+
+                # # Figure out parent and child markers
+                # parent_name = "world"
+                # child_name = "none"
+
+                # Joint = registry.get(entity, "JointComponent")
+
+                # # Any pin constraint faills into this category
+                # try:
+                #     ParentName = registry.get(Joint["parent"], "NameComponent")
+                #     parent_name = ParentName["value"]
+                # except KeyError:
+                #     pass
+
+                # # No valid constraint lacks a child, but it may
+                # # be an invalid constraint that got included in an export
+                # try:
+                #     ChildName = registry.get(Joint["child"], "NameComponent")
+                #     child_name = ChildName["value"]
+                # except KeyError:
+                #     pass
+
+                if registry.has(entity, "FixedJointComponent"):
+                    icon = _resource("icons", "fixed_constraint.png")
+                    target = "New Weld Constraint"
+
+                elif registry.has(entity, "DistanceJointComponent"):
+                    icon = _resource("icons", "distance.png")
+                    target = "New Distance Constraint"
+
+                elif registry.has(entity, "PinJointComponent"):
+                    icon = _resource("icons", "softpin.png")
+                    target = "New Pin Constraint"
+
+                else:
+                    icon = _resource("icons", "constraint.png")
+                    target = "New Constraint"
+
+                icon = QtGui.QIcon(icon)
+
+                right_icon = _resource("icons", "right.png")
+                right_icon = QtGui.QIcon(right_icon)
+
+                data = _default_data()
+                data[QtCore.Qt.DecorationRole] += [icon, right_icon]
+                data[QtCore.Qt.DisplayRole] += [label, target]
+                data[EntityRole] = entity
+                data[HintRole] += (
+                    Name["shortestPath"],
+                    Name["shortestPath"]
+                )
+
+                Scene = registry.get(entity, "SceneComponent")
+                parent_item = solver_to_item.get(Scene["entity"])
 
                 # A marker may or may not be part of a group
                 if not parent_item:
@@ -2357,7 +2472,7 @@ class DumpWidget(QtWidgets.QWidget):
                 item = qargparse.GenericTreeModelItem(data)
                 parent_item.addChild(item)
 
-                marker_to_item[entity] = item
+                constraint_to_item[entity] = item
 
         root_item = qargparse.GenericTreeModelItem({
             QtCore.Qt.DisplayRole: ("Source Node", "Target Node")
@@ -2383,6 +2498,7 @@ class DumpWidget(QtWidgets.QWidget):
             _add_solvers(root_item)
             _add_groups(root_item)
             _add_markers(root_item)
+            _add_constraints(root_item)
 
             self._widgets["TargetView"].setIndentation(px(11))
 
@@ -2400,9 +2516,9 @@ class ImportOptions(Options):
         super(ImportOptions, self).__init__(*args, **kwargs)
         print("Import this")
         self.setWindowTitle("Import Options")
-        self.setMaximumWidth(px(1700))
-        self.setMinimumWidth(px(1000))
-        self.setMinimumHeight(px(560))
+        # self.setMaximumWidth(px(1700))
+        # self.setMinimumWidth(px(1000))
+        # self.setMinimumHeight(px(560))
 
         loader = dump_.Loader()
 
@@ -2413,11 +2529,9 @@ class ImportOptions(Options):
 
         # Integrate with other options
         layout = self._panels["Central"].layout()
-        row = self.parser._row
-        alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
 
         layout.addWidget(widgets["DumpWidget"], 0, 1, 4, 1)
-        layout.setColumnStretch(1, 1)  # Unexpand last row
+        # layout.setColumnStretch(1, 1)  # Expand last row
 
         self.parser._row += 1  # For the next subclass
 

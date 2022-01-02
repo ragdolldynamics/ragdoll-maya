@@ -154,31 +154,12 @@ def DefaultState():
         # Transforms that are already assigned
         "occupied": [],
 
+        # Constraints of all sorts
+        "constraints": [],
+
         # Map entity -> active Maya transform node
         "entityToTransform": {},
     }
-
-
-def _smart_try_setattr(mod, plug, value):
-    try:
-        # In the simplest case, the plug is free
-        mod.set_attr(plug, value)
-
-    except cmdx.LockedError:
-
-        try:
-            # In other cases, it might be connected to a user attributes
-            mod.smart_set_attr(plug, value)
-
-        except cmdx.LockedError:
-            # Connected plug may also be locked or uneditable
-            return False
-
-    except Exception:
-        # Worst case, there's nothing we can do
-        return False
-
-    return True
 
 
 class Loader(object):
@@ -294,6 +275,7 @@ class Loader(object):
         if not self._dirty:
             return self._state
 
+        self._find_constraints()
         self._find_solvers()
         self._find_groups()
         self._find_markers()
@@ -317,22 +299,30 @@ class Loader(object):
 
         solvers = self._state["solvers"]
         groups = self._state["groups"]
-        transforms = self._state["entityToTransform"]
+        constraints = self._state["constraints"]
+        markers = self._state["entityToTransform"]
 
-        if transforms:
+        if solvers:
             log.info("Solvers:")
-            for entity, transform in transforms.items():
-                log.info("  %s -> %s.." % (_name(entity), transform))
+            for entity in solvers:
+                log.info("  %s.." % _name(entity))
 
+        if groups:
+            log.info("Groups:")
+            for entity in groups:
+                log.info("  %s.." % _name(entity))
+
+        if markers:
             log.info("Markers:")
-            for entity, transform in transforms.items():
+            for entity, transform in markers.items():
                 log.info("  %s -> %s.." % (_name(entity), transform))
 
-            log.info("Markers:")
-            for entity, transform in transforms.items():
-                log.info("  %s -> %s.." % (_name(entity), transform))
+        if constraints:
+            log.info("Constraints:")
+            for entity in constraints:
+                log.info("  %s.." % _name(entity))
 
-        if not any([transforms]):
+        if not any([solvers, groups, constraints, markers]):
             log.debug("Dump was empty")
 
     @internal.with_undo_chunk
@@ -370,6 +360,7 @@ class Loader(object):
         rdsolvers = self._create_solvers()
         rdgroups = self._create_groups(rdsolvers)
         rdmarkers = self._create_markers(rdgroups, rdsolvers)
+        rdconstraints = self._create_constraints(rdmarkers)
 
         self._dirty = True
         log.info("Done")
@@ -378,6 +369,7 @@ class Loader(object):
             "solvers": rdsolvers.values(),
             "groups": rdgroups.values(),
             "markers": rdmarkers.values(),
+            "constraints": rdconstraints.values(),
         }
 
     def _create_solvers(self):
@@ -508,14 +500,101 @@ class Loader(object):
             log.info("Reconstructing hierarchy..")
             for entity, rdmarker in rdmarkers.items():
                 Subs = self._registry.get(entity, "SubEntitiesComponent")
-                JointComponent = self._registry.get(Subs["relative"], "JointComponent")
-                parent_entity = JointComponent["parent"]
+                Joint = self._registry.get(Subs["relative"], "JointComponent")
+                parent_entity = Joint["parent"]
 
                 if parent_entity:
                     parent_rdmarker = rdmarkers[parent_entity]
                     mod.connect(parent_rdmarker["ragdollId"], rdmarker["parentMarker"])
 
         return rdmarkers
+
+    def _create_constraints(self, rdmarkers):
+        log.info("Creating constraint(s)..")
+        rdconstraints = {}
+
+        for entity in self._state["constraints"]:
+            Joint = self._registry.get(entity, "JointComponent")
+
+            parent_entity = Joint["parent"]
+            child_entity = Joint["child"]
+
+            if self._registry.has(entity, "DistanceJointComponent"):
+                if not parent_entity:
+                    log.warning(
+                        "Distance constraint without a parent, this is a bug."
+                    )
+
+                if not child_entity:
+                    log.warning(
+                        "Distance constraint without a child, this is a bug."
+                    )
+
+                rdparent = rdmarkers.get(parent_entity)
+                rdchild = rdmarkers.get(child_entity)
+
+                # Some markers may not have been created, e.g.
+                # via user filtering, in which case we can't
+                # make this constraint.
+                if not (rdparent and rdchild):
+                    continue
+
+                rdconstraint = markers_.create_distance_constraint(rdparent, rdchild)
+                rdconstraints[entity] = rdconstraint
+
+            elif self._registry.has(entity, "FixedJointComponent"):
+                if not parent_entity:
+                    log.warning(
+                        "Weld constraint without a parent, this is a bug."
+                    )
+
+                if not child_entity:
+                    log.warning(
+                        "Weld constraint without a child, this is a bug."
+                    )
+
+                rdparent = rdmarkers.get(parent_entity)
+                rdchild = rdmarkers.get(child_entity)
+
+                if not (rdparent and rdchild):
+                    continue
+
+                rdconstraint = markers_.create_fixed_constraint(rdparent, rdchild)
+                rdconstraints[entity] = rdconstraint
+
+            elif self._registry.has(entity, "PinJointComponent"):
+                if not child_entity:
+                    log.warning(
+                        "Pin constraint without a child, this is a bug."
+                    )
+
+                rdchild = rdmarkers.get(child_entity)
+
+                if not rdchild:
+                    continue
+
+                rdconstraint = markers_.create_pin_constraint(rdchild)
+                rdconstraints[entity] = rdconstraint
+
+        if self._opts["preserveAttributes"]:
+            with cmdx.DagModifier() as mod:
+                for entity, rdconstraint in rdconstraints.items():
+                    self._apply_constraint(mod, entity, rdconstraint)
+
+        return rdconstraints
+
+    def _find_constraints(self):
+        constraints = self._state["constraints"]
+        constraints[:] = []
+
+        for entity in self._registry.view("DistanceJointUIComponent"):
+            constraints.append(entity)
+
+        for entity in self._registry.view("PinJointUIComponent"):
+            constraints.append(entity)
+
+        for entity in self._registry.view("FixedJointComponent"):
+            constraints.append(entity)
 
     def _find_solvers(self):
         solvers = self._state["solvers"]
@@ -601,7 +680,7 @@ class Loader(object):
             order = self._registry.get(entity, "OrderComponent")
             return order["value"]
 
-        markers[:] = sorted(markers, key=sort)
+        markers[:] = sorted(markers, key=sort, reverse=True)
 
     def _apply_solver(self, mod, entity, solver):
         Solver = self._registry.get(entity, "SolverComponent")
@@ -628,31 +707,31 @@ class Loader(object):
             "PCM": 1,
         }.get(Solver["collisionDetectionType"], 1)
 
-        mod.smart_set_attr(solver["solverType"], solver_type)
-        mod.smart_set_attr(solver["cache"], cache_method)
-        mod.smart_set_attr(solver["frameskipMethod"], frameskip_method)
-        mod.smart_set_attr(solver["collisionDetectionType"], collision_type)
-        mod.smart_set_attr(solver["enabled"], Solver["enabled"])
-        mod.smart_set_attr(solver["airDensity"], Solver["airDensity"])
-        mod.smart_set_attr(solver["gravity"], Solver["gravity"])
-        mod.smart_set_attr(solver["substeps"], Solver["substeps"])
-        mod.smart_set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
-        mod.smart_set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
-        mod.smart_set_attr(solver["positionIterations"], Solver["positionIterations"])
-        mod.smart_set_attr(solver["velocityIterations"], Solver["velocityIterations"])
+        mod.set_attr(solver["solverType"], solver_type)
+        mod.set_attr(solver["cache"], cache_method)
+        mod.set_attr(solver["frameskipMethod"], frameskip_method)
+        mod.set_attr(solver["collisionDetectionType"], collision_type)
+        mod.set_attr(solver["enabled"], Solver["enabled"])
+        mod.set_attr(solver["airDensity"], Solver["airDensity"])
+        mod.set_attr(solver["gravity"], Solver["gravity"])
+        mod.set_attr(solver["substeps"], Solver["substeps"])
+        mod.set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
+        mod.set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
+        mod.set_attr(solver["positionIterations"], Solver["positionIterations"])
+        mod.set_attr(solver["velocityIterations"], Solver["velocityIterations"])
 
-        mod.smart_set_attr(solver["linearLimitStiffness"], SolverUi["linearLimitStiffness"])
-        mod.smart_set_attr(solver["linearLimitDamping"], SolverUi["linearLimitDamping"])
-        mod.smart_set_attr(solver["angularLimitStiffness"], SolverUi["angularLimitStiffness"])
-        mod.smart_set_attr(solver["angularLimitDamping"], SolverUi["angularLimitDamping"])
-        mod.smart_set_attr(solver["linearConstraintStiffness"], SolverUi["linearConstraintStiffness"])
-        mod.smart_set_attr(solver["linearConstraintDamping"], SolverUi["linearConstraintDamping"])
-        mod.smart_set_attr(solver["angularConstraintStiffness"], SolverUi["angularConstraintStiffness"])
-        mod.smart_set_attr(solver["angularConstraintDamping"], SolverUi["angularConstraintDamping"])
-        mod.smart_set_attr(solver["linearDriveStiffness"], SolverUi["linearDriveStiffness"])
-        mod.smart_set_attr(solver["linearDriveDamping"], SolverUi["linearDriveDamping"])
-        mod.smart_set_attr(solver["angularDriveStiffness"], SolverUi["angularDriveStiffness"])
-        mod.smart_set_attr(solver["angularDriveDamping"], SolverUi["angularDriveDamping"])
+        mod.set_attr(solver["linearLimitStiffness"], SolverUi["linearLimitStiffness"])
+        mod.set_attr(solver["linearLimitDamping"], SolverUi["linearLimitDamping"])
+        mod.set_attr(solver["angularLimitStiffness"], SolverUi["angularLimitStiffness"])
+        mod.set_attr(solver["angularLimitDamping"], SolverUi["angularLimitDamping"])
+        mod.set_attr(solver["linearConstraintStiffness"], SolverUi["linearConstraintStiffness"])
+        mod.set_attr(solver["linearConstraintDamping"], SolverUi["linearConstraintDamping"])
+        mod.set_attr(solver["angularConstraintStiffness"], SolverUi["angularConstraintStiffness"])
+        mod.set_attr(solver["angularConstraintDamping"], SolverUi["angularConstraintDamping"])
+        mod.set_attr(solver["linearDriveStiffness"], SolverUi["linearDriveStiffness"])
+        mod.set_attr(solver["linearDriveDamping"], SolverUi["linearDriveDamping"])
+        mod.set_attr(solver["angularDriveStiffness"], SolverUi["angularDriveStiffness"])
+        mod.set_attr(solver["angularDriveDamping"], SolverUi["angularDriveDamping"])
 
     def _apply_group(self, mod, entity, group):
         GroupUi = self._registry.get(entity, "GroupUIComponent")
@@ -670,13 +749,52 @@ class Loader(object):
             "Custom": 3
         }.get(GroupUi["driveSpace"], 1)
 
-        mod.smart_set_attr(group["inputType"], input_type)
-        mod.smart_set_attr(group["driveSpace"], drive_space)
-        mod.smart_set_attr(group["enabled"], GroupUi["enabled"])
-        mod.smart_set_attr(group["selfCollide"], GroupUi["selfCollide"])
-        mod.smart_set_attr(group["driveStiffness"], GroupUi["stiffness"])
-        mod.smart_set_attr(group["driveDampingRatio"], GroupUi["dampingRatio"])
-        mod.smart_set_attr(group["driveSpaceCustom"], GroupUi["driveSpaceCustom"])
+        mod.set_attr(group["inputType"], input_type)
+        mod.set_attr(group["driveSpace"], drive_space)
+        mod.set_attr(group["enabled"], GroupUi["enabled"])
+        mod.set_attr(group["selfCollide"], GroupUi["selfCollide"])
+        mod.set_attr(group["driveStiffness"], GroupUi["stiffness"])
+        mod.set_attr(group["driveDampingRatio"], GroupUi["dampingRatio"])
+        mod.set_attr(group["driveSpaceCustom"], GroupUi["driveSpaceCustom"])
+
+    def _apply_constraint(self, mod, entity, con):
+        Joint = self._registry.get(entity, "JointComponent")
+
+        # Common across all constraints
+        mod.set_attr(con["enabled"], Joint["enabled"])
+
+        if self._registry.has(entity, "FixedJointComponent"):
+            # No attributes for you
+            pass
+
+        elif self._registry.has(entity, "DistanceJointComponent"):
+            Con = self._registry.get(entity, "DistanceJointComponent")
+            Ui = self._registry.get(entity, "DistanceJointUIComponent")
+
+            method = {
+                "FromStart": 0,
+                "Minimum": 1,
+                "Maximum": 2,
+                "Custom": 3,
+            }.get(Con["method"], 0)
+
+            mod.set_attr(con["stiffness"], Ui["stiffness"])
+            mod.set_attr(con["dampingRatio"], Ui["dampingRatio"])
+            mod.set_attr(con["maximum"], Con["maximum"])
+            mod.set_attr(con["minimum"], Con["minimum"])
+            mod.set_attr(con["tolerance"], Con["tolerance"])
+            mod.set_attr(con["method"], method)
+
+        elif self._registry.has(entity, "PinJointComponent"):
+            Ui = self._registry.get(entity, "PinJointUIComponent")
+
+            mod.set_attr(con["linearStiffness"], Ui["linearStiffness"])
+            mod.set_attr(con["linearDampingRatio"], Ui["linearDampingRatio"])
+            mod.set_attr(con["angularStiffness"], Ui["angularStiffness"])
+            mod.set_attr(con["angularDampingRatio"], Ui["angularDampingRatio"])
+
+        else:
+            log.warning("Could not apply unsupported constraint: %s" % con)
 
     def _apply_marker(self, mod, entity, marker):
         Desc = self._registry.get(entity, "GeometryDescriptionComponent")
@@ -698,65 +816,58 @@ class Loader(object):
             "Custom": 3
         }.get(MarkerUi["driveSpace"], 0)
 
-        mod.smart_set_attr(marker["mass"], MarkerUi["mass"])
-        mod.smart_set_attr(marker["inputType"], input_type)
-        mod.smart_set_attr(marker["driveSpace"], drive_space)
-        mod.smart_set_attr(marker["driveSpaceCustom"], MarkerUi["driveSpaceCustom"])
-        mod.smart_set_attr(marker["driveStiffness"], MarkerUi["driveStiffness"])
-        mod.smart_set_attr(marker["driveDampingRatio"], MarkerUi["driveDampingRatio"])
-        mod.smart_set_attr(marker["driveAbsoluteLinear"], MarkerUi["driveAbsoluteLinear"])
-        mod.smart_set_attr(marker["driveAbsoluteAngular"], MarkerUi["driveAbsoluteAngular"])
-        mod.smart_set_attr(marker["limitStiffness"], MarkerUi["limitStiffness"])
-        mod.smart_set_attr(marker["limitDampingRatio"], MarkerUi["limitDampingRatio"])
-        mod.smart_set_attr(marker["collisionGroup"], MarkerUi["collisionGroup"])
-        mod.smart_set_attr(marker["friction"], Rigid["friction"])
-        mod.smart_set_attr(marker["restitution"], Rigid["restitution"])
-        mod.smart_set_attr(marker["collide"], Rigid["collide"])
-        mod.smart_set_attr(marker["linearDamping"], Rigid["linearDamping"])
-        mod.smart_set_attr(marker["angularDamping"], Rigid["angularDamping"])
-        mod.smart_set_attr(marker["positionIterations"],
-                           Rigid["positionIterations"])
-        mod.smart_set_attr(marker["velocityIterations"],
-                           Rigid["velocityIterations"])
-        mod.smart_set_attr(marker["maxContactImpulse"],
-                           Rigid["maxContactImpulse"])
-        mod.smart_set_attr(marker["maxDepenetrationVelocity"],
-                           Rigid["maxDepenetrationVelocity"])
-        # mod.smart_set_attr(marker["enableCCD"], Rigid["enableCCD"])
-        mod.smart_set_attr(marker["angularMass"], Rigid["angularMass"])
-        mod.smart_set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
+        density_type = {
+            "Off": 0,
+            "Wood": 1,
+            "Flesh": 2,
+            "Uranium": 3,
+            "BlackHole": 4,
+            "Custom": 5,
+        }.get(Rigid["densityType"], 0)
 
-        mod.smart_set_attr(marker["shapeExtents"], Desc["extents"])
-        mod.smart_set_attr(marker["shapeLength"], Desc["length"])
-        mod.smart_set_attr(marker["shapeRadius"], Desc["radius"])
-        mod.smart_set_attr(marker["shapeOffset"], Desc["offset"])
+        mod.set_attr(marker["mass"], MarkerUi["mass"])
+        mod.set_attr(marker["densityType"], density_type)
+        mod.set_attr(marker["densityCustom"], Rigid["densityCustom"])
+        mod.set_attr(marker["inputType"], input_type)
+        mod.set_attr(marker["driveSpace"], drive_space)
+        mod.set_attr(marker["driveSpaceCustom"], MarkerUi["driveSpaceCustom"])
+        mod.set_attr(marker["driveStiffness"], MarkerUi["driveStiffness"])
+        mod.set_attr(marker["driveDampingRatio"], MarkerUi["driveDampingRatio"])
+        mod.set_attr(marker["driveAbsoluteLinear"], MarkerUi["driveAbsoluteLinear"])
+        mod.set_attr(marker["driveAbsoluteAngular"], MarkerUi["driveAbsoluteAngular"])
+        mod.set_attr(marker["limitStiffness"], MarkerUi["limitStiffness"])
+        mod.set_attr(marker["limitDampingRatio"], MarkerUi["limitDampingRatio"])
+        mod.set_attr(marker["collisionGroup"], MarkerUi["collisionGroup"])
+        mod.set_attr(marker["friction"], Rigid["friction"])
+        mod.set_attr(marker["restitution"], Rigid["restitution"])
+        mod.set_attr(marker["collide"], Rigid["collide"])
+        mod.set_attr(marker["linearDamping"], Rigid["linearDamping"])
+        mod.set_attr(marker["angularDamping"], Rigid["angularDamping"])
+        mod.set_attr(marker["positionIterations"], Rigid["positionIterations"])
+        mod.set_attr(marker["velocityIterations"], Rigid["velocityIterations"])
+        mod.set_attr(marker["maxContactImpulse"], Rigid["maxContactImpulse"])
+        mod.set_attr(marker["maxDepenetrationVelocity"],
+                     Rigid["maxDepenetrationVelocity"])
+        mod.set_attr(marker["angularMass"], Rigid["angularMass"])
+        mod.set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
+
+        shape_type = {
+            "Box": 0,
+            "Sphere": 1,
+            "Capsule": 2,
+            "ConvexHull": 3,
+        }.get(Desc["type"], 0)
+
+        mod.set_attr(marker["shapeType"], shape_type)
+        mod.set_attr(marker["shapeExtents"], Desc["extents"])
+        mod.set_attr(marker["shapeLength"], Desc["length"])
+        mod.set_attr(marker["shapeRadius"], Desc["radius"])
+        mod.set_attr(marker["shapeOffset"], Desc["offset"])
+        mod.set_attr(marker["color"], Color["value"])
 
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
-        mod.smart_set_attr(marker["shapeRotation"], rotation)
-
-        mod.smart_set_attr(marker["color"], Color["value"])
-        # mod.smart_set_attr(marker["drawShaded"], MarkerUi["shaded"])
-
-        # Establish shape
-        if Desc["type"] in ("Cylinder", "Capsule"):
-            mod.smart_set_attr(marker["shapeType"], constants.CapsuleShape)
-
-        elif Desc["type"] == "Box":
-            mod.smart_set_attr(marker["shapeType"], constants.BoxShape)
-
-        elif Desc["type"] == "Sphere":
-            mod.smart_set_attr(marker["shapeType"], constants.SphereShape)
-
-        elif Desc["type"] == "ConvexHull":
-            mod.smart_set_attr(marker["shapeType"], constants.MeshShape)
-
-        else:
-            Name = self._registry.get(entity, "NameComponent")
-            log.debug(
-                "Unsupported shape type: %s.type=%s"
-                % (Name["name"], Desc["type"])
-            )
+        mod.set_attr(marker["shapeRotation"], rotation)
 
 
 def load(fname, roots=None):

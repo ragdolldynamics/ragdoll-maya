@@ -3858,27 +3858,6 @@ def _rdconstraint(mod, name, parent):
     return node
 
 
-def _rddistanceconstraint(mod, name, parent):
-    name = i__.unique_name(name)
-    node = mod.create_node("rdDistanceConstraint", name=name, parent=parent)
-    mod.set_attr(node["version"], i__.version())
-    return node
-
-
-def _rdfixedconstraint(mod, name, parent):
-    name = i__.unique_name(name)
-    node = mod.create_node("rdFixedConstraint", name=name, parent=parent)
-    mod.set_attr(node["version"], i__.version())
-    return node
-
-
-def _rdpinconstraint(mod, name, parent):
-    name = i__.unique_name(name)
-    node = mod.create_node("rdPinConstraint", name=name, parent=parent)
-    mod.set_attr(node["version"], i__.version())
-    return node
-
-
 def _rdconstraintmultiplier(mod, name, parent):
     """Create a new rdConstraint node"""
     name = i__.unique_name(name)

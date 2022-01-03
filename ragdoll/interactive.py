@@ -47,16 +47,15 @@ from . import (
     commands,
     upgrade,
     ui,
+    io,
     options,
     licence,
     dump,
-    tools,
     telemetry,
     constants as c,
     internal as i__,
     __
 )
-from .tools import markers_tool as markers_
 
 # Backwards compatibility
 from .legacy import fixes as legacy_fixes
@@ -116,6 +115,7 @@ from .legacy.interactive import (
     set_initial_state_options as legacy_set_initial_state_options,
     clear_initial_state as legacy_clear_initial_state,
     clear_initial_state_options as legacy_clear_initial_state_options,
+    show_constraint_editor as legacy_show_constraint_editor,
     _constraint_options as _legacy_constraint_options
 )
 
@@ -806,7 +806,7 @@ def install_menu():
                  legacy_edit_constraint_frames,
                  label="Edit Pivots")
 
-            item("constraintEditor", show_constraint_editor)
+            item("constraintEditor", legacy_show_constraint_editor)
 
         with submenu("Controls", icon="control.png"):
             item("hardPin", legacy_create_hard_pin,
@@ -1266,10 +1266,10 @@ def _find_current_solver(create_ground=True):
         return solver[0]
 
     else:
-        solver = markers_.create_solver()
+        solver = commands.create_solver()
 
         if create_ground:
-            markers_.create_ground(solver)
+            commands.create_ground(solver)
 
     return solver
 
@@ -1347,7 +1347,7 @@ def assign_single(selection=None, **opts):
 
     try:
         for transform in selection:
-            new_markers = markers_.assign([transform], solver, opts={
+            new_markers = commands.assign([transform], solver, opts={
                 "autoLimit": opts["autoLimit"],
                 "density": opts["density"],
                 "materialInChannelBox": bool(opts["materialInChannelBox"]),
@@ -1359,7 +1359,7 @@ def assign_single(selection=None, **opts):
         raise i__.UserWarning("Already assigned", str(e))
 
     if opts["createLollipop"]:
-        markers_.create_lollipop(markers)
+        commands.create_lollipop(markers)
 
     if opts["createObjectSet"]:
         _add_to_objset(markers)
@@ -1396,7 +1396,7 @@ def assign_and_connect(selection=None, **opts):
     solver = _find_current_solver(opts["createGround"])
 
     try:
-        assigned = tools.assign_markers(selection, solver, opts={
+        assigned = commands.assign_markers(selection, solver, opts={
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
             "materialInChannelBox": opts["materialInChannelBox"],
@@ -1404,14 +1404,14 @@ def assign_and_connect(selection=None, **opts):
             "limitInChannelBox": opts["limitInChannelBox"],
         })
 
-    except markers_.AlreadyAssigned as e:
+    except commands.AlreadyAssigned as e:
         raise i__.UserWarning("Already assigned", str(e))
 
     except Exception as e:
         raise i__.UserWarning("An unexpected error occurred", str(e))
 
     if opts["createLollipop"]:
-        tools.create_lollipop(assigned)
+        commands.create_lollipop(assigned)
 
     if opts["createObjectSet"]:
         _add_to_objset(assigned)
@@ -1453,7 +1453,7 @@ def create_distance_constraint(selection=None, **opts):
             "%s wasn't a marker" % selection[1]
         )
 
-    con = markers_.create_distance_constraint(a, b)
+    con = commands.create_distance_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True
@@ -1490,7 +1490,7 @@ def create_fixed_constraint(selection=None, **opts):
             "%s wasn't a marker" % selection[1]
         )
 
-    con = markers_.create_fixed_constraint(a, b)
+    con = commands.create_fixed_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True
@@ -1512,7 +1512,7 @@ def create_pin_constraint(selection=None, **opts):
                 "%s wasn't a marker" % selection[0]
             )
 
-        con = markers_.create_pin_constraint(a)
+        con = commands.create_pin_constraint(a)
         cons += [con.path()]
 
     cmds.select(cons)
@@ -1551,7 +1551,7 @@ def create_pose_constraint(selection=None, **opts):
             "%s wasn't a marker" % selection[1]
         )
 
-    con = markers_.create_pose_constraint(a, b)
+    con = commands.create_pose_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True
@@ -1599,7 +1599,7 @@ def snap_markers(selection=None, **opts):
         include += _filtered_selection(cmdx.kDagNode, selection)
 
     for solver in solvers:
-        markers_.snap(solver, {
+        io.snap(solver, {
             "include": include,
             "ignoreJoints": opts["ignoreJoints"],
             "maintainOffset": opts["maintainOffset"],
@@ -1685,7 +1685,7 @@ def record_markers(selection=None, **opts):
     timer = i__.Timer("record")
     for solver in solvers:
         with timer as duration, progressbar() as p:
-            recorder = markers_._Recorder(solver, {
+            instance = io._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
                 "include": include,
@@ -1700,7 +1700,7 @@ def record_markers(selection=None, **opts):
             })
 
             previous_progress = 0
-            for step, progress in recorder.record():
+            for step, progress in instance.record():
                 progress = int(progress)
 
                 if progress % 5 == 0 and progress != previous_progress:
@@ -1763,13 +1763,13 @@ def extract_markers(selection=None, **opts):
     for solver in solvers:
         with timer as duration, progressbar() as p, refresh_suspended():
             start_time = solver["_startTime"].as_time()
-            recorder = markers_._Recorder(solver, {
+            instance = io._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
             })
 
             previous_progress = 0
-            for status in recorder.extract():
+            for status in instance.extract():
                 step, progress = status
                 progress = int(progress)
 
@@ -1830,7 +1830,7 @@ def retarget_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    markers_.retarget(a, b, opts)
+    commands.retarget(a, b, opts)
 
     return kSuccess
 
@@ -1959,7 +1959,7 @@ def toggle_channel_box_attributes(selection=None, **opts):
             "No markers were found to toggle attributes on."
         )
 
-    visible = markers_.toggle_channel_box_attributes(markers, opts=opts)
+    visible = commands.toggle_channel_box_attributes(markers, opts=opts)
 
     log.info("Successfully %s attributes for %d markers" % (
         ("hid" if visible else "showed"), len(markers)
@@ -1979,7 +1979,7 @@ def reset_marker_constraint_frames(selection=None, **opts):
             continue
 
         with cmdx.DGModifier() as mod:
-            markers_.reset_constraint_frames(mod, marker)
+            commands.reset_constraint_frames(mod, marker)
 
     return kSuccess
 
@@ -2042,7 +2042,7 @@ def select_child_markers(selection=None, **opts):
 def snap_to_sim(selection=None, **opts):
     selection = selection or cmdx.sl()
     selection = cmdx.ls(selection, type=("transform", "joint"))
-    tools.snap_markers(selection)
+    io.snap(selection)
     return kSuccess
 
 
@@ -2065,7 +2065,7 @@ def create_lollipop(selection=None, **opts):
             "Select one or more markers to assign a lollipop to."
         )
 
-    tools.create_lollipop(markers)
+    commands.create_lollipop(markers)
 
     return kSuccess
 
@@ -2091,7 +2091,7 @@ def auto_limit(selection=None, **opts):
 
     with cmdx.DagModifier() as mod:
         for marker in markers:
-            markers_.auto_limit(mod, marker)
+            commands.auto_limit(mod, marker)
 
     log.info(
         "Successfully transferred locked channels "
@@ -2113,7 +2113,7 @@ def cache_all(selection=None, **opts):
 
     total_frames = 0
     with i__.Timer() as duration, progressbar() as p:
-        it = markers_.cache(solvers)
+        it = commands.cache(solvers)
 
         previous_progress = 0
         for progress in it:
@@ -2185,7 +2185,7 @@ def link_solver(selection=None, **opts):
             "%s or %s was not two solvers." % (a, b)
         )
 
-    markers_.link(a, b)
+    commands.link(a, b)
 
     # Trigger a draw refresh
     cmds.select(cmds.ls(selection=True))
@@ -2211,7 +2211,7 @@ def unlink_solver(selection=None, **opts):
         solvers += [solver]
 
     for solver in solvers:
-        markers_.unlink(solver)
+        commands.unlink(solver)
         log.info("Successfully unlinked %s" % solver)
 
     # Trigger a draw refresh
@@ -2309,7 +2309,7 @@ def replace_marker_mesh(selection=None, **opts):
                 "2 or more meshes selected, pick one."
             )
 
-    markers_.replace_mesh(markers[0], meshes[0], opts=opts)
+    commands.replace_mesh(markers[0], meshes[0], opts=opts)
 
     return kSuccess
 
@@ -2333,17 +2333,11 @@ def edit_marker_constraint_frames(selection=None):
         markers.add(marker)
 
     for marker in markers:
-        frames.extend(markers_.edit_constraint_frames(marker))
+        frames.extend(commands.edit_constraint_frames(marker))
 
     log.info("Created %d pivots" % len(frames))
     cmds.select(list(map(str, frames)))
     return kSuccess
-
-
-def show_constraint_editor(selection=None):
-    window = ui.PivotEditor(parent=ui.MayaWindow())
-    tools.show_pivot_editor(window)
-    pass
 
 
 @i__.with_undo_chunk

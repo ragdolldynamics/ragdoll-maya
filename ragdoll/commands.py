@@ -9,18 +9,1031 @@ NOTE: Every function in here MUST be undoable as-one.
 
 """
 
-import sys
 import logging
-import functools
 
 from maya import cmds
 from .vendor import cmdx
 from . import (
-    internal as i__,
-    constants as c
+    internal,
+    constants,
+    nodes,
 )
 
 log = logging.getLogger("ragdoll")
+
+# Exceptions thrown in this module
+AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
+LockedTransformLimits = type("LockedTransformLimits", (RuntimeError,), {})
+
+
+def assign_markers(transforms, solver, opts=None):
+    """Assign markers to `transforms` belonging to `solver`
+
+    Each marker transfers the translation and rotation of each transform
+    and generates its physical equivalent, ready for recording.
+
+    Options:
+        autoLimit (bool): Transfer locked channels into physics limits
+        density (enum): Auto-compute mass based on volume and a density,
+            such as Flesh or Wood
+        materialInChannelBox (bool): Show material attributes in Channel Box
+        shapeInChannelBox (bool): Show shape attributes in Channel Box
+        limitInChannelBox (bool): Show limit attributes in Channel Box
+
+    """
+
+    assert len(transforms) > 0, "Nothing to assign_markers to"
+
+    opts = dict({
+        "autoLimit": None,
+        "density": constants.DensityFlesh,
+        "materialInChannelBox": True,
+        "shapeInChannelBox": True,
+        "limitInChannelBox": False,
+    }, **(opts or {}))
+
+    if len(transforms) == 1:
+        other = transforms[0]["message"].output(type="rdMarker")
+
+        if other is not None:
+            raise AlreadyAssigned(
+                "%s was already assigned a marker" % transforms[0]
+            )
+
+    else:
+        existing = []
+        for t in transforms[1:]:
+            other = t["message"].output(type="rdMarker")
+            if other is not None:
+                existing += [other]
+
+        if existing:
+            raise AlreadyAssigned(
+                "At least %d transform(s) were already assigned"
+                % len(existing)
+            )
+
+    time1 = cmdx.encode("time1")
+    parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
+
+    group = None
+    root_transform = transforms[0]
+
+    if len(transforms) > 1:
+        if parent_marker:
+            group = parent_marker["startState"].output(type="rdGroup")
+
+            # Already got a marker
+            transforms.pop(0)
+
+        if not group:
+            with cmdx.DagModifier() as mod:
+                name = root_transform.name(namespace=False)
+                group = _create_group(
+                    mod, name="%s_rGroup" % name, solver=solver
+                )
+
+    markers = {}
+    with cmdx.DGModifier() as dgmod:
+        for index, transform in enumerate(transforms):
+            name = "rMarker_%s" % transform.name()
+            marker = nodes.create("rdMarker", dgmod, name=name)
+
+            try:
+                children = [transforms[index + 1]]
+            except IndexError:
+                children = None
+
+            if parent_marker:
+                parent_transform = parent_marker["inputMatrix"].input()
+                dgmod.set_attr(marker["recordTranslation"], False)
+            else:
+                parent_transform = None
+
+            shape = transform.shape(type=("mesh",
+                                          "nurbsCurve",
+                                          "nurbsSurface"))
+
+            if shape and shape.type() == "mesh":
+                dgmod.connect(shape["outMesh"],
+                              marker["inputGeometry"])
+
+            if shape and shape.type() in ("nurbsCurve", "nurbsSurface"):
+                dgmod.connect(shape["local"],
+                              marker["inputGeometry"])
+
+            # It's a limb
+            if parent_marker or len(transforms) > 1:
+                geo = infer_geometry(transform,
+                                     parent_transform,
+                                     children)
+
+                geo.shape_type = constants.CapsuleShape
+
+            # It's a lone object
+            else:
+                dgmod.set_attr(marker["inputType"], constants.InputOff)
+
+                if shape:
+                    geo = _interpret_shape2(shape)
+
+                else:
+                    geo = infer_geometry(transform)
+                    geo.shape_type = constants.CapsuleShape
+
+            # Make the root passive
+            if len(transforms) > 1 and not parent_marker:
+                dgmod.set_attr(marker["inputType"], constants.InputKinematic)
+
+            dgmod.set_attr(marker["shapeType"], geo.shape_type)
+            dgmod.set_attr(marker["shapeExtents"], geo.extents)
+            dgmod.set_attr(marker["shapeLength"], geo.length)
+            dgmod.set_attr(marker["shapeRadius"], geo.radius)
+            dgmod.set_attr(marker["shapeRotation"], geo.shape_rotation)
+            dgmod.set_attr(marker["shapeOffset"], geo.shape_offset)
+            dgmod.set_attr(marker["densityType"], opts["density"])
+
+            # Assign some random color, within some nice range
+            dgmod.set_attr(marker["color"], internal.random_color())
+            dgmod.set_attr(marker["version"], internal.version())
+
+            dgmod.set_attr(marker["originMatrix"],
+                           transform["worldMatrix"][0].as_matrix())
+
+            dgmod.connect(transform["message"], marker["src"])
+            dgmod.connect(transform["message"], marker["dst"][0])
+            dgmod.connect(time1["outTime"], marker["currentTime"])
+            dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
+            dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
+            dgmod.connect(transform["rotatePivotTranslate"],
+                          marker["rotatePivotTranslate"])
+
+            # For the offset, we need to store the difference between
+            # the source and destination transforms. At the time of
+            # creation, these are the same.
+            dgmod.set_attr(marker["offsetMatrix"][0], cmdx.Matrix4())
+
+            if transform.type() == "joint":
+                draw_scale = geo.length * 0.25
+            else:
+                draw_scale = sum(geo.extents) / 3.0
+
+            dgmod.set_attr(marker["drawScale"], draw_scale)
+
+            # Currently not implemented
+            dgmod.lock_attr(marker["recordToExistingKeys"])
+            dgmod.lock_attr(marker["recordToExistingTangents"])
+
+            if group:
+                _add_to_group(dgmod, marker, group)
+
+                if parent_marker is not None:
+                    dgmod.connect(parent_marker["ragdollId"],
+                                  marker["parentMarker"])
+
+                parent_marker = marker
+
+            else:
+                _add_to_solver(dgmod, marker, solver)
+
+            # Keep next_available_index() up-to-date
+            dgmod.do_it()
+
+            # Used as a basis for angular limits
+            reset_constraint_frames(dgmod, marker)
+
+            # No limits on per default
+            dgmod.set_attr(marker["limitRange"], (0, 0, 0))
+
+            if opts["autoLimit"]:
+                auto_limit(dgmod, marker)
+
+            markers[transform] = marker
+
+    markers = list(markers.values())
+
+    toggle_channel_box_attributes(markers, opts={
+        "materialAttributes": opts["materialInChannelBox"],
+        "shapeAttributes": opts["shapeInChannelBox"],
+        "limitAttributes": opts["limitInChannelBox"],
+    })
+
+    return markers
+
+
+def assign_marker(transform, solver, opts=None):
+    """Convenient function for passing and recieving a single node"""
+    return assign_markers([transform], solver, opts)[0]
+
+
+def create_lollipop(markers):
+    r"""Create a NURBS control for `marker` for convenience
+
+       ____
+      \    |
+       \___|
+       /
+      /
+     /
+    /
+
+    The NURBS control will carry its own Channel Box contents, making
+    it easier to spot and manipulate in a complex rig scenario.
+
+    """
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            transform = marker["src"].input()
+            name = transform.name(namespace=False)
+
+            # R_armBlend2_JNT --> R_armBlend2
+            name = name.rsplit("_", 1)[0]
+
+            # R_armBlend2 -> R_armBlend2_MRK
+            name = name + "_MRK"
+
+            lol = mod.create_node("transform", name=name, parent=transform)
+            mod.set_keyable(lol["translateX"], False)
+            mod.set_keyable(lol["translateY"], False)
+            mod.set_keyable(lol["translateZ"], False)
+            mod.set_keyable(lol["rotateX"], False)
+            mod.set_keyable(lol["rotateY"], False)
+            mod.set_keyable(lol["rotateZ"], False)
+            mod.set_keyable(lol["scaleX"], False)
+            mod.set_keyable(lol["scaleY"], False)
+            mod.set_keyable(lol["scaleZ"], False)
+
+            mod.set_attr(lol["overrideEnabled"], True)
+            mod.set_attr(lol["overrideShading"], False)
+            mod.set_attr(lol["overrideColor"], constants.YellowIndex)
+
+            # Find a suitable scale
+            scale = list(sorted(marker["shapeExtents"].read()))[1]
+            mod.set_attr(lol["scale"], scale * 0.25)
+
+            # Make shape
+            mod.do_it()
+            curve = cmdx.curve(
+                lol, points=(
+                    (-0, +0, +0),
+                    (-0, +4, +0),
+                    (-1, +5, +0),
+                    (-0, +6, +0),
+                    (+1, +5, +0),
+                    (-0, +4, +0),
+                ), mod=mod
+            )
+
+            # Delete this alongside physics
+            _take_ownership(mod, marker, lol)
+
+            # Hide from channelbox
+            mod.set_attr(curve["isHistoricallyInteresting"], False)
+
+
+def auto_limit(mod, marker):
+    """Automatically derive physical limits based on locked rotate channels"""
+
+    try:
+        dst = marker["dst"][0].input()
+
+    except IndexError:
+        # It's possible there is no target
+        raise RuntimeError("No destination transform for %s" % marker)
+
+    # Everything is unlocked
+    if not any(dst["r" + axis].locked for axis in "xyz"):
+        return
+
+    locked = set()
+
+    if dst["rx"].locked:
+        mod.set_attr(marker["limitRangeX"], cmdx.radians(-1))
+        locked.add("rx")
+
+    if dst["ry"].locked:
+        mod.set_attr(marker["limitRangeY"], cmdx.radians(-1))
+        locked.add("ry")
+
+    if dst["rz"].locked:
+        mod.set_attr(marker["limitRangeZ"], cmdx.radians(-1))
+        locked.add("rz")
+
+    # In case of common locked combinations, give the remaining
+    # axis a visible limit.
+    if locked == {"ry", "rz"}:
+        mod.set_attr(marker["limitRangeX"], cmdx.radians(45))
+
+    if locked == {"rx", "rz"}:
+        mod.set_attr(marker["limitRangeY"], cmdx.radians(45))
+
+    if locked == {"rx", "ry"}:
+        mod.set_attr(marker["limitRangeZ"], cmdx.radians(45))
+
+
+def cache(solvers):
+    """Persistently store the simulated result of the `solvers`
+
+    Use this to scrub the timeline both backwards and forwards without
+    resimulating anything.
+
+    """
+
+    # Remember where we came from
+    initial_time = cmdx.current_time()
+
+    for solver in solvers:
+        start_time = solver["_startTime"].asTime()
+
+        # Clear existing cache
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 0)
+
+        # Special case of caching whilst standing on the start time.
+        if initial_time == start_time:
+            next_time = start_time + cmdx.om.MTime(1, cmdx.TimeUiUnit())
+            # Ensure start frame is visited from a frame other than
+            # the start frame, as that's when non-keyed plugs are dirtied
+            #
+            # |   |   |   |   |   |
+            # |===|---------------|
+            # <---
+            # --->--->--->--->--->
+            #
+            cmdx.current_time(next_time)
+            solver["currentState"].read()
+
+        cmdx.current_time(start_time)
+        solver["startState"].read()
+
+        # Prime for updated cache
+        with cmdx.DagModifier() as mod:
+            mod.set_attr(solver["cache"], 1)
+
+    start_frames = {
+        s: int(s["_startTime"].asTime().value)
+        for s in solvers
+    }
+
+    start_frame = min(start_frames.values())
+    end_frame = int(cmdx.max_time().value)
+    total = end_frame - start_frame
+
+    for frame in range(start_frame, end_frame + 1):
+        time = cmdx.om.MTime(frame, cmdx.TimeUiUnit())
+        cmdx.current_time(time)
+
+        for solver in solvers:
+            if frame == start_frames[solver]:
+                solver["startState"].read()
+
+            elif frame > start_frames[solver]:
+                solver["currentState"].read()
+
+        percentage = 100 * float(frame - start_frame) / total
+        yield percentage
+
+    # Restore where we came from
+    cmdx.current_time(initial_time)
+
+
+def link(a, b):
+    assert a and a.isA("rdSolver"), "%s was not a solver" % a
+    assert b and b.isA("rdSolver"), "%s was not a solver" % b
+
+    with cmdx.DagModifier() as mod:
+        index = b["inputStart"].next_available_index()
+        mod.connect(a["startState"], b["inputStart"][index])
+        mod.connect(a["currentState"], b["inputCurrent"][index])
+
+        # Make it obvious which is main
+        mod.try_set_attr(a.parent()["visibility"], False)
+
+
+def unlink(solver):
+    assert solver and solver.isA("rdSolver"), "%s was not a solver" % solver
+    with cmdx.DagModifier() as mod:
+        mod.disconnect(solver["startState"])
+        mod.disconnect(solver["currentState"])
+
+        mod.try_set_attr(solver.parent()["visibility"], True)
+
+
+def retarget(marker, transform, opts=None):
+    """Retarget `marker` to `transform`
+
+    When recording, write simulation from `marker` onto `transform`,
+    regardless of where it is assigned.
+
+    """
+
+    opts = dict({
+        "append": False,
+    }, **(opts or {}))
+
+    with cmdx.DGModifier() as mod:
+        if not opts["append"]:
+            for el in marker["dst"]:
+                mod.disconnect(el, destination=False)
+
+            for el in marker["offsetMatrix"]:
+                mod.set_attr(el, cmdx.Mat4())
+
+            mod.do_it()
+
+        index = marker["dst"].next_available_index()
+        src = marker["src"].input()
+        dst = marker["dst"][index]
+
+        mod.connect(transform["message"], dst)
+
+        # Should we record translation?
+        if all(transform["t%s" % axis].editable for axis in "xyz"):
+            mod.try_set_attr(marker["recordTranslation"], True)
+
+        # Should we record translation?
+        if all(transform["r%s" % axis].editable for axis in "xyz"):
+            mod.try_set_attr(marker["recordRotation"], True)
+
+        # Store offset for recording later
+        offset = src["worldMatrix"][0].as_matrix()
+        offset *= transform["worldInverseMatrix"][0].as_matrix()
+        mod.set_attr(marker["offsetMatrix"][index], offset)
+
+
+def create_solver(name=None):
+    """Create a new rdSolver node"""
+
+    time1 = cmdx.encode("time1")
+    up = cmdx.up_axis()
+
+    name = name or "rSolver"
+    name = internal.unique_name(name)
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        solver_parent = mod.create_node("transform", name=name)
+        solver = mod.create_node("rdSolver",
+                                 name=shape_name,
+                                 parent=solver_parent)
+
+        canvas = mod.create_node("rdCanvas",
+                                 name="rCanvasShape",
+                                 parent=solver_parent)
+
+        # Hide in outliner and channel box
+        mod.set_attr(canvas["hiddenInOutliner"], True)
+        mod.set_attr(canvas["isHistoricallyInteresting"], 0)
+
+        mod.set_attr(solver["version"], internal.version())
+        mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
+        mod.set_attr(solver["maxMassRatio"], 1)  # 10 ^ 1
+        mod.connect(solver["ragdollId"], canvas["solver"])
+        mod.connect(time1["outTime"], solver["currentTime"])
+        mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
+
+        mod.set_keyable(solver_parent["scaleX"], False)
+        mod.set_keyable(solver_parent["scaleY"], False)
+        mod.set_keyable(solver_parent["scaleZ"], False)
+        mod.lock_attr(solver_parent["scaleX"])
+        mod.lock_attr(solver_parent["scaleY"])
+        mod.lock_attr(solver_parent["scaleZ"])
+
+        _take_ownership(mod, solver, solver_parent)
+
+        # Default values
+        mod.set_attr(solver["positionIterations"], 4)
+        mod.set_attr(solver["gravity"], up * -982)
+        mod.set_attr(solver["spaceMultiplier"], 0.1)
+
+        if up.y:
+            mod.set_keyable(solver["gravityY"])
+        else:
+            mod.set_keyable(solver["gravityZ"])
+
+    return solver
+
+
+def create_ground(solver):
+    grid_size = cmds.optionVar(query="gridSize")
+
+    plane, gen = map(cmdx.encode, cmds.polyPlane(
+        name="rGround",
+        width=grid_size * 2,
+        height=grid_size * 2,
+        subdivisionsHeight=1,
+        subdivisionsWidth=1,
+        axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
+    ))
+
+    marker = assign_markers([plane], solver)[0]
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["inputType"], constants.InputKinematic)
+        mod.set_attr(marker["displayType"], constants.DisplayWire)
+        mod.set_attr(marker["densityType"], constants.DensityOff)
+        mod.set_attr(marker["mass"], 0.01)
+
+        mod.set_attr(plane["overrideEnabled"], True)
+        mod.set_attr(plane["overrideShading"], False)
+        mod.set_attr(plane["overrideColor"], constants.WhiteIndex)
+
+        _take_ownership(mod, solver, plane)
+        _take_ownership(mod, solver, gen)
+
+    return marker
+
+
+@internal.with_undo_chunk
+def create_distance_constraint(parent, child, opts=None):
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
+    )
+
+    solver = _find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
+    )
+
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    parent_position = cmdx.Point(parent_transform.translation(cmdx.sWorld))
+    child_position = cmdx.Point(child_transform.translation(cmdx.sWorld))
+    distance = parent_position.distanceTo(child_position)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = nodes.create("rdDistanceConstraint",
+                           mod, shape_name, parent=transform)
+
+        mod.set_attr(con["minimum"], distance)
+        mod.set_attr(con["maximum"], distance)
+
+        # Inherit the rotate pivot
+        mod.set_attr(con["parentOffset"],
+                     parent_transform["rotatePivot"].as_vector())
+        mod.set_attr(con["childOffset"],
+                     child_transform["rotatePivot"].as_vector())
+
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
+
+        _take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+@internal.with_undo_chunk
+def create_fixed_constraint(parent, child, opts=None):
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
+    )
+
+    solver = _find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
+    )
+
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = nodes.create("rdFixedConstraint",
+                           mod, shape_name, parent=transform)
+
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
+
+        _take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+@internal.with_undo_chunk
+def create_pose_constraint(parent, child, opts=None):
+    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent["_scene"] == child["_scene"], (
+        "%s and %s not part of the same solver"
+    )
+
+    solver = _find_solver(parent)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % parent
+    )
+
+    parent_transform = parent["src"].input(type=cmdx.kDagNode)
+    child_transform = child["src"].input(type=cmdx.kDagNode)
+    parent_name = parent_transform.name(namespace=False)
+    child_name = child_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_to_%s" % (parent_name, child_name))
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = nodes.create("rdPinConstraint",
+                           mod, shape_name, parent=transform)
+
+        mod.set_attr(transform["translate"], child_transform.translation())
+        mod.set_attr(transform["rotate"], child_transform.rotation())
+
+        # Temporary means of viewport selection
+        mod.set_attr(transform["displayHandle"], True)
+
+        mod.connect(parent["ragdollId"], con["parentMarker"])
+        mod.connect(child["ragdollId"], con["childMarker"])
+        mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
+
+        _take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+@internal.with_undo_chunk
+def create_pin_constraint(child, opts=None):
+    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+
+    solver = _find_solver(child)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % child
+    )
+
+    source_transform = child["src"].input(type=cmdx.kDagNode)
+    source_name = source_transform.name(namespace=False)
+    source_tm = source_transform.transform(cmdx.sWorld)
+
+    name = internal.unique_name("%s_rPin" % source_name)
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        con = nodes.create("rdPinConstraint",
+                           mod, shape_name, parent=transform)
+
+        mod.set_attr(transform["translate"], source_tm.translation())
+        mod.set_attr(transform["rotate"], source_tm.rotation())
+
+        # More suitable default values
+        mod.set_attr(con["linearStiffness"], 0.01)
+        mod.set_attr(con["angularStiffness"], 0.01)
+
+        # Temporary means of viewport selection
+        mod.set_attr(transform["displayHandle"], True)
+
+        mod.connect(child["ragdollId"], con["childMarker"])
+        mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
+
+        _take_ownership(mod, con, transform)
+        add_constraint(mod, con, solver)
+
+    return con
+
+
+def add_constraint(mod, con, solver):
+    assert con["startState"].output() != solver, (
+        "%s already a member of %s" % (con, solver)
+    )
+
+    time = cmdx.encode("time1")
+    index = solver["inputStart"].next_available_index()
+
+    mod.set_attr(con["version"], internal.version())
+    mod.connect(con["startState"], solver["inputStart"][index])
+    mod.connect(con["currentState"], solver["inputCurrent"][index])
+    mod.connect(time["outTime"], con["currentTime"])
+
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
+
+
+def reset_constraint_frames(mod, marker, **opts):
+    """Reset constraint frames
+
+    Options:
+        symmetrical (bool): Keep limits visually consistent when inverted
+
+    """
+
+    opts = dict(opts, **{
+        "symmetrical": True,
+    })
+
+    assert marker and isinstance(marker, cmdx.Node), (
+        "%s was not a cmdx instance" % marker
+    )
+
+    if marker.isA("rdMarker"):
+        parent = marker["parentMarker"].input(type="rdMarker")
+        child = marker
+
+    if parent is not None:
+        parent_matrix = parent["inputMatrix"].as_matrix()
+    else:
+        # It's connected to the world
+        parent_matrix = cmdx.Matrix4()
+
+    rotate_pivot = child["rotatePivot"].as_vector()
+    child_matrix = child["inputMatrix"].as_matrix()
+
+    child_frame = cmdx.Tm()
+    child_frame.translateBy(rotate_pivot)
+    child_frame = child_frame.as_matrix()
+
+    # Reuse the shape offset to determine
+    # the direction in which each axis is facing.
+    main_axis = child["shapeOffset"].as_vector()
+
+    # The offset isn't necessarily only in one axis, it may have
+    # small values in each axis. The largest axis is the one that
+    # we are most likely interested in.
+    main_axis_abs = cmdx.Vector(
+        abs(main_axis.x),
+        abs(main_axis.y),
+        abs(main_axis.z),
+    )
+
+    largest_index = list(main_axis_abs).index(max(main_axis_abs))
+    largest_axis = cmdx.Vector()
+    largest_axis[largest_index] = main_axis[largest_index]
+
+    x_axis = cmdx.Vector(1, 0, 0)
+    y_axis = cmdx.Vector(0, 1, 0)
+
+    if any(axis < 0 for axis in largest_axis):
+        if largest_axis.x < 0:
+            flip = cmdx.Quaternion(cmdx.pi, y_axis)
+
+        elif largest_axis.y < 0:
+            flip = cmdx.Quaternion(cmdx.pi, x_axis)
+
+        else:
+            flip = cmdx.Quaternion(cmdx.pi, x_axis)
+
+        if opts["symmetrical"] and largest_axis.x < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, x_axis)
+
+        if opts["symmetrical"] and largest_axis.y < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, y_axis)
+
+        if opts["symmetrical"] and largest_axis.z < 0:
+            flip *= cmdx.Quaternion(cmdx.pi, y_axis)
+
+        child_frame = cmdx.Tm(child_frame)
+        child_frame.rotateBy(flip)
+        child_frame = child_frame.as_matrix()
+
+    # Align parent matrix to wherever the child matrix is
+    parent_frame = child_frame * child_matrix * parent_matrix.inverse()
+
+    mod.set_attr(marker["limitRange"], (cmdx.pi / 4, cmdx.pi / 4, cmdx.pi / 4))
+    mod.set_attr(marker["parentFrame"], parent_frame)
+    mod.set_attr(marker["childFrame"], child_frame)
+    mod.set_attr(marker["limitType"], 999)  # Custom
+
+
+@internal.with_undo_chunk
+def edit_constraint_frames(marker, opts=None):
+    assert marker and marker.isA("rdMarker"), "%s was not a marker" % marker
+    opts = dict({
+        "addUserAttributes": False,
+    }, **(opts or {}))
+
+    parent_marker = marker["parentMarker"].connection()
+    child_marker = marker
+
+    assert parent_marker and child_marker, (
+        "Unconnected constraint: %s" % marker
+    )
+
+    parent = parent_marker["src"].input(type=cmdx.kDagNode)
+    child = child_marker["src"].input(type=cmdx.kDagNode)
+
+    assert parent and child, (
+        "Could not find source transform for %s and/or %s" % (
+            parent_marker, child_marker)
+    )
+
+    with cmdx.DagModifier() as mod:
+        parent_frame = mod.create_node("transform",
+                                       name="parentFrame",
+                                       parent=parent)
+        child_frame = mod.create_node("transform",
+                                      name="childFrame",
+                                      parent=child)
+
+        for frame in (parent_frame, child_frame):
+            mod.set_attr(frame["displayHandle"], True)
+            mod.set_attr(frame["displayLocalAxis"], True)
+
+        parent_frame_tm = cmdx.Tm(marker["parentFrame"].asMatrix())
+        child_frame_tm = cmdx.Tm(marker["childFrame"].asMatrix())
+
+        parent_translate = parent_frame_tm.translation()
+        child_translate = child_frame_tm.translation()
+
+        mod.set_attr(parent_frame["translate"], parent_translate)
+        mod.set_attr(parent_frame["rotate"], parent_frame_tm.rotation())
+        mod.set_attr(child_frame["translate"], child_translate)
+        mod.set_attr(child_frame["rotate"], child_frame_tm.rotation())
+
+        mod.connect(parent_frame["matrix"], marker["parentFrame"])
+        mod.connect(child_frame["matrix"], marker["childFrame"])
+
+        _take_ownership(mod, marker, parent_frame)
+        _take_ownership(mod, marker, child_frame)
+
+    return parent_frame, child_frame
+
+
+def replace_mesh(marker, mesh, opts=None):
+    """Replace the 'Mesh' shape type in `marker` with `mesh`.
+
+    Arguments:
+        marker (cmdx.Node): Rigid whose mesh to replace
+        mesh (cmdx.Node): Mesh to replace with
+        clean (bool, optional): Remove other inputs, such as curve
+            or surface node. Multiple inputs are supported, so this
+            is optional. Defaults to True.
+
+    """
+
+    assert isinstance(marker, cmdx.Node), "%s was not a cmdx.Node" % marker
+    assert isinstance(mesh, cmdx.Node), "%s was not a cmdx.Node" % mesh
+    assert marker.isA("rdMarker"), "%s was not a 'rdMarker' node" % marker
+    assert mesh.isA(("mesh", "nurbsCurve", "nurbsSurface")), (
+        "%s must be either 'mesh', 'nurbsSurface' or 'nurbsSurface'" % mesh
+    )
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "maintainHistory": False,
+    }, **(opts or {}))
+
+    # Clone input mesh. We aren't able to simply connect to the
+    # transformGeometry and disconnect it, because it appears
+    # to flush its data on disconnect. So we need a dedicated
+    # mesh for this.
+    if not opts["maintainHistory"]:
+        with cmdx.DagModifier(interesting=False) as mod:
+            copy = mod.create_node(mesh.type(),
+                                   name=mesh.name() + "Orig",
+                                   parent=mesh.parent())
+
+            if mesh.type() == "mesh":
+                a, b = "outMesh", "inMesh"
+
+            elif mesh.type() == "nurbsCurve":
+                a, b = "local", "create"
+
+            elif mesh.type() == "nurbsSurface":
+                a, b = "local", "create"
+
+            mod.connect(mesh[a], copy[b])
+            mod.do_it()
+            cmds.refresh(force=True)
+            mod.disconnect(copy["inMesh"])
+            mod.set_attr(copy["intermediateObject"], True)
+
+            mesh = copy
+
+    with cmdx.DGModifier(interesting=False) as mod:
+        if opts["maintainOffset"]:
+            # Bake vertex positions with its current world matrix
+            tg = mod.create_node("transformGeometry")
+
+            # We can't connect to this directly, as it changes over time.
+            # We're only interested in a snapshot of its location.
+            transform = marker["src"].input(type=cmdx.kDagNode)
+            mesh_world_matrix = mesh["worldMatrix"][0].as_matrix()
+            parent_inverse_matrix = transform["wim"][0].as_matrix()
+            relative_matrix = mesh_world_matrix * parent_inverse_matrix
+            mod.set_attr(tg["transform"], relative_matrix)
+
+            if mesh.type() == "mesh":
+                mod.connect(mesh["outMesh"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            elif mesh.type() == "nurbsCurve":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            elif mesh.type() == "nurbsSurface":
+                mod.connect(mesh["local"], tg["inputGeometry"])
+                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
+
+            else:
+                raise TypeError("Unsupported mesh type '%s'" % mesh.type())
+
+            # Remove this node along with the associated marker
+            _take_ownership(mod, marker, tg)
+
+            # TODO: Also check whether there already is such a node,
+            # so we can reuse it rather than keep spamming them.
+
+        else:
+            if mesh.isA("mesh"):
+                mod.connect(mesh["outMesh"], marker["inputGeometry"])
+
+            elif mesh.isA("nurbsCurve"):
+                mod.connect(mesh["local"], marker["inputGeometry"])
+
+            elif mesh.isA("nurbsSurface"):
+                mod.connect(mesh["local"], marker["inputGeometry"])
+
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
+
+    return True
+
+
+def toggle_channel_box_attributes(markers, opts=None):
+    assert markers, "No markers were passed"
+
+    opts = dict({
+        "materialAttributes": True,
+        "shapeAttributes": True,
+        "limitAttributes": True,
+    }, **(opts or {}))
+
+    # Attributes to be toggled
+    material_attrs = (
+        ".collide",
+        ".densityType",
+        # ".mass",  # Auto-hidden when density is enabled
+        ".friction",
+        ".restitution",
+        ".displayType",
+        ".collisionGroup",
+        ".maxDepenetrationVelocity",  # A.k.a. Hardness
+    )
+
+    shape_attrs = (
+        ".shapeType",
+        ".shapeExtentsX",
+        ".shapeExtentsY",
+        ".shapeExtentsZ",
+        ".shapeLength",
+        ".shapeRadius",
+        ".shapeOffsetX",
+        ".shapeOffsetY",
+        ".shapeOffsetZ",
+        ".shapeRotationX",
+        ".shapeRotationY",
+        ".shapeRotationZ",
+    )
+
+    limit_attrs = (
+        ".limitStiffness",
+        ".limitDampingRatio",
+        ".limitRangeX",
+        ".limitRangeY",
+        ".limitRangeZ",
+    )
+
+    attrs = []
+
+    if opts["materialAttributes"]:
+        attrs += material_attrs
+
+    if opts["shapeAttributes"]:
+        attrs += shape_attrs
+
+    if opts["limitAttributes"]:
+        attrs += limit_attrs
+
+    if not attrs:
+        log.warning("Nothing to toggle")
+        return False
+
+    # Determine whether to show or hide attributes
+    visible = markers[0][attrs[0][1:]].channel_box
+
+    for marker in markers:
+        for attr in attrs:
+            cmds.setAttr(str(marker) + attr, channelBox=not visible)
+
+    return not visible
 
 
 def _take_ownership(mod, rdnode, node):
@@ -86,7 +1099,7 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
 
     """
 
-    geometry = geometry or i__.Geometry()
+    geometry = geometry or internal.Geometry()
 
     # Better this than nothing
     if not children:
@@ -309,9 +1322,9 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
     return geometry
 
 
-@i__.with_refresh_suspended
-@i__.with_timing
-@i__.with_undo_chunk
+@internal.with_refresh_suspended
+@internal.with_timing
+@internal.with_undo_chunk
 def delete_physics(nodes, dry_run=False):
     """Delete Ragdoll from anything related to `nodes`
 
@@ -376,7 +1389,7 @@ def delete_physics(nodes, dry_run=False):
     for node in ragdoll_nodes[:]:
         if node.is_referenced():
             ragdoll_nodes.remove(node)
-            raise i__.UserWarning(
+            raise internal.UserWarning(
                 "Cannot Delete Referenced Nodes",
                 "I can't do that.\n\n%s is referenced "
                 "and **cannot** be deleted." % node.shortest_path()
@@ -527,6 +1540,74 @@ and aren't meant for use outside of this module.
 """
 
 
+def _find_solver(start):
+    """Return solver for `start`
+
+    `start` may be a marker or a group, and it will walk the physics
+    hierarchy in reverse until it finds the first solver.
+
+    Note that a solver may be connected to another solver, in which case
+    this returns the *first* solver found.
+
+    """
+
+    while start and not start.isA("rdSolver"):
+        start = start["startState"].output(("rdGroup", "rdSolver"))
+    return start
+
+
+def _create_group(mod, name, solver):
+    name = internal.unique_name(name)
+    shape_name = internal.shape_name(name)
+    group_parent = mod.create_node("transform", name=name)
+    group = nodes.create("rdGroup", mod,
+                         name=shape_name,
+                         parent=group_parent)
+
+    index = solver["inputStart"].next_available_index()
+    mod.connect(group["startState"], solver["inputStart"][index])
+    mod.connect(group["currentState"],
+                solver["inputCurrent"][index])
+
+    if constants.RAGDOLL_DEVELOPER:
+        mod.set_keyable(group["articulated"], True)
+        mod.set_keyable(group["articulationType"], True)
+
+    _take_ownership(mod, group, group_parent)
+
+    return group
+
+
+def _remove_membership(mod, marker):
+    existing = marker["ragdollId"].outputs(
+        type=("rdGroup", "rdSolver"),
+        plugs=True
+    )
+
+    for other in existing:
+        mod.disconnect(marker["ragdollId"], other)
+
+    mod.do_it()
+
+
+def _add_to_group(mod, marker, group):
+    _remove_membership(mod, marker)
+
+    index = group["inputStart"].next_available_index()
+    mod.connect(marker["startState"], group["inputStart"][index])
+    mod.connect(marker["currentState"], group["inputCurrent"][index])
+    return True
+
+
+def _add_to_solver(mod, marker, solver):
+    _remove_membership(mod, marker)
+
+    index = solver["inputStart"].next_available_index()
+    mod.connect(marker["startState"], solver["inputStart"][index])
+    mod.connect(marker["currentState"], solver["inputCurrent"][index])
+    return True
+
+
 def _shapeattributes_from_generator(mod, shape, rigid):
     """Look at `shape` history for a e.g. polyCube or polySphere
 
@@ -549,17 +1630,17 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         return
 
     if gen.type() == "polyCube":
-        mod.set_attr(rigid["shapeType"], c.BoxShape)
+        mod.set_attr(rigid["shapeType"], constants.BoxShape)
         mod.set_attr(rigid["shapeExtentsX"], gen["width"])
         mod.set_attr(rigid["shapeExtentsY"], gen["height"])
         mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
 
     elif gen.type() == "polySphere":
-        mod.set_attr(rigid["shapeType"], c.SphereShape)
+        mod.set_attr(rigid["shapeType"], constants.SphereShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "polyCylinder" and gen["roundCap"]:
-        mod.set_attr(rigid["shapeType"], c.CylinderShape)
+        mod.set_attr(rigid["shapeType"], constants.CylinderShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
         mod.set_attr(rigid["shapeLength"], gen["height"])
 
@@ -575,7 +1656,7 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "makeNurbSphere":
-        mod.set_attr(rigid["shapeType"], c.SphereShape)
+        mod.set_attr(rigid["shapeType"], constants.SphereShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
 
     elif gen.type() == "makeNurbCone":
@@ -583,7 +1664,7 @@ def _shapeattributes_from_generator(mod, shape, rigid):
         mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
 
     elif gen.type() == "makeNurbCylinder":
-        mod.set_attr(rigid["shapeType"], c.CylinderShape)
+        mod.set_attr(rigid["shapeType"], constants.CylinderShape)
         mod.set_attr(rigid["shapeRadius"], gen["radius"])
         mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
         mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
@@ -616,7 +1697,7 @@ def _interpret_shape(mod, rigid, shape):
 
     # Account for X not necessarily being
     # represented by the width of the bounding box.
-    if radius < i__.tolerance:
+    if radius < internal.tolerance:
         radius = length * 0.5
 
     mod.set_attr(rigid["shapeOffset"], center)
@@ -626,15 +1707,15 @@ def _interpret_shape(mod, rigid, shape):
 
     if shape.type() == "mesh":
         mod.connect(shape["outMesh"], rigid["inputMesh"])
-        mod.set_attr(rigid["shapeType"], c.MeshShape)
+        mod.set_attr(rigid["shapeType"], constants.MeshShape)
 
     elif shape.type() == "nurbsCurve":
         mod.connect(shape["local"], rigid["inputCurve"])
-        mod.set_attr(rigid["shapeType"], c.MeshShape)
+        mod.set_attr(rigid["shapeType"], constants.MeshShape)
 
     elif shape.type() == "nurbsSurface":
         mod.connect(shape["local"], rigid["inputSurface"])
-        mod.set_attr(rigid["shapeType"], c.MeshShape)
+        mod.set_attr(rigid["shapeType"], constants.MeshShape)
 
     # In case the shape is connected to a common
     # generator, like polyCube or polyCylinder
@@ -649,7 +1730,7 @@ def _interpret_transform(mod, rigid, transform):
     """
 
     if transform.isA(cmdx.kJoint):
-        mod.set_attr(rigid["shapeType"], c.CapsuleShape)
+        mod.set_attr(rigid["shapeType"], constants.CapsuleShape)
 
         # Orient inner shape to wherever the joint is pointing
         # as opposed to whatever its jointOrient is facing
@@ -683,10 +1764,10 @@ def _interpret_shape2(shape):
 
     # Account for X not necessarily being
     # represented by the width of the bounding box.
-    if radius < i__.tolerance:
+    if radius < internal.tolerance:
         radius = length * 0.5
 
-    geo = i__.Geometry()
+    geo = internal.Geometry()
     geo.shape_offset = center
     geo.extents = extents
     geo.radius = radius * 0.5
@@ -695,7 +1776,7 @@ def _interpret_shape2(shape):
     gen = None
 
     # Guilty until proven innocent
-    geo.shape_type = c.MeshShape
+    geo.shape_type = constants.MeshShape
 
     if "inMesh" in shape and shape["inMesh"].connected:
         gen = shape["inMesh"].connection()
@@ -708,17 +1789,17 @@ def _interpret_shape2(shape):
         # generator, like polyCube or polyCylinder
 
         if gen.type() == "polyCube":
-            geo.shape_type = c.BoxShape
+            geo.shape_type = constants.BoxShape
             geo.extents.x = gen["width"].read()
             geo.extents.y = gen["height"].read()
             geo.extents.z = gen["depth"].read()
 
         elif gen.type() == "polySphere":
-            geo.shape_type = c.SphereShape
+            geo.shape_type = constants.SphereShape
             geo.radius = gen["radius"].read()
 
         elif gen.type() == "polyPlane":
-            geo.shape_type = c.BoxShape
+            geo.shape_type = constants.BoxShape
             geo.extents.x = gen["width"].read()
             geo.extents.z = gen["height"].read()
 
@@ -733,7 +1814,7 @@ def _interpret_shape2(shape):
                 geo.shape_offset.z = -geo.extents.z / 2.0
 
         elif gen.type() == "polyCylinder" and gen["roundCap"]:
-            geo.shape_type = c.CylinderShape
+            geo.shape_type = constants.CylinderShape
             geo.radius = gen["radius"].read()
             geo.length = gen["height"].read()
 
@@ -749,7 +1830,7 @@ def _interpret_shape2(shape):
             geo.radius = gen["radius"]
 
         elif gen.type() == "makeNurbSphere":
-            geo.shape_type = c.SphereShape
+            geo.shape_type = constants.SphereShape
             geo.radius = gen["radius"]
 
         elif gen.type() == "makeNurbCone":
@@ -757,7 +1838,7 @@ def _interpret_shape2(shape):
             geo.length = gen["heightRatio"]
 
         elif gen.type() == "makeNurbCylinder":
-            geo.shape_type = c.CylinderShape
+            geo.shape_type = constants.CylinderShape
             geo.radius = gen["radius"]
             geo.length = gen["heightRatio"]
             geo.shape_rotation = list(map(cmdx.radians, (
@@ -779,97 +1860,6 @@ def _interpret_transform2(mod, transform):
     geo = infer_geometry(transform)
 
     return geo
-
-
-def _to_cmds(name):
-    """Convert cmdx instances to maya.cmds-compatible strings
-
-    Two types of cmdx instances are returned natively, `Node` and `Plug`
-    Any other return value remains unscathed.
-
-    """
-
-    func = getattr(sys.modules[__name__], name)
-
-    contract = getattr(func, "contract", {})
-
-    @functools.wraps(func)
-    def to_cmds_wrapper(*args, **kwargs):
-
-        # Convert cmdx arguments to string
-        #
-        # ---> cmdx --> string ---> func()
-        #
-        for index in range(len(args)):
-            arg = args[index]
-            _arg = contract["args"][index]
-
-            if issubclass(_arg, cmdx.Node):
-                # It's supposed to be string, and may already be
-                if isinstance(arg, cmdx.string_types):
-                    continue
-
-                args[index] = arg.shortestPath()
-
-            if issubclass(_arg, cmdx.Plug):
-                # It's supposed to be string, and may already be
-                if isinstance(arg, cmdx.string_types):
-                    continue
-
-                args[index] = arg.shortestPath()
-
-        for key, value in kwargs.items():
-            kwarg = contract["kwargs"][key]
-
-            if issubclass(kwarg, cmdx.Node):
-                # It's supposed to be string, and may already be
-                if isinstance(value, cmdx.string_types):
-                    continue
-
-                kwargs[key] = value.shortestPath()
-
-            if issubclass(kwarg, cmdx.Plug):
-                # It's supposed to be string, and may already be
-                if isinstance(value, cmdx.string_types):
-                    continue
-
-                kwargs[key] = value.path()
-
-        result = func(*args, **kwargs)
-
-        # Convert cmdx return values to string
-        #
-        # ----> cmdx ---> string
-        #
-        if isinstance(result, (tuple, list)):
-            for index, entry in enumerate(result):
-                if isinstance(entry, cmdx.Node):
-                    result[index] = entry.shortestPath()
-
-                if isinstance(entry, cmdx.Plug):
-                    result[index] = entry.path()
-
-        elif isinstance(result, cmdx.Node):
-            result = result.shortestPath()
-
-        elif isinstance(result, cmdx.Plug):
-            result = result.path()
-
-        return result
-
-    return to_cmds_wrapper
-
-
-def _apply_scale(mat):
-    tm = cmdx.Tm(mat)
-    scale = tm.scale()
-    translate = tm.translation()
-    translate.x *= scale.x
-    translate.y *= scale.y
-    translate.z *= scale.z
-    tm.setTranslation(translate)
-    tm.setScale((1, 1, 1))
-    return tm.as_matrix()
 
 
 def _scale_from_rigid(rigid):
@@ -917,7 +1907,7 @@ def _hierarchy_bounding_size(root):
         for parent in root.lineage():
             pos2 = parent.translation(cmdx.sWorld)
 
-            if pos2.is_equivalent(pos1, i__.tolerance):
+            if pos2.is_equivalent(pos1, internal.tolerance):
                 continue
 
             # The parent will be facing in the opposite direction

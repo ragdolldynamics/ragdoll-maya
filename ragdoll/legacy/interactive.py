@@ -12,14 +12,14 @@ from . import (
     commands,
     ui,
     dump,
+    tools,
 )
 
 from .. import (
     options,
-    tools,
     constants as c,
     internal as i__,
-    __
+    __,
 )
 
 log = logging.getLogger("ragdoll")
@@ -2434,6 +2434,11 @@ def import_physics_options(*args):
 
 def export_physics_options(*args):
     return _Window("exportPhysics", export_physics)
+
+
+def show_constraint_editor(selection=None):
+    window = ui.PivotEditor(parent=ui.MayaWindow())
+    tools.show_pivot_editor(window)
 
 
 # Backwards compatibility

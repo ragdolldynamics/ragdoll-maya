@@ -12,18 +12,10 @@ import json
 import copy
 import logging
 
-from collections import OrderedDict as odict
-
 from maya import cmds
 from .vendor import cmdx
-from . import (
-    commands,
-    tools,
-    constants,
-    internal
-)
+from . import commands, internal
 
-from .tools import markers_tool as markers_
 
 log = logging.getLogger("ragdoll")
 
@@ -400,7 +392,7 @@ class Loader(object):
 
             Name = self._registry.get(entity, "NameComponent")
             transform_name = Name["path"].rsplit("|", 1)[-1]
-            rdsolver = markers_.create_solver(transform_name)
+            rdsolver = commands.create_solver(transform_name)
             rdsolvers[entity] = rdsolver
 
         if self._opts["preserveAttributes"]:
@@ -447,7 +439,7 @@ class Loader(object):
 
             # E.g. |someCtl_rGroup
             transform_name = Name["path"].rsplit("|", 1)[-1]
-            rdgroup = markers_.create_group(transform_name, rdsolver)
+            rdgroup = commands.create_group(transform_name, rdsolver)
             rdgroups[entity] = rdgroup
 
         if self._opts["preserveAttributes"]:
@@ -479,7 +471,7 @@ class Loader(object):
                 # Exported marker wasn't part of an exported solver
                 continue
 
-            rdmarker = markers_.assign([transform], rdsolver)
+            rdmarker = commands.assign([transform], rdsolver)
             rdmarkers[entity] = rdmarker[0]
 
         if self._opts["preserveAttributes"]:
@@ -494,7 +486,7 @@ class Loader(object):
                 rdgroup = rdgroups.get(Group["entity"])
 
                 if rdgroup is not None:
-                    markers_.add_to_group(mod, rdmarker, rdgroup)
+                    commands._add_to_group(mod, rdmarker, rdgroup)
                     mod.do_it()  # Commit to group
 
             log.info("Reconstructing hierarchy..")
@@ -540,7 +532,7 @@ class Loader(object):
                 if not (rdparent and rdchild):
                     continue
 
-                rdconstraint = markers_.create_distance_constraint(
+                rdconstraint = commands.create_distance_constraint(
                     rdparent, rdchild)
                 rdconstraints[entity] = rdconstraint
 
@@ -561,7 +553,7 @@ class Loader(object):
                 if not (rdparent and rdchild):
                     continue
 
-                rdconstraint = markers_.create_fixed_constraint(
+                rdconstraint = commands.create_fixed_constraint(
                     rdparent, rdchild)
                 rdconstraints[entity] = rdconstraint
 
@@ -576,7 +568,7 @@ class Loader(object):
                 if not rdchild:
                     continue
 
-                rdconstraint = markers_.create_pin_constraint(rdchild)
+                rdconstraint = commands.create_pin_constraint(rdchild)
                 rdconstraints[entity] = rdconstraint
 
         if self._opts["preserveAttributes"]:

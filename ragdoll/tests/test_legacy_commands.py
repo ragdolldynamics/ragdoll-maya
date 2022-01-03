@@ -1,7 +1,8 @@
 from maya import cmds
-from .. import commands, constants
+from .. import constants
+from ..legacy import commands
+from ..legacy.tools import chain_tool
 from ..vendor import cmdx
-from ..tools import chain_tool
 from . import _play, _new, _step, _rewind
 
 from nose.tools import (

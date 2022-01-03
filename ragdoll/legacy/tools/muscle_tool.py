@@ -1,5 +1,6 @@
-from ..vendor import cmdx
-from .. import commands, internal as i__
+from ...vendor import cmdx
+from ... import internal as i__
+from .. import commands
 
 
 @i__.with_undo_chunk

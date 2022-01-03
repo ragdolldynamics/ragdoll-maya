@@ -15,7 +15,11 @@ from collections import OrderedDict as odict
 
 from maya import cmds
 from ..vendor import cmdx
-from .. import commands, tools, constants as c, internal as i__
+from .. import constants as c, internal as i__
+
+# Legacy modules
+from . import commands
+from .tools import chain_tool
 
 log = logging.getLogger("ragdoll")
 
@@ -1457,9 +1461,9 @@ class Loader(object):
         # they would be solo rigids.
         assert len(transforms) > 1, "Bad chain: %s" % str(transforms)
 
-        active_chain = tools.create_chain(transforms,
-                                          rdscene,
-                                          opts=chain["options"])
+        active_chain = chain_tool.create(transforms,
+                                         rdscene,
+                                         opts=chain["options"])
 
         new_rigids = [
             n for n in active_chain if n.type() == "rdRigid"

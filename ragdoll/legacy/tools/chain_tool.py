@@ -14,8 +14,9 @@ figure out the constraint frames.
 
 """
 
-from ..vendor import cmdx
-from .. import commands, constants as c, internal as i__
+from ...vendor import cmdx
+from ... import constants as c, internal as i__
+from .. import commands
 
 
 class Chain(object):

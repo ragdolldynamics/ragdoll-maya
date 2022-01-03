@@ -1,8 +1,11 @@
-from . import (
+from ..legacy.tools import (
     chain_tool,
     character_tool,
     muscle_tool,
     pivot_editor_tool,
+)
+
+from . import (
     markers_tool,
 )
 

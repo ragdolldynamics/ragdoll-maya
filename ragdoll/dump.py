@@ -177,7 +177,7 @@ class Loader(object):
 
     """
 
-    SupportedSchema = "ragdoll-1.1"
+    SupportedSchema = "ragdoll-1.0"
 
     def __init__(self, opts=None):
         opts = opts or {}

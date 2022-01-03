@@ -2,7 +2,8 @@
 
 from maya import cmds
 from ..vendor import cmdx
-from .. import commands, tools, dump
+from ..legacy.tools import chain_tool
+from ..legacy import commands, dump
 from . import __, _new, _save, _load
 
 
@@ -76,7 +77,7 @@ def test_chain():
         assert_equals(len(list(shapes)), 0)
 
     scene = commands.create_scene()
-    tools.create_chain(links, scene)
+    chain_tool.create(links, scene)
 
     links[-1]["tx"].read()  # Evaluate
 
@@ -118,8 +119,8 @@ def test_hydra():
     scene = commands.create_scene(name="myScene")
 
     # A two-headed hydra
-    tools.create_chain([body, head1], scene)
-    tools.create_chain([body, head2], scene)
+    chain_tool.create([body, head1], scene)
+    chain_tool.create([body, head2], scene)
 
     assert_equals(len(cmds.ls(type="rdRigid")), 3)
 

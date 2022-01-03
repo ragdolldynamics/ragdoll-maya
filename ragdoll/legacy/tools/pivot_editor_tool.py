@@ -1,7 +1,8 @@
 import logging
 
-from .. import commands, constants, internal
-from ..vendor import cmdx
+from ...vendor import cmdx
+from ... import constants, internal
+from .. import commands
 
 from maya import cmds
 from maya.api import OpenMaya as om

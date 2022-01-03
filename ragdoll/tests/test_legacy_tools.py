@@ -1,7 +1,7 @@
-from .. import commands
-from ..tools import create_character, create_chain
+from ..legacy import commands
+from ..legacy.tools import character_tool, chain_tool
 from ..vendor import cmdx
-from . import _new, _play, _step
+from . import _new, _play
 
 import math
 from nose.tools import (
@@ -55,7 +55,7 @@ def test_character():
     # Create with root
     root = joints[0]
     scene = commands.create_scene()
-    result = create_character(root, scene, copy=False)
+    result = character_tool.create(root, scene, copy=False)
 
     # After 100 frames, the simulation has come to a rest
     _play(result, 1, 101)
@@ -85,7 +85,7 @@ def test_scale_chain():
         nodes[0]["scale"] = (2, 2, 2)
 
     scene = commands.create_scene()
-    rigids = create_chain(nodes, scene, opts={"passiveRoot": False})
+    rigids = chain_tool.create(nodes, scene, opts={"passiveRoot": False})
 
     # Ignore any automatically computed radius
     for rigid in rigids:
@@ -117,7 +117,7 @@ def test_unique_name():
 
     scene = commands.create_scene()
 
-    for node in create_chain(nodes, scene):
+    for node in chain_tool.create(nodes, scene):
         assert_equals(len(cmdx.ls(node.path())), 1)
 
     # Do it again
@@ -127,7 +127,7 @@ def test_unique_name():
         cmdx.create_node("transform"),
     ]
 
-    for node in create_chain(nodes, scene):
+    for node in chain_tool.create(nodes, scene):
         assert_equals(len(cmdx.ls(node.path())), 1)
 
 

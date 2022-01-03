@@ -1,6 +1,7 @@
 from maya import cmds
-from .. import interactive, commands, options, constants as c
+from ..legacy import interactive, commands
 from ..vendor import cmdx
+from .. import constants as c
 from . import _new, _play
 
 from nose.tools import (

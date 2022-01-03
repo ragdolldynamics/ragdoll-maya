@@ -2,7 +2,7 @@
 
 from maya import cmds
 from ..vendor import cmdx
-from .. import commands
+from ..legacy import commands
 from . import _new
 
 

@@ -1830,7 +1830,7 @@ def retarget_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    commands.retarget(a, b, opts)
+    commands.retarget_marker(a, b, opts)
 
     return kSuccess
 
@@ -2185,7 +2185,7 @@ def link_solver(selection=None, **opts):
             "%s or %s was not two solvers." % (a, b)
         )
 
-    commands.link(a, b)
+    commands.link_solver(a, b)
 
     # Trigger a draw refresh
     cmds.select(cmds.ls(selection=True))

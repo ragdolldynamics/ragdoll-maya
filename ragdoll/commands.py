@@ -73,7 +73,6 @@ def assign_markers(transforms, solver, opts=None):
                 % len(existing)
             )
 
-    time1 = cmdx.encode("time1")
     parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
 
     group = None
@@ -124,9 +123,9 @@ def assign_markers(transforms, solver, opts=None):
 
             # It's a limb
             if parent_marker or len(transforms) > 1:
-                geo = infer_geometry(transform,
-                                     parent_transform,
-                                     children)
+                geo = _infer_geometry(transform,
+                                      parent_transform,
+                                      children)
 
                 geo.shape_type = constants.CapsuleShape
 
@@ -138,7 +137,7 @@ def assign_markers(transforms, solver, opts=None):
                     geo = _interpret_shape2(shape)
 
                 else:
-                    geo = infer_geometry(transform)
+                    geo = _infer_geometry(transform)
                     geo.shape_type = constants.CapsuleShape
 
             # Make the root passive
@@ -162,7 +161,6 @@ def assign_markers(transforms, solver, opts=None):
 
             dgmod.connect(transform["message"], marker["src"])
             dgmod.connect(transform["message"], marker["dst"][0])
-            dgmod.connect(time1["outTime"], marker["currentTime"])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
             dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
             dgmod.connect(transform["rotatePivotTranslate"],
@@ -398,7 +396,17 @@ def cache(solvers):
     cmdx.current_time(initial_time)
 
 
-def link(a, b):
+def link_solver(a, b):
+    """Link solver `a` with `b`
+
+    This will make `a` part of `b`, allowing markers to interact.
+
+    Arguments:
+        a (rdSolver): The "child" solver
+        b (rdSolver): The "parent" solver
+
+    """
+
     assert a and a.isA("rdSolver"), "%s was not a solver" % a
     assert b and b.isA("rdSolver"), "%s was not a solver" % b
 
@@ -411,7 +419,13 @@ def link(a, b):
         mod.try_set_attr(a.parent()["visibility"], False)
 
 
-def unlink(solver):
+def unlink_solver(solver):
+    """Unlink `solver`
+
+    From any other solver it may be connected to.
+
+    """
+
     assert solver and solver.isA("rdSolver"), "%s was not a solver" % solver
     with cmdx.DagModifier() as mod:
         mod.disconnect(solver["startState"])
@@ -420,7 +434,7 @@ def unlink(solver):
         mod.try_set_attr(solver.parent()["visibility"], True)
 
 
-def retarget(marker, transform, opts=None):
+def retarget_marker(marker, transform, opts=None):
     """Retarget `marker` to `transform`
 
     When recording, write simulation from `marker` onto `transform`,
@@ -465,34 +479,17 @@ def retarget(marker, transform, opts=None):
 def create_solver(name=None):
     """Create a new rdSolver node"""
 
-    time1 = cmdx.encode("time1")
-    up = cmdx.up_axis()
-
     name = name or "rSolver"
     name = internal.unique_name(name)
     shape_name = internal.shape_name(name)
 
     with cmdx.DagModifier() as mod:
         solver_parent = mod.create_node("transform", name=name)
-        solver = mod.create_node("rdSolver",
-                                 name=shape_name,
-                                 parent=solver_parent)
+        solver = nodes.create("rdSolver", mod,
+                              name=shape_name,
+                              parent=solver_parent)
 
-        canvas = mod.create_node("rdCanvas",
-                                 name="rCanvasShape",
-                                 parent=solver_parent)
-
-        # Hide in outliner and channel box
-        mod.set_attr(canvas["hiddenInOutliner"], True)
-        mod.set_attr(canvas["isHistoricallyInteresting"], 0)
-
-        mod.set_attr(solver["version"], internal.version())
-        mod.set_attr(solver["startTimeCustom"], cmdx.min_time())
-        mod.set_attr(solver["maxMassRatio"], 1)  # 10 ^ 1
-        mod.connect(solver["ragdollId"], canvas["solver"])
-        mod.connect(time1["outTime"], solver["currentTime"])
-        mod.connect(solver_parent["worldMatrix"][0], solver["inputMatrix"])
-
+        # Scale isn't relevant for the solver, what would it mean?
         mod.set_keyable(solver_parent["scaleX"], False)
         mod.set_keyable(solver_parent["scaleY"], False)
         mod.set_keyable(solver_parent["scaleZ"], False)
@@ -501,16 +498,6 @@ def create_solver(name=None):
         mod.lock_attr(solver_parent["scaleZ"])
 
         _take_ownership(mod, solver, solver_parent)
-
-        # Default values
-        mod.set_attr(solver["positionIterations"], 4)
-        mod.set_attr(solver["gravity"], up * -982)
-        mod.set_attr(solver["spaceMultiplier"], 0.1)
-
-        if up.y:
-            mod.set_keyable(solver["gravityY"])
-        else:
-            mod.set_keyable(solver["gravityZ"])
 
     return solver
 
@@ -588,7 +575,7 @@ def create_distance_constraint(parent, child, opts=None):
         mod.connect(child["ragdollId"], con["childMarker"])
 
         _take_ownership(mod, con, transform)
-        add_constraint(mod, con, solver)
+        _add_constraint(mod, con, solver)
 
     return con
 
@@ -623,7 +610,7 @@ def create_fixed_constraint(parent, child, opts=None):
         mod.connect(child["ragdollId"], con["childMarker"])
 
         _take_ownership(mod, con, transform)
-        add_constraint(mod, con, solver)
+        _add_constraint(mod, con, solver)
 
     return con
 
@@ -665,7 +652,7 @@ def create_pose_constraint(parent, child, opts=None):
         mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 
         _take_ownership(mod, con, transform)
-        add_constraint(mod, con, solver)
+        _add_constraint(mod, con, solver)
 
     return con
 
@@ -705,26 +692,9 @@ def create_pin_constraint(child, opts=None):
         mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 
         _take_ownership(mod, con, transform)
-        add_constraint(mod, con, solver)
+        _add_constraint(mod, con, solver)
 
     return con
-
-
-def add_constraint(mod, con, solver):
-    assert con["startState"].output() != solver, (
-        "%s already a member of %s" % (con, solver)
-    )
-
-    time = cmdx.encode("time1")
-    index = solver["inputStart"].next_available_index()
-
-    mod.set_attr(con["version"], internal.version())
-    mod.connect(con["startState"], solver["inputStart"][index])
-    mod.connect(con["currentState"], solver["inputCurrent"][index])
-    mod.connect(time["outTime"], con["currentTime"])
-
-    # Ensure `next_available_index` is up-to-date
-    mod.do_it()
 
 
 def reset_constraint_frames(mod, marker, **opts):
@@ -1036,63 +1006,246 @@ def toggle_channel_box_attributes(markers, opts=None):
     return not visible
 
 
-def _take_ownership(mod, rdnode, node):
-    """Make `rdnode` the owner of `node`"""
+@internal.with_refresh_suspended
+@internal.with_timing
+@internal.with_undo_chunk
+def delete_physics(nodes, dry_run=False):
+    """Delete Ragdoll from anything related to `nodes`
 
-    try:
-        plug = rdnode["owner"]
-    except cmdx.ExistError:
-        try:
-            plug = rdnode["exclusiveNodes"]
-        except cmdx.ExistError:
-            raise TypeError("%s not a Ragdoll node" % rdnode)
+    This will delete anything related to Ragdoll from your scenes, including
+    any attributes added (polluted) onto your animation controls.
 
-    # Ensure next_available_index is up-to-date
-    mod.do_it()
-
-    index = plug.next_available_index()
-    mod.connect(node["message"], plug[index])
-
-
-
-def orient_from_positions(a, b, c=None):
-    """Look at `a` from `b`, with an optional up-vector `c`
-
-            a
-            o
-           /|
-          / |
-         /  |
-        /   |
-     c o____o b
+    Arguments:
+        nodes (list): Delete physics from these nodes
+        dry_run (bool, optional): Do not actually delete anything,
+            but still run through the process and throw exceptions
+            if any, and still return the results of what *would*
+            have been deleted if it wasn't dry.
 
     """
 
-    assert isinstance(a, cmdx.om.MVector), type(a)
-    assert isinstance(b, cmdx.om.MVector), type(b)
-    assert c is None or isinstance(c, cmdx.om.MVector), type(c)
+    assert isinstance(nodes, (list, tuple)), "First input must be a list"
 
-    aim = (b - a).normal()
-    up = (c - a).normal() if c else cmdx.up_axis()
+    result = {
+        "deletedRagdollNodeCount": 0,
+        "deletedExclusiveNodeCount": 0,
+        "deletedUserAttributeCount": 0,
+    }
 
-    cross = aim ^ up  # Make axes perpendicular
-    up = cross ^ aim
+    # Include shapes in supplied nodes
+    shapes = []
+    for node in nodes:
 
-    orient = cmdx.Quaternion()
-    orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
-    orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
+        # Don't bother with underworld shapes
+        if node.isA(cmdx.kShape):
+            continue
 
-    return orient
+        if node.isA(cmdx.kDagNode):
+            shapes += node.shapes()
+
+    # Include DG nodes too
+    dgnodes = []
+    for node in nodes:
+        dgnodes += list(
+            node["message"].outputs(
+                type=("rdGroup",
+                      "rdMarker",
+                      "rdDistanceConstraint",
+                      "rdFixedConstraint")))
+
+    shapes = filter(None, shapes)
+    shapes = list(shapes) + nodes
+    nodes = shapes + dgnodes
+
+    # Filter by our types
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    ragdoll_nodes = list(
+        node for node in nodes
+        if node.type() in all_nodetypes
+    )
+
+    # Nothing to do!
+    if not ragdoll_nodes:
+        return result
+
+    # See whether any of the nodes are referenced, in which
+    # case we don't have permission to delete those.
+    for node in ragdoll_nodes[:]:
+        if node.is_referenced():
+            ragdoll_nodes.remove(node)
+            raise internal.UserWarning(
+                "Cannot Delete Referenced Nodes",
+                "I can't do that.\n\n%s is referenced "
+                "and **cannot** be deleted." % node.shortest_path()
+            )
+
+    # Delete transforms exclusively made for Ragdoll nodes.
+    #  _____________________       ___________________
+    # |                     |     |                   |
+    # | Rigid               |     | Transform         |
+    # |                     |     |                   |
+    # |      exclusives [0] o<----o message           |
+    # |_____________________|     |___________________|
+    #
+    #
+    exclusives = list()
+    for node in ragdoll_nodes:
+        if "exclusiveNodes" not in node:
+            continue
+
+        for element in node["exclusiveNodes"]:
+            other = element.connection(source=True, destination=False)
+
+            if other is not None:
+                assert isinstance(other, cmdx.Node), "This is a bug in cmdx"
+                exclusives.append(other)
+
+    # Delete attributes from Ragdoll interfaces,
+    # such as on the original animation controls.
+    #
+    #  ______________________       ___________________
+    # |                      |     |                   |
+    # | Rigid                |     | Transform         |
+    # |                      |     |                   |
+    # |   userAttributes [0] o<----o mass              |
+    # |                  [1] o<----o stiffness         |
+    # |______________________|     |___________________|
+    #
+    #
+    user_attributes = dict()
+    for node in ragdoll_nodes:
+        if "userAttributes" not in node:
+            continue
+
+        for element in node["userAttributes"]:
+            user_attribute = element.connection(plug=True,
+                                                source=True,
+                                                destination=False)
+            if user_attribute is None:
+                continue
+
+            other = user_attribute.node()
+
+            # These will be deleted anyway
+            if other in exclusives:
+                continue
+
+            if other not in user_attributes:
+                user_attributes[other] = {}
+
+            key = user_attribute.name(long=False)
+            user_attributes[other][key] = user_attribute
+
+    # Reorder attributes by the order they appear in the parent node
+    #  _____________
+    # |             |
+    # |    Friction o -> 126
+    # |        Mass o -> 127
+    # |     Color R o -> 128
+    # |     Color G o -> 129
+    # |     Color B o -> 130
+    # |             |
+    # |_____________|
+    #
+    plug_to_index = {}
+    for node, plugs in user_attributes.items():
+        for index in range(node._fn.attributeCount()):
+            attr = node._fn.attribute(index)
+            fn = cmdx.om.MFnAttribute(attr)
+
+            try:
+                plug = plugs[fn.shortName]
+            except KeyError:
+                continue
+            else:
+                plug_to_index[plug] = index
+
+    # TODO: This only works reliably when all ragdoll_nodes
+    # are involved. When deleting only a subset of nodes, like
+    # mimic controls which do not carry their associated rigid
+    # for example, then rigid attributes will appear scrambled
+
+    user_attributes = sorted(plug_to_index.items(), key=lambda i: i[1])
+    user_attributes = [r[0] for r in user_attributes]
+
+    result["deletedRagdollNodeCount"] = len(ragdoll_nodes)
+    result["deletedExclusiveNodeCount"] = len(exclusives)
+    result["deletedUserAttributeCount"] = len(user_attributes)
+
+    # It was just a joke, relax
+    if dry_run:
+        return result
+
+    # Delete attributes first, as they may otherwise
+    # disappear along with their node.
+    with cmdx.DagModifier() as mod:
+
+        # Attributes are recreated in the reverse order
+        # during undo, so to preserve their original order
+        # we'll need to delete them in reverse.
+        for attr in reversed(user_attributes):
+            mod.delete_attr(attr)
+        mod.do_it()
+
+        for node in ragdoll_nodes + exclusives:
+            try:
+                mod.delete(node)
+                mod.do_it()
+
+            except cmdx.ExistError:
+                # Deleting a shape whose parent transform has no other shape
+                # automatically deletes the transform. This is shit behavior
+                # that can be corrected in Maya 2022 onwards,
+                # via includeParents=False
+                pass
+
+    return result
 
 
-def infer_geometry(root, parent=None, children=None, geometry=None):
+def delete_all_physics(dry_run=False):
+    """Nuke it from orbit
+
+    Return to simpler days, days before physics, with this one command.
+
+    """
+
+    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
+    all_nodes = cmdx.ls(type=all_nodetypes)
+    return delete_physics(all_nodes, dry_run=dry_run)
+
+
+"""
+
+Internal helper functions
+
+These things just help readability for the above functions,
+and aren't meant for use outside of this module.
+
+"""
+
+
+def _find_solver(leaf):
+    """Return solver for `leaf`
+
+    `leaf` may be a marker or a group, and it will walk the physics
+    hierarchy in reverse until it finds the first solver.
+
+    Note that a solver may be connected to another solver, in which case
+    this returns the *first* solver found.
+
+    """
+
+    while leaf and not leaf.isA("rdSolver"):
+        leaf = leaf["startState"].output(("rdGroup", "rdSolver"))
+    return leaf
+
+
+def _infer_geometry(root, parent=None, children=None, geometry=None):
     """Find length and orientation from `root`
 
-    This function looks at the child and parent of
-    any given root for clues as to how to orient it
-
-    Length is simply the distance between `root`
-    and its first child.
+    This function looks at the child and parent of any given root for clues as
+    to how to orient it. Length is simply the distance between `root` and its
+    first child.
 
     Arguments:
         root (root): The root from which to derive length and orientation
@@ -1322,238 +1475,37 @@ def infer_geometry(root, parent=None, children=None, geometry=None):
     return geometry
 
 
-@internal.with_refresh_suspended
-@internal.with_timing
-@internal.with_undo_chunk
-def delete_physics(nodes, dry_run=False):
-    """Delete Ragdoll from anything related to `nodes`
-
-    This will delete anything related to Ragdoll from your scenes, including
-    any attributes added (polluted) onto your animation controls.
-
-    Arguments:
-        nodes (list): Delete physics from these nodes
-        dry_run (bool, optional): Do not actually delete anything,
-            but still run through the process and throw exceptions
-            if any, and still return the results of what *would*
-            have been deleted if it wasn't dry.
-
-    """
-
-    assert isinstance(nodes, (list, tuple)), "First input must be a list"
-
-    result = {
-        "deletedRagdollNodeCount": 0,
-        "deletedExclusiveNodeCount": 0,
-        "deletedUserAttributeCount": 0,
-    }
-
-    # Include shapes in supplied nodes
-    shapes = []
-    for node in nodes:
-
-        # Don't bother with underworld shapes
-        if node.isA(cmdx.kShape):
-            continue
-
-        if node.isA(cmdx.kDagNode):
-            shapes += node.shapes()
-
-    # Include DG nodes too
-    dgnodes = []
-    for node in nodes:
-        dgnodes += list(
-            node["message"].outputs(
-                type=("rdGroup",
-                      "rdMarker",
-                      "rdDistanceConstraint",
-                      "rdFixedConstraint")))
-
-    shapes = filter(None, shapes)
-    shapes = list(shapes) + nodes
-    nodes = shapes + dgnodes
-
-    # Filter by our types
-    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    ragdoll_nodes = list(
-        node for node in nodes
-        if node.type() in all_nodetypes
+def _add_constraint(mod, con, solver):
+    assert con["startState"].output() != solver, (
+        "%s already a member of %s" % (con, solver)
     )
 
-    # Nothing to do!
-    if not ragdoll_nodes:
-        return result
+    index = solver["inputStart"].next_available_index()
 
-    # See whether any of the nodes are referenced, in which
-    # case we don't have permission to delete those.
-    for node in ragdoll_nodes[:]:
-        if node.is_referenced():
-            ragdoll_nodes.remove(node)
-            raise internal.UserWarning(
-                "Cannot Delete Referenced Nodes",
-                "I can't do that.\n\n%s is referenced "
-                "and **cannot** be deleted." % node.shortest_path()
-            )
+    mod.set_attr(con["version"], internal.version())
+    mod.connect(con["startState"], solver["inputStart"][index])
+    mod.connect(con["currentState"], solver["inputCurrent"][index])
 
-    # Delete transforms exclusively made for Ragdoll nodes.
-    #  _____________________       ___________________
-    # |                     |     |                   |
-    # | Rigid               |     | Transform         |
-    # |                     |     |                   |
-    # |      exclusives [0] o<----o message           |
-    # |_____________________|     |___________________|
-    #
-    #
-    exclusives = list()
-    for node in ragdoll_nodes:
-        if "exclusiveNodes" not in node:
-            continue
-
-        for element in node["exclusiveNodes"]:
-            other = element.connection(source=True, destination=False)
-
-            if other is not None:
-                assert isinstance(other, cmdx.Node), "This is a bug in cmdx"
-                exclusives.append(other)
-
-    # Delete attributes from Ragdoll interfaces,
-    # such as on the original animation controls.
-    #
-    #  ______________________       ___________________
-    # |                      |     |                   |
-    # | Rigid                |     | Transform         |
-    # |                      |     |                   |
-    # |   userAttributes [0] o<----o mass              |
-    # |                  [1] o<----o stiffness         |
-    # |______________________|     |___________________|
-    #
-    #
-    user_attributes = dict()
-    for node in ragdoll_nodes:
-        if "userAttributes" not in node:
-            continue
-
-        for element in node["userAttributes"]:
-            user_attribute = element.connection(plug=True,
-                                                source=True,
-                                                destination=False)
-            if user_attribute is None:
-                continue
-
-            other = user_attribute.node()
-
-            # These will be deleted anyway
-            if other in exclusives:
-                continue
-
-            if other not in user_attributes:
-                user_attributes[other] = {}
-
-            key = user_attribute.name(long=False)
-            user_attributes[other][key] = user_attribute
-
-    # Reorder attributes by the order they appear in the parent node
-    #  _____________
-    # |             |
-    # |    Friction o -> 126
-    # |        Mass o -> 127
-    # |     Color R o -> 128
-    # |     Color G o -> 129
-    # |     Color B o -> 130
-    # |             |
-    # |_____________|
-    #
-    plug_to_index = {}
-    for node, plugs in user_attributes.items():
-        for index in range(node._fn.attributeCount()):
-            attr = node._fn.attribute(index)
-            fn = cmdx.om.MFnAttribute(attr)
-
-            try:
-                plug = plugs[fn.shortName]
-            except KeyError:
-                continue
-            else:
-                plug_to_index[plug] = index
-
-    # TODO: This only works reliably when all ragdoll_nodes
-    # are involved. When deleting only a subset of nodes, like
-    # mimic controls which do not carry their associated rigid
-    # for example, then rigid attributes will appear scrambled
-
-    user_attributes = sorted(plug_to_index.items(), key=lambda i: i[1])
-    user_attributes = [r[0] for r in user_attributes]
-
-    result["deletedRagdollNodeCount"] = len(ragdoll_nodes)
-    result["deletedExclusiveNodeCount"] = len(exclusives)
-    result["deletedUserAttributeCount"] = len(user_attributes)
-
-    # It was just a joke, relax
-    if dry_run:
-        return result
-
-    # Delete attributes first, as they may otherwise
-    # disappear along with their node.
-    with cmdx.DagModifier() as mod:
-
-        # Attributes are recreated in the reverse order
-        # during undo, so to preserve their original order
-        # we'll need to delete them in reverse.
-        for attr in reversed(user_attributes):
-            mod.delete_attr(attr)
-        mod.do_it()
-
-        for node in ragdoll_nodes + exclusives:
-            try:
-                mod.delete(node)
-                mod.do_it()
-
-            except cmdx.ExistError:
-                # Deleting a shape whose parent transform has no other shape
-                # automatically deletes the transform. This is shit behavior
-                # that can be corrected in Maya 2022 onwards,
-                # via includeParents=False
-                pass
-
-    return result
+    # Ensure `next_available_index` is up-to-date
+    mod.do_it()
 
 
-def delete_all_physics(dry_run=False):
-    """Nuke it from orbit
+def _take_ownership(mod, rdnode, node):
+    """Make `rdnode` the owner of `node`"""
 
-    Return to simpler days, days before physics, with this one command.
+    try:
+        plug = rdnode["owner"]
+    except cmdx.ExistError:
+        try:
+            plug = rdnode["exclusiveNodes"]
+        except cmdx.ExistError:
+            raise TypeError("%s not a Ragdoll node" % rdnode)
 
-    """
+    # Ensure next_available_index is up-to-date
+    mod.do_it()
 
-    all_nodetypes = cmds.pluginInfo("ragdoll", query=True, dependNode=True)
-    all_nodes = cmdx.ls(type=all_nodetypes)
-    return delete_physics(all_nodes, dry_run=dry_run)
-
-
-"""
-
-Internal helper functions
-
-These things just help readability for the above functions,
-and aren't meant for use outside of this module.
-
-"""
-
-
-def _find_solver(start):
-    """Return solver for `start`
-
-    `start` may be a marker or a group, and it will walk the physics
-    hierarchy in reverse until it finds the first solver.
-
-    Note that a solver may be connected to another solver, in which case
-    this returns the *first* solver found.
-
-    """
-
-    while start and not start.isA("rdSolver"):
-        start = start["startState"].output(("rdGroup", "rdSolver"))
-    return start
+    index = plug.next_available_index()
+    mod.connect(node["message"], plug[index])
 
 
 def _create_group(mod, name, solver):
@@ -1734,7 +1686,7 @@ def _interpret_transform(mod, rigid, transform):
 
         # Orient inner shape to wherever the joint is pointing
         # as opposed to whatever its jointOrient is facing
-        geometry = infer_geometry(transform)
+        geometry = _infer_geometry(transform)
 
         mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
         mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
@@ -1848,25 +1800,6 @@ def _interpret_shape2(shape):
             )))
 
     return geo
-
-
-def _interpret_transform2(mod, transform):
-    """Translate `transform` into rigid shape attributes
-
-    Primarily joints, that have a radius and length.
-
-    """
-
-    geo = infer_geometry(transform)
-
-    return geo
-
-
-def _scale_from_rigid(rigid):
-    if rigid.parent().type() == "joint":
-        return rigid["shapeLength"].read() * 0.25
-    else:
-        return sum(rigid["shapeExtents"].read()) / 3.0
 
 
 def _hierarchy_bounding_size(root):

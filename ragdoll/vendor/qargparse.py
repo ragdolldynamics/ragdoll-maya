@@ -459,7 +459,7 @@ class QArgumentParser(QtWidgets.QWidget):
 
     def on_changed(self, arg):
         reset = self._resets[arg["name"]]
-        reset.setVisible(arg.isEdited())
+        reset.setVisible(arg.isEdited() and arg["enabled"] and arg["editable"])
 
         arg["edited"] = arg.isEdited()
 
@@ -525,6 +525,7 @@ class QArgument(QtCore.QObject):
         args["min"] = kwargs.pop("min", 0)
         args["max"] = kwargs.pop("max", 99)
         args["enabled"] = bool(kwargs.pop("enabled", True))
+        args["editable"] = bool(kwargs.pop("editable", True))
         args["edited"] = False
         args["condition"] = None
         args["placeholder"] = kwargs.pop("placeholder", None)
@@ -575,6 +576,18 @@ class QArgument(QtCore.QObject):
 
     def reset(self):
         self.write(self["default"])
+
+    def setEnabled(self, value, notify=True):
+        self["enabled"] = value
+
+        if notify:
+            self.changed.emit()
+
+    def enable(self, notify=True):
+        self.setEnabled(True, notify)
+
+    def disable(self, notify=True):
+        self.setEnabled(False, notify)
 
     def widget(self):
         widget = self._data["_widget"]
@@ -968,6 +981,10 @@ class String2(String):
     def create(self):
         a = _with_entered_exited(QtWidgets.QLineEdit, self)()
         b = _with_entered_exited(QtWidgets.QLineEdit, self)()
+
+        if not self["editable"]:
+            a.setReadOnly(True)
+            b.setReadOnly(True)
 
         container = QtWidgets.QWidget()
 

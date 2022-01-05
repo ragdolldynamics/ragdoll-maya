@@ -8,13 +8,14 @@ dedump(dump)
 
 """
 
+import re
 import json
 import copy
 import logging
 
 from maya import cmds
 from .vendor import cmdx
-from . import commands, internal
+from . import commands, internal, constants
 
 
 log = logging.getLogger("ragdoll")
@@ -177,8 +178,10 @@ class Loader(object):
             "roots": [],
             "replace": [],
             "namespace": None,
-            "preserveControls": False,
             "preserveAttributes": True,
+
+            "overrideSolver": True,
+            "createGround": True,
         })
 
         self._opts = opts
@@ -193,6 +196,8 @@ class Loader(object):
         self._state = DefaultState()
 
         self._registry = None
+
+        self._current_fname = ""
 
     @property
     def registry(self):
@@ -211,6 +216,7 @@ class Loader(object):
             try:
                 with open(fname) as f:
                     dump = json.load(f)
+                self._current_fname = fname
 
             except Exception as e:
                 error = (
@@ -238,19 +244,11 @@ class Loader(object):
         self._dirty = True
 
     def set_namespace(self, namespace=None):
-        # Support passing namespace with or without suffix ":"
-        if namespace is not None:
-            namespace = namespace.rstrip(":") + ":"
-
         self._opts["namespace"] = namespace
         self._dirty = True
 
     def set_preserve_attributes(self, preserve):
         self._opts["preserveAttributes"] = preserve
-        self._dirty = True
-
-    def set_preserve_control(self, preserve):
-        self._opts["preserveControls"] = preserve
         self._dirty = True
 
     def is_valid(self):
@@ -315,7 +313,7 @@ class Loader(object):
                 log.info("  %s.." % _name(entity))
 
         if not any([solvers, groups, constraints, markers]):
-            log.debug("Dump was empty")
+            log.warning("Dump was empty")
 
     @internal.with_undo_chunk
     def reinterpret(self, dry_run=False):
@@ -367,6 +365,8 @@ class Loader(object):
     def _create_solvers(self):
         log.info("Creating solver(s)..")
 
+        rdsolvers = {}
+
         unoccupied_markers = list(self._state["markers"])
         for marker in self._state["occupied"]:
             unoccupied_markers.remove(marker)
@@ -375,9 +375,15 @@ class Loader(object):
             if marker not in self._state["entityToTransform"]:
                 unoccupied_markers.remove(marker)
 
-        rdsolvers = {}
-
         for entity in self._state["solvers"]:
+            if self._opts["overrideSolver"]:
+                try:
+                    rdsolver = cmdx.encode(self._opts["overrideSolver"])
+                    rdsolvers[entity] = rdsolver
+                    continue
+
+                except cmdx.ExistError:
+                    pass
 
             # Ensure there is at least 1 marker in it
             is_empty = True
@@ -400,6 +406,13 @@ class Loader(object):
                 for entity, rdsolver in rdsolvers.items():
                     self._apply_solver(mod, entity, rdsolver)
 
+        if self._opts["createGround"]:
+            for solver in self._state["solvers"]:
+                rdsolver = rdsolvers.get(solver)
+
+                if rdsolver:
+                    commands.create_ground(rdsolver)
+
         return rdsolvers
 
     def _create_groups(self, rdsolvers):
@@ -415,35 +428,35 @@ class Loader(object):
 
         rdgroups = {}
 
-        for entity in self._state["groups"]:
-            Scene = self._registry.get(entity, "SceneComponent")
-            rdsolver = rdsolvers.get(Scene["entity"])
+        with cmdx.DagModifier() as mod:
+            for entity in self._state["groups"]:
+                Scene = self._registry.get(entity, "SceneComponent")
+                rdsolver = rdsolvers.get(Scene["entity"])
 
-            if not rdsolver:
-                # Exported group wasn't part of an exported solver
-                # This would be exceedingly rare.
-                continue
+                if not rdsolver:
+                    # Exported group wasn't part of an exported solver
+                    # This would be exceedingly rare.
+                    continue
 
-            # Ensure there is at least 1 marker in it
-            is_empty = True
-            for marker in unoccupied_markers:
-                Group = self._registry.get(marker, "GroupComponent")
-                if Group["entity"] == entity:
-                    is_empty = False
-                    break
+                # Ensure there is at least 1 marker in it
+                is_empty = True
+                for marker in unoccupied_markers:
+                    Group = self._registry.get(marker, "GroupComponent")
+                    if Group["entity"] == entity:
+                        is_empty = False
+                        break
 
-            if is_empty:
-                continue
+                if is_empty:
+                    continue
 
-            Name = self._registry.get(entity, "NameComponent")
+                Name = self._registry.get(entity, "NameComponent")
 
-            # E.g. |someCtl_rGroup
-            transform_name = Name["path"].rsplit("|", 1)[-1]
-            rdgroup = commands.create_group(transform_name, rdsolver)
-            rdgroups[entity] = rdgroup
+                # E.g. |someCtl_rGroup
+                transform_name = Name["path"].rsplit("|", 1)[-1]
+                rdgroup = commands._create_group(mod, transform_name, rdsolver)
+                rdgroups[entity] = rdgroup
 
-        if self._opts["preserveAttributes"]:
-            with cmdx.DagModifier() as mod:
+            if self._opts["preserveAttributes"]:
                 for entity, rdgroup in rdgroups.items():
                     self._apply_group(mod, entity, rdgroup)
 
@@ -453,6 +466,7 @@ class Loader(object):
         log.info("Creating marker(s)..")
         rdmarkers = {}
 
+        ordered_markers = []
         unoccupied_markers = list(self._state["markers"])
 
         for marker in self._state["occupied"]:
@@ -471,17 +485,18 @@ class Loader(object):
                 # Exported marker wasn't part of an exported solver
                 continue
 
-            rdmarker = commands.assign([transform], rdsolver)
-            rdmarkers[entity] = rdmarker[0]
+            rdmarker = commands.assign_marker(transform, rdsolver)
+            rdmarkers[entity] = rdmarker
+            ordered_markers.append((entity, rdmarker))
 
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
                 for entity, rdmarker in rdmarkers.items():
                     self._apply_marker(mod, entity, rdmarker)
 
+        log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
-            log.info("Adding to group(s)..")
-            for entity, rdmarker in rdmarkers.items():
+            for entity, rdmarker in ordered_markers:
                 Group = self._registry.get(entity, "GroupComponent")
                 rdgroup = rdgroups.get(Group["entity"])
 
@@ -489,13 +504,21 @@ class Loader(object):
                     commands._add_to_group(mod, rdmarker, rdgroup)
                     mod.do_it()  # Commit to group
 
-            log.info("Reconstructing hierarchy..")
-            for entity, rdmarker in rdmarkers.items():
+        log.info("Reconstructing hierarchy..")
+        with cmdx.DagModifier() as mod:
+            for entity, rdmarker in ordered_markers:
                 Subs = self._registry.get(entity, "SubEntitiesComponent")
                 Joint = self._registry.get(Subs["relative"], "JointComponent")
                 parent_entity = Joint["parent"]
 
                 if parent_entity:
+                    # A parent was exported, but hasn't yet been created
+                    if parent_entity not in rdmarkers:
+                        log.debug(
+                            "Missing parent, likely due to partial import"
+                        )
+                        continue
+
                     parent_rdmarker = rdmarkers[parent_entity]
                     mod.connect(parent_rdmarker["ragdollId"],
                                 rdmarker["parentMarker"])
@@ -595,7 +618,7 @@ class Loader(object):
         solvers = self._state["solvers"]
         solvers[:] = []
 
-        for entity in self._registry.view("SolverComponent"):
+        for entity in self._registry.view("SolverUIComponent"):
             solvers.append(entity)
 
     def _find_groups(self):
@@ -604,6 +627,13 @@ class Loader(object):
 
         for entity in self._registry.view("GroupUIComponent"):
             groups.append(entity)
+
+        # Re-establish creation order
+        def sort(entity):
+            order = self._registry.get(entity, "OrderComponent")
+            return order["value"]
+
+        groups[:] = sorted(groups, key=sort)
 
     def _find_markers(self):
         """Find and associate each entity with a Maya transform"""
@@ -616,45 +646,20 @@ class Loader(object):
         occupied[:] = []
 
         for entity in self._registry.view("MarkerUIComponent"):
+            # Collected regardless
+            markers.append(entity)
+
             MarkerUI = self._registry.get(entity, "MarkerUIComponent")
 
             # Find original path, minus the rigid
             # E.g. |rMarker_upperArm_ctl -> |root_grp|upperArm_ctrl
             path = MarkerUI["sourceTransform"]
-
-            for search, replace in self._opts["replace"]:
-                path = path.replace(search, replace)
-
-            if self._opts["namespace"]:
-                # Find all namespaces for the original node
-                # E.g. |myNamespace:root_grp|myNamespace:controls_grp
-                namespaces = path.split("|")
-                namespaces = [
-                    node.rsplit(":", 1)[0]
-                    for node in namespaces
-                    if ":" in node
-                ]
-                namespaces = filter(None, namespaces)  # Remove `None`
-                namespaces = tuple(set(namespaces))  # Remove duplicates
-
-                # Let them know
-                if len(namespaces) > 1:
-                    log.debug(
-                        "%s had multiple namespaces, using first: %s"
-                        % (path, ", ".join(namespaces))
-                    )
-
-                if len(namespaces) > 0:
-                    namespace = namespaces[0]
-                    namespace = namespace.rstrip(":") + ":"
-                    path = path.replace(namespace, self._opts["namespace"])
+            path = self._pre_process_path(path)
 
             # Exclude anything not starting with any of these
             roots = self._opts["roots"]
             if roots and not any(path.startswith(root) for root in roots):
                 continue
-
-            markers.append(entity)
 
             try:
                 transform = cmdx.encode(path)
@@ -675,7 +680,32 @@ class Loader(object):
             order = self._registry.get(entity, "OrderComponent")
             return order["value"]
 
-        markers[:] = sorted(markers, key=sort, reverse=True)
+        markers[:] = sorted(markers, key=sort)
+
+    def _pre_process_path(self, path):
+        """Apply search-and-replace rules along with namespace changes"""
+
+        for search, replace in self._opts["replace"]:
+            path = path.replace(search, replace)
+
+        if self._opts["namespace"]:
+            # Give namespace-less paths an empty namespace
+            # such that it can be replaced.
+            comps = []
+            for comp in path.split("|"):
+                if ":" not in comp:
+                    comp = ":" + comp
+                comps.append(comp)
+
+            path = "|".join(comps)
+
+            namespace = self._opts["namespace"].replace(" ", "")
+            path = re.sub(r"\|(.*?)\:", "|%s:" % namespace, path)
+
+        # In case of double || characters
+        path = path.replace("||", "|")
+
+        return path
 
     def _apply_solver(self, mod, entity, solver):
         Solver = self._registry.get(entity, "SolverComponent")
@@ -851,11 +881,11 @@ class Loader(object):
         mod.set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
 
         shape_type = {
-            "Box": 0,
-            "Sphere": 1,
-            "Capsule": 2,
-            "ConvexHull": 3,
-        }.get(Desc["type"], 0)
+            "Box": constants.BoxShape,
+            "Sphere": constants.SphereShape,
+            "Capsule": constants.CapsuleShape,
+            "ConvexHull": constants.MeshShape,
+        }.get(Desc["type"], constants.CapsuleShape)
 
         mod.set_attr(marker["shapeType"], shape_type)
         mod.set_attr(marker["shapeExtents"], Desc["extents"])
@@ -867,6 +897,59 @@ class Loader(object):
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
         mod.set_attr(marker["shapeRotation"], rotation)
+
+        # Preserve destination transforms, where possible
+        # In the case of importing onto a different character,
+        # e.g. one without the IK controls, this would not match 1-to-1
+        if MarkerUi["destinationTransforms"]:
+
+            def retarget(path, append=True):
+                try:
+                    path = self._pre_process_path(path)
+                    dest = cmdx.encode(path)
+
+                except cmdx.ExistError:
+                    log.warning(
+                        "Destination path '%s' from %s "
+                        "could not be found and was ignored."
+                        % (path, self._current_fname)
+                    )
+
+                else:
+                    if append:
+                        index = marker["dst"].next_available_index()
+                    else:
+                        index = 0
+
+                    dst = marker["dst"][index]
+                    mod.connect(dest["message"], dst)
+                    mod.do_it()
+
+            # Replace default destination
+            dests = MarkerUi["destinationTransforms"]
+            retarget(dests[0], False)
+
+            # Append additional ones
+            for dest in dests[1:]:
+                retarget(dest)
+
+        if MarkerUi["inputGeometryPath"]:
+            try:
+                path = MarkerUi["inputGeometryPath"]
+                path = self._pre_process_path(path)
+                shape = cmdx.encode(path)
+
+            except cmdx.ExistError:
+                pass
+
+            else:
+                # Do we need to maintain the offset?
+                source = marker["src"].node()
+                maintain_offset = shape.parent() != source
+
+                commands.replace_mesh(
+                    marker, shape, opts={"maintainOffset": maintain_offset}
+                )
 
 
 def load(fname, roots=None):

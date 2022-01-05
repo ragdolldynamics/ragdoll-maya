@@ -73,7 +73,7 @@ Timeline QSlider::handle:horizontal {
     border-left: 2px solid #ff2222;
     border-right: 2px solid #880000;
     background: #dd3333;
-    
+
     /* Crop timeline */
     margin-top: 10px;
     margin-bottom: 10px;
@@ -227,5 +227,34 @@ PivotEditor #z::indicator::checked {
     image: url("%(res)s/ui/pivot_editor/z_checked.png");
 }
 
+ImportOption #Options {
+    padding: 10px;
+}
 
-"""
+DumpWidget {
+    background: #282828;
+    border: 0;
+    outline: none;
+}
+
+#TargetView {
+    border: none;
+    background: transparent;
+}
+
+#TargetView QHeaderView::section {
+    font-weight: bold;
+    background: transparent;
+}
+
+#DestinationPath {
+    background: transparent;
+}
+
+#SourcePath {
+    background: transparent;
+}
+
+#DumpWidget QLineEdit {
+    border: none;
+}

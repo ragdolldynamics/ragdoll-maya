@@ -501,6 +501,24 @@
         "help": "Preserve the original scene from the exported .rag file. If not, create a new scene for every import."
     },
 
+    "importSolver": {
+        "name": "importSolver",
+        "label": "Solver",
+        "type": "Enum",
+        "items": ["From File", "From Scene"],
+        "default": 1,
+        "help": "Either create a new solver from this file, or reuse any solver currently found in the scene."
+    },
+
+    "importNamespace": {
+        "name": "importNamespace",
+        "label": "Replace Namespace",
+        "type": "String",
+        "default": "",
+        "placeholder": "Keep original",
+        "help": "Add or replace any namespace found in the exported file."
+    },
+
     "importSearchAndReplace": {
         "name": "importSearchAndReplace",
         "label": "Search and Replace",
@@ -508,6 +526,16 @@
         "default": ["", ""],
         "placeholder": ["Search", "Replace"],
         "help": "Replace part of a full node path, such as a namespace, with another. E.g. replace 'myNamespace:' with 'myOtherNamespace:' to apply contents of one namespace to another."
+    },
+
+    "importCurrentSelection": {
+        "name": "importCurrentSelection",
+        "label": "Current Selection",
+        "type": "String2",
+        "editable": false,
+        "default": ["", ""],
+        "placeholder": ["", ""],
+        "help": "Source and destination transforms of the current selection."
     },
 
     "importMergePhysics": {
@@ -532,7 +560,7 @@
         "name": "importUseSelection",
         "label": "Use Selection",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Import onto selection, ignore everything else."
     },
 
@@ -896,9 +924,9 @@
         "default": false,
         "help": "Experimental auto initial state."
     },
-    "frameskipHandling": {
-        "name": "frameskipHandling",
-        "label": "Frameskip Handling",
+    "frameskipMethod": {
+        "name": "frameskipMethod",
+        "label": "Frameskip Method",
         "type": "Enum",
         "default": 1,
         "items": ["Ignore", "Pause"],

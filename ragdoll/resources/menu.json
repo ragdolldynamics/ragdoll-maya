@@ -338,15 +338,16 @@
             "importPath",
             "importPaths",
             "importMethod",
+            "importSolver",
+            "markersCreateGround",
             "importMergePhysics",
             "importPreserveAttributes",
-            "importIncludeControls",
             "importIncludeAnimation",
             "importIncludeSimulation",
             "importUseSelection",
-            "importAutoScene",
-            "importAutoNamespace",
-            "importSearchAndReplace"
+            "importSearchAndReplace",
+            "importNamespace",
+            "importCurrentSelection"
         ]
     },
     "openPhysics": {
@@ -511,6 +512,7 @@
             "scale",
             "sceneScale",
             "cacheMedia",
+            "frameskipMethod",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",
@@ -610,13 +612,11 @@
         "summary": "Assign marker to this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
-            "basicsSeparator",
-
+            "markersDensity",
+            "markersAutoLimit",
             "markersCreateGround",
             "markersCreateObjectSet",
-            "markersAutoLimit",
             "markersCreateLollipop",
-            "markersDensity",
 
             "channelBoxSeparator",
 

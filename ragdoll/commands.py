@@ -476,8 +476,12 @@ def retarget_marker(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
-def create_solver(name=None):
+def create_solver(name=None, opts=None):
     """Create a new rdSolver node"""
+
+    opts = dict({
+        "frameskipMethod": constants.FrameskipPause,
+    }, **(opts or {}))
 
     name = name or "rSolver"
     name = internal.unique_name(name)
@@ -488,6 +492,8 @@ def create_solver(name=None):
         solver = nodes.create("rdSolver", mod,
                               name=shape_name,
                               parent=solver_parent)
+
+        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
 
         # Scale isn't relevant for the solver, what would it mean?
         mod.set_keyable(solver_parent["scaleX"], False)
@@ -858,7 +864,7 @@ def replace_mesh(marker, mesh, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "maintainHistory": False,
+        "maintainHistory": True,
     }, **(opts or {}))
 
     # Clone input mesh. We aren't able to simply connect to the
@@ -931,8 +937,6 @@ def replace_mesh(marker, mesh, opts=None):
 
             elif mesh.isA("nurbsSurface"):
                 mod.connect(mesh["local"], marker["inputGeometry"])
-
-        mod.set_attr(marker["shapeType"], constants.MeshShape)
 
     return True
 

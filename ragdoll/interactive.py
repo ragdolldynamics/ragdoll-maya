@@ -1102,28 +1102,40 @@ def validate_playbackspeed():
     if not options.read("validatePlaybackSpeed"):
         return kSuccess
 
+    # 'Real-time playback' is only problematic if frames are skipped
+    if options.read("frameskipMethod") == c.FrameskipPause:
+        return kSuccess
+
     playback_speed = cmds.playbackOptions(playbackSpeed=True, query=True)
 
     if playback_speed == 0.0:
+
+        # Keep this the current option as much as
+        # possible, it is the most reliable
+        options.write("frameskipMethod", c.FrameskipPause)
+
+        return kSuccess
+
+    def ignore():
+        options.write("frameskipMethod", c.FrameskipIgnore)
         return kSuccess
 
     def fix_it():
         cmds.playbackOptions(playbackSpeed=0.0, maxPlaybackSpeed=1)
-
         log.info("Playing every frame")
         return kSuccess
 
     return ui.warn(
         option="validatePlaybackSpeed",
-        title="Play every frame",
+        title="Real-time playback detected",
         message=(
-            "Ensure your playback speed is set to 'Play every frame' "
-            "to avoid frame drops, these can break a simulation and "
-            "generally causes odd things to happen."
+            "Real-time playback is supported, but requires Ragdoll "
+            "to ignore frames during simulation which can result "
+            "in less predictable results."
         ),
         call_to_action="What would you like to do?",
         actions=[
-            ("Ignore", lambda: True),
+            ("Ignore Frames", ignore),
             ("Play Every Frame", fix_it),
             ("Cancel", lambda: False)
         ]
@@ -1266,7 +1278,10 @@ def _find_current_solver(create_ground=True):
         return solver[0]
 
     else:
-        solver = commands.create_solver()
+        opts = {
+            "frameskipMethod": options.read("frameskipMethod")
+        }
+        solver = commands.create_solver(opts=opts)
 
         if create_ground:
             commands.create_ground(solver)
@@ -1343,18 +1358,22 @@ def assign_single(selection=None, **opts):
     }, **(opts or {}))
 
     solver = _find_current_solver(opts["createGround"])
+
+    if not solver:
+        return
+
     markers = []
 
     try:
         for transform in selection:
-            new_markers = commands.assign([transform], solver, opts={
+            new_marker = commands.assign_marker(transform, solver, opts={
                 "autoLimit": opts["autoLimit"],
                 "density": opts["density"],
                 "materialInChannelBox": bool(opts["materialInChannelBox"]),
                 "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
                 "limitInChannelBox": bool(opts["limitInChannelBox"]),
             })
-            markers.extend(new_markers)
+            markers.append(new_marker)
     except RuntimeError as e:
         raise i__.UserWarning("Already assigned", str(e))
 
@@ -1394,6 +1413,9 @@ def assign_and_connect(selection=None, **opts):
     }, **(opts or {}))
 
     solver = _find_current_solver(opts["createGround"])
+
+    if not solver:
+        return
 
     try:
         assigned = commands.assign_markers(selection, solver, opts={
@@ -2311,6 +2333,10 @@ def replace_marker_mesh(selection=None, **opts):
 
     commands.replace_mesh(markers[0], meshes[0], opts=opts)
 
+    # Make life easier for the user
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(markers[0]["shapeType"], c.MeshShape)
+
     return kSuccess
 
 
@@ -2752,11 +2778,88 @@ def import_physics_options(*args):
     win = None
 
     def import_physics():
-        return win.do_import()
+        create_ground = options.read("markersCreateGround")
+
+        override_solver = None
+        if options.read("importSolver") == 1:
+            existing_solvers = cmdx.ls(type="rdSolver")
+
+            if existing_solvers:
+                override_solver = existing_solvers[0].path()
+
+        win._loader._opts["createGround"] = create_ground
+        win._loader._opts["overrideSolver"] = override_solver
+
+        try:
+            if options.read("importMethod") == c.ImportLoad:
+                win._loader.load()
+            else:
+                win._loader.reinterpret()
+
+        except Exception:
+            log.warning(traceback.format_exc())
+            log.warning("An unexpected error occurred, see Script Editor")
+            return False
+
+        finally:
+            # Now that new physics has become part of the
+            # scene, reset relevant widgets.
+            win.reset()
+
+        return True
+
+    def _on_selection_changed():
+        use_selection = win.parser.find("importUseSelection")
+
+        if use_selection.read():
+            roots = cmds.ls(selection=True, type="transform", long=True)
+
+            # win._loader.set_namespace(None)
+            win._loader.set_roots(roots)
+
+        else:
+            win._loader.set_roots([])
+
+        win.reset()
+
+    def on_selection_changed(clientData=None):
+        try:
+            _on_selection_changed()
+
+        except Exception:
+            # One the window is closed, this will cease to matter
+            uninstall_selection_callback()
+
+    def uninstall_selection_callback():
+        from maya.api import OpenMaya as om
+        callback = getattr(on_selection_changed, "_callback", None)
+        if callback is not None:
+            om.MMessage.removeCallback(callback)
+            on_selection_changed._callback = None
+
+    def install_selection_callback():
+        uninstall_selection_callback()
+
+        # Store callback on called function, it'll survive
+        # any eventual module reloads too.
+        from maya.api import OpenMaya as om
+        on_selection_changed._callback = om.MModelMessage.addCallback(
+            om.MModelMessage.kActiveListModified,
+            on_selection_changed
+        )
+
+    def on_use_selection_changed():
+        _on_selection_changed()
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
+
+    use_selection = win.parser.find("importUseSelection")
+    use_selection.changed.connect(on_use_selection_changed)
+
     ui.center_window(win)
     win.resize(ui.px(1100), ui.px(560))
+
+    install_selection_callback()
 
     return win
 

@@ -157,3 +157,9 @@ DensityFlesh = 2
 DensityUranium = 3
 DensityBlackHole = 4
 DensityCustom = 5
+
+FrameskipPause = 0
+FrameskipIgnore = 1
+
+ImportLoad = "Load"
+ImportReinterpret = "Reinterpret"

@@ -8,7 +8,6 @@ import logging
 import datetime
 import webbrowser
 
-from maya import cmds
 from maya.api import OpenMaya as om, OpenMayaUI as omui
 from maya.OpenMayaUI import MQtUtil
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
@@ -18,19 +17,13 @@ import shiboken2
 from . import (
     options,
     licence,
-    dump as dump_,
+    dump,
     constants as c,
     internal as i__,
-    __
+    __,
 )
-from .vendor import qargparse, markdown, qjsonmodel
 
-try:
-    from maya.cmds import optionVar
-except ImportError:
-    # Standalone
-    def optionVar(*args, **kwargs):
-        return None
+from .vendor import qargparse, markdown, qjsonmodel
 
 log = logging.getLogger("ragdoll")
 
@@ -925,8 +918,8 @@ class Options(QtWidgets.QMainWindow):
         super(Options, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setMouseTracking(True)  # For helptext
-        # self.setMinimumWidth(px(570))
-        # self.setMaximumWidth(px(570))
+        self.setMinimumWidth(px(570))
+        self.setMaximumWidth(px(570))
         self.setMinimumHeight(px(395))
 
         # Infer name from command
@@ -956,6 +949,7 @@ class Options(QtWidgets.QMainWindow):
             "Player": Player(media, self),
             "Help": HelpPage(),
             "Options": QtWidgets.QWidget(),
+            "ScrollArea": QtWidgets.QScrollArea(),
             "Timeline": Timeline(media),
             "Background": QtWidgets.QLabel(),
             "Foreground": QtWidgets.QLabel(),
@@ -1068,7 +1062,13 @@ class Options(QtWidgets.QMainWindow):
         hlp_on = hlp.addAction("Help on %s" % command_name)
         hlp_on.triggered.connect(self.on_help)
 
-        panels["Body"].addWidget(widgets["Options"])
+        widgets["ScrollArea"].setWidget(widgets["Options"])
+        widgets["ScrollArea"].setWidgetResizable(True)
+        widgets["ScrollArea"].setFrameShape(QtWidgets.QFrame.NoFrame)
+        widgets["Options"].setMinimumHeight(px(300))
+        widgets["Options"].setMinimumWidth(px(300))
+
+        panels["Body"].addWidget(widgets["ScrollArea"])
         panels["Body"].addWidget(widgets["Player"])
         panels["Body"].addWidget(widgets["Help"])
         panels["Body"].setMaximumWidth(px(570))
@@ -1083,9 +1083,12 @@ class Options(QtWidgets.QMainWindow):
         widgets["Parser"].setIcon(icon)
         widgets["Parser"].setDescription(description)
 
-        layout = QtWidgets.QVBoxLayout(widgets["Options"])
-        layout.addWidget(widgets["Parser"], 1)
-        layout.setContentsMargins(px(50), px(5), px(5), px(5))
+        spacer = QtWidgets.QWidget()
+        spacer.setFixedWidth(px(45))
+        layout = QtWidgets.QGridLayout(widgets["Options"])
+        layout.addWidget(spacer, 0, 0)
+        layout.addWidget(widgets["Parser"], 0, 1)
+        layout.setContentsMargins(px(5), px(5), px(5), px(5))
 
         layout = QtWidgets.QHBoxLayout(panels["Buttons"])
         layout.setContentsMargins(px(5), px(5), px(5), px(7))
@@ -1093,11 +1096,11 @@ class Options(QtWidgets.QMainWindow):
         layout.addWidget(widgets["Apply"])
         layout.addWidget(widgets["Close"])
 
-        layout = QtWidgets.QGridLayout(panels["Central"])
-        layout.addWidget(panels["Body"], 0, 0)
-        layout.addWidget(panels["Buttons"], 1, 0)
-        layout.addWidget(panels["Footer"], 2, 0)
-        layout.addWidget(panels["Timeline"], 3, 0)
+        layout = QtWidgets.QVBoxLayout(panels["Central"])
+        layout.addWidget(panels["Body"])
+        layout.addWidget(panels["Buttons"])
+        layout.addWidget(panels["Footer"])
+        layout.addWidget(panels["Timeline"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
@@ -1127,7 +1130,7 @@ class Options(QtWidgets.QMainWindow):
         self._media = media
 
         # For uninstall
-        ImportOptions.instance = self
+        Options.instance = self
         __.widgets[self.windowTitle()] = self
 
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
@@ -2064,18 +2067,17 @@ class DumpView(QtWidgets.QTreeView):
 
 class DumpWidget(QtWidgets.QWidget):
     hinted = QtCore.Signal(str)  # Hint
+    selection_changed = QtCore.Signal(dump.Entity, object)  # entity, transform
 
     def __init__(self, loader, parent=None):
         super(DumpWidget, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
 
         panels = {
             "Body": QtWidgets.QWidget(),
         }
 
         widgets = {
-            "Collapse": QtWidgets.QPushButton(">"),
-            "SourcePath": QtWidgets.QLineEdit(),
-            "DestinationPath": QtWidgets.QLineEdit(),
             "TargetView": DumpView(),
         }
 
@@ -2084,51 +2086,48 @@ class DumpWidget(QtWidgets.QWidget):
         }
 
         for name, wid in panels.items():
+            wid.setAttribute(QtCore.Qt.WA_StyledBackground)
             wid.setObjectName(name)
 
         for name, wid in widgets.items():
+            wid.setAttribute(QtCore.Qt.WA_StyledBackground)
             wid.setObjectName(name)
 
         # Setup
-        panels["Body"].setMinimumWidth(px(530))
 
-        widgets["Collapse"].setFixedWidth(px(10))
-        widgets["Collapse"].setSizePolicy(QtWidgets.QSizePolicy.Minimum,
-                                          QtWidgets.QSizePolicy.Expanding)
-
-        widgets["SourcePath"].setReadOnly(True)
-        widgets["DestinationPath"].setReadOnly(True)
+        pixmap = _resource("icons", "right.png")
+        pixmap = QtGui.QPixmap(pixmap)
+        pixmap = pixmap.scaledToWidth(px(16), QtCore.Qt.SmoothTransformation)
         widgets["TargetView"].mouseMoved.connect(self.on_mouse_moved)
         widgets["TargetView"].setModel(models["TargetModel"])
+        widgets["TargetView"].setUniformRowHeights(True)
+        widgets["TargetView"].setFrameShape(QtWidgets.QFrame.NoFrame)
+        widgets["TargetView"].header().hide()
         widgets["TargetView"].setSelectionBehavior(
             QtWidgets.QTreeView.SelectRows)
 
         # Layout
 
         layout = QtWidgets.QGridLayout(panels["Body"])
-        layout.addWidget(QtWidgets.QLabel("Source"), 0, 0)
-        layout.addWidget(widgets["SourcePath"], 0, 1)
-        layout.addWidget(QtWidgets.QLabel("Destination"), 1, 0)
-        layout.addWidget(widgets["DestinationPath"], 1, 1)
-        layout.addWidget(widgets["TargetView"], 2, 0, 1, 2)
-        layout.addWidget(QtWidgets.QWidget(), 0, 2)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["TargetView"], 1, 0, 1, 3)
+        layout.setRowStretch(1, 1)
+        # layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(px(5))
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.addWidget(widgets["Collapse"])
         layout.addWidget(panels["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(px(5))
 
         selection_model = widgets["TargetView"].selectionModel()
         selection_model.currentRowChanged.connect(self.on_target_changed)
-        widgets["Collapse"].clicked.connect(self.on_collapse_clicked)
 
         timer = QtCore.QTimer(parent=self)
         timer.setInterval(50.0)  # ms
         timer.setSingleShot(True)
         timer.timeout.connect(self._reset)
+
+        font_info = QtGui.QFontInfo(self.font())
 
         self._reset_timer = timer
         self._widgets = widgets
@@ -2136,7 +2135,13 @@ class DumpWidget(QtWidgets.QWidget):
         self._models = models
         self._loader = loader
 
-        self.setStyleSheet(_scaled_stylesheet("""
+        # For refreshing without losing selection
+        self._last_selected_path = ""
+
+        # For automatically determining tree view height
+        self._item_height = font_info.pixelSize() * 1.5
+
+        style = _scaled_stylesheet("""
             QTreeView {
                 outline: none;
             }
@@ -2150,7 +2155,15 @@ class DumpWidget(QtWidgets.QWidget):
             QTreeView::item:selected {
                 background: #5285a6;
             }
-        """))
+        """)
+
+        style += """
+            QTreeView::item {
+                height: %dpx;
+            }
+        """ % self._item_height
+
+        self.setStyleSheet(style)
 
     def leaveEvent(self, event):
         self.hinted.emit("")  # Clear
@@ -2161,39 +2174,15 @@ class DumpWidget(QtWidgets.QWidget):
         tooltip = index.data(HintRole)
         self.hinted.emit(tooltip or "")
 
-    def on_collapse_clicked(self):
-        body = self._panels["Body"]
-        body.setVisible(not body.isVisible())
-
     def on_target_changed(self, current, previous):
         parent = current.parent()
         item = self._models["TargetModel"].index(current.row(), 0, parent)
+
         entity = item.data(EntityRole)
-
-        if not entity:
-            return
-
-        if self._loader.registry.has(entity, "MarkerUIComponent"):
-            MarkerUi = self._loader.registry.get(entity, "MarkerUIComponent")
-            source_text = MarkerUi["sourceTransform"]
-        else:
-            Name = self._loader.registry.get(entity, "NameComponent")
-            source_text = Name["path"] or Name["value"]
-
-        source_widget = self._widgets["SourcePath"]
-        source_widget.setText(source_text)
-
-        # If there's a destination, put it in the box
-        dest_widget = self._widgets["DestinationPath"]
-
         transform = item.data(TransformRole)
-        if transform:
-            dest_text = transform.path()
-            dest_widget.setText(dest_text)
-            dest_widget.setPlaceholderText("")
-        else:
-            dest_widget.setText("")
-            dest_widget.setPlaceholderText("No target")
+        self.selection_changed.emit(entity, transform)
+
+        self._store_current_selection()
 
     def reset(self):
         # Reset after a given time period.
@@ -2206,19 +2195,11 @@ class DumpWidget(QtWidgets.QWidget):
         analysis = self._loader.analyse()
 
         def _transform(data, entity):
-            Name = self._loader.registry.get(entity, "NameComponent")
-
-            alignment = (
-                QtCore.Qt.AlignLeft,
-                QtCore.Qt.AlignLeft,
-                QtCore.Qt.AlignLeft,
-            )
-
             shape_icon = None
 
             if self._loader.registry.has(entity, "MarkerUIComponent"):
                 marker_ui = self._loader.registry.get(entity,
-                                                     "MarkerUIComponent")
+                                                      "MarkerUIComponent")
 
                 # TODO: Replace .get with []
                 shape_icon = marker_ui.get("shapeIcon")
@@ -2250,14 +2231,12 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DisplayRole] += [path]
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[QtCore.Qt.ForegroundRole] = (color, color)
-                data[QtCore.Qt.TextAlignmentRole] = alignment
 
                 data[TransformRole] = occupied
                 data[OccupiedRole] = True
-                data[HintRole] += (
-                    occupied.path(),
+                data[HintRole] += [
                     "%s already has a rigid" % path
-                )
+                ]
 
             elif no_transform:
                 # There isn't any transform for this entity
@@ -2266,14 +2245,12 @@ class DumpWidget(QtWidgets.QWidget):
                 tooltip = "No transform could be found for this rigid"
 
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.TextAlignmentRole] = alignment
                 data[QtCore.Qt.ForegroundRole] = grayed_out
 
                 data[OccupiedRole] = False
-                data[HintRole] += (
-                    Name["shortestPath"],
+                data[HintRole] += [
                     tooltip
-                )
+                ]
 
             else:
                 icon = _resource("icons", "right.png")
@@ -2281,13 +2258,11 @@ class DumpWidget(QtWidgets.QWidget):
                 transform = analysis["entityToTransform"][entity]
 
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.TextAlignmentRole] = alignment
                 data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
                 data[TransformRole] = transform
-                data[HintRole] += (
-                    Name["shortestPath"],
+                data[HintRole] += [
                     transform.shortestPath()
-                )
+                ]
 
         def _marker_icon(data, entity):
             Desc = self._loader.registry.get(
@@ -2316,7 +2291,12 @@ class DumpWidget(QtWidgets.QWidget):
             return {
                 QtCore.Qt.DisplayRole: [],
                 QtCore.Qt.DecorationRole: [],
-                QtCore.Qt.TextAlignmentRole: [],
+                QtCore.Qt.TextAlignmentRole: (
+                    QtCore.Qt.AlignLeft,
+                    QtCore.Qt.AlignLeft,
+                    QtCore.Qt.AlignLeft,
+                ),
+                # QtCore.Qt.SizeHintRole: QtCore.QSize(px(0), px(20)),
 
                 HintRole: [],
                 TransformRole: None,
@@ -2328,6 +2308,7 @@ class DumpWidget(QtWidgets.QWidget):
         group_to_item = {}
         marker_to_item = {}
         constraint_to_item = {}
+        all_items = {}
 
         def _add_solvers(root_item):
             for entity in analysis["solvers"]:
@@ -2338,17 +2319,18 @@ class DumpWidget(QtWidgets.QWidget):
 
                 data = _default_data()
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.DisplayRole] += [label, "New Solver"]
+                data[QtCore.Qt.DisplayRole] += [label, ""]
                 data[EntityRole] = entity
-                data[HintRole] += (
+                data[HintRole] += [
                     Name["shortestPath"],
                     "A new solver will be created"
-                )
+                ]
 
                 item = qargparse.GenericTreeModelItem(data)
                 root_item.addChild(item)
 
                 solver_to_item[entity] = item
+                all_items[entity] = item
 
         def _add_groups(root_item):
             for entity in analysis["groups"]:
@@ -2361,6 +2343,10 @@ class DumpWidget(QtWidgets.QWidget):
                 data[EntityRole] = entity
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[QtCore.Qt.DisplayRole] += [label]
+                data[HintRole] += [
+                    label,
+                    "A new group will be created with the contained markers."
+                ]
 
                 Scene = self._loader.registry.get(entity, "SceneComponent")
                 parent_item = solver_to_item.get(Scene["entity"])
@@ -2373,16 +2359,23 @@ class DumpWidget(QtWidgets.QWidget):
                 parent_item.addChild(item)
 
                 group_to_item[entity] = item
+                all_items[entity] = item
 
         def _add_markers(root_item):
             registry = self._loader.registry
 
-            for entity in analysis["markers"]:
+            for entity in reversed(analysis["markers"]):
                 Name = registry.get(entity, "NameComponent")
+                MarkerUi = registry.get(entity, "MarkerUIComponent")
+                name = MarkerUi["sourceTransform"].rsplit("|", 1)[-1]
+                name = name.rsplit(":", 1)[-1]
 
                 data = _default_data()
                 data[EntityRole] = entity
-                data[QtCore.Qt.DisplayRole] += [Name["value"]]
+                data[QtCore.Qt.DisplayRole] += [name]
+                data[HintRole] += [
+                    Name["value"]
+                ]
 
                 _marker_icon(data, entity)
                 _transform(data, entity)
@@ -2403,6 +2396,7 @@ class DumpWidget(QtWidgets.QWidget):
                 parent_item.addChild(item)
 
                 marker_to_item[entity] = item
+                all_items[entity] = item
 
         def _add_constraints(root_item):
             registry = self._loader.registry
@@ -2410,27 +2404,6 @@ class DumpWidget(QtWidgets.QWidget):
             for entity in analysis["constraints"]:
                 Name = registry.get(entity, "NameComponent")
                 label = Name["path"].rsplit("|", 1)[-1]
-
-                # # Figure out parent and child markers
-                # parent_name = "world"
-                # child_name = "none"
-
-                # Joint = registry.get(entity, "JointComponent")
-
-                # # Any pin constraint faills into this category
-                # try:
-                #     ParentName = registry.get(Joint["parent"], "NameComponent")
-                #     parent_name = ParentName["value"]
-                # except KeyError:
-                #     pass
-
-                # # No valid constraint lacks a child, but it may
-                # # be an invalid constraint that got included in an export
-                # try:
-                #     ChildName = registry.get(Joint["child"], "NameComponent")
-                #     child_name = ChildName["value"]
-                # except KeyError:
-                #     pass
 
                 if registry.has(entity, "FixedJointComponent"):
                     icon = _resource("icons", "fixed_constraint.png")
@@ -2457,10 +2430,10 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.DecorationRole] += [icon, right_icon]
                 data[QtCore.Qt.DisplayRole] += [label, target]
                 data[EntityRole] = entity
-                data[HintRole] += (
+                data[HintRole] += [
                     Name["shortestPath"],
                     Name["shortestPath"]
-                )
+                ]
 
                 Scene = registry.get(entity, "SceneComponent")
                 parent_item = solver_to_item.get(Scene["entity"])
@@ -2473,6 +2446,10 @@ class DumpWidget(QtWidgets.QWidget):
                 parent_item.addChild(item)
 
                 constraint_to_item[entity] = item
+                all_items[entity] = item
+
+        view = self._widgets["TargetView"]
+        model = self._models["TargetModel"]
 
         root_item = qargparse.GenericTreeModelItem({
             QtCore.Qt.DisplayRole: ("Source Node", "Target Node")
@@ -2482,7 +2459,7 @@ class DumpWidget(QtWidgets.QWidget):
             icon = _resource("icons", "error.png")
             icon = QtGui.QIcon(icon)
             invalid_item = qargparse.GenericTreeModelItem({
-                QtCore.Qt.DisplayRole: "Invalid .rag file",
+                QtCore.Qt.DisplayRole: "Empty or incompatible .rag file",
                 QtCore.Qt.DecorationRole: icon,
                 QtCore.Qt.ForegroundRole: QtGui.QColor("#F66"),
             })
@@ -2502,36 +2479,96 @@ class DumpWidget(QtWidgets.QWidget):
 
             self._widgets["TargetView"].setIndentation(px(11))
 
-        model = self._models["TargetModel"]
+        if all_items == {}:
+            icon = _resource("icons", "error.png")
+            icon = QtGui.QIcon(icon)
+            invalid_item = qargparse.GenericTreeModelItem({
+                QtCore.Qt.DisplayRole: "No Markers found in .rag file",
+                QtCore.Qt.DecorationRole: icon,
+                QtCore.Qt.ForegroundRole: QtGui.QColor("#F66"),
+            })
+
+            root_item.addChild(invalid_item)
+
+            for reason in self._loader.invalid_reasons():
+                log.debug("Failure reason: %s" % reason)
+
+            view.setIndentation(0)
+
         model.reset(root_item)
 
         # Make sure everything is nice and tight
-        self._widgets["TargetView"].expandAll()
-        self._widgets["TargetView"].resizeColumnToContents(0)
-        self._widgets["TargetView"].resizeColumnToContents(1)
+        view.expandAll()
+        view.resizeColumnToContents(0)
+        view.resizeColumnToContents(1)
+
+        count = len(all_items) + 3  # + header & padding & space
+        height = self._item_height * count
+        view.setMinimumHeight(height)
+
+        self._restore_current_selection()
+
+    def _store_current_selection(self):
+        """Serialise selection to string"""
+
+        self._last_selected_path = ""
+
+        view = self._widgets["TargetView"]
+        selection = view.selectionModel()
+
+        try:
+            index = selection.currentIndex()
+        except IndexError:
+            return
+
+        path = index.data(QtCore.Qt.DisplayRole)
+        parent = index.parent()
+
+        while parent.isValid():
+            path = "%s/%s" % (parent.data(QtCore.Qt.DisplayRole), path)
+            parent = parent.parent()
+
+        self._last_selected_path = path
+
+    def _restore_current_selection(self):
+        """Deserialise selection from string"""
+
+        model = self._models["TargetModel"]
+        index = model.index(0, 0)
+
+        for comp in self._last_selected_path.split("/"):
+            for ii in range(model.rowCount(index)):
+                child = index.child(ii, 0)
+
+                if child.data(QtCore.Qt.DisplayRole) == comp:
+                    index = child
+                    break
+
+        view = self._widgets["TargetView"]
+        view.setCurrentIndex(index)
 
 
 class ImportOptions(Options):
+    before_reset = QtCore.Signal()
+
     def __init__(self, *args, **kwargs):
         super(ImportOptions, self).__init__(*args, **kwargs)
-        print("Import this")
         self.setWindowTitle("Import Options")
-        # self.setMaximumWidth(px(1700))
-        # self.setMinimumWidth(px(1000))
-        # self.setMinimumHeight(px(560))
 
-        loader = dump_.Loader()
+        loader = dump.Loader()
 
         widgets = {
             "DumpWidget": DumpWidget(loader),
             "Thumbnail": QtWidgets.QLabel(),
         }
 
-        # Integrate with other options
-        layout = self._panels["Central"].layout()
+        for nam, obj in widgets.items():
+            obj.setObjectName(nam)
 
-        layout.addWidget(widgets["DumpWidget"], 0, 1, 4, 1)
-        # layout.setColumnStretch(1, 1)  # Expand last row
+        # Integrate with other options
+        layout = self._widgets["Options"].layout()
+        layout.addWidget(widgets["DumpWidget"], 1, 0, 1, 2)
+        layout.setRowStretch(1, 1)
 
         self.parser._row += 1  # For the next subclass
 
@@ -2541,15 +2578,15 @@ class ImportOptions(Options):
         import_paths = parser.find("importPaths")
         search_replace = parser.find("importSearchAndReplace")
         use_selection = parser.find("importUseSelection")
-        auto_namespace = self.parser.find("importAutoNamespace")
+        namespace = self.parser.find("importNamespace")
         preserve_attributes = self.parser.find("importPreserveAttributes")
 
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
         import_paths.changed.connect(self.on_filename_changed)
-        use_selection.changed.connect(self.on_selection_changed)
-        auto_namespace.changed.connect(self.on_selection_changed)
+        use_selection.changed.connect(self.on_use_selection_toggled)
         search_replace.changed.connect(self.on_search_and_replace)
+        namespace.changed.connect(self.on_namespace_changed)
         preserve_attributes.changed.connect(self.on_preserve_attributes)
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")
@@ -2577,10 +2614,15 @@ class ImportOptions(Options):
         """)
 
         widgets["DumpWidget"].hinted.connect(self.on_hinted)
+        widgets["DumpWidget"].selection_changed.connect(
+            self.on_content_selection_changed)
 
         self._loader = loader
         self._selection_callback = None
         self._previous_dirname = None
+        self._read_timer = QtCore.QTimer()
+        self._read_timer.setInterval(200)
+        self._read_timer.timeout.connect(self.read)
         self._default_thumbnail = default_thumbnail
 
         # Keep superclass informed
@@ -2588,6 +2630,8 @@ class ImportOptions(Options):
 
         # Kick things off, a few ms after opening
         QtCore.QTimer.singleShot(200, self.on_path_changed)
+
+        ImportOptions.instance = self
 
     def on_hinted(self, hint):
         if hint:
@@ -2601,37 +2645,45 @@ class ImportOptions(Options):
 
         self._widgets["Hint"].setText(text)
 
-    def do_import(self):
-        try:
-            if options.read("importMethod") == Load:
-                self._loader.load()
-            else:
-                self._loader.reinterpret()
+    def on_content_selection_changed(self, entity, transform):
+        current_selection = self.parser.find("importCurrentSelection")
+        current_selection.write(("", ""))
 
-        except Exception:
+        if not entity:
+            return
 
-            # Keep the technical crowd on-top of what happened
-            import traceback
-            log.debug(traceback.format_exc())
+        if self._loader.registry.has(entity, "MarkerUIComponent"):
+            MarkerUi = self._loader.registry.get(entity, "MarkerUIComponent")
+            source_text = MarkerUi["sourceTransform"]
+        else:
+            Name = self._loader.registry.get(entity, "NameComponent")
+            source_text = Name["path"] or Name["value"]
 
-            # But don't bother the animator
-            log.warning("An unexpected error occurred, see Script Editor")
+        dest_text = self._loader._pre_process_path(source_text)
+        # if transform:
+        #     dest_text = transform.shortestPath()
+        # else:
+        #     dest_text = ""
 
-            return False
+        current_selection.write((source_text, dest_text))
 
-        finally:
-            # Now that new physics has become part of the
-            # scene, reset relevant widgets.
-            self.reset()
-
-        return True
+        # Focus on the start of the path, for search-and-replace
+        current_selection = current_selection.widget().layout()
+        source_widget = current_selection.itemAt(0).widget()
+        dest_widget = current_selection.itemAt(1).widget()
+        source_widget.setCursorPosition(0)
+        dest_widget.setCursorPosition(0)
 
     @i__.with_timing
     def reset(self):
         search_replace = self.parser.find("importSearchAndReplace")
         preserve = self.parser.find("importPreserveAttributes")
+        namespace = self.parser.find("importNamespace")
         search, replace = search_replace.read()
-        self._loader.set_replace([(search, replace)])
+        self._loader.set_replace([
+            (a, replace) for a in search.split(" ") if a
+        ])
+        self._loader.set_namespace(namespace.read())
         self._loader.set_preserve_attributes(preserve.read())
         self._widgets["DumpWidget"].reset()
 
@@ -2642,79 +2694,34 @@ class ImportOptions(Options):
         current_path.write("<raw>", notify=False)
 
         self._loader.read(data)
-        self.on_selection_changed()
+        self.reset()
 
-    def read(self, fname):
+    def read(self, fname=None):
+        fname = fname or self.parser.find("importPath").read()
         assert isinstance(fname, i__.string_types), "fname must be string"
 
         current_path = self.parser.find("importPath")
         current_path.write(fname, notify=False)
 
         self._loader.read(fname)
-        self.on_selection_changed()
-
-    def on_selection_changed(self, _=None):
-        try:
-            self._on_selection_changed()
-
-        # In the off chance that this fails, prevent further failure
-        # by removing the callback altogether.
-        except Exception:
-            # Make note for debugging
-            log.debug(
-                "Ragdoll Import Options had trouble "
-                "with a selection callback, and won't "
-                "be using it anymore."
-            )
-
-            # This is not allowed to fail
-            if self._selection_callback is not None:
-                om.MMessage.removeCallback(self._selection_callback)
-            self._selection_callback = None
-
-    def _on_selection_changed(self, _=None):
-        use_selection = self.parser.find("importUseSelection")
-        auto_namespace = self.parser.find("importAutoNamespace")
-
-        if use_selection.read():
-            auto_namespace.widget().setEnabled(True)
-
-            roots = cmds.ls(selection=True, type="transform", long=True)
-
-            self._loader.set_namespace(None)
-            self._loader.set_roots(roots)
-
-            auto_namespace = self.parser.find("importAutoNamespace")
-            if auto_namespace.read():
-                namespaces = set()
-
-                for root in roots:
-                    namespaces = root.split("|")
-                    namespaces = [node.rsplit(":", 1)[0]
-                                  for node in namespaces]
-                    namespaces = filter(None, namespaces)  # Remove `None`
-                    namespaces = tuple(set(namespaces))  # Remove duplicates
-
-                if len(namespaces) > 1:
-                    log.debug("Selection had multiple namespaces: %s"
-                              % str(namespaces))
-
-                elif len(namespaces) > 0:
-                    target_namespace = tuple(namespaces)[0]
-                    self._loader.set_namespace(target_namespace)
-
-        else:
-            auto_namespace.widget().setEnabled(False)
-            self._loader.set_namespace(None)
-            self._loader.set_roots([])
-
         self.reset()
 
     def on_search_and_replace(self):
         # It'll get fetched during reset
         self.reset()
 
+    def on_use_selection_toggled(self):
+        use_selection = self.parser.find("importUseSelection")
+
+        if not use_selection.read():
+            self._loader.set_roots([])
+
+        self.reset()
+
     def on_preserve_attributes(self):
+        pass
+
+    def on_namespace_changed(self):
         self.reset()
 
     def on_path_changed(self, force=False):
@@ -2778,11 +2785,7 @@ class ImportOptions(Options):
                                header=("Filename",),
                                current=selected_fname)
 
-        def read():
-            self.read(import_path_str)
-
-        # Give UI a chance to keep up
-        QtCore.QTimer.singleShot(200, read)
+        self._read_timer.start()
 
     def on_filename_changed(self):
         current_paths = self.parser.find("importPaths")
@@ -2850,34 +2853,6 @@ class ImportOptions(Options):
 
         import_path = self.parser.find("importPath")
         import_path.write(path)
-
-    def install_selection_callback(self):
-        self._selection_callback = om.MModelMessage.addCallback(
-            om.MModelMessage.kActiveListModified,
-            self.on_selection_changed
-        )
-
-    def uninstall_selection_callback(self):
-        if self._selection_callback is not None:
-            om.MMessage.removeCallback(self._selection_callback)
-        self._selection_callback = None
-
-    def showEvent(self, event):
-        # Keep an eye on the current selection
-        self.install_selection_callback()
-        super(ImportOptions, self).showEvent(event)
-
-    def closeEvent(self, event):
-        self.uninstall_selection_callback()
-
-    def __del__(self):
-        """This should never really need to be called
-
-        But you can never be too careful with callbacks.
-
-        """
-
-        self.uninstall_selection_callback()
 
 
 class DragButton(QtWidgets.QPushButton):

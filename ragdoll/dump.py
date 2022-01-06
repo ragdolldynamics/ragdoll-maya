@@ -742,6 +742,7 @@ class Loader(object):
         mod.set_attr(solver["substeps"], Solver["substeps"])
         mod.set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
         mod.set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
+        mod.set_attr(solver["lod"], Solver["lod"])
         mod.set_attr(solver["poit"], Solver["positionIterations"])
         mod.set_attr(solver["veit"], Solver["velocityIterations"])
 
@@ -830,6 +831,7 @@ class Loader(object):
         Desc = self._registry.get(entity, "GeometryDescriptionComponent")
         Color = self._registry.get(entity, "ColorComponent")
         Rigid = self._registry.get(entity, "RigidComponent")
+        Lod = self._registry.get(entity, "LodComponent")
         MarkerUi = self._registry.get(entity, "MarkerUIComponent")
 
         input_type = {
@@ -855,6 +857,20 @@ class Loader(object):
             "Custom": 5,
         }.get(Rigid["densityType"], 0)
 
+        lod_preset = {
+            "Level0": 0,
+            "Level1": 1,
+            "Level2": 2,
+            "Custom": 3,
+        }.get(Lod["preset"], 0)
+
+        lod_op = {
+            "LessThan": 0,
+            "GreaterThan": 1,
+            "Equal": 2,
+            "NotEqual": 3,
+        }.get(Lod["op"], 0)
+
         mod.set_attr(marker["mass"], MarkerUi["mass"])
         mod.set_attr(marker["densityType"], density_type)
         mod.set_attr(marker["densityCustom"], Rigid["densityCustom"])
@@ -879,6 +895,9 @@ class Loader(object):
         mod.set_attr(marker["mxdv"], Rigid["maxDepenetrationVelocity"])
         mod.set_attr(marker["angularMass"], Rigid["angularMass"])
         mod.set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
+        mod.set_attr(marker["lodPreset"], lod_preset)
+        mod.set_attr(marker["lodOperator"], lod_op)
+        mod.set_attr(marker["lod"], Lod["level"])
 
         shape_type = {
             "Box": constants.BoxShape,

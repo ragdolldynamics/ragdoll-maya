@@ -55,6 +55,12 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitRange";
         editorTemplate -endLayout;
 
+        editorTemplate -beginLayout "Level of Detail" -collapse true;
+            editorTemplate -addControl "lodPreset";
+            editorTemplate -addControl "lodOperator";
+            editorTemplate -addControl "lod";
+        editorTemplate -endLayout;
+
         editorTemplate -beginLayout "Visualisation" -collapse true;
             editorTemplate -addControl "displayType";
             editorTemplate -addControl "color";

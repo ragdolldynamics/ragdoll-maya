@@ -772,6 +772,9 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
 
     # Recursively create childhood
     def recurse(mod, marker, parent=None):
+        if not (marker["enabled"].read() and marker["_scene"].read()):
+            return
+
         parent = marker_to_dagnode.get(parent)
         name = marker.name() + "_jnt"
 

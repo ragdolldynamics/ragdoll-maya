@@ -152,11 +152,12 @@ StaticCache = 1
 DynamicCache = 2
 
 DensityOff = 0
-DensityWood = 1
-DensityFlesh = 2
-DensityUranium = 3
-DensityBlackHole = 4
-DensityCustom = 5
+DensityCotton = 1
+DensityWood = 2
+DensityFlesh = 3
+DensityUranium = 4
+DensityBlackHole = 5
+DensityCustom = 6
 
 FrameskipPause = 0
 FrameskipIgnore = 1

@@ -516,7 +516,7 @@
         "type": "String",
         "default": "",
         "placeholder": "Keep original",
-        "help": "Add or replace any namespace found in the exported file."
+        "help": "Add or replace any namespace found in the exported file.\n- Leave empty to preserve namespace from the file.\n- Leave a space character"
     },
 
     "importSearchAndReplace": {
@@ -893,8 +893,8 @@
         "name": "markersDensity",
         "label": "Density",
         "type": "Enum",
-        "default": 2,
-        "items": ["Off", "Wood", "Flesh", "Uranium", "Black Hole", "Custom"],
+        "default": 3,
+        "items": ["Off", "Cotton", "Wood", "Flesh", "Uranium", "Black Hole", "Custom"],
         "help": "Use the volume and density of the shape to determine its mass."
     },
 

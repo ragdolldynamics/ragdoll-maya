@@ -110,10 +110,9 @@ class Registry(object):
             )
 
         except KeyError:
-            Name = self._dump["entities"][entity]
-            Name = Name["components"]["NameComponent"]
-            Name = Component(Name)
-            raise KeyError("%s did not have %s" % (Name["path"], component))
+            Name = self.get(entity, "NameComponent")
+            name = Name["path"] or Name["value"]
+            raise KeyError("%s did not have '%s'" % (name, component))
 
     def components(self, entity):
         """Return *all* components for `entity`"""
@@ -152,6 +151,9 @@ def DefaultState():
 
         # Map entity -> active Maya transform node
         "entityToTransform": {},
+
+        # Markers without a transform
+        "missing": [],
     }
 
 
@@ -167,6 +169,7 @@ class Loader(object):
         roots (list): Path(s) that the original path must match
         replace (list): Search/replace pairs of strings to find and replace
             in each original path
+        overrideSolver (path): Use this solver instead of the one from the file
 
     """
 
@@ -180,8 +183,8 @@ class Loader(object):
             "namespace": None,
             "preserveAttributes": True,
 
-            "overrideSolver": True,
-            "createGround": True,
+            "overrideSolver": "",
+            "createMissingTransforms": True,
         })
 
         self._opts = opts
@@ -202,6 +205,10 @@ class Loader(object):
     @property
     def registry(self):
         return self._registry
+
+    def edit(self, options):
+        self._opts.update(options)
+        self._dirty = True
 
     def read(self, fname):
         self._invalid_reasons[:] = []
@@ -233,23 +240,23 @@ class Loader(object):
         self._registry = Registry(dump)
         self._dirty = True
 
-    def set_roots(self, roots):
-        self._opts["roots"][:] = roots
-        self._dirty = True
+    # def set_roots(self, roots):
+    #     self._opts["roots"][:] = roots
+    #     self._dirty = True
 
-    def set_replace(self, replace):
-        assert isinstance(replace, (tuple, list))
-        assert all(isinstance(i, tuple) for i in replace)
-        self._opts["replace"][:] = replace
-        self._dirty = True
+    # def set_replace(self, replace):
+    #     assert isinstance(replace, (tuple, list))
+    #     assert all(isinstance(i, tuple) for i in replace)
+    #     self._opts["replace"][:] = replace
+    #     self._dirty = True
 
-    def set_namespace(self, namespace=None):
-        self._opts["namespace"] = namespace
-        self._dirty = True
+    # def set_namespace(self, namespace=None):
+    #     self._opts["namespace"] = namespace
+    #     self._dirty = True
 
-    def set_preserve_attributes(self, preserve):
-        self._opts["preserveAttributes"] = preserve
-        self._dirty = True
+    # def set_preserve_attributes(self, preserve):
+    #     self._opts["preserveAttributes"] = preserve
+    #     self._dirty = True
 
     def is_valid(self):
         return len(self._invalid_reasons) == 0
@@ -347,6 +354,9 @@ class Loader(object):
         if not self.is_valid():
             return log.error("Dump not valid")
 
+        if self._opts["createMissingTransforms"]:
+            self._create_missing_transforms()
+
         rdsolvers = self._create_solvers()
         rdgroups = self._create_groups(rdsolvers)
         rdmarkers = self._create_markers(rdgroups, rdsolvers)
@@ -361,6 +371,44 @@ class Loader(object):
             "markers": rdmarkers.values(),
             "constraints": rdconstraints.values(),
         }
+
+    def _create_missing_transforms(self):
+        missing = self._state["missing"]
+
+        if not missing:
+            return
+
+        log.info("Creating missing transforms..")
+
+        with cmdx.DagModifier() as mod:
+            for entity in missing:
+                MarkerUi = self._registry.get(entity, "MarkerUIComponent")
+                Rest = self._registry.get(entity, "RestComponent")
+                path = self._pre_process_path(MarkerUi["sourceTransform"])
+                hierarchy, name = path.rsplit("|", 1)
+
+                # Maintain parent, if any
+                parent = None
+                try:
+                    parent = cmdx.encode(hierarchy)
+                except cmdx.ExistError:
+                    pass
+
+                name = internal.unique_name(name.replace(":", ""))
+                transform = mod.create_node("transform",
+                                            name=name,
+                                            parent=parent)
+
+                matrix = Rest["matrix"]
+
+                if parent:
+                    matrix *= parent["worldInverseMatrix"][0].as_matrix()
+
+                tm = cmdx.Tm(matrix)
+                transform["translate"] = tm.translation()
+                transform["rotate"] = tm.rotation()
+
+                self._state["entityToTransform"][entity] = transform
 
     def _create_solvers(self):
         log.info("Creating solver(s)..")
@@ -383,7 +431,12 @@ class Loader(object):
                     continue
 
                 except cmdx.ExistError:
-                    pass
+                    # If the user requested to override it, they likely
+                    # intended to stop if it could not be found.
+                    raise cmdx.ExistError(
+                        "Overridden solver '%s' could not be found"
+                        % self._optsp["overrideSolver"]
+                    )
 
             # Ensure there is at least 1 marker in it
             is_empty = True
@@ -404,14 +457,11 @@ class Loader(object):
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
                 for entity, rdsolver in rdsolvers.items():
-                    self._apply_solver(mod, entity, rdsolver)
-
-        if self._opts["createGround"]:
-            for solver in self._state["solvers"]:
-                rdsolver = rdsolvers.get(solver)
-
-                if rdsolver:
-                    commands.create_ground(rdsolver)
+                    try:
+                        self._apply_solver(mod, entity, rdsolver)
+                    except KeyError as e:
+                        # Don't let poorly formatted JSON get in the way
+                        log.warning(e)
 
         return rdsolvers
 
@@ -458,7 +508,11 @@ class Loader(object):
 
             if self._opts["preserveAttributes"]:
                 for entity, rdgroup in rdgroups.items():
-                    self._apply_group(mod, entity, rdgroup)
+                    try:
+                        self._apply_group(mod, entity, rdgroup)
+                    except KeyError as e:
+                        # Don't let poorly formatted JSON get in the way
+                        log.warning(e)
 
         return rdgroups
 
@@ -492,7 +546,11 @@ class Loader(object):
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
                 for entity, rdmarker in rdmarkers.items():
-                    self._apply_marker(mod, entity, rdmarker)
+                    try:
+                        self._apply_marker(mod, entity, rdmarker)
+                    except KeyError as e:
+                        # Don't let poorly formatted JSON get in the way
+                        log.warning(e)
 
         log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
@@ -597,7 +655,10 @@ class Loader(object):
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
                 for entity, rdconstraint in rdconstraints.items():
-                    self._apply_constraint(mod, entity, rdconstraint)
+                    try:
+                        self._apply_constraint(mod, entity, rdconstraint)
+                    except KeyError as e:
+                        log.warning(e)
 
         return rdconstraints
 
@@ -640,6 +701,7 @@ class Loader(object):
         entity_to_transform = self._state["entityToTransform"]
         markers = self._state["markers"]
         occupied = self._state["occupied"]
+        missing = self._state["missing"]
 
         entity_to_transform.clear()
         markers[:] = []
@@ -649,11 +711,11 @@ class Loader(object):
             # Collected regardless
             markers.append(entity)
 
-            MarkerUI = self._registry.get(entity, "MarkerUIComponent")
+            MarkerUi = self._registry.get(entity, "MarkerUIComponent")
 
             # Find original path, minus the rigid
             # E.g. |rMarker_upperArm_ctl -> |root_grp|upperArm_ctrl
-            path = MarkerUI["sourceTransform"]
+            path = MarkerUi["sourceTransform"]
             path = self._pre_process_path(path)
 
             # Exclude anything not starting with any of these
@@ -667,6 +729,7 @@ class Loader(object):
             except cmdx.ExistError:
                 # Transform wasn't found in this scene, that's OK.
                 # It just means it can't actually be loaded onto anything.
+                missing.append(entity)
                 continue
 
             entity_to_transform[entity] = transform
@@ -833,6 +896,7 @@ class Loader(object):
         Rigid = self._registry.get(entity, "RigidComponent")
         Lod = self._registry.get(entity, "LodComponent")
         MarkerUi = self._registry.get(entity, "MarkerUIComponent")
+        Drawable = self._registry.get(entity, "DrawableComponent")
 
         input_type = {
             "Inherit": 0,
@@ -871,6 +935,19 @@ class Loader(object):
             "NotEqual": 3,
         }.get(Lod["op"], 0)
 
+        display_type = {
+            "Off": -1,
+            "Default": 0,
+            "Wire": 1,
+            "Constant": 2,
+            "Shaded": 3,
+            "Mass": 4,
+            "Friction": 5,
+            "Restitution": 6,
+            "Velocity": 7,
+            "Contacts": 8,
+        }.get(Drawable["displayType"], 0)
+
         mod.set_attr(marker["mass"], MarkerUi["mass"])
         mod.set_attr(marker["densityType"], density_type)
         mod.set_attr(marker["densityCustom"], Rigid["densityCustom"])
@@ -898,6 +975,7 @@ class Loader(object):
         mod.set_attr(marker["lodPreset"], lod_preset)
         mod.set_attr(marker["lodOperator"], lod_op)
         mod.set_attr(marker["lod"], Lod["level"])
+        mod.set_attr(marker["displayType"], display_type)
 
         shape_type = {
             "Box": constants.BoxShape,

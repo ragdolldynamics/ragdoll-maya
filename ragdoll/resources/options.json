@@ -547,6 +547,14 @@
         "help": "Apply physics to existing objects in the currently opened Maya scene."
     },
 
+    "importCreateMissingTransforms": {
+        "name": "importCreateMissingTransforms",
+        "label": "Create Missing Transforms",
+        "type": "Boolean",
+        "default": false,
+        "help": "For any markers in this file without a corresponding transform in Maya, create one automatically. Useful for things such as the default ground and any extra rigids you create as part of your authoring process."
+    },
+
     "importMethod": {
         "name": "importMethod",
         "enabled": false,

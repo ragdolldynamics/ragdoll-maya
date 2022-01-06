@@ -47,10 +47,10 @@ from . import (
     commands,
     upgrade,
     ui,
-    io,
     options,
     licence,
     dump,
+    recording,
     telemetry,
     constants as c,
     internal as i__,
@@ -136,7 +136,7 @@ __.previousvars = dict({
 
 
 def _print_exception():
-    log.debug(traceback.format_exc())
+    log.warning(traceback.format_exc())
 
 
 def _resource(*fname):
@@ -1621,7 +1621,7 @@ def snap_markers(selection=None, **opts):
         include += _filtered_selection(cmdx.kDagNode, selection)
 
     for solver in solvers:
-        io.snap(solver, {
+        recording.snap(solver, {
             "include": include,
             "ignoreJoints": opts["ignoreJoints"],
             "maintainOffset": opts["maintainOffset"],
@@ -1707,7 +1707,7 @@ def record_markers(selection=None, **opts):
     timer = i__.Timer("record")
     for solver in solvers:
         with timer as duration, progressbar() as p:
-            instance = io._Recorder(solver, {
+            instance = recording._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
                 "include": include,
@@ -1785,7 +1785,7 @@ def extract_markers(selection=None, **opts):
     for solver in solvers:
         with timer as duration, progressbar() as p, refresh_suspended():
             start_time = solver["_startTime"].as_time()
-            instance = io._Recorder(solver, {
+            instance = recording._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
             })
@@ -2064,7 +2064,7 @@ def select_child_markers(selection=None, **opts):
 def snap_to_sim(selection=None, **opts):
     selection = selection or cmdx.sl()
     selection = cmdx.ls(selection, type=("transform", "joint"))
-    io.snap(selection)
+    recording.snap(selection)
     return kSuccess
 
 
@@ -2527,6 +2527,7 @@ def welcome_user(*args):
 def export_physics(selection=None, **opts):
 
     # Initialise start and next frames of each scene
+
     current_time = cmds.currentTime(query=True)
     for scene in cmdx.ls(type="rdScene"):
         start_time = scene["startTime"].asTime().value
@@ -2540,7 +2541,22 @@ def export_physics(selection=None, **opts):
     if not data["entities"]:
         return log.error("Nothing to export")
 
+    # Include optional thumbnail
     from PySide2 import QtWidgets
+
+    data["ui"] = {
+        "filename": "",
+        "thumbnail": "",
+        "description": "",
+    }
+
+    # Call this *before* opening up the dialog,
+    # to ensure we don't mess up the active 3d viewport
+    if _opt("exportIncludeThumbnail", opts):
+        thumbnail = ui.view_to_pixmap()
+        b64 = ui.pixmap_to_base64(thumbnail)
+        data["ui"]["thumbnail"] = b64.decode("ascii")
+
     fname, suffix = QtWidgets.QFileDialog.getSaveFileName(
         ui.MayaWindow(),
         "Export Ragdoll Scene",
@@ -2552,20 +2568,10 @@ def export_physics(selection=None, **opts):
         return cmds.warning("Cancelled")
 
     fname = os.path.normpath(fname)
+    fname = fname.replace("\\", "/")  # Safe for all platforms
 
-    # Include optional thumbnail
-    data["ui"] = {
-
-        # Guarantee forward-slash for paths, on all OSes
-        "filename": fname.replace("\\", "/"),
-
-        "description": "",
-    }
-
-    if _opt("exportIncludeThumbnail", opts):
-        thumbnail = ui.view_to_pixmap()
-        b64 = ui.pixmap_to_base64(thumbnail)
-        data["ui"]["thumbnail"] = b64.decode("ascii")
+    # Embed into the .rag file
+    data["ui"]["filename"] = fname
 
     try:
         dump.export(fname, data=data)
@@ -2774,27 +2780,32 @@ def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
 
 
+_singleton_loader = None
+
+
 def import_physics_options(*args):
     win = None
+    loader = dump.Loader()
 
     def import_physics():
-        create_ground = options.read("markersCreateGround")
+        # FromFile = 0
+        FromScene = 1
 
         override_solver = None
-        if options.read("importSolver") == 1:
+        if options.read("importSolver") == FromScene:
             existing_solvers = cmdx.ls(type="rdSolver")
 
             if existing_solvers:
                 override_solver = existing_solvers[0].path()
 
-        win._loader._opts["createGround"] = create_ground
-        win._loader._opts["overrideSolver"] = override_solver
+        loader.edit({
+            "overrideSolver": override_solver,
+            "createMissingTransforms": options.read(
+                "importCreateMissingTransforms"),
+        })
 
         try:
-            if options.read("importMethod") == c.ImportLoad:
-                win._loader.load()
-            else:
-                win._loader.reinterpret()
+            loader.reinterpret()
 
         except Exception:
             log.warning(traceback.format_exc())
@@ -2814,11 +2825,10 @@ def import_physics_options(*args):
         if use_selection.read():
             roots = cmds.ls(selection=True, type="transform", long=True)
 
-            # win._loader.set_namespace(None)
-            win._loader.set_roots(roots)
+            loader.edit({"roots": roots})
 
         else:
-            win._loader.set_roots([])
+            loader.edit({"roots": []})
 
         win.reset()
 
@@ -2851,8 +2861,17 @@ def import_physics_options(*args):
     def on_use_selection_changed():
         _on_selection_changed()
 
-    win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
+    def before_reset():
+        loader.edit({
+            "searchAndReplace": options.read("importSearchAndReplace"),
+            "preserveAttributes": options.read("importPreserveAttributes"),
+            "namespace": options.read("importNamespace")
+        })
 
+    win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
+    win.init(loader)
+
+    win.before_reset.connect(before_reset)
     use_selection = win.parser.find("importUseSelection")
     use_selection.changed.connect(on_use_selection_changed)
 

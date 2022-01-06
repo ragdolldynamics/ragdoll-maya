@@ -2069,7 +2069,7 @@ class DumpWidget(QtWidgets.QWidget):
     hinted = QtCore.Signal(str)  # Hint
     selection_changed = QtCore.Signal(dump.Entity, object)  # entity, transform
 
-    def __init__(self, loader, parent=None):
+    def __init__(self, parent=None):
         super(DumpWidget, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
 
@@ -2133,7 +2133,7 @@ class DumpWidget(QtWidgets.QWidget):
         self._widgets = widgets
         self._panels = panels
         self._models = models
-        self._loader = loader
+        self._loader = None
 
         # For refreshing without losing selection
         self._last_selected_path = ""
@@ -2184,11 +2184,12 @@ class DumpWidget(QtWidgets.QWidget):
 
         self._store_current_selection()
 
-    def reset(self):
+    def reset(self, loader):
         # Reset after a given time period.
         # This allows reset to get called frequently, without
         # actually incuring the cost of resetting the model each
         # time. It keeps the user interactivity swift and clean.
+        self._loader = loader
         self._reset_timer.start()
 
     def _reset(self):
@@ -2218,7 +2219,6 @@ class DumpWidget(QtWidgets.QWidget):
 
             color = self.palette().color(self.foregroundRole())
             color.setAlpha(100)
-            grayed_out = (color, color, color)
 
             if occupied:
                 # Dim any transform that isn't getting imported
@@ -2233,21 +2233,27 @@ class DumpWidget(QtWidgets.QWidget):
                 data[QtCore.Qt.ForegroundRole] = (color, color)
 
                 data[TransformRole] = occupied
-                data[OccupiedRole] = True
                 data[HintRole] += [
-                    "%s already has a rigid" % path
+                    "%s already has a marker" % path
                 ]
 
             elif no_transform:
                 # There isn't any transform for this entity
-                icon = _resource("icons", "questionmark.png")
-                icon = QtGui.QIcon(icon)
-                tooltip = "No transform could be found for this rigid"
+
+                if options.read("importCreateMissingTransforms"):
+                    icon = _resource("icons", "add.png")
+                    icon = QtGui.QIcon(icon)
+                    tooltip = "A new transform will be created for this marker"
+                    data[QtCore.Qt.DisplayRole] += ["New"]
+
+                else:
+                    icon = _resource("icons", "questionmark.png")
+                    icon = QtGui.QIcon(icon)
+                    tooltip = "No transform could be found for this marker"
+                    data[QtCore.Qt.ForegroundRole] = (color, color)
 
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.ForegroundRole] = grayed_out
 
-                data[OccupiedRole] = False
                 data[HintRole] += [
                     tooltip
                 ]
@@ -2555,10 +2561,8 @@ class ImportOptions(Options):
         super(ImportOptions, self).__init__(*args, **kwargs)
         self.setWindowTitle("Import Options")
 
-        loader = dump.Loader()
-
         widgets = {
-            "DumpWidget": DumpWidget(loader),
+            "DumpWidget": DumpWidget(),
             "Thumbnail": QtWidgets.QLabel(),
         }
 
@@ -2580,6 +2584,7 @@ class ImportOptions(Options):
         use_selection = parser.find("importUseSelection")
         namespace = self.parser.find("importNamespace")
         preserve_attributes = self.parser.find("importPreserveAttributes")
+        create_missing = self.parser.find("importCreateMissingTransforms")
 
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
@@ -2587,6 +2592,7 @@ class ImportOptions(Options):
         use_selection.changed.connect(self.on_use_selection_toggled)
         search_replace.changed.connect(self.on_search_and_replace)
         namespace.changed.connect(self.on_namespace_changed)
+        create_missing.changed.connect(self.reset)
         preserve_attributes.changed.connect(self.on_preserve_attributes)
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")
@@ -2617,11 +2623,12 @@ class ImportOptions(Options):
         widgets["DumpWidget"].selection_changed.connect(
             self.on_content_selection_changed)
 
-        self._loader = loader
+        self._loader = None
         self._selection_callback = None
         self._previous_dirname = None
         self._read_timer = QtCore.QTimer()
         self._read_timer.setInterval(200)
+        self._read_timer.setSingleShot(True)
         self._read_timer.timeout.connect(self.read)
         self._default_thumbnail = default_thumbnail
 
@@ -2632,6 +2639,9 @@ class ImportOptions(Options):
         QtCore.QTimer.singleShot(200, self.on_path_changed)
 
         ImportOptions.instance = self
+
+    def init(self, loader):
+        self._loader = loader
 
     def on_hinted(self, hint):
         if hint:
@@ -2660,11 +2670,6 @@ class ImportOptions(Options):
             source_text = Name["path"] or Name["value"]
 
         dest_text = self._loader._pre_process_path(source_text)
-        # if transform:
-        #     dest_text = transform.shortestPath()
-        # else:
-        #     dest_text = ""
-
         current_selection.write((source_text, dest_text))
 
         # Focus on the start of the path, for search-and-replace
@@ -2676,16 +2681,14 @@ class ImportOptions(Options):
 
     @i__.with_timing
     def reset(self):
-        search_replace = self.parser.find("importSearchAndReplace")
-        preserve = self.parser.find("importPreserveAttributes")
-        namespace = self.parser.find("importNamespace")
-        search, replace = search_replace.read()
-        self._loader.set_replace([
-            (a, replace) for a in search.split(" ") if a
-        ])
-        self._loader.set_namespace(namespace.read())
-        self._loader.set_preserve_attributes(preserve.read())
-        self._widgets["DumpWidget"].reset()
+        self._loader.edit({
+            "searchAndReplace": options.read("importSearchAndReplace"),
+            "preserveAttributes": options.read("importPreserveAttributes"),
+            "namespace": options.read("importNamespace")
+        })
+
+        self.before_reset.emit()
+        self._widgets["DumpWidget"].reset(self._loader)
 
     def load(self, data):
         assert isinstance(data, dict), "data must be a dictionary"
@@ -2714,7 +2717,7 @@ class ImportOptions(Options):
         use_selection = self.parser.find("importUseSelection")
 
         if not use_selection.read():
-            self._loader.set_roots([])
+            self._loader.edit({"roots": []})
 
         self.reset()
 
@@ -3140,9 +3143,13 @@ def notify(title, message, pos_at_menu=False, persistent=False):
 
 def view_to_pixmap(size=None):
     """Render currently active 3D viewport as a QPixmap"""
+    from maya import cmds
+
+    # # Ensure we're picking whichever model panel is active,
+    panel = cmds.playblast(activeEditor=True)
 
     image = om.MImage()
-    view = omui.M3dView.active3dView()
+    view = omui.M3dView.getM3dViewFromModelEditor(panel)
     view.readColorBuffer(image, True)
 
     # Translate from Maya -> Qt jargon

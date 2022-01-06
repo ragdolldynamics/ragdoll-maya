@@ -339,12 +339,12 @@
             "importPaths",
             "importMethod",
             "importSolver",
-            "markersCreateGround",
             "importMergePhysics",
             "importPreserveAttributes",
             "importIncludeAnimation",
             "importIncludeSimulation",
             "importUseSelection",
+            "importCreateMissingTransforms",
             "importSearchAndReplace",
             "importNamespace",
             "importCurrentSelection"

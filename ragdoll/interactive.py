@@ -676,7 +676,7 @@ def install_menu():
     divider("IO")
 
     item("exportPhysics", export_physics, export_physics_options)
-    item("importPhysics", import_physics_from_file, import_physics_options)
+    item("importPhysics", import_physics, import_physics_options)
 
     divider("Manipulate")
 
@@ -895,15 +895,9 @@ def install_menu():
                  legacy_clear_initial_state_options)
 
         with submenu("Select", icon="select.png"):
-            item("selectRigids", select_rigids, select_rigids_options)
-            item("selectConstraints",
-                 select_constraints,
-                 select_constraints_options)
-            item("selectControls", select_controls, select_controls_options)
-            item("selectScenes", select_scenes, select_scenes_options)
+            item("selectSolvers", select_solvers)
             item("selectMarkers", select_markers)
             item("selectGroups", select_groups)
-            item("selectSolvers", select_solvers)
 
     divider()
 
@@ -2396,9 +2390,8 @@ def delete_physics(selection=None, **opts):
 
     if any(result.values()):
         log.info(
-            "Deleted {deletedRagdollNodeCount} Ragdoll nodes, "
-            "{deletedExclusiveNodeCount} exclusive nodes and "
-            "{deletedUserAttributeCount} user attributes".format(**result)
+            "Deleted {deletedRagdollNodeCount} Ragdoll nodes and "
+            "{deletedOwnedNodeCount} owned nodes".format(**result)
         )
         return kSuccess
 
@@ -2764,60 +2757,68 @@ def toggle_channel_box_attributes_options(*args):
     return _Window("toggleChannelBoxAttributes", toggle_channel_box_attributes)
 
 
-def _st_options(key, typ):
-    def select(*args):
-        return _Window(key, select_type(typ))
-    return select
-
-
-select_rigids_options = _st_options("selectRigids", "rdRigid")
-select_constraints_options = _st_options("selectConstraints", "rdConstraint")
-select_scenes_options = _st_options("selectScenes", "rdScene")
-select_controls_options = _st_options("selectControls", "rdControl")
-
-
 def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
 
 
+# Let the Import UI initialise this, and then reuse it for
+# any subsequent imports without a UI. To mimic the behavior
+# of other menu items that don't *require* a UI.
 _singleton_loader = None
 
 
-def import_physics_options(*args):
-    win = None
-    loader = dump.Loader()
+def _import_physics_wrapper():
+    override_solver = None
+    if options.read("importSolver") == c.ImportSolverFromScene:
+        existing_solvers = cmdx.ls(type="rdSolver")
 
-    def import_physics():
-        # FromFile = 0
-        FromScene = 1
+        if existing_solvers:
+            override_solver = existing_solvers[0].path()
 
-        override_solver = None
-        if options.read("importSolver") == FromScene:
-            existing_solvers = cmdx.ls(type="rdSolver")
+    _singleton_loader.edit({
+        "overrideSolver": override_solver,
+    })
 
-            if existing_solvers:
-                override_solver = existing_solvers[0].path()
+    try:
+        with i__.Timer("importPhysics") as t:
+            _singleton_loader.reinterpret()
 
-        loader.edit({
-            "overrideSolver": override_solver,
-            "createMissingTransforms": options.read(
-                "importCreateMissingTransforms"),
-        })
+    except Exception:
+        log.warning(traceback.format_exc())
+        log.warning("An unexpected error occurred, see Script Editor")
+        return False
 
+    else:
+        stats = (_singleton_loader.count(), t.ms)
+        cmds.inViewMessage(
+            amg="Imported %d markers in <hl>%.2f ms</hl>" % stats,
+            pos="topCenter",
+            fade=True
+        )
+
+        log.info("Successfully imported %d markers in %.2f ms" % stats)
+
+    return True
+
+
+def import_physics(selection=None, **opts):
+    if _singleton_loader is None:
+        log.info("Importing for the first time, launching UI")
+        return import_physics_options()
+
+    else:
         try:
-            loader.reinterpret()
+            return _import_physics_wrapper()
+        except cmdx.ExistError:
+            return import_physics_options()
 
-        except Exception:
-            log.warning(traceback.format_exc())
-            log.warning("An unexpected error occurred, see Script Editor")
-            return False
 
-        finally:
-            # Now that new physics has become part of the
-            # scene, reset relevant widgets.
-            win.reset()
+def import_physics_options(*args):
+    global _singleton_loader
+    _singleton_loader = dump.Loader()
 
-        return True
+    #
+    win = None
 
     def _on_selection_changed():
         use_selection = win.parser.find("importUseSelection")
@@ -2825,10 +2826,10 @@ def import_physics_options(*args):
         if use_selection.read():
             roots = cmds.ls(selection=True, type="transform", long=True)
 
-            loader.edit({"roots": roots})
+            _singleton_loader.edit({"roots": roots})
 
         else:
-            loader.edit({"roots": []})
+            _singleton_loader.edit({"roots": []})
 
         win.reset()
 
@@ -2862,14 +2863,23 @@ def import_physics_options(*args):
         _on_selection_changed()
 
     def before_reset():
-        loader.edit({
+        """The UI was reset, for whatever reason"""
+        _singleton_loader.edit({
             "searchAndReplace": options.read("importSearchAndReplace"),
             "preserveAttributes": options.read("importPreserveAttributes"),
-            "namespace": options.read("importNamespace")
+            "namespace": options.read("importNamespace"),
+            "createMissingTransforms": options.read(
+                "importCreateMissingTransforms"
+            ),
         })
 
+    def import_physics():
+        result = _import_physics_wrapper()
+        win.reset()
+        return result
+
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
-    win.init(loader)
+    win.init(_singleton_loader)
 
     win.before_reset.connect(before_reset)
     use_selection = win.parser.find("importUseSelection")

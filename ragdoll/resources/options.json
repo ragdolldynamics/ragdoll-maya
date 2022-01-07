@@ -530,12 +530,12 @@
 
     "importCurrentSelection": {
         "name": "importCurrentSelection",
-        "label": "Current Selection",
+        "label": "Source and Destination",
         "type": "String2",
         "editable": false,
         "default": ["", ""],
         "placeholder": ["", ""],
-        "help": "Source and destination transforms of the current selection."
+        "help": "Full path from the file on one side, and the path Ragdoll uses to find a matching node in your current Maya scene. Use the <b>Search & Replace</b> and <b>Namespace</b> fields above to tune the matching algorithm."
     },
 
     "importMergePhysics": {

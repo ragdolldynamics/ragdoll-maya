@@ -2583,17 +2583,15 @@ class ImportOptions(Options):
         search_replace = parser.find("importSearchAndReplace")
         use_selection = parser.find("importUseSelection")
         namespace = self.parser.find("importNamespace")
-        preserve_attributes = self.parser.find("importPreserveAttributes")
         create_missing = self.parser.find("importCreateMissingTransforms")
 
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
         import_paths.changed.connect(self.on_filename_changed)
-        use_selection.changed.connect(self.on_use_selection_toggled)
-        search_replace.changed.connect(self.on_search_and_replace)
-        namespace.changed.connect(self.on_namespace_changed)
+        use_selection.changed.connect(self.reset)
+        namespace.changed.connect(self.reset)
+        search_replace.changed.connect(self.reset)
         create_missing.changed.connect(self.reset)
-        preserve_attributes.changed.connect(self.on_preserve_attributes)
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")
         default_thumbnail = QtGui.QPixmap(default_thumbnail)
@@ -2681,12 +2679,6 @@ class ImportOptions(Options):
 
     @i__.with_timing
     def reset(self):
-        self._loader.edit({
-            "searchAndReplace": options.read("importSearchAndReplace"),
-            "preserveAttributes": options.read("importPreserveAttributes"),
-            "namespace": options.read("importNamespace")
-        })
-
         self.before_reset.emit()
         self._widgets["DumpWidget"].reset(self._loader)
 
@@ -2707,24 +2699,6 @@ class ImportOptions(Options):
         current_path.write(fname, notify=False)
 
         self._loader.read(fname)
-        self.reset()
-
-    def on_search_and_replace(self):
-        # It'll get fetched during reset
-        self.reset()
-
-    def on_use_selection_toggled(self):
-        use_selection = self.parser.find("importUseSelection")
-
-        if not use_selection.read():
-            self._loader.edit({"roots": []})
-
-        self.reset()
-
-    def on_preserve_attributes(self):
-        pass
-
-    def on_namespace_changed(self):
         self.reset()
 
     def on_path_changed(self, force=False):

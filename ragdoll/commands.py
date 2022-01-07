@@ -532,8 +532,8 @@ def create_ground(solver):
         mod.set_attr(plane["overrideShading"], False)
         mod.set_attr(plane["overrideColor"], constants.WhiteIndex)
 
-        _take_ownership(mod, solver, plane)
-        _take_ownership(mod, solver, gen)
+        _take_ownership(mod, marker, plane)
+        _take_ownership(mod, marker, gen)
 
     return marker
 
@@ -1010,7 +1010,6 @@ def toggle_channel_box_attributes(markers, opts=None):
     return not visible
 
 
-@internal.with_refresh_suspended
 @internal.with_timing
 @internal.with_undo_chunk
 def delete_physics(nodes, dry_run=False):
@@ -1032,8 +1031,7 @@ def delete_physics(nodes, dry_run=False):
 
     result = {
         "deletedRagdollNodeCount": 0,
-        "deletedExclusiveNodeCount": 0,
-        "deletedUserAttributeCount": 0,
+        "deletedOwnedNodeCount": 0,
     }
 
     # Include shapes in supplied nodes
@@ -1083,98 +1081,26 @@ def delete_physics(nodes, dry_run=False):
                 "and **cannot** be deleted." % node.shortest_path()
             )
 
-    # Delete transforms exclusively made for Ragdoll nodes.
+    # Delete nodes owned by Ragdoll nodes.
     #  _____________________       ___________________
     # |                     |     |                   |
-    # | Rigid               |     | Transform         |
+    # | Marker              |     | Transform         |
     # |                     |     |                   |
-    # |      exclusives [0] o<----o message           |
+    # |           owned [0] o<----o message           |
     # |_____________________|     |___________________|
     #
     #
-    exclusives = list()
+    owned = list()
     for node in ragdoll_nodes:
-        if "exclusiveNodes" not in node:
+        if not node.has_attr("owner"):
             continue
 
-        for element in node["exclusiveNodes"]:
-            other = element.connection(source=True, destination=False)
-
-            if other is not None:
-                assert isinstance(other, cmdx.Node), "This is a bug in cmdx"
-                exclusives.append(other)
-
-    # Delete attributes from Ragdoll interfaces,
-    # such as on the original animation controls.
-    #
-    #  ______________________       ___________________
-    # |                      |     |                   |
-    # | Rigid                |     | Transform         |
-    # |                      |     |                   |
-    # |   userAttributes [0] o<----o mass              |
-    # |                  [1] o<----o stiffness         |
-    # |______________________|     |___________________|
-    #
-    #
-    user_attributes = dict()
-    for node in ragdoll_nodes:
-        if "userAttributes" not in node:
-            continue
-
-        for element in node["userAttributes"]:
-            user_attribute = element.connection(plug=True,
-                                                source=True,
-                                                destination=False)
-            if user_attribute is None:
-                continue
-
-            other = user_attribute.node()
-
-            # These will be deleted anyway
-            if other in exclusives:
-                continue
-
-            if other not in user_attributes:
-                user_attributes[other] = {}
-
-            key = user_attribute.name(long=False)
-            user_attributes[other][key] = user_attribute
-
-    # Reorder attributes by the order they appear in the parent node
-    #  _____________
-    # |             |
-    # |    Friction o -> 126
-    # |        Mass o -> 127
-    # |     Color R o -> 128
-    # |     Color G o -> 129
-    # |     Color B o -> 130
-    # |             |
-    # |_____________|
-    #
-    plug_to_index = {}
-    for node, plugs in user_attributes.items():
-        for index in range(node._fn.attributeCount()):
-            attr = node._fn.attribute(index)
-            fn = cmdx.om.MFnAttribute(attr)
-
-            try:
-                plug = plugs[fn.shortName]
-            except KeyError:
-                continue
-            else:
-                plug_to_index[plug] = index
-
-    # TODO: This only works reliably when all ragdoll_nodes
-    # are involved. When deleting only a subset of nodes, like
-    # mimic controls which do not carry their associated rigid
-    # for example, then rigid attributes will appear scrambled
-
-    user_attributes = sorted(plug_to_index.items(), key=lambda i: i[1])
-    user_attributes = [r[0] for r in user_attributes]
+        for element in node["owner"]:
+            for other in element.connections(source=True, destination=False):
+                owned.append(other)
 
     result["deletedRagdollNodeCount"] = len(ragdoll_nodes)
-    result["deletedExclusiveNodeCount"] = len(exclusives)
-    result["deletedUserAttributeCount"] = len(user_attributes)
+    result["deletedOwnedNodeCount"] = len(owned)
 
     # It was just a joke, relax
     if dry_run:
@@ -1183,15 +1109,7 @@ def delete_physics(nodes, dry_run=False):
     # Delete attributes first, as they may otherwise
     # disappear along with their node.
     with cmdx.DagModifier() as mod:
-
-        # Attributes are recreated in the reverse order
-        # during undo, so to preserve their original order
-        # we'll need to delete them in reverse.
-        for attr in reversed(user_attributes):
-            mod.delete_attr(attr)
-        mod.do_it()
-
-        for node in ragdoll_nodes + exclusives:
+        for node in ragdoll_nodes + owned:
             try:
                 mod.delete(node)
                 mod.do_it()
@@ -1504,6 +1422,12 @@ def _take_ownership(mod, rdnode, node):
             plug = rdnode["exclusiveNodes"]
         except cmdx.ExistError:
             raise TypeError("%s not a Ragdoll node" % rdnode)
+
+    # Is the node already owned?
+    existing_connection = node["message"].output(plug=True)
+    if existing_connection and existing_connection.name() == "owner":
+        print("%s / %s" % (rdnode, node))
+        mod.disconnect(node["message"], existing_connection)
 
     # Ensure next_available_index is up-to-date
     mod.do_it()

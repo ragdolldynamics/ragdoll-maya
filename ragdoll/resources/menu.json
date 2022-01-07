@@ -345,8 +345,8 @@
             "importIncludeSimulation",
             "importUseSelection",
             "importCreateMissingTransforms",
-            "importSearchAndReplace",
             "importNamespace",
+            "importSearchAndReplace",
             "importCurrentSelection"
         ]
     },

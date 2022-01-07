@@ -179,7 +179,7 @@ class Loader(object):
         opts = opts or {}
         opts = dict(opts, **{
             "roots": [],
-            "replace": [],
+            "searchAndReplace": ["", ""],
             "namespace": None,
             "preserveAttributes": True,
 
@@ -201,6 +201,9 @@ class Loader(object):
         self._registry = None
 
         self._current_fname = ""
+
+    def count(self):
+        return len(self._state["entityToTransform"])
 
     @property
     def registry(self):
@@ -239,24 +242,6 @@ class Loader(object):
 
         self._registry = Registry(dump)
         self._dirty = True
-
-    # def set_roots(self, roots):
-    #     self._opts["roots"][:] = roots
-    #     self._dirty = True
-
-    # def set_replace(self, replace):
-    #     assert isinstance(replace, (tuple, list))
-    #     assert all(isinstance(i, tuple) for i in replace)
-    #     self._opts["replace"][:] = replace
-    #     self._dirty = True
-
-    # def set_namespace(self, namespace=None):
-    #     self._opts["namespace"] = namespace
-    #     self._dirty = True
-
-    # def set_preserve_attributes(self, preserve):
-    #     self._opts["preserveAttributes"] = preserve
-    #     self._dirty = True
 
     def is_valid(self):
         return len(self._invalid_reasons) == 0
@@ -435,7 +420,7 @@ class Loader(object):
                     # intended to stop if it could not be found.
                     raise cmdx.ExistError(
                         "Overridden solver '%s' could not be found"
-                        % self._optsp["overrideSolver"]
+                        % self._opts["overrideSolver"]
                     )
 
             # Ensure there is at least 1 marker in it
@@ -581,6 +566,14 @@ class Loader(object):
                     mod.connect(parent_rdmarker["ragdollId"],
                                 rdmarker["parentMarker"])
 
+        if self._opts["createMissingTransforms"]:
+            log.info("Taking ownership of newly created missing transforms..")
+            with cmdx.DagModifier() as mod:
+                for missing in self._state["missing"]:
+                    rdmarker = rdmarkers[missing]
+                    transform = self._state["entityToTransform"][missing]
+                    commands._take_ownership(mod, rdmarker, transform)
+
         return rdmarkers
 
     def _create_constraints(self, rdmarkers):
@@ -706,6 +699,7 @@ class Loader(object):
         entity_to_transform.clear()
         markers[:] = []
         occupied[:] = []
+        missing[:] = []
 
         for entity in self._registry.view("MarkerUIComponent"):
             # Collected regardless
@@ -748,8 +742,8 @@ class Loader(object):
     def _pre_process_path(self, path):
         """Apply search-and-replace rules along with namespace changes"""
 
-        for search, replace in self._opts["replace"]:
-            path = path.replace(search, replace)
+        snr = self._opts["searchAndReplace"]
+        path = path.replace(snr[0], snr[1])
 
         if self._opts["namespace"]:
             # Give namespace-less paths an empty namespace

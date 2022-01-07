@@ -164,3 +164,5 @@ FrameskipIgnore = 1
 
 ImportLoad = "Load"
 ImportReinterpret = "Reinterpret"
+ImportSolverFromFile = 0
+ImportSolverFromScene = 1

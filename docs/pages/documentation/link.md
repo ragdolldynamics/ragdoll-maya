@@ -7,7 +7,7 @@ icon: "link_black.png"
     <img class="hero-image" src=/car12.png>
 </div>
 
-The fundamental building block to Ragdoll, for "reverse motion capture" or Animation Capture.
+Combine, or "merge" multiple solvers together, to simulate them as one.
 
 <br>
 

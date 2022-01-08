@@ -35,8 +35,10 @@ cube, _ = cmds.polyCube()
 cmds.move(0, 10, 0)
 cmds.rotate(35, 50, 30)
 
-scene = rd.createScene()
-rigid = rd.createRigid(cube, scene)
+solver = rd.createSolver()
+marker = rd.assignMarker(cube, solver)
+
+rd.record()
 
 cmds.evalDeferred(cmds.play)
 ```
@@ -69,15 +71,15 @@ cube, _ = map(cmdx.encode, cmds.polyCube())
 cube["translateY"] = 10
 cube["rotate", cmdx.Degrees] = (35, 50, 30)
 
-# Every simulation needs a scene
-scene = rc.create_scene()
-assert isinstance(scene, cmdx.DagNode)
-assert scene.type() == "rdScene"
+# Every simulation needs a solver
+solver = rc.create_solver("mySolver")
+assert isinstance(solver, cmdx.DagNode)
+assert solver.isA("rdSolver")
 
-# Every scene needs one or more rigid bodies
-rigid = rc.create_rigid(cube, scene)
-assert isinstance(rigid, cmdx.DagNode)
-assert rigid.type() == "rdRigid"
+# Every solver needs one or more marker bodies
+marker = rc.assign_marker(cube, solver)
+assert isinstance(marker, cmdx.DagNode)
+assert marker.isA("rdMarker")
 
 # Allow start frame to evaluate before progressing
 cmds.evalDeferred(cmds.play)
@@ -106,13 +108,13 @@ cmds.move(0, 10, 0)
 cmds.rotate(35, 50, 30)
 
 cmds.select(cube)
-ri.create_rigid()
+ri.assign_marker()
 
 cmds.evalDeferred(cmds.play)
 ```
 
-!!! hint "Quick Tip"
-  Whenever you click a menu item, its Python command is printed in the Script Editor!
+!!! hint "Pro Tip"
+  Whenever you click a menu item, this Python command is printed in the Script Editor!
 
 <br>
 
@@ -124,57 +126,35 @@ Currently available members of `ragdoll.api`.
 
 ```py
 # Fundamentals
-api.createScene()
-api.createRigid(node, scene, passive=False, compute_mass=True)
+api.createSolver(name="mySolver")
+api.assignMarker(transform, solver)
+api.assignMarkers([transform1, transform2], solver)
 
 # Constraints
-api.pointConstraint(parent, child, scene)
-api.orientConstraint(parent, child, scene)
-api.hingeConstraint(parent, child, scene)
-api.socketConstraint(parent, child, scene)
-api.parentConstraint(parent, child, scene)
+api.createFixedConstraint(marker1, marker2)
+api.createDistanceConstraint(marker2, marker2)
+api.createPinConstraint(marker1)
 
-api.convertToPoint(con)
-api.convertToOrient(con)
-api.convertToHinge(con, secondary_axis="y")
-api.convertToSocket(con)
-api.convertToParent(con)
+# Edit
+api.reconnect(child_marker, parent_marker)
+api.retarget(marker, new_transform)
+api.replaceMesh(marker, new_mesh)
 
-# Controls
-api.createAbsoluteControl(rigid)
-api.createRelativeControl(rigid)
-api.createActiveControl(reference, rigid)
-api.createKinematicControl(rigid)
-
-# Forces
-api.createForce(type, rigid, scene)
-api.createSlice(scene)
-api.assignForce(rigid, force)
-
-# Utilities
-api.transferAttributes(a, b, mirror=True)
-api.transferRigid(ra, rb)
-api.transferConstraint(ca, cb, mirror=True)
-api.editConstraintFrames(con)
-api.duplicate(rigid)
+# IO
+api.record()
+api.export()
+api.reinterpret()
 ```
 
 <br>
 
 ## Environment Variables
 
-Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables. For example, to avoid the startup dialog on first launch, set `RAGDOLL_NO_STARTUP_DIALOG=1` and then call:
-
-```py
-import ragdoll.interactive
-ragdoll.interactive.install()
-```
-
-> Added `Ragdoll 2021.01.14`
+Gain more control over the integration of Ragdoll into your pipeline with these optional environment variables. For example, to avoid the startup dialog on first launch, set `RAGDOLL_NO_STARTUP_DIALOG=1` before loading the plug-in.
 
 | Variable                  | Description | Default
 |:--------------------------|:------------|:--------
 | RAGDOLL_PLUGIN            | Override absolute path to binary plugin, .mll on Windows .so on Linux. This overrides whatever is on `MAYA_PLUG_IN_PATH` | <nobr>`"ragdoll"`</nobr>
 | RAGDOLL_NO_STARTUP_DIALOG | Do not display the startup-dialog on first launch. | `False`
 | RAGDOLL_AUTO_SERIAL       | Automatically activate Ragdoll on install using this serial number. | Unset
-| RAGDOLL_INSTALL_ON_IDLE   | Restore plug-in load behavior pre-2021.04.30 | Unset
+| RAGDOLL_TELEMETRY         | Help development by uploading usage data. | Enabled for non-commercial licences, optional for commercial licences.

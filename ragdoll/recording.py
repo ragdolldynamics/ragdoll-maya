@@ -109,10 +109,10 @@ class _Recorder(object):
             end_time = cmdx.max_time()
 
         if isinstance(start_time, int):
-            start_time = cmdx.om.MTime(start_time, cmdx.TimeUiUnit())
+            start_time = cmdx.time(start_time)
 
         if isinstance(end_time, int):
-            end_time = cmdx.om.MTime(end_time, cmdx.TimeUiUnit())
+            end_time = cmdx.time(end_time)
 
         # We're only ever interested in whole frames
         solver_start_frame = int(solver_start_time.value)
@@ -396,7 +396,7 @@ class _Recorder(object):
                 # This does run faster, but at what cost?
                 cmds.setAttr("time1.outTime", int(frame))
             else:
-                cmdx.current_time(cmdx.om.MTime(frame, cmdx.TimeUiUnit()))
+                cmdx.current_time(cmdx.time(frame))
 
             if frame == self._solver_start_frame:
                 # Initialise solver

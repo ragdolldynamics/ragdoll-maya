@@ -26,6 +26,59 @@ AlreadyAssigned = type("AlreadyAssigned", (RuntimeError,), {})
 LockedTransformLimits = type("LockedTransformLimits", (RuntimeError,), {})
 
 
+def create_solver(name=None, opts=None):
+    r"""Create a new rdSolver node
+               ____
+              /    \
+          /  |      |
+      ---/----\____/
+        /       /
+    ---/-------/---
+      /       /
+
+    The solver is where the magic happens. Markers are connected to it
+    and solved within; populating its .outputMatrix attribute with the
+    final result.
+
+    Arguments:
+        name (str, optional): Override the default name of this solver
+        opts (dict, optional): Configure the solver with these options
+
+    Options:
+        frameskipMethod (int): Method to use whenever a frame is skipped,
+            can be either api.FrameskipPause or api.FrameskipIgnore
+
+    """
+
+    opts = dict({
+        "frameskipMethod": constants.FrameskipPause,
+    }, **(opts or {}))
+
+    name = name or "rSolver"
+    name = internal.unique_name(name)
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        solver_parent = mod.create_node("transform", name=name)
+        solver = nodes.create("rdSolver", mod,
+                              name=shape_name,
+                              parent=solver_parent)
+
+        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
+
+        # Scale isn't relevant for the solver, what would it mean?
+        mod.set_keyable(solver_parent["scaleX"], False)
+        mod.set_keyable(solver_parent["scaleY"], False)
+        mod.set_keyable(solver_parent["scaleZ"], False)
+        mod.lock_attr(solver_parent["scaleX"])
+        mod.lock_attr(solver_parent["scaleY"])
+        mod.lock_attr(solver_parent["scaleZ"])
+
+        _take_ownership(mod, solver, solver_parent)
+
+    return solver
+
+
 def assign_markers(transforms, solver, opts=None):
     """Assign markers to `transforms` belonging to `solver`
 
@@ -43,9 +96,12 @@ def assign_markers(transforms, solver, opts=None):
     """
 
     assert len(transforms) > 0, "Nothing to assign_markers to"
+    assert all(isinstance(t, cmdx.Node) for t in transforms), (
+        "%s was not a tuple of cmdx transforms" % str(transforms)
+    )
 
     opts = dict({
-        "autoLimit": None,
+        "autoLimit": False,
         "density": constants.DensityFlesh,
         "materialInChannelBox": True,
         "shapeInChannelBox": True,
@@ -134,7 +190,7 @@ def assign_markers(transforms, solver, opts=None):
                 dgmod.set_attr(marker["inputType"], constants.InputOff)
 
                 if shape:
-                    geo = _interpret_shape2(shape)
+                    geo = _interpret_shape(shape)
 
                 else:
                     geo = _infer_geometry(transform)
@@ -220,7 +276,7 @@ def assign_markers(transforms, solver, opts=None):
 
 
 def assign_marker(transform, solver, opts=None):
-    """Convenient function for passing and recieving a single node"""
+    """Convenience function for passing and recieving a single `transform`"""
     return assign_markers([transform], solver, opts)[0]
 
 
@@ -476,38 +532,6 @@ def retarget_marker(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
-def create_solver(name=None, opts=None):
-    """Create a new rdSolver node"""
-
-    opts = dict({
-        "frameskipMethod": constants.FrameskipPause,
-    }, **(opts or {}))
-
-    name = name or "rSolver"
-    name = internal.unique_name(name)
-    shape_name = internal.shape_name(name)
-
-    with cmdx.DagModifier() as mod:
-        solver_parent = mod.create_node("transform", name=name)
-        solver = nodes.create("rdSolver", mod,
-                              name=shape_name,
-                              parent=solver_parent)
-
-        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
-
-        # Scale isn't relevant for the solver, what would it mean?
-        mod.set_keyable(solver_parent["scaleX"], False)
-        mod.set_keyable(solver_parent["scaleY"], False)
-        mod.set_keyable(solver_parent["scaleZ"], False)
-        mod.lock_attr(solver_parent["scaleX"])
-        mod.lock_attr(solver_parent["scaleY"])
-        mod.lock_attr(solver_parent["scaleZ"])
-
-        _take_ownership(mod, solver, solver_parent)
-
-    return solver
-
-
 def create_ground(solver):
     grid_size = cmds.optionVar(query="gridSize")
 
@@ -525,8 +549,7 @@ def create_ground(solver):
     with cmdx.DagModifier() as mod:
         mod.set_attr(marker["inputType"], constants.InputKinematic)
         mod.set_attr(marker["displayType"], constants.DisplayWire)
-        mod.set_attr(marker["densityType"], constants.DensityOff)
-        mod.set_attr(marker["mass"], 0.01)
+        mod.set_attr(marker["densityType"], constants.DensityWood)
 
         mod.set_attr(plane["overrideEnabled"], True)
         mod.set_attr(plane["overrideShading"], False)
@@ -1623,7 +1646,7 @@ def _interpret_transform(mod, rigid, transform):
         mod.set_attr(rigid["shapeExtents"], geometry.extents)
 
 
-def _interpret_shape2(shape):
+def _interpret_shape(shape):
     """Translate `shape` into rigid shape attributes
 
     For example, if the shape is a `mesh`, we'll plug that in as

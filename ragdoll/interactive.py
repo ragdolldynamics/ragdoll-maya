@@ -59,7 +59,6 @@ from . import (
 )
 
 # Backwards compatibility
-from .legacy import fixes as legacy_fixes
 from .legacy.interactive import (
     export_physics as legacy_export_physics,
     export_physics_options as legacy_export_physics_options,
@@ -298,9 +297,6 @@ def install():
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
-
-        if options.read("skinweightsFix"):
-            legacy_fixes.paint_skin_weights()
 
     __.installed = True
 
@@ -688,7 +684,7 @@ def install_menu():
 
     divider("Markers")
 
-    item("assignMarker", assign_single, assign_marker_options)
+    item("assignMarker", assign_marker, assign_marker_options)
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
 
@@ -1355,7 +1351,7 @@ def markers_manipulator(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def assign_single(selection=None, **opts):
+def assign_marker(selection=None, **opts):
     selection = selection or cmdx.selection()
     selection = cmdx.ls(selection, type=("transform", "joint"))
 
@@ -1664,7 +1660,7 @@ def record_markers(selection=None, **opts):
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
 
-    if licence.data()["isNonCommercial"]:
+    if _is_interactive() and licence.data()["isNonCommercial"]:
         if options.read("validateNonCommercialRecord"):
             def buy():
                 webbrowser.open(
@@ -2612,9 +2608,6 @@ def export_physics(selection=None, **opts):
     fname = os.path.normpath(fname)
     fname = fname.replace("\\", "/")  # Safe for all platforms
 
-    # Embed into the .rag file
-    data["ui"]["filename"] = fname
-
     try:
         dump.export(fname, data=data)
     except Exception:
@@ -2783,7 +2776,7 @@ def replace_marker_mesh_options(*args):
 
 
 def assign_marker_options(*args):
-    return _Window("assignMarker", assign_single)
+    return _Window("assignMarker", assign)
 
 
 def assign_and_connect_options(*args):
@@ -2949,4 +2942,5 @@ def export_physics_options(*args):
 # Backwards compatibility
 create_rigid = legacy_create_active_rigid
 create_collider = legacy_create_passive_rigid
+assign_single = assign_marker
 assign_group = assign_and_connect

@@ -21,6 +21,54 @@ from . import commands, internal, constants
 log = logging.getLogger("ragdoll")
 
 
+def load(fname, opts=None):
+    """Create a Maya scene from an exported Ragdoll file
+
+    New transforms are generated and then assigned Markers.
+
+    """
+
+    loader = Loader(opts)
+    loader.read(fname)
+    return loader.load()
+
+
+def reinterpret(fname, opts=None):
+    """Recreate Maya scene from exported Ragdoll file
+
+    User-interface attributes like `density` and display settings
+    are restored from a file otherwise mostly contains the raw
+    simulation data.
+
+    """
+
+    loader = Loader(opts)
+    loader.read(fname)
+    return loader.reinterpret()
+
+
+def export(fname, data=None):
+    """Export everything Ragdoll-related into `fname`
+
+    Arguments:
+        data (dict, optional): Export this dictionary instead
+
+    """
+
+    data = data or json.loads(cmds.ragdollDump())
+
+    if "ui" not in data:
+        data["ui"] = {}
+
+    # Keep filename in the dump
+    data["ui"]["filename"] = fname
+
+    with open(fname, "w") as f:
+        json.dump(data, f, indent=4, sort_keys=True)
+
+    return True
+
+
 class Entity(int):
     pass
 
@@ -1041,34 +1089,3 @@ class Loader(object):
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": maintain_offset}
                 )
-
-
-def load(fname, roots=None):
-    loader = Loader(roots)
-    loader.read(fname)
-    return loader.load()
-
-
-def reinterpret(fname, roots=None):
-    loader = Loader(roots)
-    loader.read(fname)
-    return loader.reinterpret()
-
-
-def export(fname, data=None):
-    import json
-    data = data or json.loads(cmds.ragdollDump())
-
-    # Validate a few things
-    registry = Registry(data)
-    for entity in registry.view("SceneComponent", "NameComponent"):
-        Name = registry.get(entity, "NameComponent")
-        Scene = registry.get(entity, "SceneComponent")
-
-        # This would be an invalid, non-exising scene
-        assert Scene["entity"] != 0, "%s has no scene" % Name["shortestPath"]
-
-    with open(fname, "w") as f:
-        json.dump(data, f, indent=4, sort_keys=True)
-
-    return True

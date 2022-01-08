@@ -4,7 +4,7 @@ import re
 import os
 import sys
 import json
-import time
+import time as time_
 import math
 import types
 import logging
@@ -19,7 +19,7 @@ from maya import cmds
 from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui
 from maya import OpenMaya as om1, OpenMayaMPx as ompx1, OpenMayaUI as omui1
 
-__version__ = "0.6.1"
+__version__ = "0.6.3"
 
 PY3 = sys.version_info[0] == 3
 
@@ -169,12 +169,12 @@ def withTiming(text="{func}() {time:.2f} ns"):
 
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            t0 = time.clock()
+            t0 = time_.clock()
 
             try:
                 return func(*args, **kwargs)
             finally:
-                t1 = time.clock()
+                t1 = time_.clock()
                 duration = (t1 - t0) * 10 ** 6  # microseconds
 
                 Stats.LastTiming = duration
@@ -2933,7 +2933,7 @@ class Plug(object):
         return 0
 
     def pull(self):
-        """Pull on a plug, without seriasing any value. For performance"""
+        """Pull on a plug, without serialising any value. For performance."""
         self._mplug.asMObject()
 
     def append(self, value, autofill=False):
@@ -3633,6 +3633,10 @@ class Plug(object):
                 '|persp.translateX'
                 >>> persp["translateX"].path(full=True)
                 '|persp.translate.translateX'
+                >>> persp["worldMatrix"].path()
+                '|persp.worldMatrix'
+                >>> persp["worldMatrix"][0].path()
+                '|persp.worldMatrix[0]'
 
             """
 
@@ -3640,7 +3644,8 @@ class Plug(object):
             self._node.path(), self._mplug.partialName(
                 includeNodeName=False,
                 useLongNames=True,
-                useFullAttributePath=full
+                useFullAttributePath=full,
+                includeInstancedIndices=True,
             )
         )
 
@@ -3659,6 +3664,10 @@ class Plug(object):
             'translate.translateX'
             >>> persp["tx"].name(long=False, full=True)
             't.tx'
+            >>> persp["worldMatrix"].name()
+            'worldMatrix'
+            >>> persp["worldMatrix"][0].name()
+            'worldMatrix[0]'
 
         """
 
@@ -3666,7 +3675,8 @@ class Plug(object):
             self._mplug.partialName(
                 includeNodeName=False,
                 useLongNames=long,
-                useFullAttributePath=full
+                useFullAttributePath=full,
+                includeInstancedIndices=True,
             )
         )
 
@@ -5230,6 +5240,16 @@ sin = math.sin
 cos = math.cos
 tan = math.tan
 pi = math.pi
+
+
+def time(frame):
+    assert isinstance(frame, int), "%s was not an int" % frame
+    return om.MTime(frame, TimeUiUnit())
+
+
+def frame(time):
+    assert isinstance(time, om.MTime), "%s was not an om.MTime" % time
+    return int(time.value)
 
 
 def meters(cm):
@@ -7132,14 +7152,14 @@ def lookAt(origin, center, up=None):
 
     up = up or Vector(0, 1, 0)
 
-    x = (center - origin).normalize()
-    y = ((center - origin) ^ (center - up)).normalize()
+    x = (center - origin).normal()
+    y = ((center - origin) ^ (center - up)).normal()
     z = x ^ y
 
     return MatrixType((
-        x[0], x[1], x[2], 1,
-        y[0], y[1], y[2], 1,
-        z[0], z[1], z[2], 1,
+        x[0], x[1], x[2], 0,
+        y[0], y[1], y[2], 0,
+        z[0], z[1], z[2], 0,
         0, 0, 0, 1
     ))
 

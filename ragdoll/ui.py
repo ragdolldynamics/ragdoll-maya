@@ -1834,27 +1834,37 @@ def center_window(window):
         )
 
 
-def warn(option, title, message, call_to_action, actions):
+def warn(title, message, call_to_action, actions, option=None):
     msgbox = QtWidgets.QMessageBox()
     msgbox.setWindowTitle(title)
-    msgbox.setText(message)
     msgbox.setInformativeText(call_to_action)
+    layout = msgbox.layout()
 
     buttons = []
     for index, (label, func) in enumerate(actions):
         button = msgbox.addButton(label, msgbox.ActionRole)
         buttons += [button]
 
-    def on_remind_me(value):
-        options.write(option, bool(value))
-        log.info("Toggled %s" % option)
+    if option:
+        def on_remind_me(value):
+            options.write(option, bool(value))
+            log.info("Toggled %s" % option)
 
-    remind_me = QtWidgets.QCheckBox("Keep telling me")
-    remind_me.setChecked(True)
-    remind_me.stateChanged.connect(on_remind_me)
+        remind_me = QtWidgets.QCheckBox("Keep telling me")
+        remind_me.setChecked(True)
+        remind_me.stateChanged.connect(on_remind_me)
 
-    layout = msgbox.layout()
-    layout.addWidget(remind_me, 3, 1, QtCore.Qt.AlignRight)
+        layout.addWidget(remind_me, 3, 1, QtCore.Qt.AlignHCenter)
+
+    if message.endswith(".png"):
+        poster = _resource("ui", message)
+        pixmap = QtGui.QPixmap(poster)
+        label = QtWidgets.QLabel()
+        label.setPixmap(pixmap)
+        layout.addWidget(label, 0, 0, 1, 2)
+
+    else:
+        msgbox.setText(message)
 
     msgbox.exec_()
 
@@ -3000,7 +3010,7 @@ class Notification(QtWidgets.QDialog):
     def animate_fade_out(self):
         self._fade_out.start()
 
-    def init(self, pos, title, message, persistent=False):
+    def init(self, pos, title, message, persistent=False, shake=False):
         self._widgets["title"].setText(title)
         self._widgets["message"].setText(message)
 
@@ -3021,7 +3031,9 @@ class Notification(QtWidgets.QDialog):
         self.move(pos)
 
         self.animate_fade_in()
-        self.shake_it(pos)
+
+        if shake:
+            self.shake_it(pos)
 
         if not persistent:
             self._fade_out_timer.start()
@@ -3081,12 +3093,13 @@ class Notification(QtWidgets.QDialog):
         return super(Notification, self).mousePressEvent(event)
 
 
-def notify(title, message, pos_at_menu=False, persistent=False):
+def notify(title, message, location="cursor", persistent=False, shake=False):
     """Produce a transient balloon popup with `title` and `message`
 
     Arguments:
         title (str): Header of the popup, a summary of the event
         message (str): Body of the popup, more details about the event
+        location (str): Where on screen to display the notification
 
     """
 
@@ -3101,16 +3114,23 @@ def notify(title, message, pos_at_menu=False, persistent=False):
 
     pos = QtGui.QCursor.pos()
 
-    if pos_at_menu and __.menu:
-        menu = __.menu.rsplit("|", 1)[-1]
-        menu = maya_win.findChild(QtWidgets.QMenu, menu)
+    if location == "menu" and __.menu:
+        menu = maya_win.menuBar()
 
-        # The menu won't have a position until it's been opened at least once
-        # In those cases, just use the mouse position
-        if menu is not None and menu.pos().x() > 0:
-            pos = menu.pos()
+        def find_action(text):
+            for action in menu.actions():
+                if action.text().startswith(text):
+                    return action
 
-    note.init(pos, title, message, persistent)
+        action = find_action("Ragdoll")
+
+        if action:
+            geo = menu.actionGeometry(action)
+            pos = geo.topLeft()
+            pos += QtCore.QPoint(geo.width() / 2, geo.height())
+            pos = menu.mapToGlobal(pos)
+
+    note.init(pos, title, message, persistent, shake=shake)
 
     return note
 

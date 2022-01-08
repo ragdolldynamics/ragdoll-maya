@@ -2,7 +2,7 @@ import logging
 import traceback
 
 from .vendor import cmdx
-from . import constants, internal, commands
+from . import constants, internal, commands, licence
 
 from maya import cmds
 
@@ -147,8 +147,23 @@ class _Recorder(object):
 
         self._opts = opts
 
+        # You found it!
+        #
+        # However, removing this check won't enable the recording
+        # of more frames. Once a frame greater than 100 is attempted,
+        # Ragdoll will return a translate/rotate value of 0. This
+        # check is merely for your convenience.
+        if licence.non_commercial():
+            self._end_frame = min(100, self._end_frame)
+
     @internal.with_undo_chunk
     def record(self):
+        if self._solver_start_frame >= self._end_frame:
+            raise RuntimeError(
+                "Start Frame=%d is greater than End Frame=%d" %
+                (self._end_frame, self._solver_start_frame)
+            )
+
         if not self._validate_transform_limits():
             raise commands.LockedTransformLimits(
                 "There were transform limits, "
@@ -772,7 +787,7 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
 
     # Recursively create childhood
     def recurse(mod, marker, parent=None):
-        if not (marker["enabled"].read() and marker["_scene"].read()):
+        if not (marker["enabled"].read() and not marker["_culled"].read()):
             return
 
         parent = marker_to_dagnode.get(parent)

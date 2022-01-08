@@ -37,6 +37,7 @@ import errno
 import logging
 import traceback
 import functools
+import webbrowser
 import contextlib
 
 from maya import cmds
@@ -444,7 +445,9 @@ def _on_nonkeyable_keyed(clientData=None):
 
     cmds.evalDeferred(lambda: ui.notify(
         "Non-keyable Attribute",
-        "This attribute cannot be keyframed"
+        "This attribute cannot be keyframed",
+        location="cursor",
+        shake=True
     ))
 
 
@@ -460,8 +463,25 @@ def _on_noncommercial(clientData=None):
     )
 
     def deferred():
-        ui.notify("Non-commercial file", msg, persistent=True)
+        ui.notify("Non-commercial file", msg, persistent=True, location="menu")
         welcome_user()
+
+    cmds.evalDeferred(deferred)
+    log.warning(msg)
+
+
+def _on_noncommercial_export(clientData=None):
+    """Called on attempted export from non-commercial version"""
+
+    msg = (
+        "Export using a <b>Complete</b> or <b>Non-commercial</b> licence "
+        "is limited to 10 markers."
+    )
+
+    def deferred():
+        ui.notify(
+            "Non-commercial export", msg, persistent=True, location="menu"
+        )
 
     cmds.evalDeferred(deferred)
     log.warning(msg)
@@ -511,6 +531,11 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollNonCommercialEvent", _on_noncommercial)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollNonCommercialExportEvent", _on_noncommercial_export)
     )
 
 
@@ -1640,11 +1665,32 @@ def record_markers(selection=None, **opts):
     }, **(opts or {}))
 
     if licence.data()["isNonCommercial"]:
-        raise i__.UserWarning(
-            "Commercial Licence Required",
-            "A commercial licence is required in order to "
-            "Record Simulation, Ragdoll Complete or Unlimited."
-        )
+        if options.read("validateNonCommercialRecord"):
+            def buy():
+                webbrowser.open(
+                    "https://ragdolldynamics.com/pricing-commercial"
+                )
+                return False
+
+            proceed = ui.warn(
+                option="validateNonCommercialRecord",
+                title="Recording with Ragdoll Non-Commercial",
+                message="nc_record.png",
+                call_to_action=(
+                    "A non-commercial licence is limited to "
+                    "100 frames of recorded simulation. To "
+                    "record more frames, consider purchasing "
+                    "a Complete or Unlimited licence."
+                ),
+                actions=[
+                    ("Proceed", lambda: True),
+                    ("Cancel", lambda: False),
+                    ("Buy", buy)
+                ]
+            )
+
+            if not proceed:
+                return log.info("Aborted")
 
     solvers = _filtered_selection("rdSolver", selection)
     include = []
@@ -2518,7 +2564,6 @@ def welcome_user(*args):
 
 @with_exception_handling
 def export_physics(selection=None, **opts):
-
     # Initialise start and next frames of each scene
 
     current_time = cmds.currentTime(query=True)
@@ -2528,7 +2573,11 @@ def export_physics(selection=None, **opts):
         cmds.currentTime(start_time + 1)
     cmds.currentTime(current_time)
 
-    data = cmds.ragdollDump()
+    try:
+        data = cmds.ragdollDump()
+    except RuntimeError:
+        return log.warning("Failed")
+
     data = json.loads(data)
 
     if not data["entities"]:

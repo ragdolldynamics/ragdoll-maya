@@ -326,3 +326,11 @@ def data():
         expires=cmds.ragdollLicence(expires=True, query=True),
         expiryDays=cmds.ragdollLicence(expiryDays=True, query=True),
     )
+
+
+def non_commercial():
+    return cmds.ragdollLicence(isNonCommercial=True, query=True)
+
+
+def commercial():
+    return not non_commercial()

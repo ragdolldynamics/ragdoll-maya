@@ -960,6 +960,12 @@
         "default": true,
         "help": "Protect against accidental cycles."
     },
+    "validateNonCommercialRecord": {
+        "name": "validateNonCommercialRecord",
+        "type": "Boolean",
+        "default": true,
+        "help": "Provide details about the limitations of Ragdoll Trial and Personal licences."
+    },
     "validateEvaluationMode": {
         "name": "validateEvaluationMode",
         "type": "Boolean",

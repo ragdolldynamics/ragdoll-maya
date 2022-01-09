@@ -96,6 +96,19 @@ QWidget {
     border: none;
 }
 
+*[type="Image"], *[type="ImageButton"] {
+    border: 1px solid #555;
+    background: #222;
+}
+
+*[type="ImageButton"]:hover {
+    background: #2A2A2A;
+}
+
+*[type="ImageButton"]:pressed {
+    background: #333;
+}
+
 QLabel[type="Separator"] {
     min-height: 20px;
     text-decoration: underline;
@@ -363,14 +376,14 @@ class QArgumentParser(QtWidgets.QWidget):
         else:
             widget = arg.create()
 
-        for widget in (label, widget):
-            widget.setObjectName(arg["name"])  # useful in CSS
-            widget.setProperty("type", type(arg).__name__)
-            widget.setAttribute(QtCore.Qt.WA_StyledBackground)
-            widget.setEnabled(arg["enabled"])
+        if self._style.get("useTooltip"):
+            label.setToolTip(arg["help"])
+            widget.setToolTip(arg["help"])
 
-            if self._style.get("useTooltip"):
-                widget.setToolTip(arg["help"])
+        widget.setObjectName(arg["name"])  # useful in CSS
+        widget.setAttribute(QtCore.Qt.WA_StyledBackground)
+        widget.setEnabled(arg["enabled"])
+        widget.setProperty("type", type(arg).__name__)
 
         def base64_to_pixmap(base64):
             data = QtCore.QByteArray.fromBase64(base64)
@@ -396,6 +409,7 @@ class QArgumentParser(QtWidgets.QWidget):
         # Align label on top of row if widget is over two times higher
         height = (lambda w: w.sizeHint().height())
         label_on_top = height(label) * 2 < height(widget)
+        print("%s.height=%s" % (widget.objectName(), height(widget)))
 
         if label_on_top:
             alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
@@ -1460,6 +1474,136 @@ class Separator(QArgument):
         self._write = lambda value: None
 
         return widget
+
+    def reset(self):
+        # This ain't got no default value
+        pass
+
+
+class Image(QArgument):
+    """An image of sorts
+
+               ________________
+    Thumbnail |                |
+              |                |
+              |                |
+              |                |
+              |________________|
+
+    """
+
+    clicked = QtCore.Signal()
+
+    def __init__(self, name, **kwargs):
+        super(Image, self).__init__(name, **kwargs)
+        self._data["editable"] = False
+
+    def create(self):
+        label = _with_entered_exited(QtWidgets.QLabel, self)()
+        label.setMinimumHeight(px(200))
+        label.setMinimumWidth(px(128))
+
+        self._widget = label
+
+        def _write(pixmap):
+            if not isinstance(pixmap, QtGui.QPixmap):
+                pixmap = QtGui.QPixmap(pixmap)
+            label.setPixmap(pixmap)
+
+        self._read = lambda: None
+        self._write = _write
+
+        initial = self["initial"]
+
+        if initial is None:
+            initial = self["default"]
+
+        if initial != self.default:
+            self._write(initial)
+
+        return label
+
+    def reset(self):
+        # This ain't got no default value
+        pass
+
+
+# For whatever reason, sizeHint of a QPushButton doesn't
+# respect the minimum of fixed sizes. :/
+class _ImageButton(QtWidgets.QPushButton):
+    def sizeHint(self):
+        return QtCore.QSize(px(200), px(128))
+
+
+class ImageButton(QArgument):
+    """An image of sorts
+
+               ________________
+    Thumbnail |                |
+              |                |
+              |                |
+              |                |
+              |________________|
+
+    """
+
+    clicked = QtCore.Signal()
+
+    def __init__(self, name, **kwargs):
+        super(ImageButton, self).__init__(name, **kwargs)
+        self._data["editable"] = False  # No reset button
+
+    def create(self):
+        button = _with_entered_exited(_ImageButton, self)()
+
+        size = QtCore.QSize(px(200), px(128))
+        button.setIconSize(size)
+        button.setFixedSize(size)
+
+        button.clicked.connect(self.clicked.emit)
+
+        def _write(pixmap):
+            if isinstance(pixmap, QtGui.QIcon):
+                pass
+
+            elif isinstance(pixmap, QtGui.QPixmap):
+                pixmap.scaled(
+                    px(200), px(128),
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                icon = QtGui.QIcon(pixmap)
+
+            else:
+                # Try making whatever this is into a pixmap
+                pixmap = QtGui.QPixmap(pixmap)
+                pixmap.scaled(
+                    px(200), px(128),
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                icon = QtGui.QIcon(pixmap)
+
+            button.setIcon(icon)
+
+        self._widget = button
+        self._read = lambda: None
+        self._write = _write
+        self._size = size
+
+        initial = self["initial"]
+
+        if initial is None:
+            initial = self["default"]
+
+        if initial != self.default:
+            self._write(initial)
+
+        return button
+
+    def pixmap(self):
+        icon = self._widget.icon()
+        return icon.pixmap(self._size)
 
     def reset(self):
         # This ain't got no default value

@@ -325,6 +325,10 @@
         "summary": "Save physics to disk.",
         "description": "Export the internals of the Ragdoll solver into a new file, this file could then be imported back into Maya for re-application onto an identical character or imported elsewhere such as Unreal or Unity.",
         "options": [
+            "exportPath",
+            "exportThumbnail",
+            "exportFormat",
+            "exportSolver",
             "exportIncludeAnimation",
             "exportIncludeSimulation"
         ]

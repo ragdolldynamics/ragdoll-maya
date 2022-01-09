@@ -2121,7 +2121,6 @@ class DumpWidget(QtWidgets.QWidget):
         layout = QtWidgets.QGridLayout(panels["Body"])
         layout.addWidget(widgets["TargetView"], 1, 0, 1, 3)
         layout.setRowStretch(1, 1)
-        # layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(px(5))
 
         layout = QtWidgets.QHBoxLayout(self)
@@ -2611,6 +2610,16 @@ class ImportOptions(Options):
             QtCore.Qt.SmoothTransformation
         )
 
+        # Add a thumbnail next to the import paths
+        #  ________________________________
+        # |o --- -- ---   |                |
+        # |o ----- ---    |                |
+        # |o --- -- ---   |                |
+        # |o ----- ---    |   thumbnail    |
+        # |o ----- ---    |                |
+        # |o ----- ---    |                |
+        # |_______________|________________|
+        #
         qimport_paths = import_paths.widget()
         qimport_paths.setFixedHeight(px(128))
         layout = qimport_paths.layout()
@@ -2620,12 +2629,6 @@ class ImportOptions(Options):
         widgets["Thumbnail"].setFixedWidth(px(200))
         widgets["Thumbnail"].setFixedHeight(px(128))
         widgets["Thumbnail"].setPixmap(default_thumbnail)
-        widgets["Thumbnail"].setStyleSheet("""
-            QLabel {
-                border: 1px solid #555;
-                background: #222;
-            }
-        """)
 
         widgets["DumpWidget"].hinted.connect(self.on_hinted)
         widgets["DumpWidget"].selection_changed.connect(
@@ -2823,7 +2826,7 @@ class ImportOptions(Options):
     def on_browsed(self):
         path, suffix = QtWidgets.QFileDialog.getOpenFileName(
             MayaWindow(),
-            "Open Ragdoll Scene",
+            "Open Ragdoll Data",
             options.read("lastVisitedPath"),
             "Ragdoll scene files (*.rag)"
         )
@@ -2840,6 +2843,85 @@ class ImportOptions(Options):
 
         import_path = self.parser.find("importPath")
         import_path.write(path)
+
+
+class ExportOptions(Options):
+    exported = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(ExportOptions, self).__init__(*args, **kwargs)
+        self.setWindowTitle("Export Options")
+
+        widgets = {
+            "DumpWidget": DumpWidget(),
+        }
+
+        for nam, obj in widgets.items():
+            obj.setObjectName(nam)
+
+        # Integrate with other options
+        layout = self._widgets["Options"].layout()
+        layout.addWidget(widgets["DumpWidget"], 1, 0, 1, 2)
+        layout.setRowStretch(1, 1)
+
+        # Map known options to this widget
+        parser = self._widgets["Parser"]
+        export_path = parser.find("exportPath")
+        export_path.browsed.connect(self.on_browsed)
+        thumbnail = parser.find("exportThumbnail")
+        thumbnail.write(_resource("icons", "no_thumbnail.png"))
+        thumbnail.clicked.connect(self.on_thumbnail_clicked)
+
+        self._loader = None
+        self._loader_factory = None
+
+        self._refresh_timer = QtCore.QTimer()
+        self._refresh_timer.setInterval(200)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.timeout.connect(self.refresh)
+
+        # Keep superclass informed
+        self._widgets.update(widgets)
+
+        ExportOptions.instance = self
+
+    def init(self, loader_factory=None):
+        self._loader_factory = loader_factory
+        self._refresh_timer.start()
+
+    def refresh(self, loader_factory=None):
+        pixmap = view_to_pixmap()
+
+        parser = self._widgets["Parser"]
+        thumbnail = parser.find("exportThumbnail")
+        thumbnail.write(pixmap)
+
+        self._loader = self._loader_factory()
+        self._widgets["DumpWidget"].reset(self._loader)
+
+    def on_browsed(self):
+        path, suffix = QtWidgets.QFileDialog.getSaveFileName(
+            MayaWindow(),
+            "Save Ragdoll Data",
+            options.read("lastVisitedPath"),
+            "Ragdoll scene files (*.rag)"
+        )
+
+        if not path:
+            return log.debug("Cancelled")
+
+        path = os.path.normpath(path)
+        dirname, fname = os.path.split(path)
+
+        # Update directory listing, even if it's unchanged
+        # (in case the contents has actually changed)
+        self._previous_dirname = None
+
+        export_path = self.parser.find("exportPath")
+        export_path.write(path)
+
+    def on_thumbnail_clicked(self):
+        self.refresh()
 
 
 class DragButton(QtWidgets.QPushButton):
@@ -3162,7 +3244,7 @@ def view_to_pixmap(size=None):
 
     return QtGui.QPixmap.fromImage(qimage).scaled(
         osize.width(), osize.height(),
-        QtCore.Qt.KeepAspectRatio,
+        QtCore.Qt.KeepAspectRatioByExpanding,
         QtCore.Qt.SmoothTransformation
     )
 

@@ -227,8 +227,9 @@ PivotEditor #z::indicator::checked {
     image: url("%(res)s/ui/pivot_editor/z_checked.png");
 }
 
-ImportOption #Options {
-    padding: 10px;
+ImportOptions #Thumbnail {
+    border: 1px solid #555;
+    background: #222;
 }
 
 DumpWidget {

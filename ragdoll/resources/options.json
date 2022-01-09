@@ -602,9 +602,37 @@
     "exportPath": {
         "name": "exportPath",
         "label": "Filename",
-        "type": "String",
+        "type": "Path",
         "default": "",
         "help": "Export physics to this .rag file."
+    },
+
+    "exportSolver": {
+        "name": "exportSolver",
+        "label": "Solver",
+        "enabled": false,
+        "type": "Enum",
+        "items": ["All", "Selected"],
+        "default": 0,
+        "help": "Which solvers to include in the export."
+    },
+
+    "exportFormat": {
+        "name": "exportFormat",
+        "label": "Format",
+        "enabled": false,
+        "type": "Enum",
+        "items": ["*.rag", "*.ragz"],
+        "default": 0,
+        "help": "Format in which to store the markers, one ASCII and humanly readable format versus one binary and compact format better suited for convex meshes and long-running simulations."
+    },
+
+    "exportThumbnail": {
+        "name": "exportThumbnail",
+        "label": "Thumbnail",
+        "type": "ImageButton",
+        "default": "",
+        "help": "<b>Click to update</b> thumbnail included with export."
     },
 
     "exportIncludeThumbnail": {

@@ -248,6 +248,9 @@ class Loader(object):
 
         self._registry = None
 
+        # Original dump
+        self._dump = None
+
         self._current_fname = ""
 
     def count(self):
@@ -256,6 +259,9 @@ class Loader(object):
     @property
     def registry(self):
         return self._registry
+
+    def dump(self):
+        return copy.deepcopy(self._dump)
 
     def edit(self, options):
         self._opts.update(options)
@@ -289,6 +295,7 @@ class Loader(object):
         )
 
         self._registry = Registry(dump)
+        self._dump = dump
         self._dirty = True
 
     def is_valid(self):

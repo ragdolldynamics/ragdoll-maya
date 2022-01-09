@@ -1270,7 +1270,7 @@ def _opt(key, override=None):
 
 
 def _rewind(scene):
-    start_time = scene["startTime"].asTime()
+    start_time = scene["startTime"].as_time()
     cmdx.currentTime(start_time)
 
 
@@ -2211,7 +2211,7 @@ def uncache(selection=None, **opts):
         for solver in solvers:
             mod.set_attr(solver["cache"], 0)
 
-            solver_start = solver["_startTime"].asTime()
+            solver_start = solver["_startTime"].as_time()
             if solver_start < start_time:
                 start_time = solver_start
 
@@ -2558,123 +2558,6 @@ def welcome_user(*args):
     return win
 
 
-@with_exception_handling
-def export_physics(selection=None, **opts):
-    # Initialise start and next frames of each scene
-
-    current_time = cmds.currentTime(query=True)
-    for scene in cmdx.ls(type="rdScene"):
-        start_time = scene["startTime"].asTime().value
-        cmds.currentTime(start_time)
-        cmds.currentTime(start_time + 1)
-    cmds.currentTime(current_time)
-
-    try:
-        data = cmds.ragdollDump()
-    except RuntimeError:
-        return log.warning("Failed")
-
-    data = json.loads(data)
-
-    if not data["entities"]:
-        return log.error("Nothing to export")
-
-    # Include optional thumbnail
-    from PySide2 import QtWidgets
-
-    data["ui"] = {
-        "filename": "",
-        "thumbnail": "",
-        "description": "",
-    }
-
-    # Call this *before* opening up the dialog,
-    # to ensure we don't mess up the active 3d viewport
-    if _opt("exportIncludeThumbnail", opts):
-        thumbnail = ui.view_to_pixmap()
-        b64 = ui.pixmap_to_base64(thumbnail)
-        data["ui"]["thumbnail"] = b64.decode("ascii")
-
-    fname, suffix = QtWidgets.QFileDialog.getSaveFileName(
-        ui.MayaWindow(),
-        "Export Ragdoll Scene",
-        os.path.dirname(options.read("exportPath")),
-        "Ragdoll scene files (*.rag)"
-    )
-
-    if not fname:
-        return cmds.warning("Cancelled")
-
-    fname = os.path.normpath(fname)
-    fname = fname.replace("\\", "/")  # Safe for all platforms
-
-    try:
-        dump.export(fname, data=data)
-    except Exception:
-        _print_exception()
-        return log.warning("Could not export %s" % fname)
-
-    # Update any currently opened Import UI
-    for title, widget in __.widgets.items():
-        if not isinstance(widget, ui.ImportOptions):
-            continue
-
-        if not ui.isValid(widget):
-            continue
-
-        log.warning("Updating currently opened Import UI")
-        widget.on_path_changed(force=True)
-
-    options.write("exportPath", fname)
-    log.info(
-        "Successfully exported to %s in %.2f ms"
-        % (fname, data["info"]["serialisationTimeMs"])
-    )
-
-    return True
-
-
-@with_exception_handling
-def import_physics_from_file(selection=None, **opts):
-    from PySide2 import QtWidgets
-    fname, suffix = QtWidgets.QFileDialog.getOpenFileName(
-        ui.MayaWindow(),
-        "Import Ragdoll Scene",
-        os.path.dirname(options.read("importPath")),
-        "Ragdoll scene files (*.rag)"
-    )
-
-    if not fname:
-        return cmds.warning("Cancelled")
-
-    fname = os.path.normpath(fname)
-    loader = dump.Loader()
-
-    try:
-        loader.read(fname)
-    except Exception:
-        _print_exception()
-        return log.error("Could not read from %s" % fname)
-
-    method = _opt("importMethod", opts)
-
-    try:
-        if method == "Load":
-            merge = _opt("importMergePhysics", opts)
-            loader.load(merge=merge)
-        else:
-            loader.reinterpret()
-
-    except Exception:
-        _print_exception()
-        return log.error("Could not load %s" % fname)
-
-    options.write("importPath", fname)
-    log.info("Successfully imported %s" % fname)
-
-    return True
-
-
 def _Arg(var, label=None, callback=None):
     var = __.optionvars[var]
     var = copy.deepcopy(var)  # Allow edits to internal lists etc.
@@ -2776,7 +2659,7 @@ def replace_marker_mesh_options(*args):
 
 
 def assign_marker_options(*args):
-    return _Window("assignMarker", assign)
+    return _Window("assignMarker", assign_marker)
 
 
 def assign_and_connect_options(*args):
@@ -2803,10 +2686,11 @@ def delete_physics_options(*args):
     return _Window("deleteAllPhysics", delete_physics)
 
 
-# Let the Import UI initialise this, and then reuse it for
+# Let the Import UI initialise these, and then reuse it for
 # any subsequent imports without a UI. To mimic the behavior
 # of other menu items that don't *require* a UI.
-_singleton_loader = None
+_singleton_import_loader = None
+_singleton_export_loader = None
 
 
 def _import_physics_wrapper():
@@ -2817,13 +2701,13 @@ def _import_physics_wrapper():
         if existing_solvers:
             override_solver = existing_solvers[0].path()
 
-    _singleton_loader.edit({
+    _singleton_import_loader.edit({
         "overrideSolver": override_solver,
     })
 
     try:
         with i__.Timer("importPhysics") as t:
-            _singleton_loader.reinterpret()
+            _singleton_import_loader.reinterpret()
 
     except Exception:
         log.warning(traceback.format_exc())
@@ -2831,7 +2715,7 @@ def _import_physics_wrapper():
         return False
 
     else:
-        stats = (_singleton_loader.count(), t.ms)
+        stats = (_singleton_import_loader.count(), t.ms)
         cmds.inViewMessage(
             amg="Imported %d markers in <hl>%.2f ms</hl>" % stats,
             pos="topCenter",
@@ -2843,8 +2727,65 @@ def _import_physics_wrapper():
     return True
 
 
+def _export_physics_wrapper(thumbnail=None):
+    try:
+        with i__.Timer("exportPhysics") as t:
+            data = _singleton_export_loader.dump()
+
+            if not data["entities"]:
+                return log.error("Nothing to export")
+
+            if not thumbnail:
+                # Call this *before* opening up the dialog,
+                # to ensure we don't mess up the active 3d viewport
+                thumbnail = ui.view_to_pixmap()
+
+            if "ui" not in data:
+                data["ui"] = {}
+
+            b64 = ui.pixmap_to_base64(thumbnail)
+            data["ui"]["thumbnail"] = b64.decode("ascii")
+
+            fname = options.read("exportPath")
+            fname = os.path.normpath(fname)
+            fname = fname.replace("\\", "/")  # Safe for all platforms
+
+            try:
+                dump.export(fname, data=data)
+            except Exception:
+                _print_exception()
+                return log.warning("Could not export %s" % fname)
+
+            # Update any currently opened Import UI
+            for title, widget in __.widgets.items():
+                if not isinstance(widget, ui.ImportOptions):
+                    continue
+
+                if not ui.isValid(widget):
+                    continue
+
+                log.warning("Updating currently opened Import UI")
+                widget.on_path_changed(force=True)
+
+    except Exception:
+        log.warning(traceback.format_exc())
+        log.warning("An unexpected error occurred, see Script Editor")
+        return False
+
+    stats = (_singleton_export_loader.count(), t.ms)
+    cmds.inViewMessage(
+        amg="Exported %d markers in <hl>%.2f ms</hl>" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+    log.info("Successfully imported %d markers in %.2f ms" % stats)
+
+    return True
+
+
 def import_physics(selection=None, **opts):
-    if _singleton_loader is None:
+    if _singleton_import_loader is None:
         log.info("Importing for the first time, launching UI")
         return import_physics_options()
 
@@ -2855,9 +2796,13 @@ def import_physics(selection=None, **opts):
             return import_physics_options()
 
 
+def export_physics(selection=None, **opts):
+    return export_physics_options()
+
+
 def import_physics_options(*args):
-    global _singleton_loader
-    _singleton_loader = dump.Loader()
+    global _singleton_import_loader
+    _singleton_import_loader = dump.Loader()
 
     #
     win = None
@@ -2868,10 +2813,10 @@ def import_physics_options(*args):
         if use_selection.read():
             roots = cmds.ls(selection=True, type="transform", long=True)
 
-            _singleton_loader.edit({"roots": roots})
+            _singleton_import_loader.edit({"roots": roots})
 
         else:
-            _singleton_loader.edit({"roots": []})
+            _singleton_import_loader.edit({"roots": []})
 
         win.reset()
 
@@ -2906,7 +2851,7 @@ def import_physics_options(*args):
 
     def before_reset():
         """The UI was reset, for whatever reason"""
-        _singleton_loader.edit({
+        _singleton_import_loader.edit({
             "searchAndReplace": options.read("importSearchAndReplace"),
             "preserveAttributes": options.read("importPreserveAttributes"),
             "namespace": options.read("importNamespace"),
@@ -2921,7 +2866,7 @@ def import_physics_options(*args):
         return result
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
-    win.init(_singleton_loader)
+    win.init(_singleton_import_loader)
 
     win.before_reset.connect(before_reset)
     use_selection = win.parser.find("importUseSelection")
@@ -2936,7 +2881,35 @@ def import_physics_options(*args):
 
 
 def export_physics_options(*args):
-    return _Window("exportPhysics", export_physics)
+    global _singleton_export_loader
+    _singleton_export_loader = dump.Loader()
+
+    def export_physics():
+        thumbnail = win.parser.find("exportThumbnail")
+        thumbnail = thumbnail.pixmap()
+        result = _export_physics_wrapper(thumbnail)
+        return result
+
+    win = _Window("exportPhysics", export_physics, cls=ui.ExportOptions)
+
+    def loader_factory(*args, **kwargs):
+        current_time = cmds.currentTime(query=True)
+        for solver in cmdx.ls(type="rdScene"):
+            start_time = solver["_startTime"].as_time().value
+            cmds.currentTime(start_time)
+            cmds.currentTime(start_time + 1)
+        cmds.currentTime(current_time)
+
+        data = json.loads(cmds.ragdollDump(*args, **kwargs))
+        _singleton_export_loader.read(data)
+
+        return _singleton_export_loader
+
+    win.init(loader_factory)
+    ui.center_window(win)
+    win.resize(ui.px(1100), ui.px(400))
+
+    return win
 
 
 # Backwards compatibility

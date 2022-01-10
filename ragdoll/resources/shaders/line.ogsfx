@@ -1,16 +1,11 @@
 uniform mat4 gWvpXf : WorldViewProjection;
 
-attribute AppData {
+attribute ToVertex {
     vec3 inPosition   : POSITION;
     vec4 inColor      : COLOR0;
 };
 
-attribute FromVert {
-    vec4 WorldPosition  : TEXCOORD0;
-    vec4 Diffuse        : COLOR0;
-};
-
-attribute ToColorPass {
+attribute ToFragment {
     vec4 WorldPosition  : TEXCOORD0;
     vec4 Diffuse        : COLOR0;
 };
@@ -47,7 +42,7 @@ technique Wireframe
 {
     pass p0
     {
-        VertexShader (in AppData, out ToColorPass) = ShaderVertex;
-        PixelShader (in FromVert, out ToScreen) = ShaderColor;
+        VertexShader (in ToVertex, out ToFragment) = ShaderVertex;
+        PixelShader (in ToFragment, out ToScreen) = ShaderColor;
     }
 }

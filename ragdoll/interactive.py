@@ -2867,7 +2867,7 @@ def export_physics_options(*args):
 
     win.init(loader_factory)
     ui.center_window(win)
-    win.resize(ui.px(1100), ui.px(400))
+    win.resize(ui.px(1100), ui.px(410))
 
     return win
 

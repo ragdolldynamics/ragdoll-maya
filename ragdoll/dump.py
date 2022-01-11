@@ -854,10 +854,10 @@ class Loader(object):
         mod.set_attr(solver["substeps"], Solver["substeps"])
         mod.set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
         mod.set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
+        mod.set_attr(solver["maxMassRatio"], Solver["maxMassRatio"])
         mod.set_attr(solver["lod"], Solver["lod"])
         mod.set_attr(solver["poit"], Solver["positionIterations"])
         mod.set_attr(solver["veit"], Solver["velocityIterations"])
-
         mod.set_attr(solver["llst"], SolverUi["linearLimitStiffness"])
         mod.set_attr(solver["lldr"], SolverUi["linearLimitDamping"])
         mod.set_attr(solver["alst"], SolverUi["angularLimitStiffness"])
@@ -1040,6 +1040,9 @@ class Loader(object):
         mod.set_attr(marker["shapeOffset"], Desc["offset"])
         mod.set_attr(marker["color"], Color["value"])
 
+        mod.set_attr(marker["inputGeometryMatrix"],
+                     MarkerUi["inputGeometryMatrix"])
+
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
         mod.set_attr(marker["shapeRotation"], rotation)
@@ -1089,10 +1092,6 @@ class Loader(object):
                 pass
 
             else:
-                # Do we need to maintain the offset?
-                source = marker["src"].node()
-                maintain_offset = shape.parent() != source
-
                 commands.replace_mesh(
-                    marker, shape, opts={"maintainOffset": maintain_offset}
+                    marker, shape, opts={"maintainOffset": False}
                 )

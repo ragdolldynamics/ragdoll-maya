@@ -918,48 +918,19 @@ def replace_mesh(marker, mesh, opts=None):
             mesh = copy
 
     with cmdx.DGModifier(interesting=False) as mod:
+        if mesh.isA("mesh"):
+            mod.connect(mesh["outMesh"], marker["inputGeometry"])
+
+        elif mesh.isA("nurbsCurve"):
+            mod.connect(mesh["local"], marker["inputGeometry"])
+
+        elif mesh.isA("nurbsSurface"):
+            mod.connect(mesh["local"], marker["inputGeometry"])
+
         if opts["maintainOffset"]:
-            # Bake vertex positions with its current world matrix
-            tg = mod.create_node("transformGeometry")
-
-            # We can't connect to this directly, as it changes over time.
-            # We're only interested in a snapshot of its location.
-            transform = marker["src"].input(type=cmdx.kDagNode)
-            mesh_world_matrix = mesh["worldMatrix"][0].as_matrix()
-            parent_inverse_matrix = transform["wim"][0].as_matrix()
-            relative_matrix = mesh_world_matrix * parent_inverse_matrix
-            mod.set_attr(tg["transform"], relative_matrix)
-
-            if mesh.type() == "mesh":
-                mod.connect(mesh["outMesh"], tg["inputGeometry"])
-                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
-
-            elif mesh.type() == "nurbsCurve":
-                mod.connect(mesh["local"], tg["inputGeometry"])
-                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
-
-            elif mesh.type() == "nurbsSurface":
-                mod.connect(mesh["local"], tg["inputGeometry"])
-                mod.connect(tg["outputGeometry"], marker["inputGeometry"])
-
-            else:
-                raise TypeError("Unsupported mesh type '%s'" % mesh.type())
-
-            # Remove this node along with the associated marker
-            _take_ownership(mod, marker, tg)
-
-            # TODO: Also check whether there already is such a node,
-            # so we can reuse it rather than keep spamming them.
-
-        else:
-            if mesh.isA("mesh"):
-                mod.connect(mesh["outMesh"], marker["inputGeometry"])
-
-            elif mesh.isA("nurbsCurve"):
-                mod.connect(mesh["local"], marker["inputGeometry"])
-
-            elif mesh.isA("nurbsSurface"):
-                mod.connect(mesh["local"], marker["inputGeometry"])
+            mesh_matrix = mesh["worldMatrix"][0].as_matrix()
+            mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
+            mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
 
     return True
 

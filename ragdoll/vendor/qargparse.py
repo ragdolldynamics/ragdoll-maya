@@ -1047,6 +1047,7 @@ class Path(String):
     def create(self):
         # Keep the `onEditingFinished` signal
         widget = super(Path, self).create()
+        widget.setPlaceholderText(r"Click 'Browse' or type in a full path.")
 
         browse = _with_entered_exited(QtWidgets.QPushButton, self)("Browse")
         browse.setMaximumHeight(px(22))

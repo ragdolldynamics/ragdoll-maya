@@ -1193,43 +1193,6 @@ def validate_layer_override():
     )
 
 
-@requires_ui
-def validate_legacy_opengl():
-    if not options.read("validateLegacyOpenGL2"):
-        return kSuccess
-
-    opengl_legacy = cmds.optionVar(query="vp2RenderingEngine") == "OpenGL"
-    direct_x = cmds.optionVar(query="vp2RenderingEngine") == "DirectX11"
-
-    if not (opengl_legacy or direct_x):
-        return kSuccess
-
-    def fix_it():
-        cmds.optionVar(stringValue=("vp2RenderingEngine",
-                                    "OpenGLCoreProfileCompat"))
-        log.warning(
-            "OpenGL Core Compatibility Profile "
-            "enabled, restart required."
-        )
-        return False
-
-    return ui.warn(
-        option="validateLegacyOpenGL2",
-        title="Unsupported Rendering Engine Detected",
-        message=(
-            "Your viewport is set to render in either DirectX or "
-            "Legacy OpenGL, which is incompatible with the Ragdoll "
-            "renderer.\n\nNOTE: Changing renderer requires a restart of Maya."
-        ),
-        call_to_action="Go to Maya Preferences to change this.",
-        actions=[
-            ("Ignore", lambda: True),
-            ("Fix it", fix_it),
-            ("Cancel", lambda: False)
-        ]
-    )
-
-
 def _filtered_selection(node_type, selection=None):
     """Interpret user selection
 
@@ -1282,9 +1245,6 @@ def _find_current_solver(create_ground=True):
         return
 
     if not validate_playbackspeed():
-        return
-
-    if not validate_legacy_opengl():
         return
 
     solver = cmdx.ls(type="rdSolver")

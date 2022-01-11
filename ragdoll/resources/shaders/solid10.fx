@@ -45,7 +45,7 @@ ToPixel ShaderVertex(ToVertex IN) {
     OUT.Color = IN.Color;
 
     OUT.Position = mul(vec4(IN.Position, 1), gWvpXf);
-    OUT.Position.z -= 0.0001;
+    OUT.Position.z -= 0.00001;
 
     OUT.WorldPosition = (mul(vec4(IN.Position,1), gWorldXf));
 

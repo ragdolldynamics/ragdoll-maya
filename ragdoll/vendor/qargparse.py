@@ -409,7 +409,6 @@ class QArgumentParser(QtWidgets.QWidget):
         # Align label on top of row if widget is over two times higher
         height = (lambda w: w.sizeHint().height())
         label_on_top = height(label) * 2 < height(widget)
-        print("%s.height=%s" % (widget.objectName(), height(widget)))
 
         if label_on_top:
             alignment = (QtCore.Qt.AlignRight | QtCore.Qt.AlignTop,)
@@ -455,6 +454,16 @@ class QArgumentParser(QtWidgets.QWidget):
 
         # Take ownership for clean deletion alongside parser
         arg.setParent(self)
+
+        def setVisible(value):
+            label.setVisible(value)
+            widget.setVisible(value)
+            reset_container.setVisible(value)
+
+        arg.setVisible = setVisible
+
+        if not arg["visible"]:
+            arg.setVisible(False)
 
         self._row += 1
         self._arguments[arg["name"]] = arg
@@ -543,6 +552,7 @@ class QArgument(QtCore.QObject):
         args["edited"] = False
         args["condition"] = None
         args["placeholder"] = kwargs.pop("placeholder", None)
+        args["visible"] = kwargs.pop("visible", True)
 
         # Anything left is an error
         for arg in kwargs:

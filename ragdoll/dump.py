@@ -1115,13 +1115,22 @@ class Loader(object):
                 retarget(dest)
 
         if MarkerUi["inputGeometryPath"]:
+            path = MarkerUi["inputGeometryPath"]
+            path = self._pre_process_path(path)
+
             try:
-                path = MarkerUi["inputGeometryPath"]
-                path = self._pre_process_path(path)
                 shape = cmdx.encode(path)
 
             except cmdx.ExistError:
-                pass
+                if shape_type == constants.MeshShape:
+                    # No mesh? Resort to a plain capsule
+                    mod.set_attr(marker["shapeType"], constants.CapsuleShape)
+                    log.warning(
+                        "%s.%s=%s could not be found, reverting "
+                        "to a capsule shape" % (
+                            marker, "inputGeometry", path
+                        )
+                    )
 
             else:
                 commands.replace_mesh(

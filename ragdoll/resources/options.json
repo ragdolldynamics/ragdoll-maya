@@ -512,11 +512,20 @@
 
     "importNamespace": {
         "name": "importNamespace",
-        "label": "Replace Namespace",
+        "label": "Namespace",
+        "type": "Enum",
+        "items": ["Off", "From File", "Custom"],
+        "default": 1,
+        "help": "Import onto this namespace."
+    },
+
+    "importNamespaceCustom": {
+        "name": "importNamespaceCustom",
+        "label": "Custom Namespace",
         "type": "String",
+        "placeholder": "Enter a custom namespace",
         "default": "",
-        "placeholder": "Keep original",
-        "help": "Add or replace any namespace found in the exported file.\n- Leave empty to preserve namespace from the file.\n- Leave a space character"
+        "help": "Manually specify a namespace."
     },
 
     "importSearchAndReplace": {
@@ -525,12 +534,12 @@
         "type": "String2",
         "default": ["", ""],
         "placeholder": ["Search", "Replace"],
-        "help": "Replace part of a full node path, such as a namespace, with another. E.g. replace 'myNamespace:' with 'myOtherNamespace:' to apply contents of one namespace to another."
+        "help": "Replace part of a full node path with something else, such as a prefix. E.g. replace 'rig1_' with 'rig2_' to turn 'rig1_foot_ctl' into 'rig2_foot_ctl'"
     },
 
     "importCurrentSelection": {
         "name": "importCurrentSelection",
-        "label": "Source and Destination",
+        "label": "Preview",
         "type": "String2",
         "editable": false,
         "default": ["", ""],

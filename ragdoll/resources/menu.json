@@ -350,6 +350,7 @@
             "importUseSelection",
             "importCreateMissingTransforms",
             "importNamespace",
+            "importNamespaceCustom",
             "importSearchAndReplace",
             "importCurrentSelection"
         ]

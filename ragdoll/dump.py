@@ -202,6 +202,9 @@ def DefaultState():
 
         # Markers without a transform
         "missing": [],
+
+        # Paths used to search for each marker
+        "searchTerms": {},
     }
 
 
@@ -311,6 +314,9 @@ class Loader(object):
         # No need for needless work
         if not self._dirty:
             return self._state
+
+        # Clear previous results
+        self._state = DefaultState()
 
         self._find_constraints()
         self._find_solvers()
@@ -501,7 +507,8 @@ class Loader(object):
                         self._apply_solver(mod, entity, rdsolver)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning(e)
+                        log.warning("Could not restore attribute: %s.%s"
+                                    % (rdsolver, e))
 
         return rdsolvers
 
@@ -552,7 +559,8 @@ class Loader(object):
                         self._apply_group(mod, entity, rdgroup)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning(e)
+                        log.warning("Could not restore attribute: %s.%s"
+                                    % (rdgroup, e))
 
         return rdgroups
 
@@ -590,7 +598,8 @@ class Loader(object):
                         self._apply_marker(mod, entity, rdmarker)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning(e)
+                        log.warning("Could not restore attribute: %s.%s"
+                                    % (rdmarker, e))
 
         log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
@@ -706,7 +715,8 @@ class Loader(object):
                     try:
                         self._apply_constraint(mod, entity, rdconstraint)
                     except KeyError as e:
-                        log.warning(e)
+                        log.warning("Could not restore attribute: %s.%s"
+                                    % (rdconstraint, e))
 
         return rdconstraints
 
@@ -746,15 +756,11 @@ class Loader(object):
 
     def _find_markers(self):
         """Find and associate each entity with a Maya transform"""
-        entity_to_transform = self._state["entityToTransform"]
         markers = self._state["markers"]
         occupied = self._state["occupied"]
         missing = self._state["missing"]
-
-        entity_to_transform.clear()
-        markers[:] = []
-        occupied[:] = []
-        missing[:] = []
+        search_terms = self._state["searchTerms"]
+        entity_to_transform = self._state["entityToTransform"]
 
         for entity in self._registry.view("MarkerUIComponent"):
             # Collected regardless
@@ -766,6 +772,8 @@ class Loader(object):
             # E.g. |rMarker_upperArm_ctl -> |root_grp|upperArm_ctrl
             path = MarkerUi["sourceTransform"]
             path = self._pre_process_path(path)
+
+            search_terms[entity] = path
 
             # Exclude anything not starting with any of these
             roots = self._opts["roots"]
@@ -781,11 +789,14 @@ class Loader(object):
                 missing.append(entity)
                 continue
 
-            entity_to_transform[entity] = transform
-
             # Avoid assigning to already assigned transforms
-            if transform["message"].output(type="rdMarker"):
+            if transform in entity_to_transform.values():
                 occupied.append(entity)
+
+            elif transform["message"].output(type="rdMarker"):
+                occupied.append(entity)
+
+            entity_to_transform[entity] = transform
 
         # Re-establish creation order
         def sort(entity):
@@ -797,16 +808,37 @@ class Loader(object):
     def _pre_process_path(self, path):
         """Apply search-and-replace rules along with namespace changes"""
 
-        snr = self._opts["searchAndReplace"]
-        path = path.replace(snr[0], snr[1])
+        search, replace = self._opts["searchAndReplace"]
+        search_terms = search.split(" ")
+        replace_terms = replace.split(" ")
 
-        if self._opts["namespace"]:
+        if len(search_terms) > len(replace_terms):
+            for term in search_terms[len(replace_terms):]:
+                replace_terms.append("")
+
+        # Split by space
+        for a, b in zip(search_terms, replace_terms):
+            path = path.replace(a, b)
+
+        # Remove namespace from `path`
+        if self._opts["namespace"] == " ":
+            comps = []
+            for comp in path.split("|"):
+                comp = comp.split(":", 1)[-1]
+                comps.append(comp)
+            path = "|".join(comps)
+
+        # Replace namespace in `path`
+        elif self._opts["namespace"]:
             # Give namespace-less paths an empty namespace
             # such that it can be replaced.
             comps = []
             for comp in path.split("|"):
-                if ":" not in comp:
-                    comp = ":" + comp
+                if self._opts["namespace"] == " ":
+                    comp = comp.split(":", 1)[-1]
+                else:
+                    if ":" not in comp:
+                        comp = ":" + comp
                 comps.append(comp)
 
             path = "|".join(comps)
@@ -854,7 +886,6 @@ class Loader(object):
         mod.set_attr(solver["substeps"], Solver["substeps"])
         mod.set_attr(solver["timeMultiplier"], Solver["timeMultiplier"])
         mod.set_attr(solver["spaceMultiplier"], Solver["spaceMultiplier"])
-        mod.set_attr(solver["maxMassRatio"], Solver["maxMassRatio"])
         mod.set_attr(solver["lod"], Solver["lod"])
         mod.set_attr(solver["poit"], Solver["positionIterations"])
         mod.set_attr(solver["veit"], Solver["velocityIterations"])
@@ -870,6 +901,7 @@ class Loader(object):
         mod.set_attr(solver["lddr"], SolverUi["linearDriveDamping"])
         mod.set_attr(solver["adst"], SolverUi["angularDriveStiffness"])
         mod.set_attr(solver["addr"], SolverUi["angularDriveDamping"])
+        mod.set_attr(solver["maxMassRatio"], SolverUi["maxMassRatio"])
 
     def _apply_group(self, mod, entity, group):
         GroupUi = self._registry.get(entity, "GroupUIComponent")

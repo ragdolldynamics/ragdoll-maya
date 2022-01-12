@@ -2814,7 +2814,7 @@ def import_physics_options(*args):
         _singleton_import_loader.edit({
             "searchAndReplace": options.read("importSearchAndReplace"),
             "preserveAttributes": options.read("importPreserveAttributes"),
-            "namespace": options.read("importNamespace"),
+            "namespace": options.read("importNamespaceCustom"),
             "createMissingTransforms": options.read(
                 "importCreateMissingTransforms"
             ),
@@ -2824,6 +2824,21 @@ def import_physics_options(*args):
         result = _import_physics_wrapper()
         win.reset()
         return result
+
+    # Initialise namespaces
+    namespaces = cmds.namespaceInfo(listOnlyNamespaces=True, recurse=True)
+
+    for default_namespace in ("UI", "shared"):
+        try:
+            namespaces.remove(default_namespace)
+        except ValueError:
+            pass
+
+    items = ["Off", "From File"]
+    items.extend(":%s" % namespace for namespace in namespaces)
+    items.append("Custom")
+
+    __.optionvars["importNamespace"]["items"] = items
 
     win = _Window("importPhysics", import_physics, cls=ui.ImportOptions)
     win.init(_singleton_import_loader)

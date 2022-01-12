@@ -160,20 +160,32 @@ def replace_mesh(marker, mesh, opts=None):
     )
 
 
+@_functools.wraps(_commands.delete_physics)
+def delete_physics(nodes):
+    _assert_is_nodepaths(nodes)
+    nodes = [_cmdx.encode(node) for node in nodes]
+    _commands.delete_physics(nodes)
+
+
+@_functools.wraps(_commands.delete_all_physics)
+def delete_all_physics():
+    _commands.delete_all_physics()
+
+
 @_functools.wraps(_recording.record)
-def record(solver, opts=None):
+def record_physics(solver, opts=None):
     _assert_is_a(solver, "rdSolver")
     solver = _cmdx.encode(solver)
     _recording.record(solver, opts)
 
 
 @_functools.wraps(_dump.export)
-def export(fname, opts=None):
+def export_physics(fname, opts=None):
     return _dump.export(fname, opts)
 
 
 @_functools.wraps(_dump.reinterpret)
-def reinterpret(fname, opts=None):
+def reinterpret_physics(fname, opts=None):
     return _dump.reinterpret(fname, opts)
 
 
@@ -233,6 +245,12 @@ assignMarkers = assign_markers
 createDistanceConstraint = create_distance_constraint
 createPinConstraint = create_pin_constraint
 createFixedConstraint = create_fixed_constraint
+replaceMesh = replace_mesh
+exportPhysics = export_physics
+recordPhysics = record_physics
+reinterpretPhysics = reinterpret_physics
+deletePhysics = delete_physics
+deleteAllPhysics = delete_all_physics
 
 
 # Members are repeated here in __all__ for two reasons:
@@ -278,24 +296,16 @@ __all__ = [
     "StartTimeCustom",
 
     # Main
-
-    "create_solver",
-    "assign_marker",
-    "assign_markers",
-    "create_fixed_constraint",
-    "create_distance_constraint",
-    "create_pin_constraint",
-
-    "record",
-    "export",
-    "reinterpret",
-
-    # Camel case
-
     "createSolver",
     "assignMarker",
     "assignMarkers",
     "createDistanceConstraint",
     "createPinConstraint",
     "createFixedConstraint",
+    "replaceMesh",
+    "exportPhysics",
+    "recordPhysics",
+    "reinterpretPhysics",
+    "deletePhysics",
+    "deleteAllPhysics",
 ]

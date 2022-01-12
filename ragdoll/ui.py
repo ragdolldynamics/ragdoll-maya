@@ -2057,6 +2057,7 @@ OptionsRole = QtCore.Qt.UserRole + 2
 OccupiedRole = QtCore.Qt.UserRole + 3
 HintRole = QtCore.Qt.UserRole + 4
 PathRole = QtCore.Qt.UserRole + 5
+SearchTermRole = QtCore.Qt.UserRole + 5
 
 
 Load = "Load"
@@ -2188,8 +2189,8 @@ class DumpWidget(QtWidgets.QWidget):
         item = self._models["TargetModel"].index(current.row(), 0, parent)
 
         entity = item.data(EntityRole)
-        transform = item.data(TransformRole)
-        self.selection_changed.emit(entity, transform)
+        term = item.data(SearchTermRole)
+        self.selection_changed.emit(entity, term)
 
         self._store_current_selection()
 
@@ -2225,6 +2226,7 @@ class DumpWidget(QtWidgets.QWidget):
 
             occupied = entity in analysis["occupied"]
             no_transform = entity not in analysis["entityToTransform"]
+            term = analysis["searchTerms"][entity]
 
             color = self.palette().color(self.foregroundRole())
             color.setAlpha(100)
@@ -2248,36 +2250,37 @@ class DumpWidget(QtWidgets.QWidget):
 
             elif no_transform:
                 # There isn't any transform for this entity
-
                 if options.read("importCreateMissingTransforms"):
+                    data[QtCore.Qt.DisplayRole] += ["New"]
                     icon = _resource("icons", "add.png")
                     icon = QtGui.QIcon(icon)
                     tooltip = "A new transform will be created for this marker"
-                    data[QtCore.Qt.DisplayRole] += ["New"]
 
                 else:
+                    data[QtCore.Qt.ForegroundRole] = (color, color)
+                    data[QtCore.Qt.DisplayRole] += [term]
                     icon = _resource("icons", "questionmark.png")
                     icon = QtGui.QIcon(icon)
-                    tooltip = "No transform could be found for this marker"
-                    data[QtCore.Qt.ForegroundRole] = (color, color)
+                    tooltip = (
+                        "<b>%s</b> - could not be found in the scene" % term
+                    )
 
                 data[QtCore.Qt.DecorationRole] += [icon]
-
-                data[HintRole] += [
-                    tooltip
-                ]
+                data[HintRole] += [tooltip]
 
             else:
                 icon = _resource("icons", "right.png")
                 icon = QtGui.QIcon(icon)
                 transform = analysis["entityToTransform"][entity]
 
+                # These paths can get *quite* long, so help the user
+                # by keeping things as short as possible.
+                path = transform.shortestPath()
+
                 data[QtCore.Qt.DecorationRole] += [icon]
-                data[QtCore.Qt.DisplayRole] += [transform.shortestPath()]
+                data[QtCore.Qt.DisplayRole] += [path]
                 data[TransformRole] = transform
-                data[HintRole] += [
-                    transform.shortestPath()
-                ]
+                data[HintRole] += [path]
 
         def _marker_icon(data, entity):
             Desc = self._loader.registry.get(
@@ -2302,7 +2305,9 @@ class DumpWidget(QtWidgets.QWidget):
 
             data[QtCore.Qt.DecorationRole] += [icon]
 
-        def _default_data():
+        def _default_data(entity):
+            search_term = analysis["searchTerms"].get(entity, "")
+
             return {
                 QtCore.Qt.DisplayRole: [],
                 QtCore.Qt.DecorationRole: [],
@@ -2311,12 +2316,12 @@ class DumpWidget(QtWidgets.QWidget):
                     QtCore.Qt.AlignLeft,
                     QtCore.Qt.AlignLeft,
                 ),
-                # QtCore.Qt.SizeHintRole: QtCore.QSize(px(0), px(20)),
 
                 HintRole: [],
                 TransformRole: None,
-                EntityRole: None,
+                EntityRole: entity,
                 OptionsRole: None,
+                SearchTermRole: search_term,
             }
 
         solver_to_item = {}
@@ -2332,10 +2337,9 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "solver.png")
                 icon = QtGui.QIcon(icon)
 
-                data = _default_data()
+                data = _default_data(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[QtCore.Qt.DisplayRole] += [label, ""]
-                data[EntityRole] = entity
                 data[HintRole] += [
                     Name["shortestPath"],
                     "A new solver will be created"
@@ -2354,8 +2358,7 @@ class DumpWidget(QtWidgets.QWidget):
                 icon = _resource("icons", "suit.png")
                 icon = QtGui.QIcon(icon)
 
-                data = _default_data()
-                data[EntityRole] = entity
+                data = _default_data(entity)
                 data[QtCore.Qt.DecorationRole] += [icon]
                 data[QtCore.Qt.DisplayRole] += [label]
                 data[HintRole] += [
@@ -2385,8 +2388,7 @@ class DumpWidget(QtWidgets.QWidget):
                 name = MarkerUi["sourceTransform"].rsplit("|", 1)[-1]
                 name = name.rsplit(":", 1)[-1]
 
-                data = _default_data()
-                data[EntityRole] = entity
+                data = _default_data(entity)
                 data[QtCore.Qt.DisplayRole] += [name]
                 data[HintRole] += [
                     Name["value"]
@@ -2441,10 +2443,9 @@ class DumpWidget(QtWidgets.QWidget):
                 right_icon = _resource("icons", "right.png")
                 right_icon = QtGui.QIcon(right_icon)
 
-                data = _default_data()
+                data = _default_data(entity)
                 data[QtCore.Qt.DecorationRole] += [icon, right_icon]
                 data[QtCore.Qt.DisplayRole] += [label, target]
-                data[EntityRole] = entity
                 data[HintRole] += [
                     Name["shortestPath"],
                     Name["shortestPath"]
@@ -2536,6 +2537,10 @@ class DumpWidget(QtWidgets.QWidget):
         except IndexError:
             return
 
+        # Select first column
+        parent = index.parent()
+        index = self._models["TargetModel"].index(index.row(), 0, parent)
+
         path = index.data(QtCore.Qt.DisplayRole)
         parent = index.parent()
 
@@ -2592,13 +2597,18 @@ class ImportOptions(Options):
         search_replace = parser.find("importSearchAndReplace")
         use_selection = parser.find("importUseSelection")
         namespace = self.parser.find("importNamespace")
+        namespace_custom = self.parser.find("importNamespaceCustom")
         create_missing = self.parser.find("importCreateMissingTransforms")
+
+        custom_visible = namespace.read() == namespace["items"][-1]
+        namespace_custom.setVisible(custom_visible)
 
         import_path.changed.connect(self.on_path_changed)
         import_path.browsed.connect(self.on_browsed)
         import_paths.changed.connect(self.on_filename_changed)
         use_selection.changed.connect(self.reset)
         namespace.changed.connect(self.reset)
+        namespace_custom.changed.connect(self.reset)
         search_replace.changed.connect(self.reset)
         create_missing.changed.connect(self.reset)
 
@@ -2666,7 +2676,7 @@ class ImportOptions(Options):
 
         self._widgets["Hint"].setText(text)
 
-    def on_content_selection_changed(self, entity, transform):
+    def on_content_selection_changed(self, entity, term):
         current_selection = self.parser.find("importCurrentSelection")
         current_selection.write(("", ""))
 
@@ -2680,8 +2690,7 @@ class ImportOptions(Options):
             Name = self._loader.registry.get(entity, "NameComponent")
             source_text = Name["path"] or Name["value"]
 
-        dest_text = self._loader._pre_process_path(source_text)
-        current_selection.write((source_text, dest_text))
+        current_selection.write((source_text, term))
 
         # Focus on the start of the path, for search-and-replace
         current_selection = current_selection.widget().layout()
@@ -2692,6 +2701,34 @@ class ImportOptions(Options):
 
     @i__.with_timing
     def reset(self):
+        namespace = self.parser.find("importNamespace")
+        namespace_custom = self.parser.find("importNamespaceCustom")
+
+        items = namespace["items"]
+        item = items[namespace.read()]
+
+        Off = 0
+        FromFile = 1
+        Custom = -1  # Last
+
+        if item == items[Custom]:
+            namespace_custom.setVisible(True)
+
+        else:
+            namespace_custom.setVisible(False)
+
+            if item == items[Off]:
+                options.write("importNamespaceCustom", " ")
+                namespace_custom.write(" ", notify=False)
+
+            elif item == items[FromFile]:
+                options.write("importNamespaceCustom", "")
+                namespace_custom.write("", notify=False)
+
+            else:
+                options.write("importNamespaceCustom", item)
+                namespace_custom.write(item, notify=False)
+
         self.before_reset.emit()
         self._widgets["DumpWidget"].reset(self._loader)
 

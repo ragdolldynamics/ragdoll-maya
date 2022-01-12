@@ -53,7 +53,7 @@ def test_record():
     solver = api.createSolver()
     cube1, _ = cmds.polyCube()
     api.assignMarker(cube1, solver)
-    api.record(solver)
+    api.record_physics(solver)
 
     cube1 = cmdx.encode(cube1)
     assert cube1["tx"].connected, (
@@ -81,7 +81,7 @@ def test_record_options():
 
     start = cmdx.time(10)
     end = cmdx.time(15)
-    api.record(solver, opts={
+    api.record_physics(solver, opts={
         "startTime": start,
         "endTime": end,
         "toLayer": False,

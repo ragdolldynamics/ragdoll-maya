@@ -340,6 +340,51 @@ def releases(markdown, page):
     return markdown
 
 
+def api(markdown, page):
+    """Convert {{ api }}"""
+
+    try:
+        from ragdoll import api
+    except ImportError:
+        return markdown
+
+    import inspect
+
+    constants = []
+
+    rows = []
+
+    for name in api.__all__:
+        func = getattr(api, name)
+
+        if not callable(func):
+            constants.append(name)
+            continue
+
+        doc = inspect.getdoc(func)
+
+        if not doc:
+            print("WARNING: %s has no docstring" % name)
+            doc = ""
+
+        rows.append("def {func}({args})".format(
+            func=name,
+            args="a, b=True, c='yes'"
+        ))
+
+        rows.append(doc)
+        rows.append("\n\n")
+
+    replace = os.linesep.join(rows)
+
+    markdown = re.sub(
+        r"\{\{(\s)*api(\s)*\}\}", replace, markdown,
+        flags=re.IGNORECASE
+    )
+
+    return markdown
+
+
 def documentation(markdown, page):
     """Convert {{ documentation }}"""
 
@@ -520,6 +565,9 @@ class MenuGeneratorPlugin(BasePlugin):
 
         markdown = meta(markdown, page, config)
         markdown = mp4(markdown, page)
+
+        if "api_reference" in page.url.lower():
+            markdown = api(markdown, page)
 
         if page.title == "Releases":
             markdown = releases(markdown, page)

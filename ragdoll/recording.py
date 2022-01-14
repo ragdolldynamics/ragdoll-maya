@@ -13,8 +13,8 @@ def record(solver, opts=None):
     """Transfer simulation from `solver` to animation land
 
     Options:
-        start_time (MTime, optional): Record from this time
-        end_time (MTime, optional): Record to this time
+        start_time (int, optional): Record from this time
+        end_time (int, optional): Record to this time
         include (list, optional): Record these transforms only
         exclude (list, optional): Do not record these transforms
         kinematic (bool, optional): Record kinematic frames too
@@ -169,11 +169,6 @@ class _Recorder(object):
                 "There were transform limits, "
                 "Ragdoll cannot cope with these. See above."
             )
-
-        # Enable cache, for replay
-        with cmdx.DagModifier() as mod:
-            # It may be locked or connected
-            mod.try_set_attr(self._solver["cache"], constants.StaticCache)
 
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
@@ -829,8 +824,9 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
     return marker_to_dagnode
 
 
-def _find_markers(solver):
-    markers = []
+def _find_markers(solver, markers=None):
+    if markers is None:
+        markers = []
 
     for entity in [el.input() for el in solver["inputStart"]]:
         if not entity:

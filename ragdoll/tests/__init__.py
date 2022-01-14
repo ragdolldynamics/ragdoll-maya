@@ -46,9 +46,10 @@ def _rewind(scene):
     cmds.currentTime(scene["startTime"].as_time().value, update=True)
 
 
-def _save():
-    __.fname = cmds.file("test.ma", rename=True)
+def _save(name="test.ma"):
+    __.fname = cmds.file(rename=name)
     cmds.file(type="mayaAscii", save=True, force=True)
+    return __.fname.replace("/", os.sep)
 
 
 def _load():

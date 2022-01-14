@@ -713,7 +713,11 @@ def install_menu():
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
-        item("reconnectMarker", reconnect_marker, label="Reconnect")
+        item("reparentMarker", reparent_marker, label="Reparent")
+
+        divider()
+
+        item("unparentMarker", unparent_marker, label="Unparent")
         item("untargetMarker", untarget_marker, label="Untarget")
 
     with submenu("Cache", icon="bake.png"):
@@ -1100,10 +1104,11 @@ def validate_cached_playback():
     return ui.warn(
         option="validateCachingMode",
         title="Cached Playback Warning",
-        message=(
-            "Ragdoll does not work well with Cached Playback."
+        message="cachedplayback.png",
+        call_to_action=(
+            "Ragdoll does not work well with Cached Playback.\n"
+            "What would you like to do?"
         ),
-        call_to_action="What would you like to do?",
         actions=[
             ("Ignore", lambda: True),
             ("Disable Cached Playback", disable_cached_playback),
@@ -1734,6 +1739,10 @@ def record_markers(selection=None, **opts):
 
             total_frames += end_frame - start_frame
 
+            # Leave it cached
+            with cmdx.DagModifier() as mod:
+                mod.set_attr(solver["cache"], c.StaticCache)
+
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Recorded markers in %.2fs (%d fps)" % stats)
 
@@ -1855,7 +1864,7 @@ def retarget_marker(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def reconnect_marker(selection=None, **opts):
+def reparent_marker(selection=None, **opts):
     try:
         a, b = selection or cmdx.sl()
     except ValueError:
@@ -1883,10 +1892,40 @@ def reconnect_marker(selection=None, **opts):
             "The second selection should be the new parent."
         )
 
-    with cmdx.DGModifier() as mod:
-        mod.connect(b["ragdollId"], a["parentMarker"])
+    commands.reparent_marker(a, b)
 
     log.info("Parented %s -> %s" % (a, b))
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def unparent_marker(selection=None, **opts):
+    selection = selection or cmdx.sl()
+
+    if not selection:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select a child marker along with "
+            "the marker to make the new parent."
+        )
+
+    for node in selection:
+        marker = None
+
+        if node.isA(cmdx.kDagNode):
+            marker = node["message"].output(type="rdMarker")
+
+        if not (marker and marker.type() == "rdMarker"):
+            raise i__.UserWarning(
+                "No child marker found",
+                "The first selection should be a child marker."
+            )
+
+        commands.unparent_marker(marker)
+
+        log.info("Unparented %s" % (marker))
+
     return kSuccess
 
 
@@ -1909,9 +1948,8 @@ def untarget_marker(selection=None, **opts):
             "Select one or more markers to remove the target(s) from."
         )
 
-    with cmdx.DGModifier() as mod:
-        for marker in markers:
-            mod.disconnect(marker["dst"][0])
+    for marker in markers:
+        commands.untarget_marker(marker)
 
     return kSuccess
 
@@ -2745,15 +2783,7 @@ def _export_physics_wrapper(thumbnail=None):
 
 
 def import_physics(selection=None, **opts):
-    if _singleton_import_loader is None:
-        log.info("Importing for the first time, launching UI")
-        return import_physics_options()
-
-    else:
-        try:
-            return _import_physics_wrapper()
-        except cmdx.ExistError:
-            return import_physics_options()
+    return import_physics_options()
 
 
 def export_physics(selection=None, **opts):

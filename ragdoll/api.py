@@ -108,6 +108,17 @@ def assign_markers(transforms, solver, opts=None):
     )
 
 
+@_functools.wraps(_commands.create_ground)
+def create_ground(solver, opts=None):
+    _assert_is_nodepath(solver)
+    _assert_is_a(solver, "rdSolver")
+
+    solver = _cmdx.encode(solver)
+    return _return(
+        _commands.create_ground(solver, opts)
+    )
+
+
 @_functools.wraps(_commands.create_distance_constraint)
 def create_distance_constraint(parent, child, opts=None):
     _assert_is_nodepath(parent)
@@ -122,7 +133,7 @@ def create_distance_constraint(parent, child, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_distance_constraint)
+@_functools.wraps(_commands.create_pin_constraint)
 def create_pin_constraint(parent, child=None, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
@@ -135,7 +146,7 @@ def create_pin_constraint(parent, child=None, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_distance_constraint)
+@_functools.wraps(_commands.create_fixed_constraint)
 def create_fixed_constraint(parent, child=None, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
@@ -155,9 +166,69 @@ def replace_mesh(marker, mesh, opts=None):
 
     marker = _cmdx.encode(marker)
     mesh = _cmdx.encode(mesh)
-    return _return(
-        _commands.replace_mesh(marker, mesh=mesh, opts=opts)
-    )
+    _commands.replace_mesh(marker, mesh=mesh, opts=opts)
+
+
+@_functools.wraps(_commands.link_solver)
+def link_solver(a, b, opts=None):
+    _assert_is_nodepath(a)
+    _assert_is_nodepath(b)
+    _assert_is_a(a, "rdSolver")
+    _assert_is_a(b, "rdSolver")
+
+    a = _cmdx.encode(a)
+    b = _cmdx.encode(b)
+    _commands.link_solver(a, b, opts=opts)
+
+
+@_functools.wraps(_commands.unlink_solver)
+def unlink_solver(solver, opts=None):
+    _assert_is_nodepath(solver)
+    _assert_is_a(solver, "rdSolver")
+
+    solver = _cmdx.encode(solver)
+    _commands.unlink_solver(solver, opts=opts)
+
+
+@_functools.wraps(_commands.retarget_marker)
+def retarget_marker(marker, transform, opts=None):
+    _assert_is_nodepath(marker)
+    _assert_is_nodepath(transform)
+
+    _assert_is_a(marker, "rdMarker")
+    _assert_is_a(transform, _cmdx.kDagNode)
+
+    marker = _cmdx.encode(marker)
+    transform = _cmdx.encode(transform)
+    _commands.retarget_marker(marker, transform, opts=opts)
+
+
+@_functools.wraps(_commands.unparent_marker)
+def untarget_marker(marker, opts=None):
+    _assert_is_a(marker, "rdMarker")
+
+    marker = _cmdx.encode(marker)
+    _commands.untarget_marker(marker, opts=opts)
+
+
+@_functools.wraps(_commands.reparent_marker)
+def reparent_marker(child, parent, opts=None):
+    _assert_is_nodepath(child)
+    _assert_is_nodepath(parent)
+    _assert_is_a(child, "rdMarker")
+    _assert_is_a(parent, "rdMarker")
+
+    child = _cmdx.encode(child)
+    parent = _cmdx.encode(parent)
+    _commands.reparent_marker(child, parent, opts=opts)
+
+
+@_functools.wraps(_commands.unparent_marker)
+def unparent_marker(child, opts=None):
+    _assert_is_a(child, "rdMarker")
+
+    child = _cmdx.encode(child)
+    _commands.unparent_marker(child, opts=opts)
 
 
 @_functools.wraps(_commands.delete_physics)
@@ -198,16 +269,16 @@ def _assert_is_nodepath(value):
     assert (
         isinstance(value, _cmdx.string_types) and
         _cmdx.exists(value, strict=False)
-    ), "%s must be the full path to a node." % value
+    ), "%r must be the full path to a node." % value
 
 
 def _assert_is_a(value, a):
-    assert _cmdx.encode(value).isA(a)
+    assert _cmdx.encode(value).isA(a), "%s was not a %s" % (value, a)
 
 
 def _assert_is_nodepaths(values):
     for value in values:
-        _assert_is_nodepaths(value)
+        _assert_is_nodepath(value)
 
 
 def _return(result):
@@ -242,9 +313,16 @@ def _return(result):
 createSolver = create_solver
 assignMarker = assign_marker
 assignMarkers = assign_markers
+createGround = create_ground
 createDistanceConstraint = create_distance_constraint
 createPinConstraint = create_pin_constraint
 createFixedConstraint = create_fixed_constraint
+linkSolver = link_solver
+unlinkSolver = unlink_solver
+reparentMarker = reparent_marker
+unparentMarker = unparent_marker
+retargetMarker = retarget_marker
+untargetMarker = untarget_marker
 replaceMesh = replace_mesh
 exportPhysics = export_physics
 recordPhysics = record_physics
@@ -302,10 +380,19 @@ __all__ = [
     "createDistanceConstraint",
     "createPinConstraint",
     "createFixedConstraint",
+
+    "linkSolver",
+    "unlinkSolver",
+    "retargetMarker",
+    "untargetMarker",
+    "reparentMarker",
+    "unparentMarker",
     "replaceMesh",
+
     "exportPhysics",
     "recordPhysics",
     "reinterpretPhysics",
+
     "deletePhysics",
     "deleteAllPhysics",
 ]

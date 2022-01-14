@@ -752,38 +752,44 @@
     "retargetMarker": {
         "label": "Retarget Marker",
         "icon": "retarget.png",
-        "summary": "Change where to output this marker",
+        "summary": "Change where to record the selected marker",
         "description": "When recording, this is where keyframes go. Typically this is from e.g. a joint to an animation control, but can also be from the same control that was assigned a marker.",
         "options": [
             "markersAppendTarget"
         ]
     },
 
-    "untargetMarker": {
-        "label": "Untarget Marker",
-        "icon": "untarget.png",
-        "summary": "Remove all output from this marker",
-        "description": "",
-        "options": [
-        ]
-    },
-
     "reassignMarker": {
         "label": "Reassign Marker",
         "icon": "reassign.png",
-        "summary": "Change the input to this marker",
+        "summary": "Change the input to the selected marker",
         "description": "",
         "options": [
         ]
     },
 
-    "reconnectMarker": {
-        "label": "Reconnect Marker",
+    "reparentMarker": {
+        "label": "Reparent Marker",
         "icon": "reparent.png",
-        "summary": "Change the connection of this marker",
+        "summary": "Change the parent of the selected marker",
         "description": "",
-        "options": [
-        ]
+        "options": []
+    },
+
+    "unparentMarker": {
+        "label": "Unparent Marker",
+        "icon": "extract.png",
+        "summary": "Remove the parent from the selected marker",
+        "description": "",
+        "options": []
+    },
+
+    "untargetMarker": {
+        "label": "Untarget Marker",
+        "icon": "untarget.png",
+        "summary": "Remove all output from the selected marker",
+        "description": "",
+        "options": []
     },
 
     "resetMarkerConstraintFrames": {

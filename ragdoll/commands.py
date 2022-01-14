@@ -148,7 +148,7 @@ def assign_markers(transforms, solver, opts=None):
                     mod, name="%s_rGroup" % name, solver=solver
                 )
 
-    markers = {}
+    markers = list()
     with cmdx.DGModifier() as dgmod:
         for index, transform in enumerate(transforms):
             name = "rMarker_%s" % transform.name()
@@ -215,12 +215,14 @@ def assign_markers(transforms, solver, opts=None):
             dgmod.set_attr(marker["originMatrix"],
                            transform["worldMatrix"][0].as_matrix())
 
-            dgmod.connect(transform["message"], marker["src"])
-            dgmod.connect(transform["message"], marker["dst"][0])
             dgmod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
             dgmod.connect(transform["rotatePivot"], marker["rotatePivot"])
             dgmod.connect(transform["rotatePivotTranslate"],
                           marker["rotatePivotTranslate"])
+
+            # Source and destination
+            dgmod.connect(transform["message"], marker["src"])
+            dgmod.connect(transform["message"], marker["dst"][0])
 
             # For the offset, we need to store the difference between
             # the source and destination transforms. At the time of
@@ -262,9 +264,7 @@ def assign_markers(transforms, solver, opts=None):
             if opts["autoLimit"]:
                 auto_limit(dgmod, marker)
 
-            markers[transform] = marker
-
-    markers = list(markers.values())
+            markers.append(marker)
 
     toggle_channel_box_attributes(markers, opts={
         "materialAttributes": opts["materialInChannelBox"],
@@ -452,7 +452,7 @@ def cache(solvers):
     cmdx.current_time(initial_time)
 
 
-def link_solver(a, b):
+def link_solver(a, b, opts=None):
     """Link solver `a` with `b`
 
     This will make `a` part of `b`, allowing markers to interact.
@@ -460,6 +460,9 @@ def link_solver(a, b):
     Arguments:
         a (rdSolver): The "child" solver
         b (rdSolver): The "parent" solver
+
+    Returns:
+        Nothing
 
     """
 
@@ -475,17 +478,27 @@ def link_solver(a, b):
         mod.try_set_attr(a.parent()["visibility"], False)
 
 
-def unlink_solver(solver):
+def unlink_solver(solver, opts=None):
     """Unlink `solver`
 
     From any other solver it may be connected to.
 
+    Arguments:
+        a (rdSolver): The solver to unlink from any other solver
+
+    Returns:
+        Nothing
+
     """
 
     assert solver and solver.isA("rdSolver"), "%s was not a solver" % solver
+    linked_to = solver["startState"].output(type="rdSolver", plug="inputStart")
+
+    assert linked_to, "%s was not linked" % solver
+
     with cmdx.DagModifier() as mod:
-        mod.disconnect(solver["startState"])
-        mod.disconnect(solver["currentState"])
+        mod.disconnect(solver["startState"], linked_to)
+        mod.disconnect(solver["currentState"], linked_to)
 
         mod.try_set_attr(solver.parent()["visibility"], True)
 
@@ -532,8 +545,65 @@ def retarget_marker(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
-def create_ground(solver):
+def untarget_marker(marker, opts=None):
+    """Remove all recording targets from `marker`"""
+
+    with cmdx.DGModifier() as mod:
+        for dst in marker["dst"]:
+            other = dst.input()
+            mod.disconnect(dst, other)
+
+
+def reparent_marker(child, new_parent, opts=None):
+    """Make `new_parent` the new parent of `child`
+
+    Arguments:
+        child (rdMarker): The marker whose about to have its parent changed
+        new_parent (rdMarker): The new parent of `child`
+
+    """
+
+    with cmdx.DGModifier() as mod:
+        mod.connect(new_parent["ragdollId"], child["parentMarker"])
+
+
+def unparent_marker(child, opts=None):
+    """Remove parent from `child`
+
+    Meaning `child` will be a free marker, without a parent.
+
+    """
+
+    old_parent = child["parentMarker"].input(type="rdMarker", plug=True)
+
+    if not old_parent:
+        log.warning("%s had no parent to remove" % child)
+        return False
+
+    with cmdx.DGModifier() as mod:
+        mod.disconnect(child["parentMarker"], old_parent)
+
+    return True
+
+
+def create_ground(solver, options=None):
+    """Create a ground plane, connected to `solver`
+
+    It'll have the size of the viewport grid.
+
+    Arguments:
+        solver (rdSolver): Assign ground to this solver
+
+    Returns:
+        rdMarker: Newly created marker of the newly created polyPlane
+
+    """
+
     grid_size = cmds.optionVar(query="gridSize")
+
+    # In headless, or a fresh Maya, there is no grid size
+    if not grid_size or grid_size < 0.001:
+        grid_size = 10
 
     plane, gen = map(cmdx.encode, cmds.polyPlane(
         name="rGround",
@@ -563,6 +633,7 @@ def create_ground(solver):
 
 @internal.with_undo_chunk
 def create_distance_constraint(parent, child, opts=None):
+    """Create a new distance constraint between `parent` and `child`"""
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert parent["_scene"] == child["_scene"], (
@@ -611,6 +682,7 @@ def create_distance_constraint(parent, child, opts=None):
 
 @internal.with_undo_chunk
 def create_fixed_constraint(parent, child, opts=None):
+    """Create a new fixed constraint between `parent` and `child`"""
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert parent["_scene"] == child["_scene"], (
@@ -688,6 +760,7 @@ def create_pose_constraint(parent, child, opts=None):
 
 @internal.with_undo_chunk
 def create_pin_constraint(child, opts=None):
+    """Create a new pin constraint for `child`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
 
     solver = _find_solver(child)
@@ -875,6 +948,9 @@ def replace_mesh(marker, mesh, opts=None):
             or surface node. Multiple inputs are supported, so this
             is optional. Defaults to True.
 
+    Returns:
+        Nothing
+
     """
 
     assert isinstance(marker, cmdx.Node), "%s was not a cmdx.Node" % marker
@@ -931,8 +1007,6 @@ def replace_mesh(marker, mesh, opts=None):
             mesh_matrix = mesh["worldMatrix"][0].as_matrix()
             mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
             mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
-
-    return True
 
 
 def toggle_channel_box_attributes(markers, opts=None):

@@ -353,9 +353,12 @@ def api(markdown, page):
     constants = []
 
     rows = []
+    rows.append("| Function | Description")
+    rows.append("|:---------|:------------")
 
     for name in api.__all__:
         func = getattr(api, name)
+        summary = ""
 
         if not callable(func):
             constants.append(name)
@@ -363,17 +366,25 @@ def api(markdown, page):
 
         doc = inspect.getdoc(func)
 
-        if not doc:
+        if doc:
+            summary = doc.splitlines()[0]
+        else:
             print("WARNING: %s has no docstring" % name)
-            doc = ""
 
-        rows.append("def {func}({args})".format(
+        # args = [
+        #     a for a in inspect.getargspec(func)[0]
+        #     if a not in ("self", "cls")
+        # ]
+
+        rows.append("| **{func}** | {summary}".format(
             func=name,
-            args="a, b=True, c='yes'"
+            summary=summary
         ))
 
-        rows.append(doc)
-        rows.append("\n\n")
+    # rows.append("| Constant")
+    # rows.append("|:--------")
+    # for constant in constants:
+    #     rows.append("| %s" % constant)
 
     replace = os.linesep.join(rows)
 
@@ -480,10 +491,11 @@ def mp4(markdown, page):
         extras = match.group(3).strip().rstrip()
 
         return (
-'\n{prefix}<p><video autoplay class="poster" muted loop width=100% {extras}>'
-'<source src="{url}" type="video/mp4">'
-'</video></p>\n'
-).format(prefix=prefix, url=url, extras=extras)
+            '\n{prefix}<p><video autoplay class="poster"'
+            ' muted loop width=100% {extras}>'
+            '<source src="{url}" type="video/mp4">'
+            '</video></p>\n'
+        ).format(prefix=prefix, url=url, extras=extras)
 
     markdown = re.sub(
         regex, replace, markdown,

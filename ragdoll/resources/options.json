@@ -943,6 +943,21 @@
         "help": "Use the volume and density of the shape to determine its mass."
     },
 
+
+    "#": "---------------------",
+    "#": " Manipulator options ",
+    "#": "---------------------",
+
+
+    "manipRangeScale": {
+        "name": "manipRangeScale",
+        "label": "Range Scale",
+        "type": "Float",
+        "default": 1.0,
+        "help": "Increase or decrease the range at which sliders operate. For example, if a slider is normally between 1-10, a scale of 2.0 would make it 0.5-20"
+    },
+
+
     "#": "----------------",
     "#": " Global options ",
     "#": "----------------",

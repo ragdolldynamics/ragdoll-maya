@@ -430,6 +430,7 @@ class Loader(object):
             for entity in missing:
                 MarkerUi = self._registry.get(entity, "MarkerUIComponent")
                 Rest = self._registry.get(entity, "RestComponent")
+                Scale = self._registry.get(entity, "ScaleComponent")
                 path = self._pre_process_path(MarkerUi["sourceTransform"])
                 hierarchy, name = path.rsplit("|", 1)
 
@@ -446,6 +447,7 @@ class Loader(object):
                                             parent=parent)
 
                 matrix = Rest["matrix"]
+                scale = Scale["value"]
 
                 if parent:
                     matrix *= parent["worldInverseMatrix"][0].as_matrix()
@@ -453,6 +455,7 @@ class Loader(object):
                 tm = cmdx.Tm(matrix)
                 transform["translate"] = tm.translation()
                 transform["rotate"] = tm.rotation()
+                transform["scale"] = scale
 
                 self._state["entityToTransform"][entity] = transform
 
@@ -588,11 +591,19 @@ class Loader(object):
                 continue
 
             rdmarker = commands.assign_marker(transform, rdsolver)
+
             rdmarkers[entity] = rdmarker
             ordered_markers.append((entity, rdmarker))
 
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
+
+                # Get this information from the file
+                for marker in rdmarkers.values():
+                    mod.disconnect(marker["dst"][0])
+
+                mod.do_it()
+
                 for entity, rdmarker in rdmarkers.items():
                     try:
                         self._apply_marker(mod, entity, rdmarker)
@@ -855,12 +866,6 @@ class Loader(object):
         Solver = self._registry.get(entity, "SolverComponent")
         SolverUi = self._registry.get(entity, "SolverUIComponent")
 
-        cache_method = {
-            "Off": 0,
-            "Static": 1,
-            "Dynamic": 2,
-        }.get(Solver["cacheMethod"], 0)
-
         frameskip_method = {
             "Pause": 0,
             "Ignore": 1,
@@ -877,7 +882,6 @@ class Loader(object):
         }.get(Solver["collisionDetectionType"], 1)
 
         mod.set_attr(solver["solverType"], solver_type)
-        mod.set_attr(solver["cache"], cache_method)
         mod.set_attr(solver["frameskipMethod"], frameskip_method)
         mod.set_attr(solver["collisionDetectionType"], collision_type)
         mod.set_attr(solver["enabled"], Solver["enabled"])
@@ -1082,37 +1086,27 @@ class Loader(object):
         # Preserve destination transforms, where possible
         # In the case of importing onto a different character,
         # e.g. one without the IK controls, this would not match 1-to-1
-        if MarkerUi["destinationTransforms"]:
+        def retarget(path):
+            try:
+                path = self._pre_process_path(path)
+                dest = cmdx.encode(path)
 
-            def retarget(path, append=True):
-                try:
-                    path = self._pre_process_path(path)
-                    dest = cmdx.encode(path)
+            except cmdx.ExistError:
+                log.warning(
+                    "Destination path '%s' from %s "
+                    "could not be found and was ignored."
+                    % (path, self._current_fname)
+                )
 
-                except cmdx.ExistError:
-                    log.warning(
-                        "Destination path '%s' from %s "
-                        "could not be found and was ignored."
-                        % (path, self._current_fname)
-                    )
+            else:
+                index = marker["dst"].next_available_index()
+                dst = marker["dst"][index]
+                mod.connect(dest["message"], dst)
+                mod.do_it()
 
-                else:
-                    if append:
-                        index = marker["dst"].next_available_index()
-                    else:
-                        index = 0
-
-                    dst = marker["dst"][index]
-                    mod.connect(dest["message"], dst)
-                    mod.do_it()
-
-            # Replace default destination
-            dests = MarkerUi["destinationTransforms"]
-            retarget(dests[0], False)
-
-            # Append additional ones
-            for dest in dests[1:]:
-                retarget(dest)
+        # There will be *no* destinations per default
+        for dest in MarkerUi["destinationTransforms"]:
+            retarget(dest)
 
         if MarkerUi["inputGeometryPath"]:
             path = MarkerUi["inputGeometryPath"]

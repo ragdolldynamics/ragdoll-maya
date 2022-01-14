@@ -20,7 +20,7 @@ from . import (
 )
 
 # Inherit docstring from source command
-import functools.wraps as _wraps
+from functools import wraps as _wraps
 
 # Constants
 from .constants import (

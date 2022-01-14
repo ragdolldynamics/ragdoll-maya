@@ -3862,11 +3862,16 @@ class Plug(object):
                 False,  # useAlias
                 False,  # useFullAttributePath
                 True    # useLongNames
-            )
+            ).split("[", 1)[0]
 
+        # Support search of exact plug names
         plug_names = []
         if isinstance(plugs, (list, tuple)):
             plug_names = plugs
+
+            # Convert `plugName[2]` to `plugName`
+            plug_names = [name.split("[", 1)[0] for name in plug_names]
+
             plugs = True
 
         for plug in self._mplug.connectedTo(source, destination):

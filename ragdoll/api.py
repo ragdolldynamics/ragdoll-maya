@@ -20,8 +20,7 @@ from . import (
 )
 
 # Inherit docstring from source command
-import functools as _functools
-
+import functools.wraps as _wraps
 
 # Constants
 from .constants import (
@@ -77,12 +76,12 @@ from .constants import (
 #
 
 
-@_functools.wraps(_commands.create_solver)
+@_wraps(_commands.create_solver)
 def create_solver(name=None, opts=None):
     return _return(_commands.create_solver(name=name, opts=opts))
 
 
-@_functools.wraps(_commands.assign_marker)
+@_wraps(_commands.assign_marker)
 def assign_marker(transform, solver, opts=None):
     _assert_is_nodepath(transform)
     _assert_is_nodepath(solver)
@@ -94,7 +93,7 @@ def assign_marker(transform, solver, opts=None):
     )
 
 
-@_functools.wraps(_commands.assign_markers)
+@_wraps(_commands.assign_markers)
 def assign_markers(transforms, solver, opts=None):
     _assert_is_nodepaths(transforms)
     _assert_is_nodepath(solver)
@@ -108,7 +107,7 @@ def assign_markers(transforms, solver, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_ground)
+@_wraps(_commands.create_ground)
 def create_ground(solver, opts=None):
     _assert_is_nodepath(solver)
     _assert_is_a(solver, "rdSolver")
@@ -119,7 +118,7 @@ def create_ground(solver, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_distance_constraint)
+@_wraps(_commands.create_distance_constraint)
 def create_distance_constraint(parent, child, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
@@ -133,7 +132,7 @@ def create_distance_constraint(parent, child, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_pin_constraint)
+@_wraps(_commands.create_pin_constraint)
 def create_pin_constraint(parent, child=None, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
@@ -146,7 +145,7 @@ def create_pin_constraint(parent, child=None, opts=None):
     )
 
 
-@_functools.wraps(_commands.create_fixed_constraint)
+@_wraps(_commands.create_fixed_constraint)
 def create_fixed_constraint(parent, child=None, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
@@ -158,7 +157,7 @@ def create_fixed_constraint(parent, child=None, opts=None):
     )
 
 
-@_functools.wraps(_commands.replace_mesh)
+@_wraps(_commands.replace_mesh)
 def replace_mesh(marker, mesh, opts=None):
     _assert_is_nodepath(marker)
     _assert_is_nodepath(mesh)
@@ -169,7 +168,7 @@ def replace_mesh(marker, mesh, opts=None):
     _commands.replace_mesh(marker, mesh=mesh, opts=opts)
 
 
-@_functools.wraps(_commands.link_solver)
+@_wraps(_commands.link_solver)
 def link_solver(a, b, opts=None):
     _assert_is_nodepath(a)
     _assert_is_nodepath(b)
@@ -181,7 +180,7 @@ def link_solver(a, b, opts=None):
     _commands.link_solver(a, b, opts=opts)
 
 
-@_functools.wraps(_commands.unlink_solver)
+@_wraps(_commands.unlink_solver)
 def unlink_solver(solver, opts=None):
     _assert_is_nodepath(solver)
     _assert_is_a(solver, "rdSolver")
@@ -190,7 +189,7 @@ def unlink_solver(solver, opts=None):
     _commands.unlink_solver(solver, opts=opts)
 
 
-@_functools.wraps(_commands.retarget_marker)
+@_wraps(_commands.retarget_marker)
 def retarget_marker(marker, transform, opts=None):
     _assert_is_nodepath(marker)
     _assert_is_nodepath(transform)
@@ -203,7 +202,7 @@ def retarget_marker(marker, transform, opts=None):
     _commands.retarget_marker(marker, transform, opts=opts)
 
 
-@_functools.wraps(_commands.unparent_marker)
+@_wraps(_commands.unparent_marker)
 def untarget_marker(marker, opts=None):
     _assert_is_a(marker, "rdMarker")
 
@@ -211,7 +210,7 @@ def untarget_marker(marker, opts=None):
     _commands.untarget_marker(marker, opts=opts)
 
 
-@_functools.wraps(_commands.reparent_marker)
+@_wraps(_commands.reparent_marker)
 def reparent_marker(child, parent, opts=None):
     _assert_is_nodepath(child)
     _assert_is_nodepath(parent)
@@ -223,7 +222,7 @@ def reparent_marker(child, parent, opts=None):
     _commands.reparent_marker(child, parent, opts=opts)
 
 
-@_functools.wraps(_commands.unparent_marker)
+@_wraps(_commands.unparent_marker)
 def unparent_marker(child, opts=None):
     _assert_is_a(child, "rdMarker")
 
@@ -231,7 +230,7 @@ def unparent_marker(child, opts=None):
     _commands.unparent_marker(child, opts=opts)
 
 
-@_functools.wraps(_commands.delete_physics)
+@_wraps(_commands.delete_physics)
 def delete_physics(nodes):
     assert isinstance(nodes, (list, tuple)), "First input must be a list"
     _assert_is_nodepaths(nodes)
@@ -239,24 +238,24 @@ def delete_physics(nodes):
     _commands.delete_physics(nodes)
 
 
-@_functools.wraps(_commands.delete_all_physics)
+@_wraps(_commands.delete_all_physics)
 def delete_all_physics():
     _commands.delete_all_physics()
 
 
-@_functools.wraps(_recording.record)
+@_wraps(_recording.record)
 def record_physics(solver, opts=None):
     _assert_is_a(solver, "rdSolver")
     solver = _cmdx.encode(solver)
     _recording.record(solver, opts)
 
 
-@_functools.wraps(_dump.export)
+@_wraps(_dump.export)
 def export_physics(fname, opts=None):
     return _dump.export(fname, opts)
 
 
-@_functools.wraps(_dump.reinterpret)
+@_wraps(_dump.reinterpret)
 def reinterpret_physics(fname, opts=None):
     return _dump.reinterpret(fname, opts)
 

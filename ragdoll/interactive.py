@@ -447,8 +447,8 @@ def _on_nonkeyable_keyed(clientData=None):
     ))
 
 
-def _on_noncommercial(clientData=None):
-    """Called on attempted keyframining of a non-keyable attribute"""
+def _on_noncommercial_file(clientData=None):
+    """Called on opening a file saved with a non-commercial Ragdoll"""
 
     msg = (
         "This file was saved using a non-commercial licence of Ragdoll\n"
@@ -526,7 +526,7 @@ def install_callbacks():
 
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
-            "ragdollNonCommercialEvent", _on_noncommercial)
+            "ragdollNonCommercialEvent", _on_noncommercial_file)
     )
 
     __.callbacks.append(

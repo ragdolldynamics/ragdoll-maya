@@ -233,6 +233,7 @@ def unparent_marker(child, opts=None):
 
 @_functools.wraps(_commands.delete_physics)
 def delete_physics(nodes):
+    assert isinstance(nodes, (list, tuple)), "First input must be a list"
     _assert_is_nodepaths(nodes)
     nodes = [_cmdx.encode(node) for node in nodes]
     _commands.delete_physics(nodes)

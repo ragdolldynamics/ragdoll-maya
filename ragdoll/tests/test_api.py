@@ -228,6 +228,27 @@ def test_record():
     )
 
 
+def test_delete_physics():
+    _new()
+    solver = api.createSolver()
+    cube1, _ = cmds.polyCube()
+    api.assignMarker(cube1, solver)
+    api.deletePhysics([cube1])
+    assert not cmds.ls(type="rdMarker"), cmds.ls(type="rdMarker")
+
+
+def test_delete_all_physics():
+    _new()
+    solver1 = api.createSolver()
+    solver2 = api.createSolver()
+    cube1, _ = cmds.polyCube()
+    cube2, _ = cmds.polyCube()
+    api.assignMarker(cube1, solver1)
+    api.assignMarker(cube2, solver2)
+    api.deleteAllPhysics()
+    assert not cmds.ls(type="rdSolver"), cmds.ls(type="rdSolver")
+
+
 def test_record_options():
     _new()
     solver = api.createSolver()

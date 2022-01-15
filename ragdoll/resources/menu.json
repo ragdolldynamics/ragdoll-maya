@@ -7,6 +7,7 @@
     },
 
     "activeRigid": {
+        "deprecated": true,
         "label": "Active Rigid",
         "icon": "rigid.png",
         "summary": "Customise the creation of a new rigid body.",
@@ -44,6 +45,7 @@
         ]
     },
     "activeChain": {
+        "deprecated": true,
         "label": "Active Chain",
         "icon": "chain.png",
         "summary": "Create a series of connected rigid bodies.",
@@ -58,6 +60,7 @@
         ]
     },
     "passiveRigid": {
+        "deprecated": true,
         "label": "Passive Rigid",
         "icon": "collider.png",
         "summary": "Customise the creation of a new passive rigid body.",
@@ -75,14 +78,17 @@
         ]
     },
     "tissue": {
+        "deprecated": true,
         "label": "Tissue",
         "enable": false
     },
     "cloth": {
+        "deprecated": true,
         "label": "Cloth",
         "enable": false
     },
     "muscle": {
+        "deprecated": true,
         "label": "Muscle",
         "icon": "muscle.png",
         "summary": "Make a muscle from the selected anchor points.",
@@ -95,10 +101,12 @@
         ]
     },
     "fluid": {
+        "deprecated": true,
         "label": "Fluid",
         "enable": false
     },
     "constraint": {
+        "deprecated": true,
         "label": "Constraint",
         "icon": "constraint.png",
         "summary": "Constrain one rigid to another.",
@@ -112,59 +120,69 @@
         ]
     },
     "point": {
+        "deprecated": true,
         "label": "Point",
         "icon": "point_constraint.png",
         "summary": "Constrain the position of two rigid bodies."
     },
     "orient": {
+        "deprecated": true,
         "label": "Orient",
         "icon": "orient_constraint.png",
         "summary": "Constrain the orientation of two rigid bodies.",
         "description": "Constrain the orientation of two rigid bodies. This doesn't have a physical equivalent, as you can't have something rotate the same as another object without also having some sort of positional relationship."
     },
     "parent": {
+        "deprecated": true,
         "label": "Parent",
         "icon": "parent_constraint.png",
         "summary": "Constrain both the position and orientation of two rigid bodies.",
         "description": "Constrain both the position and orientation of two rigid bodies. Useful for when you need multiple shapes for a single rigid."
     },
     "hinge": {
+        "deprecated": true,
         "label": "Hinge",
         "icon": "hinge_constraint.png",
         "summary": "A special kind of Socket Constraint",
         "description": "A special kind of Socket Constraint where the X-axis (a.k.a. 'twist') is rotated 90 degrees. This constraint is especially well grouped for hinge-like appendages, like elbows and knees."
     },
     "socket": {
+        "deprecated": true,
         "label": "Socket",
         "icon": "socket_constraint2.png",
         "summary": "Constrain the position and limit the orientation between two rigid bodies.",
         "description": "Constrain the position and limit the orientation between two rigid bodies. Useful for things like shoulder and hip joints."
     },
     "ignoreContacts": {
+        "deprecated": true,
         "label": "Ignore Contacts",
         "icon": "ignore_contacts.png",
         "summary": "Ignore contacts between the two selected rigids.",
         "description": "This is a normal constraint with limits and guides disabled, and 'Allow Overlap' left enabled."
     },
     "animationConstraint": {
+        "deprecated": true,
         "label": "Animation Constraint",
         "icon": "animation.png",
         "summary": "Convert translate/rotate channels into a target guide.",
         "description": "Turn the animatable translate and rotate channels into a suitable guide target pose."
     },
     "hardPin": {
+        "deprecated": true,
         "label": "Hard Pin",
         "icon": "hardpin.png",
         "summary": "Pin a rigid body in worldspace.",
         "description": "Pin the selected rigid body at its current worldspace position. The pin may be animated and disabled/enabled at run-time."
     },
     "softPin": {
+        "deprecated": true,
         "label": "Soft Pin",
         "icon": "control.png",
         "summary": "Pin a rigid body in worldspace, with a spring-like softness.",
         "description": "Guide the selected rigid body towards its current worldspace position. The guide may be animated and disabled/enabled at run-time."
     },
     "mimic": {
+        "deprecated": true,
         "label": "Mimic",
         "icon": "mimic.png",
         "summary": "Generate a target control hierarchy for the simulation to follow.",
@@ -181,57 +199,68 @@
         ]
     },
     "motor": {
+        "deprecated": true,
         "label": "Motor",
         "enable": false
     },
     "actuator": {
+        "deprecated": true,
         "label": "Actuator",
         "enable": false
     },
     "trigger": {
+        "deprecated": true,
         "label": "Trigger",
         "enable": false
     },
     "push": {
+        "deprecated": true,
         "label": "Push",
         "icon": "magnet.png",
         "summary": "Push rigids away from a point in space.",
         "description": "This forces applies a force facing away from a point in space. It can be used for things like explosions."
     },
     "pull": {
+        "deprecated": true,
         "label": "Pull",
         "icon": "magnet2.png",
         "summary": "Pull rigids towards a point in space.",
         "description": "This is technically the same as 'Push', except the opposite. Instead of pushing rigids away from a point in space, rigids are pull towards it. This can be used for effects like black holes, or to simply nudge a rigid in some specific direction."
     },
     "directional": {
+        "deprecated": true,
         "label": "Directional",
         "icon": "uniformforce.png",
         "summary": "Like gravity, except in any arbitrary direction.",
         "description": "Gravity is computed deep within the solver and isn't technically applied as an external force, but apart form that this force replicates gravity in addition to letting you control the direction."
     },
     "wind": {
+        "deprecated": true,
         "label": "Wind",
         "icon": "turbulence.png",
         "summary": "Create a force similar to wind, with editable turbulence.",
         "description": "Wind is a complex phenomena. This force applies an iterative, 3D Perlin noise field to rigid bodies and is a great representation of how wind looks and acts in the real world. Use 'Visualiser' to get a sense of how it looks."
     },
     "visualiser": {
+        "deprecated": true,
         "label": "Visualiser",
         "icon": "slice.png",
         "summary": "Visualise 3D forces with a 2D slice, much like an MRI.",
         "description": "This creates a 2-dimensonal representation of either all or selected 3-dimensional forces. The slice can be moved and scaled just like any normal Maya transform, and the amount and length of samples can be manipulated (and even animated) interactively to get a fine-grained understanding of what your forces do to each rigid. Hint: Create *multiple* slices at various strategic locations in your scene to get an even greater understanding at specific areas."
     },
     "assignToSelected": {
+        "deprecated": true,
         "label": "Assign Force to Selected Rigid(s)",
         "summary": "Assign force to the selected rigids.",
         "description": "Forces are typically assigned to all existing rigids when created, or to the currently selected rigids. This command lets you add forces to rigids manually. Forces can be removed by breaking their connection to each other."
     },
     "emitter": {
+        "deprecated": true,
         "label": "Emitter",
         "enable": false
     },
     "character": {
+        "deprecated": true,
         "label": "Character",
         "summary": "Generate a character from the selected joint hierarchy.",
         "icon": "ragdoll.png",
@@ -243,20 +272,24 @@
         "description": "An auto-rigger, designed to automatically generate an animatable character from a skeletal hierarchy."
     },
     "trajectory": {
+        "deprecated": true,
         "label": "Trajectory",
         "enable": false,
         "icon": "trajectory.png"
     },
     "momentOfInertia": {
+        "deprecated": true,
         "label": "Moment of Inertia",
         "enable": false
     },
     "centerOfMass": {
+        "deprecated": true,
         "label": "Center of Mass",
         "enable": false,
         "icon": "com.png"
     },
     "createDynamicControl": {
+        "deprecated": true,
         "hidden": true,
         "label": "Create Dynamic Control",
         "icon": "dynamic_control.png",
@@ -282,6 +315,7 @@
         ]
     },
     "multiplySelected": {
+        "deprecated": true,
         "label": "Multiply Selected",
         "icon": "multiply.png",
         "summary": "Multiply keyable attributes on multiple physics objects at once.",
@@ -289,6 +323,7 @@
         "description": "Perform bulk-edits of many rigid or constraint attributes at once, from a single attribute source. For example, edit the `Translate Damping` of all rigid in an entire character, from a single top-level node."
     },
     "multiplyRigids": {
+        "deprecated": true,
         "label": "Multiply Selected Rigids",
         "icon": "rigid_multiplier.png",
         "summary": "Multiply keyable attributes on multiple rigid at once.",
@@ -296,6 +331,7 @@
         "description": "Perform bulk-edits of many rigid attributes at once, from a single attribute source. For example, edit the `Translate Damping` of all rigid in an entire character, from a single top-level node."
     },
     "multiplyConstraints": {
+        "deprecated": true,
         "label": "Multiply Selected Constraints",
         "icon": "constraint_multiplier.png",
         "summary": "Multiply keyable attributes on multiple constraints at once.",
@@ -303,6 +339,7 @@
         "description": "Like Multiply Rigid, except for constraints."
     },
     "bakeSimulation": {
+        "deprecated": true,
         "label": "Bake Simulation",
         "icon": "bake.png",
         "summary": "Convert a live simulation into editable keyframes.",
@@ -376,18 +413,21 @@
     },
 
     "combineScenes": {
+        "deprecated": true,
         "label": "Combine Scenes",
         "icon": "combine.png",
         "summary": "Combine two or more scenes into one.",
         "description": "Move all rigids from two or more scenes into one common scene, where they can interact with each other."
     },
     "extractFromScene": {
+        "deprecated": true,
         "label": "Extract Rigids",
         "icon": "extract.png",
         "summary": "Extract rigids into new scene.",
         "description": "Move rigids *out* of one scene and into a new scene, where they can run in parallel with the original, without interacting with each other."
     },
     "moveToScene": {
+        "deprecated": true,
         "label": "Move Rigids",
         "icon": "move.png",
         "summary": "Move rigids into existing scene.",
@@ -404,6 +444,7 @@
         ]
     },
     "freezeEvaluation": {
+        "deprecated": true,
         "label": "Freeze",
         "icon": "freeze.png",
         "summary": "Exclude selected node from Maya's Parallel Evaluation.",
@@ -416,6 +457,7 @@
     },
 
     "unfreezeEvaluation": {
+        "deprecated": true,
         "label": "Unfreeze",
         "icon": "unfreeze.png",
         "summary": "Undo the effect of freezing evaluation.",
@@ -433,6 +475,7 @@
         "description": "Create editable transforms for the parent and child pivots for the selected constraint, or constraint under the selected transform. The parent frame represents the position and orientation the child rigid is connected, and vice versa."
     },
     "constraintEditor": {
+        "deprecated": true,
         "label": "Open Pivot Editor",
         "icon": "rotate.png",
         "summary": "Visually manipulate constraint pivots with this UI",
@@ -447,34 +490,40 @@
     },
 
     "editShape": {
+        "deprecated": true,
         "label": "Edit Shape",
         "icon": "rigid.png",
         "summary": "Edit the shape offset and shape rotation attributes with a native Maya transform.",
         "description": "Create editable transforms for the shape attributes to simplify editing with the native interactive Maya manipulators."
     },
     "duplicateSelected": {
+        "deprecated": true,
         "label": "Duplicate Selected",
         "icon": "duplicate.png",
         "summary": "Create a new rigid, using the selected rigid as a template for position, orientation and shape."
     },
     "transferAttributes": {
+        "deprecated": true,
         "label": "Transfer Attributes",
         "icon": "transfer_attributes.png",
         "summary": "Copy attributes from one rigid body to another.",
         "description": "Copy attributes from the first selected rigid to the second selected rigid, like shape extents and constraint frames. This can be used to mirror one rigid across a character."
     },
     "convertToPolygons": {
+        "deprecated": true,
         "label": "Convert to Polygons",
         "icon": "convert.png",
         "summary": "Convert selected rigids and controls into polygons.",
         "description": "(Unstable) Convert the selected <code>rdRigid</code> and <code>rdControl</code> nodes into geometry that can be exported to another application, and rendered with shadows in the viewport. NOTE: This may crash your scene, use at your own risk."
     },
     "normaliseShapes": {
+        "deprecated": true,
         "label": "Normalise Shapes",
         "summary": "Resize shapes within a hierarchy to avoid some being too different.",
         "description": "Resize shapes across the selected hierarchy such that no shape is overly sized relative another. This is mostly intended for use with the Character command, to automatically generate a suitable skeleton. It is however not very good at the moment (!)."
     },
     "setInitialState": {
+        "deprecated": true,
         "label": "Set Initial State",
         "icon": "initial_state.png",
         "summary": "Re-establish the starting position and orientation of selected rigids.",
@@ -484,6 +533,7 @@
         ]
     },
     "clearInitialState": {
+        "deprecated": true,
         "label": "Clear Initial State",
         "icon": "initial_state2.png",
         "summary": "Set initial state to creation state.",
@@ -528,6 +578,7 @@
         ]
     },
     "selectInvalidConstraints": {
+        "deprecated": true,
         "label": "Select Invalid Constraints",
         "icon": "save.png",
         "summary": "Select constraints without connected rigid bodies."
@@ -545,6 +596,7 @@
         "description": "This doesn't save preferences, something to keep in mind."
     },
     "selectRigids": {
+        "deprecated": true,
         "label": "Select Rigids",
         "icon": "rigid.png",
         "summary": "Select all rigids, or filter rigids from selection.",
@@ -554,6 +606,7 @@
         ]
     },
     "selectConstraints": {
+        "deprecated": true,
         "label": "Select Constraints",
         "icon": "constraint.png",
         "summary": "Select all constraints, or filter constraints from selection.",
@@ -563,6 +616,7 @@
         ]
     },
     "selectScenes": {
+        "deprecated": true,
         "label": "Select Scenes",
         "icon": "logo.png",
         "summary": "Select all scenes, or filter scenes from selection.",
@@ -572,6 +626,7 @@
         ]
     },
     "selectControls": {
+        "deprecated": true,
         "label": "Select Controls",
         "icon": "control.png",
         "summary": "Select all controls, or filter controls from selection.",

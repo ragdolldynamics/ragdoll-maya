@@ -9,6 +9,9 @@ from mkdocs.plugins import BasePlugin
 
 import ragdoll
 
+# Reloadable modules
+import importlib
+from . import parse_api
 
 MENU_HEADER = """\
 |Item | Description
@@ -124,6 +127,9 @@ def menu_all(markdown):
             continue
 
         if value.get("hidden"):
+            continue
+
+        if value.get("deprecated", False):
             continue
 
         row = MENU_TEMPLATE.format(**{
@@ -340,62 +346,6 @@ def releases(markdown, page):
     return markdown
 
 
-def api(markdown, page):
-    """Convert {{ api }}"""
-
-    try:
-        from ragdoll import api
-    except ImportError:
-        return markdown
-
-    import inspect
-
-    constants = []
-
-    rows = []
-    rows.append("| Function | Description")
-    rows.append("|:---------|:------------")
-
-    for name in api.__all__:
-        func = getattr(api, name)
-        summary = ""
-
-        if not callable(func):
-            constants.append(name)
-            continue
-
-        doc = inspect.getdoc(func)
-
-        if doc:
-            summary = doc.splitlines()[0]
-        else:
-            print("WARNING: %s has no docstring" % name)
-
-        # args = [
-        #     a for a in inspect.getargspec(func)[0]
-        #     if a not in ("self", "cls")
-        # ]
-
-        rows.append("| **{func}** | {summary}".format(
-            func=name,
-            summary=summary
-        ))
-
-    # rows.append("| Constant")
-    # rows.append("|:--------")
-    # for constant in constants:
-    #     rows.append("| %s" % constant)
-
-    replace = os.linesep.join(rows)
-
-    markdown = re.sub(
-        r"\{\{(\s)*api(\s)*\}\}", replace, markdown,
-        flags=re.IGNORECASE
-    )
-
-    return markdown
-
-
 def documentation(markdown, page):
     """Convert {{ documentation }}"""
 
@@ -579,7 +529,8 @@ class MenuGeneratorPlugin(BasePlugin):
         markdown = mp4(markdown, page)
 
         if "api_reference" in page.url.lower():
-            markdown = api(markdown, page)
+            importlib.reload(parse_api)
+            markdown = parse_api.parse(markdown, page)
 
         if page.title == "Releases":
             markdown = releases(markdown, page)
@@ -595,8 +546,8 @@ class MenuGeneratorPlugin(BasePlugin):
     def on_config(self, config):
         section = next(
             entry for entry in config["nav"]
-            if "Release History" in entry
-        )["Release History"]
+            if "News" in entry
+        )["News"]
 
         # Start from scratch
         section[:] = []

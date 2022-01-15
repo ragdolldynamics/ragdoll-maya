@@ -40,13 +40,12 @@ nav:
   - Download: download.md
   # - Examples: examples.md
   - Menu Reference: menu.md
-  - Node Reference: nodes.md
+  # - Node Reference: nodes.md
   - API Reference: api.md
-  - Release History:  # Automatically generated
-    - 2021.07.15: releases/2021.07.15.md
   - Licencing: licencing.md
   - Serialisation: serialisation.md
-  - About: about.md
+  - News:  # Automatically generated
+    - 2021.07.15: releases/2021.07.15.md
   - Legacy:
     - Active Rigid: legacy/active_rigid.md
     - Active Chain: legacy/active_chain.md
@@ -68,6 +67,7 @@ nav:
       - Bouncing Ball: legacy/bouncing_ball.md
       - Rally Car: legacy/rally_car.md
       - Manikin: legacy/manikin.md
+  - About: about.md
 
 icons:
   - Active Rigid: icons/rigid.png
@@ -126,7 +126,7 @@ markdown_extensions:
 
 plugins:
   - search
-  - git-revision-date
+  # - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false

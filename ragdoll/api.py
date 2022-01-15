@@ -375,8 +375,8 @@ __all__ = [
 
     # Main
     "createSolver",
-    "assignMarker",
     "assignMarkers",
+    "assignMarker",
     "createDistanceConstraint",
     "createPinConstraint",
     "createFixedConstraint",

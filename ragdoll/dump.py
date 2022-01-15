@@ -47,13 +47,28 @@ def reinterpret(fname, opts=None):
     return loader.reinterpret()
 
 
-def export(fname, data=None):
+def export(fname=None, data=None):
     """Export everything Ragdoll-related into `fname`
 
     Arguments:
+        fname (str, optional): Write to this file
         data (dict, optional): Export this dictionary instead
 
+    Returns:
+        data (dict): Exported data as a dictionary
+
     """
+
+    # Pull on solver, both at the start and first frame
+    # to ensure everything is initialised.
+    initial_time = cmdx.current_time()
+    for solver in cmdx.ls(type="rdSolver"):
+        start_time = solver["_startTime"].as_time()
+        cmdx.current_time(start_time)
+        solver["startState"].read()
+        cmdx.current_time(start_time + 1)
+        solver["currentState"].read()
+    cmdx.current_time(initial_time)
 
     data = data or json.loads(cmds.ragdollDump())
 
@@ -61,12 +76,13 @@ def export(fname, data=None):
         data["ui"] = {}
 
     # Keep filename in the dump
-    data["ui"]["filename"] = fname
+    data["ui"]["filename"] = fname or "Memory"
 
-    with open(fname, "w") as f:
-        json.dump(data, f, indent=4, sort_keys=True)
+    if fname is not None:
+        with open(fname, "w") as f:
+            json.dump(data, f, indent=4, sort_keys=True)
 
-    return True
+    return data
 
 
 class Entity(int):
@@ -120,6 +136,10 @@ class Registry(object):
         }
 
         self._dump = dump
+
+    def count(self, *components):
+        """Return number of entities with this component(s)"""
+        return len(list(self.view(*components)))
 
     def view(self, *components):
         """Iterate over every entity that has all of `components`"""

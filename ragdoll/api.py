@@ -251,7 +251,7 @@ def record_physics(solver, opts=None):
 
 
 @_wraps(_dump.export)
-def export_physics(fname, opts=None):
+def export_physics(fname=None, opts=None):
     return _dump.export(fname, opts)
 
 

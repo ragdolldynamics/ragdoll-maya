@@ -2898,14 +2898,7 @@ def export_physics_options(*args):
     win = _Window("exportPhysics", export_physics, cls=ui.ExportOptions)
 
     def loader_factory(*args, **kwargs):
-        current_time = cmds.currentTime(query=True)
-        for solver in cmdx.ls(type="rdScene"):
-            start_time = solver["_startTime"].as_time().value
-            cmds.currentTime(start_time)
-            cmds.currentTime(start_time + 1)
-        cmds.currentTime(current_time)
-
-        data = json.loads(cmds.ragdollDump(*args, **kwargs))
+        data = dump.export()
         _singleton_export_loader.read(data)
 
         return _singleton_export_loader

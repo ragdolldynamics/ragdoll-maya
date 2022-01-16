@@ -153,8 +153,9 @@ class _Recorder(object):
         # of more frames. Once a frame greater than 100 is attempted,
         # Ragdoll will return a translate/rotate value of 0. This
         # check is merely for your convenience.
-        if licence.non_commercial():
-            self._end_frame = min(100, self._end_frame)
+        if not licence.commercial() and not licence.early_bird():
+            if (self._end_frame - self._solver_start_frame) > 101:
+                self._end_frame = self._solver_start_frame + 101
 
     @internal.with_undo_chunk
     def record(self):
@@ -386,7 +387,7 @@ class _Recorder(object):
         initial_time = cmdx.current_time()
 
         total = self._end_frame - self._solver_start_frame
-        for frame in range(self._solver_start_frame, self._end_frame):
+        for frame in range(self._solver_start_frame, self._end_frame + 1):
             if self._opts["experimental"]:
                 # This does run faster, but at what cost?
                 cmds.setAttr("time1.outTime", int(frame))
@@ -456,7 +457,8 @@ class _Recorder(object):
             rx, ry, rz = {}, {}, {}
             s = cmdx.Vector(1, 1, 1)
 
-            for frame, values in self._cache[marker].items():
+            for frame in range(self._solver_start_frame, self._end_frame):
+                values = self._cache[marker][frame]
                 matrix = values["outputMatrix"]
                 parent_matrix = cmdx.Mat4()
 
@@ -657,7 +659,7 @@ class _Recorder(object):
         kwargs = {
             "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
             "simulation": False,
-            "time": (self._start_frame, self._end_frame),
+            "time": (self._start_frame, self._end_frame - 1),
             "sampleBy": 1,
             "oversamplingRate": 1,
             "disableImplicitControl": True,

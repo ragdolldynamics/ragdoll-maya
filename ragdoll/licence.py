@@ -325,6 +325,13 @@ def data():
         # How many days until expiration
         expires=cmds.ragdollLicence(expires=True, query=True),
         expiryDays=cmds.ragdollLicence(expiryDays=True, query=True),
+
+        # Date of Annual Upgrade Program end
+        annualUpgradeProgram=cmds.ragdollLicence(
+            annualUpgradeProgram=True, query=True),
+
+        # Special flag for anyone having purchased Ragdoll prior to 2022.01.17
+        isEarlyBird=cmds.ragdollLicence(isEarlyBird=True, query=True),
     )
 
 
@@ -334,3 +341,7 @@ def non_commercial():
 
 def commercial():
     return not non_commercial()
+
+
+def early_bird():
+    return cmds.ragdollLicence(isEarlyBird=True, query=True)

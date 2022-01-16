@@ -483,6 +483,37 @@ def _on_noncommercial_export(clientData=None):
     log.warning(msg)
 
 
+def _on_recording_limit(clientData=None):
+    """Called on attempted recording from non-commercial version"""
+
+    msg = (
+        "A non-commercial licence is limited to 100 frames of recorded "
+        "simulation. To record more frames, consider purchasing "
+        "a Complete or Unlimited licence."
+    )
+
+    def deferred():
+        def buy():
+            webbrowser.open(
+                "https://ragdolldynamics.com/pricing-commercial"
+            )
+            return False
+
+        ui.warn(
+            option="validateNonCommercialRecord",
+            title="Recording with Ragdoll Non-Commercial",
+            message="nc_record.png",
+            call_to_action=msg,
+            actions=[
+                ("Ok", lambda: True),
+                ("Buy", buy)
+            ]
+        )
+
+    cmds.evalDeferred(deferred)
+    log.warning(msg)
+
+
 def install_callbacks():
     __.callbacks.append(
         om.MSceneMessage.addCallback(
@@ -532,6 +563,20 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollNonCommercialExportEvent", _on_noncommercial_export)
+    )
+
+    # This next event is triggered many times, but we're only really
+    # interested in notifying the user about it once.
+    from PySide2 import QtCore
+    timer = QtCore.QTimer()
+    timer.setSingleShot(True)
+    timer.setInterval(1000)
+    timer.timeout.connect(_on_recording_limit)
+
+    __.recording_timer = timer
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollRecordingLimitEvent", lambda _: timer.start())
     )
 
 
@@ -1624,34 +1669,6 @@ def record_markers(selection=None, **opts):
         "recordFilter": _opt("markersRecordFilter", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
-
-    if _is_interactive() and licence.data()["isNonCommercial"]:
-        if options.read("validateNonCommercialRecord"):
-            def buy():
-                webbrowser.open(
-                    "https://ragdolldynamics.com/pricing-commercial"
-                )
-                return False
-
-            proceed = ui.warn(
-                option="validateNonCommercialRecord",
-                title="Recording with Ragdoll Non-Commercial",
-                message="nc_record.png",
-                call_to_action=(
-                    "A non-commercial licence is limited to "
-                    "100 frames of recorded simulation. To "
-                    "record more frames, consider purchasing "
-                    "a Complete or Unlimited licence."
-                ),
-                actions=[
-                    ("Proceed", lambda: True),
-                    ("Cancel", lambda: False),
-                    ("Buy", buy)
-                ]
-            )
-
-            if not proceed:
-                return log.info("Aborted")
 
     solvers = _filtered_selection("rdSolver", selection)
     include = []

@@ -89,6 +89,7 @@ def test_rotate_pivot():
     group = cmdx.ls(type="rdGroup")[0]
     group["driveStiffness"] = 0.01
 
+    cmdx.max_time(100)
     ri.record_markers()
 
     # We've got a dick-like shape

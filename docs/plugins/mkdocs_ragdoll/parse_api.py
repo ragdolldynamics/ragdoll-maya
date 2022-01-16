@@ -54,10 +54,9 @@ def parse(markdown, page):
             if a not in ("self", "cls")
         ]
 
-        details.append("#### %s" % name)
+        details.append("### %s" % name)
         details.append("")
         details.append(summary)
-        details.append("")
 
         details.append("```py")
         details.append("def %s(%s):" % (name, ", ".join(args)))

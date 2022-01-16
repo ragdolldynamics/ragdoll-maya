@@ -2,7 +2,7 @@
   <img class="hero-image" src=/yoga13.png>
 </div>
 
-### API Member Reference
+## API Member Reference
 
 The complete Ragdoll API. :man_raising_hand:
 
@@ -22,7 +22,7 @@ rd.recordPhysics()
 
 <br>
 
-### Argument Signatures
+## Argument Signatures
 
 A more in-depth view on each function.
 
@@ -30,7 +30,7 @@ A more in-depth view on each function.
 
 <br>
 
-### Constants
+## Constants
 
 Some functions take constants for arguments.
 

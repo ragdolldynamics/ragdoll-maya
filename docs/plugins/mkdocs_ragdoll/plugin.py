@@ -532,7 +532,7 @@ class MenuGeneratorPlugin(BasePlugin):
             importlib.reload(parse_api)
             markdown = parse_api.parse(markdown, page)
 
-        if page.title == "Releases":
+        if page.title == "News":
             markdown = releases(markdown, page)
 
         if page.title == "Documentation":

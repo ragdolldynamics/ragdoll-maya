@@ -46,7 +46,7 @@ template: landing.html
         <div class="hboxlayout justify-left">
             <a href="/overview" class="button blue">Learn more</a>
             <a href="/download" class="button red">Download</a>
-            <a href="/releases" class="button green">Releases</a>
+            <a href="/releases" class="button green">News</a>
         </div>
         <br>
         <br>

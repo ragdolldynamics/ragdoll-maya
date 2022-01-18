@@ -567,7 +567,6 @@
             "scale",
             "sceneScale",
             "cacheMedia",
-            "frameskipMethod",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",

@@ -50,7 +50,7 @@ Here are some options for getting into Ragdoll.
 | Route | Description
 |:------|:-----
 | Install & Explore | Tried and true, who reads documentation anyway?
-| Watch & Learn | We've made a number of [videos](https://www.youtube.com/playlist?list=PLL4XIS5Woc6nVsTdsvs0XLmiKmXVCdwXy) demonstrating how to use Ragdoll.
+| Watch & Learn | We've made a number of [videos](/tutorials/videos/) demonstrating how to use Ragdoll.
 | Read All About It | Keep clicking that next button at the bottom of every page.
 
 <br>

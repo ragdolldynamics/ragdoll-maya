@@ -550,7 +550,7 @@ def untarget_marker(marker, opts=None):
 
     with cmdx.DGModifier() as mod:
         for dst in marker["dst"]:
-            other = dst.input()
+            other = dst.input(plug=True)
             mod.disconnect(dst, other)
 
 

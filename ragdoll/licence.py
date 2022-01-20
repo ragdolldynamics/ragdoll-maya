@@ -4,15 +4,16 @@ import os
 from maya import cmds
 import logging
 
-STATUS_OK = 0                  # All OK
-STATUS_FAIL = 1                # General error
-STATUS_ACTIVATE = 3            # The product needs to be activated.
-STATUS_ALREADY_ACTIVATED = 26  # No action needed
-STATUS_INET = 4                # Connection to the server failed.
-STATUS_INET_DELAYED = 21       # Waiting 5 hours to reconnect with server
-STATUS_INUSE = 5               # Maximum number of activations reached
-STATUS_TRIAL_EXPIRED = 30      # Maximum number of activations reached
-STATUS_NO_FREE_LEASES = 5        # Maximum number of leases reached
+STATUS_OK = 0                   # All OK
+STATUS_FAIL = 1                 # General error
+STATUS_ACTIVATE = 3             # The product needs to be activated.
+STATUS_ALREADY_ACTIVATED = 26   # No action needed
+STATUS_INET = 4                 # Connection to the server failed.
+STATUS_KEY_FOR_TURBOFLOAT = 20  # Used a floating key to activate node-locked
+STATUS_INET_DELAYED = 21        # Waiting 5 hours to reconnect with server
+STATUS_INUSE = 5                # Maximum number of activations reached
+STATUS_TRIAL_EXPIRED = 30       # Maximum number of activations reached
+STATUS_NO_FREE_LEASES = 5       # Maximum number of leases reached
 
 log = logging.getLogger("ragdoll")
 
@@ -181,6 +182,12 @@ def activate(key):
     elif status == STATUS_INET:
         log.error(
             "An internet connection is required to activate."
+        )
+
+    elif status == STATUS_KEY_FOR_TURBOFLOAT:
+        log.error(
+            "The key provided is meant for a floating licence server, "
+            "this here is for node-locked activation only."
         )
 
     elif status == STATUS_INUSE:

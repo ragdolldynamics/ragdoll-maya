@@ -69,6 +69,12 @@ from .constants import (
     StartTimeRangeStart,
     StartTimeAnimationStart,
     StartTimeCustom,
+
+    # rdMarker.lod enums
+    Lod0,
+    Lod1,
+    Lod2,
+    LodCustom,
 )
 
 #
@@ -372,6 +378,10 @@ __all__ = [
     "StartTimeRangeStart",
     "StartTimeAnimationStart",
     "StartTimeCustom",
+    "Lod0",
+    "Lod1",
+    "Lod2",
+    "LodCustom",
 
     # Main
     "createSolver",

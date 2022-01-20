@@ -1002,6 +1002,9 @@ class Loader(object):
         Lod = self._registry.get(entity, "LodComponent")
         MarkerUi = self._registry.get(entity, "MarkerUIComponent")
         Drawable = self._registry.get(entity, "DrawableComponent")
+        Subs = self._registry.get(entity, "SubEntitiesComponent")
+        Joint = self._registry.get(Subs["relative"], "JointComponent")
+        Limit = self._registry.get(Subs["relative"], "LimitComponent")
 
         input_type = {
             "Inherit": 0,
@@ -1018,26 +1021,27 @@ class Loader(object):
         }.get(MarkerUi["driveSpace"], 0)
 
         density_type = {
-            "Off": 0,
-            "Wood": 1,
-            "Flesh": 2,
-            "Uranium": 3,
-            "BlackHole": 4,
-            "Custom": 5,
+            "Off": constants.DensityOff,
+            "Cotton": constants.DensityCotton,
+            "Wood": constants.DensityWood,
+            "Flesh": constants.DensityFlesh,
+            "Uranium": constants.DensityUranium,
+            "BlackHole": constants.DensityBlackHole,
+            "Custom": constants.DensityCustom,
         }.get(Rigid["densityType"], 0)
 
         lod_preset = {
-            "Level0": 0,
-            "Level1": 1,
-            "Level2": 2,
-            "Custom": 3,
+            "Level0": constants.Lod0,
+            "Level1": constants.Lod1,
+            "Level2": constants.Lod2,
+            "Custom": constants.LodCustom,
         }.get(Lod["preset"], 0)
 
         lod_op = {
-            "LessThan": 0,
-            "GreaterThan": 1,
-            "Equal": 2,
-            "NotEqual": 3,
+            "LessThan": constants.LodLessThan,
+            "GreaterThan": constants.GreaterThan,
+            "Equal": constants.LodEqual,
+            "NotEqual": constants.LodNotEqual,
         }.get(Lod["op"], 0)
 
         display_type = {
@@ -1081,6 +1085,13 @@ class Loader(object):
         mod.set_attr(marker["lodOperator"], lod_op)
         mod.set_attr(marker["lod"], Lod["level"])
         mod.set_attr(marker["displayType"], display_type)
+
+        # Limits
+        mod.set_attr(marker["parentFrame"], Joint["parentFrame"])
+        mod.set_attr(marker["childFrame"], Joint["childFrame"])
+        mod.set_attr(marker["limitRangeX"], Limit["twist"])
+        mod.set_attr(marker["limitRangeY"], Limit["swing1"])
+        mod.set_attr(marker["limitRangeZ"], Limit["swing2"])
 
         shape_type = {
             "Box": constants.BoxShape,

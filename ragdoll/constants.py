@@ -67,6 +67,16 @@ StartTimeRangeStart = 0
 StartTimeAnimationStart = 1
 StartTimeCustom = 2
 
+Lod0 = 0
+Lod1 = 1
+Lod2 = 2
+LodCustom = 3
+
+LodLessThan = 0
+GreaterThan = 1
+LodEqual = 2
+LodNotEqual = 3
+
 # cacheMedia enum indices
 Off = 0
 On = 1

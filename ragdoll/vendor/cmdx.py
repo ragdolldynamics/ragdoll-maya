@@ -6512,7 +6512,7 @@ def connect(a, b):
 def currentTime(time=None):
     """Set or return current time in MTime format"""
     if time is None:
-        return oma.MAnimControl.currentTime()
+        return HashableTime(oma.MAnimControl.currentTime())
     else:
         if not isinstance(time, om.MTime):
             time = om.MTime(time, TimeUiUnit())

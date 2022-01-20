@@ -611,7 +611,7 @@ def create_ground(solver, options=None):
         height=grid_size * 2,
         subdivisionsHeight=1,
         subdivisionsWidth=1,
-        axis=(0, 1, 0) if cmdx.up_axis().y else (0, 0, 1)
+        axis=cmdx.up_axis()
     ))
 
     marker = assign_markers([plane], solver)[0]

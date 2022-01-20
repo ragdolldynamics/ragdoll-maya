@@ -6,6 +6,10 @@ __ = type("internal", (object,), {})()
 __.fname = cmds.file("test.ma", expandName=True, query=True)
 __.export = cmds.file("tempexport.rag", expandName=True, query=True)
 
+# Bah
+__.fname = __.fname.replace("/", os.sep)
+__.export = __.export.replace("/", os.sep)
+
 
 def _new(start=1, end=120):
     cmdx.setUpAxis(cmdx.Y)

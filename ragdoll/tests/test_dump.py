@@ -1,8 +1,9 @@
 """Every command is undoable and redoable"""
 
+import os
 from maya import cmds
 from ..vendor import cmdx
-from .. import commands, dump
+from .. import commands, dump, api
 from . import __, _new, _save, _load
 
 
@@ -15,17 +16,17 @@ def setup():
     pass
 
 
-def _export():
-    data = cmds.ragdollDump()
-
-    with open(__.export, "w") as f:
-        f.write(data)
-
+def _export(fname=None):
+    fname = cmds.file(fname, expandName=True, query=True)
+    dump.export(fname)
+    print("Wrote %s" % fname.replace("/", os.sep))
     return True
 
 
-def _reinterpret():
-    return dump.reinterpret(__.export)
+def _reinterpret(fname=None):
+    fname = cmds.file(fname, expandName=True, query=True)
+    print("Read %s" % fname.replace("/", os.sep))
+    return dump.reinterpret(fname)
 
 
 def test_simplest_of_cases():
@@ -43,13 +44,13 @@ def test_simplest_of_cases():
 
     assert_equals(len(cmds.ls(type="rdMarker")), 1)
 
-    _export()
+    _export("simplest_case.rag")
     _new()
     _load()
 
     assert_equals(len(cmds.ls(type="rdMarker")), 0)
 
-    _reinterpret()
+    _reinterpret("simplest_case.rag")
     assert_equals(len(cmds.ls(type="rdMarker")), 1)
 
 

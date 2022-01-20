@@ -771,6 +771,7 @@
         "options": [
             "markersUseSelection",
             "markersIgnoreJoints",
+            "markersRecordFilter",
             "markersRecordMaintainOffset2"
         ]
     },

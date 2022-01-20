@@ -234,96 +234,51 @@ class _Recorder(object):
             return self._snap_from_retarget()
 
     def _snap_from_start(self):
-        """Maintain offset from the start frame
-
-        We are currently:
-
-        1. Storing the current world matrix
-        2. Storing the start world matrix
-        3. Creating a kinematic hierarchy
-        4. Keying it at start -> current
-        5. Visiting the start frame
-        6. Constraining, maintaining offset
-        7. Rewinding to current frame
-        8. Deleting all
-
-        This is incredibly convoluted.. todo, find a better way.
-
-        """
-
-        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        """Maintain offset from the start frame"""
 
         initial_time = cmdx.current_time()
         start_frame = self._solver_start_frame
         current_frame = int(initial_time.value)
 
-        # Align kinematic hierarchy to worldspace simulation
-        marker_to_start_matrix = {}
-        marker_to_current_matrix = {}
+        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        sim_to_cache = self._sim_to_cache([current_frame, start_frame])
+        cache_to_curves = self._cache_to_curves(marker_to_dagnode,
+                                                [start_frame, current_frame])
 
-        for marker, dagnode in marker_to_dagnode.items():
-            src = marker["dst"][0].input(type=cmdx.kDagNode)
-            matrix = src["worldMatrix"][0].as_matrix(
-                time=self._solver_start_frame)
-            marker_to_start_matrix[marker] = matrix
+        for _ in sim_to_cache:
+            pass
 
-        for marker in marker_to_dagnode.keys():
-            matrix = marker["outputMatrix"].as_matrix()
-            marker_to_current_matrix[marker] = matrix
-
-        with cmdx.DagModifier() as mod:
-            for marker, dagnode in marker_to_dagnode.items():
-                tx, ty, tz = {}, {}, {}
-                rx, ry, rz = {}, {}, {}
-
-                parent = marker["parentMarker"].input(type="rdMarker")
-                matrix = marker_to_start_matrix[marker]
-                parent_matrix = marker_to_start_matrix.get(parent, cmdx.Mat4())
-                local_matrix = matrix * parent_matrix.inverse()
-
-                tm = cmdx.Tm(local_matrix)
-                t = tm.translation()
-                r = tm.rotation()
-
-                tx[start_frame] = t.x
-                ty[start_frame] = t.y
-                tz[start_frame] = t.z
-
-                rx[start_frame] = r.x
-                ry[start_frame] = r.y
-                rz[start_frame] = r.z
-
-                matrix = marker_to_current_matrix[marker]
-                parent_matrix = marker_to_current_matrix.get(
-                    parent, cmdx.Mat4())
-                local_matrix = matrix * parent_matrix.inverse()
-
-                tm = cmdx.Tm(local_matrix)
-                t = tm.translation()
-                r = tm.rotation()
-
-                tx[current_frame] = t.x
-                ty[current_frame] = t.y
-                tz[current_frame] = t.z
-
-                rx[current_frame] = r.x
-                ry[current_frame] = r.y
-                rz[current_frame] = r.z
-
-                mod.set_attr(dagnode["translateX"], tx)
-                mod.set_attr(dagnode["translateY"], ty)
-                mod.set_attr(dagnode["translateZ"], tz)
-                mod.set_attr(dagnode["rotateX"], rx)
-                mod.set_attr(dagnode["rotateY"], ry)
-                mod.set_attr(dagnode["rotateZ"], rz)
+        for _ in cache_to_curves:
+            pass
 
         cons = self._attach(marker_to_dagnode)
+
+        # Put a keyframe on everything with keyframes
+        for dst in self._dst_to_marker:
+            for channel in ("tx", "ty", "tz",
+                            "rx", "ry", "rz"):
+                if dst[channel].input():
+                    # They may be connected but locked, or whatever
+                    # else going on there. Either way, it's not important
+                    try:
+                        cmds.setKeyframe(dst.path(), attribute=channel)
+                    except RuntimeError:
+                        log.debug(traceback.format_exc())
+                        log.warning(
+                            "Could not keyframe %s.%s" % (dst, channel)
+                        )
 
         temp = []
         temp.extend(str(con) for con in cons)
         temp.extend(str(node) for node in marker_to_dagnode.values())
 
         cmds.delete(temp)
+
+        if self._opts["rotationFilter"] == 1:
+            _euler_filter(self._dst_to_marker.keys())
+
+        elif self._opts["rotationFilter"] == 2:
+            _quat_filter(self._dst_to_marker.keys())
 
     def _snap_from_retarget(self, _force=False):
         marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
@@ -362,7 +317,7 @@ class _Recorder(object):
         cmds.delete(temp)
 
     @internal.with_timing
-    def _sim_to_cache(self):
+    def _sim_to_cache(self, _range=None):
         r"""Evaluate every frame between `solver_start_frame` and `end_frame`
 
         We'll need to start from the solver start frame, even if the user
@@ -384,10 +339,13 @@ class _Recorder(object):
 
         """
 
+        if _range is None:
+            _range = range(self._solver_start_frame, self._end_frame + 1)
+
         initial_time = cmdx.current_time()
 
         total = self._end_frame - self._solver_start_frame
-        for frame in range(self._solver_start_frame, self._end_frame + 1):
+        for frame in _range:
             if self._opts["experimental"]:
                 # This does run faster, but at what cost?
                 cmds.setAttr("time1.outTime", int(frame))
@@ -431,7 +389,7 @@ class _Recorder(object):
         cmdx.current_time(initial_time)
 
     @internal.with_timing
-    def _cache_to_curves(self, marker_to_dagnode):
+    def _cache_to_curves(self, marker_to_dagnode, _range=None):
         r"""Convert worldspace matrices into translate/rotate channels
 
                                  ___ z
@@ -448,6 +406,9 @@ class _Recorder(object):
 
         total = len(marker_to_dagnode)
 
+        if _range is None:
+            _range = range(self._solver_start_frame, self._end_frame)
+
         # Generate animation
         progress = 0
         for marker, dagnode in marker_to_dagnode.items():
@@ -457,7 +418,7 @@ class _Recorder(object):
             rx, ry, rz = {}, {}, {}
             s = cmdx.Vector(1, 1, 1)
 
-            for frame in range(self._solver_start_frame, self._end_frame):
+            for frame in _range:
                 values = self._cache[marker][frame]
                 matrix = values["outputMatrix"]
                 parent_matrix = cmdx.Mat4()
@@ -607,7 +568,10 @@ class _Recorder(object):
                 except RuntimeError:
                     self._dst_to_marker.pop(dst)
                     log.debug(traceback.format_exc())
-                    log.warning("Unable to attach %s -> %s" % (src, dst))
+                    log.info(
+                        "Unable to parent constrain %s"
+                        % (dst.shortest_path())
+                    )
                     continue
 
                 pcon = cmdx.encode(pcon[0])
@@ -635,7 +599,10 @@ class _Recorder(object):
                 except RuntimeError:
                     self._dst_to_marker.pop(dst)
                     log.debug(traceback.format_exc())
-                    log.warning("Unable to attach %s -> %s" % (src, dst))
+                    log.info(
+                        "Unable to orient constrain %s"
+                        % (dst.shortest_path())
+                    )
                     continue
 
                 ocon = cmdx.encode(ocon[0])
@@ -655,11 +622,16 @@ class _Recorder(object):
         return new_constraints
 
     @internal.with_timing
-    def _bake(self):
+    def _bake(self, time=None):
+        if time is None:
+            time = (self._start_frame, self._end_frame - 1)
+
+        print("Baking %s-%s" % time)
+
         kwargs = {
             "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
             "simulation": False,
-            "time": (self._start_frame, self._end_frame - 1),
+            "time": time,
             "sampleBy": 1,
             "oversamplingRate": 1,
             "disableImplicitControl": True,

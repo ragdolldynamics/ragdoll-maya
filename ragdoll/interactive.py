@@ -1642,7 +1642,7 @@ def snap_markers(selection=None, **opts):
     if len(solvers) < 1:
         solvers = cmdx.ls(type="rdSolver")
 
-        # if opts["useSelection"]:
+    if opts["useSelection"]:
         include += _filtered_selection(cmdx.kDagNode, selection)
 
     for solver in solvers:
@@ -1721,6 +1721,11 @@ def record_markers(selection=None, **opts):
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
 
+    # Leave them cached
+    with cmdx.DagModifier() as mod:
+        for solver in solvers:
+            mod.try_set_attr(solver["cache"], c.StaticCache)
+
     total_frames = 0
     timer = i__.Timer("record")
     for solver in solvers:
@@ -1755,10 +1760,6 @@ def record_markers(selection=None, **opts):
                     cmds.progressBar(p, edit=True, step=1)
 
             total_frames += end_frame - start_frame
-
-            # Leave it cached
-            with cmdx.DagModifier() as mod:
-                mod.set_attr(solver["cache"], c.StaticCache)
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Recorded markers in %.2fs (%d fps)" % stats)

@@ -93,7 +93,7 @@ class _Recorder(object):
             "ignoreJoints": False,
             "resetMarkers": False,
             "experimental": False,
-            "maintainOffset": constants.FromRetargeting,
+            "maintainOffset": constants.FromStart,
             "keepConstraints": False,
             "includeKinematic": False,
         }, **(opts or {}))
@@ -361,26 +361,12 @@ class _Recorder(object):
 
             # Record results
             for marker in self._markers:
-                if self._opts["includeKinematic"]:
-                    is_kinematic = False
-                else:
-                    is_kinematic = marker["_kinematic"].read()
-
                 self._cache[marker][frame] = {
                     "recordTranslation": marker["retr"].read(),
                     "recordRotation": marker["rero"].read(),
                     "outputMatrix": marker["ouma"].as_matrix(),
-                    "kinematic": is_kinematic,
-                    "transition": False,
+                    "kinematic": marker["_kinematic"].read(),
                 }
-
-                if frame < self._start_frame:
-                    self._cache[marker][frame]["recordTranslation"] = False
-                    self._cache[marker][frame]["recordRotation"] = False
-
-                if is_kinematic:
-                    self._cache[marker][frame]["recordTranslation"] = False
-                    self._cache[marker][frame]["recordRotation"] = False
 
             progress = frame - self._solver_start_frame
             percentage = 100.0 * progress / total
@@ -626,8 +612,6 @@ class _Recorder(object):
         if time is None:
             time = (self._start_frame, self._end_frame - 1)
 
-        print("Baking %s-%s" % time)
-
         kwargs = {
             "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
             "simulation": False,
@@ -647,10 +631,20 @@ class _Recorder(object):
 
         # The cheeky little bakeResults changes our selection
         selection = cmds.ls(selection=True)
-        destinations = [
-            str(d) for d, m in self._dst_to_marker.items()
-            if m["recordTranslation"] or m["recordRotation"]
-        ]
+        destinations = []
+
+        for dst, marker in self._dst_to_marker.items():
+            if not self._opts["includeKinematic"]:
+                frames = self._cache[marker].values()
+                if all(frame["kinematic"] for frame in list(frames)):
+                    continue
+
+            if not (marker["recordTranslation"] and
+                    marker["recordRotation"]):
+                continue
+
+            destinations += [str(dst)]
+
         cmds.bakeResults(*destinations, **kwargs)
         cmds.select(selection)
 

@@ -823,8 +823,8 @@
         "name": "markersRecordKinematic",
         "label": "Include Kinematic Keys",
         "type": "Boolean",
-        "default": true,
-        "help": "Should I include non-simulated (kinematic) motion during the record?"
+        "default": false,
+        "help": "Should I record markers set to `Kinematic`?"
     },
 
     "markersRecordSimplify": {

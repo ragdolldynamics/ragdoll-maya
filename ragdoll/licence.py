@@ -1,6 +1,7 @@
 """Ragdoll Licence API"""
 
 import os
+import sys
 from maya import cmds
 import logging
 
@@ -12,10 +13,12 @@ STATUS_INET = 4                 # Connection to the server failed.
 STATUS_KEY_FOR_TURBOFLOAT = 20  # Used a floating key to activate node-locked
 STATUS_INET_DELAYED = 21        # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5                # Maximum number of activations reached
-STATUS_TRIAL_EXPIRED = 30       # Maximum number of activations reached
+STATUS_TRIAL_EXPIRED = 30       # Trial expired
 STATUS_NO_FREE_LEASES = 5       # Maximum number of leases reached
 
 log = logging.getLogger("ragdoll")
+self = sys.modules[__name__]
+self._last_status = -1
 
 
 def install(key=None):
@@ -92,9 +95,7 @@ def _install_nodelocked(key=None):
 
     elif status == STATUS_INET or status == STATUS_INET_DELAYED:
         log.warning(
-            "Ragdoll is activated, but failed to verify the activation\n"
-            "with the licence servers. You can still use the app for the\n"
-            "duration of the grace period."
+            "Failed to connect to the internet for activation."
         )
 
     elif status == STATUS_ACTIVATE:
@@ -120,6 +121,8 @@ def _install_nodelocked(key=None):
             "Unexpected error occurred with licencing, "
             "this is a bug. Tell someone."
         )
+
+    self._last_status = status
 
     return status
 
@@ -298,6 +301,8 @@ def reverify():
 def data():
     """Return overall information about the current Ragdoll licence"""
     return dict(
+        lastStatus=self._last_status,
+
         key=cmds.ragdollLicence(serial=True, query=True),
 
         # Which edition of Ragdoll is this?

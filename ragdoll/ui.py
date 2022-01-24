@@ -1358,7 +1358,7 @@ class SplashScreen(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
         super(SplashScreen, self).__init__(parent)
-        self.setWindowTitle("Activate Ragdoll Dynamics")
+        self.setWindowTitle("Ragdoll Dynamics")
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowFlags(QtCore.Qt.Tool)
         self.setFixedSize(px(500), px(410))  # 0.5x the size of splash.png
@@ -1535,6 +1535,9 @@ class SplashScreen(QtWidgets.QDialog):
             if data["trialDays"] > 0:
                 self.on_trial(data["trialDays"])
 
+            elif data["lastStatus"] == licence.STATUS_INET:
+                self.on_trial_no_internet()
+
             elif data["trialDays"] < 1:
                 self.on_expired(data["trialDays"])
 
@@ -1691,6 +1694,19 @@ class SplashScreen(QtWidgets.QDialog):
         datestring = self._expiry_string(trial_days)
         expiry = self._widgets["expiryDate"]
         expiry.setText("Expired %s" % datestring)
+
+    def on_trial_no_internet(self):
+        self.on_expired(0)
+
+        msg = "An internet connection required to activate Ragdoll."
+        icon = self._widgets["statusActivated"]
+        icon.setToolTip(msg)
+
+        message = self._widgets["statusMessage"]
+        message.setText("Trial is <b>inactive</b>")
+
+        expiry = self._widgets["expiryDate"]
+        expiry.setText(msg)
 
     def on_activated(self, data):
         log.info("Ragdoll is activated")

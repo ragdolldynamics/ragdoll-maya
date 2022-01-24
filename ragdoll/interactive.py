@@ -493,6 +493,8 @@ def _on_recording_limit(clientData=None):
     )
 
     def deferred():
+        log.warning(msg)
+
         def buy():
             webbrowser.open(
                 "https://ragdolldynamics.com/pricing-commercial"
@@ -510,8 +512,18 @@ def _on_recording_limit(clientData=None):
             ]
         )
 
-    cmds.evalDeferred(deferred)
-    log.warning(msg)
+    # This event is triggered many times, but we're only really
+    # interested in notifying the user about it once.
+    if not hasattr(__, "recording_timer"):
+        from PySide2 import QtCore
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.setInterval(1000)
+        timer.timeout.connect(deferred)
+
+        __.recording_timer = timer
+
+    __.recording_timer.start()
 
 
 def install_callbacks():
@@ -565,18 +577,9 @@ def install_callbacks():
             "ragdollNonCommercialExportEvent", _on_noncommercial_export)
     )
 
-    # This next event is triggered many times, but we're only really
-    # interested in notifying the user about it once.
-    from PySide2 import QtCore
-    timer = QtCore.QTimer()
-    timer.setSingleShot(True)
-    timer.setInterval(1000)
-    timer.timeout.connect(_on_recording_limit)
-
-    __.recording_timer = timer
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
-            "ragdollRecordingLimitEvent", lambda _: timer.start())
+            "ragdollRecordingLimitEvent", _on_recording_limit)
     )
 
 
@@ -613,8 +616,6 @@ def install_plugin():
 
 
 def uninstall_plugin(force=True):
-    cmds.file(new=True, force=force)
-
     if cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME, query=True, loaded=True):
         cmds.unloadPlugin(c.RAGDOLL_PLUGIN_NAME)
 

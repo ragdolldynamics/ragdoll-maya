@@ -2611,6 +2611,7 @@ class ImportOptions(Options):
         import_path = parser.find("importPath")
         import_paths = parser.find("importPaths")
         search_replace = parser.find("importSearchAndReplace")
+        match_by = parser.find("importMatchBy")
         use_selection = parser.find("importUseSelection")
         namespace = self.parser.find("importNamespace")
         namespace_custom = self.parser.find("importNamespaceCustom")
@@ -2626,6 +2627,7 @@ class ImportOptions(Options):
         namespace.changed.connect(self.reset)
         namespace_custom.changed.connect(self.reset)
         search_replace.changed.connect(self.reset)
+        match_by.changed.connect(self.reset)
         create_missing.changed.connect(self.reset)
 
         default_thumbnail = _resource("icons", "no_thumbnail.png")

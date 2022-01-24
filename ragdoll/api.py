@@ -75,6 +75,9 @@ from .constants import (
     Lod1,
     Lod2,
     LodCustom,
+
+    MatchByName,
+    MatchByHierarchy,
 )
 
 #
@@ -382,6 +385,8 @@ __all__ = [
     "Lod1",
     "Lod2",
     "LodCustom",
+    "MatchByName",
+    "MatchByHierarchy",
 
     # Main
     "createSolver",

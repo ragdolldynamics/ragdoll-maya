@@ -386,6 +386,7 @@
             "importIncludeSimulation",
             "importUseSelection",
             "importCreateMissingTransforms",
+            "importMatchBy",
             "importNamespace",
             "importNamespaceCustom",
             "importSearchAndReplace",

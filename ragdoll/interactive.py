@@ -2861,6 +2861,7 @@ def import_physics_options(*args):
     def before_reset():
         """The UI was reset, for whatever reason"""
         _singleton_import_loader.edit({
+            "matchBy": options.read("importMatchBy"),
             "searchAndReplace": options.read("importSearchAndReplace"),
             "preserveAttributes": options.read("importPreserveAttributes"),
             "namespace": options.read("importNamespaceCustom"),
@@ -2897,7 +2898,7 @@ def import_physics_options(*args):
     use_selection.changed.connect(on_use_selection_changed)
 
     ui.center_window(win)
-    win.resize(ui.px(1100), ui.px(560))
+    win.resize(ui.px(1100), ui.px(575))
 
     install_selection_callback()
 

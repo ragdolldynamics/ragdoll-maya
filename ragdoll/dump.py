@@ -247,16 +247,16 @@ class Loader(object):
     SupportedSchema = "ragdoll-1.0"
 
     def __init__(self, opts=None):
-        opts = opts or {}
-        opts = dict(opts, **{
+        opts = dict({
             "roots": [],
+            "matchBy": constants.MatchByHierarchy,
             "searchAndReplace": ["", ""],
             "namespace": None,
             "preserveAttributes": True,
 
             "overrideSolver": "",
-            "createMissingTransforms": True,
-        })
+            "createMissingTransforms": False,
+        }, **(opts or {}))
 
         self._opts = opts
 
@@ -877,6 +877,9 @@ class Loader(object):
             namespace = self._opts["namespace"].replace(" ", "")
             path = re.sub(r"\|(.*?)\:", "|%s:" % namespace, path)
 
+        if self._opts["matchBy"] == constants.MatchByName:
+            path = path.rsplit("|", 1)[-1]
+
         # In case of double || characters
         path = path.replace("||", "|")
 
@@ -996,6 +999,7 @@ class Loader(object):
             log.warning("Could not apply unsupported constraint: %s" % con)
 
     def _apply_marker(self, mod, entity, marker):
+        Name = self._registry.get(entity, "NameComponent")
         Desc = self._registry.get(entity, "GeometryDescriptionComponent")
         Color = self._registry.get(entity, "ColorComponent")
         Rigid = self._registry.get(entity, "RigidComponent")
@@ -1005,6 +1009,8 @@ class Loader(object):
         Subs = self._registry.get(entity, "SubEntitiesComponent")
         Joint = self._registry.get(Subs["relative"], "JointComponent")
         Limit = self._registry.get(Subs["relative"], "LimitComponent")
+
+        mod.rename_node(marker, Name["value"])
 
         input_type = {
             "Inherit": 0,

@@ -77,6 +77,9 @@ GreaterThan = 1
 LodEqual = 2
 LodNotEqual = 3
 
+MatchByName = 0
+MatchByHierarchy = 1
+
 # cacheMedia enum indices
 Off = 0
 On = 1

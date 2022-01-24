@@ -8,7 +8,6 @@ import time as time_
 import math
 import types
 import logging
-import getpass
 import operator
 import traceback
 import collections
@@ -20,6 +19,8 @@ from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui
 from maya import OpenMaya as om1, OpenMayaMPx as ompx1, OpenMayaUI as omui1
 
 __version__ = "0.6.3"
+
+IS_VENDORED = "." in __name__
 
 PY3 = sys.version_info[0] == 3
 
@@ -7823,15 +7824,6 @@ Distance4Attribute = Distance4
 # --------------------------------------------------------
 
 
-# E.g. cmdx => cmdx_0_6_0_plugin_username0.py
-unique_plugin = "cmdx_%s_plugin_%s.py" % (
-    __version__.replace(".", "_"),
-
-    # Include username, in case two
-    # users occupy the same machine
-    getpass.getuser()
-)
-
 # Support for multiple co-existing versions of apiundo.
 unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
 
@@ -7892,13 +7884,8 @@ def install():
     Inception time! :)
 
     In order to facilitate undo, we need a custom command registered
-    with Maya's native plug-in system. To do that, we need a dedicated
-    file. We *could* register ourselves as that file, but what we need
-    is a unique instance of said command per distribution of cmdx.
-
-    Per distribution? Yes, because cmdx.py can be vendored with any
-    library, and we don't want cmdx.py from one vendor to interfere
-    with one from another.
+    with Maya's native plug-in system. To do that, we will register
+    ourselves as a Maya command plug-in.
 
     Maya uses (pollutes) global memory in two ways that
     matter to us here.
@@ -7919,56 +7906,21 @@ def install():
     *is* no __name__. Instead, we'll rely on each version being unique
     and consistent.
 
+    Vendoring
+    ---------
+    If you vendored cmdx, you'll need to take into account that Maya
+    plug-ins are registered by *name*. And there can only ever be a
+    single plug-in with a given name.
+
+    So rename your `cmdx.py` to something like `cmdx_mytool.py` and from
+    your `vendor` package use e.g. `from . import cmdx_mytool as cmdx`
+
+    This will enable you to `from vendor import cmdx` whilst at the same
+    time allowing Maya to use the unique name for plug-in purposes. Win-win.
+
     """
 
-    import errno
-    import shutil
-
-    # E.g. c:\users\marcus\Documents\maya
-    tempdir = os.path.expanduser("~/maya/plug-ins")
-
-    try:
-        os.makedirs(tempdir)
-
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            # This is fine
-            pass
-
-        else:
-            # Can't think of a reason why this would ever
-            # happen but you can never be too careful..
-            log.debug("Could not create %s" % tempdir)
-
-            import tempfile
-            tempdir = tempfile.gettempdir()
-
-    tempfname = os.path.join(tempdir, unique_plugin)
-
-    if not os.path.exists(tempfname):
-        # We can't know whether we're a .pyc or .py file,
-        # but we need to copy the .py file *only*
-        fname = os.path.splitext(__file__)[0]
-
-        try:
-            shutil.copyfile(fname + ".py", tempfname)
-
-        except OSError:
-            # This could never really happen, but you never know.
-            # In which case, use the file as-is. This should work
-            # for a majority of cases and only really conflict when/if
-            # the undo mechanism of cmdx changes, which is exceedingly
-            # rare. The actual functionality of cmdx is independent of
-            # this plug-in and will still pick up the appropriate
-            # vendored module.
-            log.debug("Could not generate unique cmdx.py")
-            log.debug("Undo may still work, but cmdx may conflict\n"
-                      "with other instances of it.")
-            tempfname = __file__
-
-    # Now we're guaranteed to not interfere
-    # with other versions of cmdx. Win!
-    cmds.loadPlugin(tempfname, quiet=True)
+    cmds.loadPlugin(__file__, quiet=True)
 
     self.installed = True
 
@@ -7980,7 +7932,7 @@ def uninstall():
         # therefore cannot be unloaded until flushed.
         clear()
 
-        cmds.unloadPlugin(unique_plugin)
+        cmds.unloadPlugin(__file__)
 
     self.installed = False
 

@@ -1100,7 +1100,6 @@ class Loader(object):
             "ConvexHull": constants.MeshShape,
         }.get(Desc["type"], constants.CapsuleShape)
 
-        mod.set_attr(marker["shapeType"], shape_type)
         mod.set_attr(marker["shapeExtents"], Desc["extents"])
         mod.set_attr(marker["shapeLength"], Desc["length"])
         mod.set_attr(marker["shapeRadius"], Desc["radius"])
@@ -1161,3 +1160,7 @@ class Loader(object):
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
+
+        # Set this after replacing the mesh, as the replaced
+        # mesh may not actually be in use.
+        mod.set_attr(marker["shapeType"], shape_type)

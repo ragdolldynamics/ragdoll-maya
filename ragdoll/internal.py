@@ -716,3 +716,34 @@ def sort_by_parent(markers):
     log.debug("sort_by_parent: %.2fms" % t.ms)
 
     return list(sorted(orders.keys(), key=lambda key: orders[key]))
+
+
+# From https://docs.python.org/3/library/itertools.html#itertools-recipes
+def filterfalse(predicate, iterable):
+    # filterfalse(lambda x: x%2, range(10)) --> 0 2 4 6 8
+    if predicate is None:
+        predicate = bool
+    for x in iterable:
+        if not predicate(x):
+            yield x
+
+
+def unique_everseen(iterable, key=None):
+    """List unique elements, preserving order"""
+
+    # unique_everseen('AAAABBBCCDAABBB') --> A B C D
+    # unique_everseen('ABBCcAD', str.lower) --> A B C D
+
+    seen = set()
+    seen_add = seen.add
+    if key is None:
+        for element in filterfalse(seen.__contains__, iterable):
+            seen_add(element)
+            yield element
+    else:
+        for element in iterable:
+            k = key(element)
+            if k not in seen:
+                seen_add(k)
+                yield element
+

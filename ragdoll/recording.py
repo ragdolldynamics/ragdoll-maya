@@ -174,12 +174,12 @@ class _Recorder(object):
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
-        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        marker_to_joint = _generate_kinematic_hierarchy(self._solver)
 
-        for progress in self._cache_to_curves(marker_to_dagnode):
+        for progress in self._cache_to_curves(marker_to_joint):
             yield ("transferring", 49 + progress * 0.10)
 
-        constraints = self._attach(marker_to_dagnode)
+        constraints = self._attach(marker_to_joint)
 
         yield ("baking", 60)
 
@@ -203,9 +203,17 @@ class _Recorder(object):
             initial_time = cmdx.current_time()
             cmdx.current_time(self._solver_start_frame)
 
+            def find_roots():
+                roots = set()
+                for joint in marker_to_joint.values():
+                    if joint.parent() is None:
+                        roots.add(joint.shortest_path())
+
+                return roots
+
             temp = []
-            temp.extend(str(node) for node in marker_to_dagnode.values())
-            temp.extend(str(con) for con in constraints)
+            temp.extend(find_roots())
+            temp.extend(con.shortest_path() for con in constraints)
             cmds.delete(temp)
 
             cmdx.current_time(initial_time)
@@ -746,12 +754,13 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
     marker_to_dagnode = {}
 
     def find_roots():
-        roots = []
+        roots = set()
         for marker in markers:
+            print("Looking at marker: %s" % marker)
             if marker["parentMarker"].input(type="rdMarker"):
                 continue
 
-            roots.append(marker)
+            roots.add(marker)
         return roots
 
     roots = find_roots() if root is None else [root]
@@ -818,6 +827,9 @@ def _find_markers(solver, markers=None):
             # A solver will have markers and groups of its own
             # that we need to iterate over again.
             _find_markers(entity, markers)
+
+    # Unique, preserving order
+    markers = list(internal.unique_everseen(markers))
 
     return markers
 

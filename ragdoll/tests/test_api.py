@@ -216,7 +216,7 @@ def test_record():
 
     cube1 = cmdx.encode(cube1)
     assert cube1["tx"].connected, (
-        "%s should have been recorded" % cube1["tx"])
+        "%s should have been recorded" % cube1["tx"].path())
 
     # Baking to layer per default, which means the curve type is
     curve_type = "animBlendNodeAdditiveDL"
@@ -225,6 +225,21 @@ def test_record():
         % (cube1["tx"].input(),
            cube1["tx"].input().type_name,
            curve_type)
+    )
+
+
+def test_record_nokinematic():
+    _new()
+    solver = api.createSolver()
+    cube1, _ = cmds.polyCube()
+    marker = api.assignMarker(cube1, solver)
+    cmds.setAttr(marker + ".inputType", api.InputKinematic)
+    api.recordPhysics(solver, opts={"includeKinematic": False})
+
+    cube1 = cmdx.encode(cube1)
+    assert not cube1["tx"].connected, (
+        "%s was kinematic, it should not have been recorded"
+        % cube1["tx"].path()
     )
 
 

@@ -639,13 +639,21 @@ class _Recorder(object):
                 if all(frame["kinematic"] for frame in list(frames)):
                     continue
 
-            if not (marker["recordTranslation"] and
-                    marker["recordRotation"]):
+            if not (marker["recordTranslation"].read() or
+                    marker["recordRotation"].read()):
                 continue
 
             destinations += [str(dst)]
 
-        cmds.bakeResults(*destinations, **kwargs)
+        if destinations:
+            cmds.bakeResults(*destinations, **kwargs)
+        else:
+            log.warning(
+                "Nothing was baked\n"
+                "Either everything was kinematic or markers were set "
+                "to recordTranslation=Off and recordRotation=Off"
+            )
+
         cmds.select(selection)
 
         # Restore time

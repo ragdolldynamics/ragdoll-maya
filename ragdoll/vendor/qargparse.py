@@ -506,6 +506,8 @@ class QArgumentParser(QtWidgets.QWidget):
                 other["_widget"].setEnabled(other["enabled"])
                 other["_reset"].setEnabled(other["enabled"])
 
+        arg["_widget"].setEnabled(arg["enabled"])
+
         self.changed.emit(arg)
 
     def on_entered(self, arg):
@@ -779,8 +781,8 @@ class Number(QArgument):
             slider = _with_entered_exited(FractionSlider, self)()
             widget = _with_entered_exited(QtWidgets.QDoubleSpinBox, self)()
             default = self._data.get("default", 0.0)
-            widget.setMinimum(min(default, self._data.get("min", 0.0)))
-            widget.setMaximum(max(default, self._data.get("max", 99.99)))
+            widget.setMinimum(-9999)
+            widget.setMaximum(9999)
 
             # Account for small values
             delta = widget.maximum() - widget.minimum()
@@ -796,14 +798,14 @@ class Number(QArgument):
             slider = _with_entered_exited(QtWidgets.QSlider, self)()
             widget = _with_entered_exited(QtWidgets.QSpinBox, self)()
             default = self._data.get("default", 0)
-            widget.setMinimum(min(default, self._data.get("min", 0)))
-            widget.setMaximum(max(default, self._data.get("max", 99)))
+            widget.setMinimum(-9999)
+            widget.setMaximum(9999)
 
         widget.setMinimumWidth(px(50))
 
         container = QtWidgets.QWidget()
-        slider.setMaximum(widget.maximum())
-        slider.setMinimum(widget.minimum())
+        slider.setMinimum(min(default, self._data.get("min", 0)))
+        slider.setMaximum(max(default, self._data.get("max", 99)))
         slider.setOrientation(QtCore.Qt.Horizontal)
 
         layout = QtWidgets.QHBoxLayout(container)
@@ -833,6 +835,12 @@ class Number(QArgument):
         return container
 
     def on_spinbox_changed(self, value):
+        if value > self._slider.maximum():
+            self._slider.setMaximum(value)
+
+        if value < self._slider.minimum():
+            self._slider.setMinimum(value)
+
         self._slider.setValue(value)
         # Spinbox emits a signal all on its own
 

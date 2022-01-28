@@ -33,9 +33,9 @@ Rather than assigning to joints and retargeting to IK controls, we assign to IK 
 
 <br>
 
-#### Reconnect
+#### Reparent
 
-Use `Reconnect` when you selected things in the wrong order and want a do-over.
+Use `Reparent` when you selected things in the wrong order and want a do-over.
 
 https://user-images.githubusercontent.com/2152766/134465284-f9a3bd04-9392-4f33-a161-390cbe9049d2.mp4 controls
 

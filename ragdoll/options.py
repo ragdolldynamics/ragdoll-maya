@@ -132,6 +132,10 @@ def read(arg):
         return value
 
 
+def default(arg):
+    return __.optionvars[arg].get("default")
+
+
 def install(reset=False):
     """Ensure default optionvars exists
 

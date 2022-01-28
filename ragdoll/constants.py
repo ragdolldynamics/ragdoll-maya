@@ -63,6 +63,9 @@ ImportReinterpret = "Reinterpret"
 ImportSolverFromFile = 0
 ImportSolverFromScene = 1
 
+ImportNamespaceOff = " "
+ImportNamespaceFromFile = ""
+
 StartTimeRangeStart = 0
 StartTimeAnimationStart = 1
 StartTimeCustom = 2
@@ -79,6 +82,9 @@ LodNotEqual = 3
 
 MatchByName = 0
 MatchByHierarchy = 1
+
+RecordFastAndLoose = 0
+RecordNiceAndSteady = 1
 
 # cacheMedia enum indices
 Off = 0

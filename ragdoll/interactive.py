@@ -783,7 +783,7 @@ def install_menu():
 
         divider()
 
-        item("extractMarkers", extract_markers)
+        item("extractMarkers", extract_markers, extract_markers_options)
 
         divider()
 
@@ -1669,6 +1669,9 @@ def record_markers(selection=None, **opts):
         "recordSimplify": _opt("markersRecordSimplify", opts),
         "recordFilter": _opt("markersRecordFilter", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
+        "mode": _opt("markersRecordMode", opts),
+        "protectOriginalInput": _opt(
+            "markersRecordProtectOriginalInput", opts),
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)
@@ -1694,29 +1697,29 @@ def record_markers(selection=None, **opts):
             solvers.remove(solver)
 
     if opts["recordRange"] == 0:
-        start_time = cmdx.min_time()
-        end_time = cmdx.max_time()
-
-    elif opts["recordRange"] == 1:
         start_time = cmdx.animation_start_time()
         end_time = cmdx.animation_end_time()
+
+    elif opts["recordRange"] == 1:
+        start_time = cmdx.min_time()
+        end_time = cmdx.max_time()
 
     else:
         start_time = opts["recordCustomStartTime"]
         end_time = opts["recordCustomEndTime"]
 
     if isinstance(start_time, int):
-        start_time = cmdx.om.MTime(start_time, cmdx.TimeUiUnit())
+        start_time = cmdx.time(start_time)
 
     if isinstance(end_time, int):
-        end_time = cmdx.om.MTime(end_time, cmdx.TimeUiUnit())
+        end_time = cmdx.time(end_time)
 
     # A selected time overrides it all
     if _is_interactive():
         a, b = cmdx.selected_time()
 
         # Returns a single frame if nothing was selected
-        if (a.value - b.value) > 2:
+        if (b.value - a.value) > 2:
             start_time, end_time = a, b
 
     start_frame = int(start_time.value)
@@ -1731,7 +1734,7 @@ def record_markers(selection=None, **opts):
     timer = i__.Timer("record")
     for solver in solvers:
         with timer as duration, progressbar() as p:
-            instance = recording._Recorder(solver, {
+            op = {
                 "startTime": start_time,
                 "endTime": end_time,
                 "include": include,
@@ -1743,7 +1746,11 @@ def record_markers(selection=None, **opts):
                 "toLayer": opts["recordToLayer"],
                 "ignoreJoints": opts["ignoreJoints"],
                 "resetMarkers": opts["recordReset"],
-            })
+                "mode": opts["mode"],
+                "protectOriginalInput": opts["protectOriginalInput"],
+            }
+
+            instance = recording._Recorder(solver, op)
 
             previous_progress = 0
             for step, progress in instance.record():
@@ -1782,6 +1789,7 @@ def record_markers(selection=None, **opts):
 @with_exception_handling
 def extract_markers(selection=None, **opts):
     opts = dict({
+        "extractAndAttach": _opt("markersExtractAndAttach", opts)
     }, **(opts or {}))
 
     solvers = _filtered_selection("rdSolver", selection)
@@ -1812,6 +1820,7 @@ def extract_markers(selection=None, **opts):
             instance = recording._Recorder(solver, {
                 "startTime": start_time,
                 "endTime": end_time,
+                "extractAndAttach": opts["extractAndAttach"],
             })
 
             previous_progress = 0
@@ -2675,6 +2684,10 @@ def replace_marker_mesh_options(*args):
     return _Window("markerReplaceMesh", replace_marker_mesh)
 
 
+def extract_markers_options(*args):
+    return _Window("extractMarkers", extract_markers)
+
+
 def assign_marker_options(*args):
     return _Window("assignMarker", assign_marker)
 
@@ -2684,7 +2697,30 @@ def assign_and_connect_options(*args):
 
 
 def record_markers_options(*args):
-    return _Window("recordMarkers", record_markers)
+    start = int(cmdx.animation_start_time().value)
+    end = int(cmdx.animation_end_time().value)
+
+    __.optionvars["markersRecordCustomStartTime"]["default"] = start
+    __.optionvars["markersRecordCustomStartTime"]["min"] = start
+    __.optionvars["markersRecordCustomStartTime"]["max"] = end
+    __.optionvars["markersRecordCustomEndTime"]["default"] = end
+    __.optionvars["markersRecordCustomEndTime"]["min"] = start
+    __.optionvars["markersRecordCustomEndTime"]["max"] = end
+
+    win = _Window("recordMarkers", record_markers)
+
+    record_range = win.parser.find("markersRecordRange")
+    start = win.parser.find("markersRecordCustomStartTime")
+    end = win.parser.find("markersRecordCustomEndTime")
+
+    def update_start_end():
+        start.setEnabled(record_range.read() == 2)
+        end.setEnabled(record_range.read() == 2)
+
+    update_start_end()
+    record_range.changed.connect(update_start_end)
+
+    return win
 
 
 def snap_markers_options(*args):

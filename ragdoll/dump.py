@@ -451,15 +451,25 @@ class Loader(object):
                 MarkerUi = self._registry.get(entity, "MarkerUIComponent")
                 Rest = self._registry.get(entity, "RestComponent")
                 Scale = self._registry.get(entity, "ScaleComponent")
-                path = self._pre_process_path(MarkerUi["sourceTransform"])
-                hierarchy, name = path.rsplit("|", 1)
+                path = MarkerUi["sourceTransform"]
 
                 # Maintain parent, if any
                 parent = None
                 try:
-                    parent = cmdx.encode(hierarchy)
-                except cmdx.ExistError:
-                    pass
+                    hierarchy, name = path.rsplit("|", 1)
+
+                except ValueError:
+                    # The path always contains at least the root
+                    # separator so this is highly unlikely.
+                    name = path
+
+                else:
+                    try:
+                        hierarchy = self._pre_process_path(hierarchy)
+                        parent = cmdx.encode(hierarchy)
+
+                    except cmdx.ExistError:
+                        pass
 
                 name = internal.unique_name(name.replace(":", ""))
                 transform = mod.create_node("transform",

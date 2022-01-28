@@ -836,6 +836,31 @@
         "help": "Should I record markers set to `Kinematic`?"
     },
 
+    "markersRecordMode": {
+        "name": "markersRecordMode",
+        "label": "Mode",
+        "type": "Enum",
+        "items": ["Fast and Loose", "Nice and Steady"],
+        "default": 1,
+        "help": "Gain a potential performance boost at the expense of reliability of the output."
+    },
+
+    "markersExtractAndAttach": {
+        "name": "markersExtractAndAttach",
+        "label": "Attach Controls",
+        "type": "Boolean",
+        "default": false,
+        "help": "This will apply the same Parent and Orient constraints onto the assigned controls are Record Simulation, without actually recording anything."
+    },
+
+    "markersRecordProtectOriginalInput": {
+        "name": "markersRecordProtectOriginalInput",
+        "label": "Protect Original Input",
+        "type": "Boolean",
+        "default": true,
+        "help": "Ensure none of your existing connections, such as constraints, on a recorded control are affected. NOTE: This will become the new default and this option will be removed."
+    },
+
     "markersRecordSimplify": {
         "name": "markersRecordSimplify",
         "label": "Simplify Recorded Channels",
@@ -870,17 +895,15 @@
     },
 
     "markersRecordRange": {
-        "enabled": false,
         "name": "markersRecordRange",
         "label": "Record Range",
         "type": "Enum",
-        "items": ["Animation Range", "Full Range", "Custom"],
-        "default": 0,
-        "help": "Start recording from here."
+        "items": ["Full Range", "Playback Range", "Custom"],
+        "default": 1,
+        "help": "- Record the entire animation range.\n- Or just the current timeline.\n- Or a custom range via the sliders below."
     },
 
     "markersRecordCustomStartTime": {
-        "enabled": false,
         "name": "markersRecordCustomStartTime",
         "label": "Start Time",
         "type": "Integer",
@@ -889,7 +912,6 @@
     },
 
     "markersRecordCustomEndTime": {
-        "enabled": false,
         "name": "markersRecordCustomEndTime",
         "label": "End Time",
         "type": "Integer",

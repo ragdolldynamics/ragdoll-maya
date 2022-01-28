@@ -760,7 +760,9 @@
             "markersUseSelection",
             "markersIgnoreJoints",
             "markersRecordKinematic",
-            "markersRecordReset"
+            "markersRecordProtectOriginalInput",
+            "markersRecordReset",
+            "markersRecordMode"
         ]
     },
 
@@ -802,6 +804,7 @@
         "summary": "Extract simulation from markers",
         "description": "Generate a joint hierarchy for each marker along with the baked simulation.",
         "options": [
+            "markersExtractAndAttach"
         ]
     },
 

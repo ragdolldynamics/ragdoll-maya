@@ -94,8 +94,10 @@ class _Recorder(object):
             "resetMarkers": False,
             "experimental": False,
             "maintainOffset": constants.FromStart,
-            "keepConstraints": False,
+            "extractAndAttach": False,
             "includeKinematic": False,
+            "protectOriginalInput": True,
+            "mode": constants.RecordNiceAndSteady,
         }, **(opts or {}))
 
         start_time = opts["startTime"]
@@ -179,7 +181,19 @@ class _Recorder(object):
         for progress in self._cache_to_curves(marker_to_joint):
             yield ("transferring", 49 + progress * 0.10)
 
-        constraints = self._attach(marker_to_joint)
+        # Attach uses Maya constraints. They are special, because
+        # if there already is a constraint Maya will append to it,
+        # rather than create one anew. We can't have that, since
+        # we need to delete those on completion.
+        if self._opts["protectOriginalInput"]:
+            try:
+                connections = self._detach(marker_to_joint)
+                constraints = self._attach(marker_to_joint)
+            finally:
+                self._reattach(connections)
+
+        else:
+            constraints = self._attach(marker_to_joint)
 
         yield ("baking", 60)
 
@@ -232,8 +246,8 @@ class _Recorder(object):
         for progress in self._cache_to_curves(marker_to_dagnode):
             yield ("transferring", 50 + progress * 0.50)
 
-        # if self._opts["keepConstraints"]:
-        #     self._attach(marker_to_dagnode)
+        if self._opts["extractAndAttach"]:
+            self._attach(marker_to_dagnode)
 
     def snap(self, _force=False):
         if self._opts["maintainOffset"] == constants.FromStart:
@@ -486,6 +500,30 @@ class _Recorder(object):
 
         return True
 
+    def _detach(self, marker_to_dagnode):
+        connections = {}
+
+        with cmdx.DagModifier() as mod:
+            for dst in self._dst_to_marker:
+                for channel in ("tx", "ty", "tz",
+                                "rx", "ry", "rz"):
+                    constraint = dst[channel].input(
+                        type=("parentConstraint", "orientConstraint"),
+                        plug=True
+                    )
+
+                    if constraint is not None:
+                        attr = dst[channel]
+                        connections[constraint] = attr
+                        mod.disconnect(constraint, attr)
+
+        return connections
+
+    def _reattach(self, connections):
+        with cmdx.DagModifier() as mod:
+            for src, dst in connections.items():
+                mod.connect(src, dst)
+
     def _attach(self, marker_to_dagnode):
         """Constrain destination controls to extracted simulated hierarchy
 
@@ -622,7 +660,7 @@ class _Recorder(object):
 
         kwargs = {
             "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
-            "simulation": False,
+            "simulation": self._opts["mode"] == constants.RecordNiceAndSteady,
             "time": time,
             "sampleBy": 1,
             "oversamplingRate": 1,
@@ -756,7 +794,6 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
     def find_roots():
         roots = set()
         for marker in markers:
-            print("Looking at marker: %s" % marker)
             if marker["parentMarker"].input(type="rdMarker"):
                 continue
 

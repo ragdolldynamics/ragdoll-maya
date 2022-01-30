@@ -7,6 +7,7 @@ import ctypes
 import logging
 import datetime
 import webbrowser
+import tempfile
 
 from maya.api import OpenMaya as om, OpenMayaUI as omui
 from maya.OpenMayaUI import MQtUtil
@@ -1550,16 +1551,17 @@ class SplashScreen(QtWidgets.QDialog):
         self._data = data
 
     def on_activate_offline(self):
-        base = "https://learn.ragdolldynamics.com"
-        url = "%s/licencing/#offline-activation" % base
-        log.info("Opening URL %s.." % url)
-        webbrowser.open(url)
+        key = self._widgets["serial"].text()
+        modal = OfflineDialog(True, key, self)
+        modal.exec_()
+        self.refresh()
 
     def on_deactivate_offline(self):
-        base = "https://learn.ragdolldynamics.com"
-        url = "%s/licencing/#offline-deactivation" % base
-        log.info("Opening URL %s.." % url)
-        webbrowser.open(url)
+        data = licence.data()
+        key = data["key"]
+        modal = OfflineDialog(False, key, self)
+        modal.exec_()
+        self.refresh()
 
     def on_serial_changed(self):
         key = self._widgets["serial"].text()
@@ -1568,6 +1570,7 @@ class SplashScreen(QtWidgets.QDialog):
             key = self._data.get("key")
 
         self._widgets["activate"].setEnabled(bool(key))
+        self._widgets["activateOffline"].setEnabled(bool(key))
 
     def on_continue_clicked(self):
         self.close()
@@ -1830,6 +1833,185 @@ class SplashScreen(QtWidgets.QDialog):
 
     def animate_fade_in(self):
         self._fade_anim.start()
+
+
+class OfflineDialog(QtWidgets.QDialog):
+    def __init__(self, activate, key, parent=None):
+        super(OfflineDialog, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
+        self.setWindowTitle("Ragdoll Offline Activation Wizard")
+
+        widgets = {
+            "HelpText": QtWidgets.QLabel(),
+            "Serial": QtWidgets.QLineEdit(),
+            "Request": QtWidgets.QPlainTextEdit(),
+            "RequestPlaceholder": QtWidgets.QLabel(),
+            "Response": QtWidgets.QPlainTextEdit(),
+            "ResponsePlaceholder": QtWidgets.QLabel(),
+
+            "Generate": QtWidgets.QPushButton("Generate"),
+            "Activate": QtWidgets.QPushButton("Activate"),
+            "Deactivate": QtWidgets.QPushButton("Deactivate"),
+        }
+
+        url = "https://ragdolldynamics.com/offline"
+        url = (
+            "<a href='{0}' style='color: white'>{0}</a>".format(url)
+        )
+
+        if activate:
+            text = (
+                "Welcome to the <b>Offline Activation Guide</b>"
+                "<br>"
+                "<br>"
+                "1. Generate a request<br>"
+                "2. Get response from {}<br>"
+                "3. Enter response<br>"
+                "4. Click Activate<br>"
+            ).format(url)
+        else:
+            text = (
+                "Welcome to the <b>Offline Deactivation Guide</b>"
+                "<br>"
+                "<br>"
+                "1. Copy the text below<br>"
+                "2. Go to {}<br>"
+            ).format(url)
+
+        widgets["HelpText"].setText(text)
+        widgets["HelpText"].setOpenExternalLinks(True)
+
+        widgets["Serial"].setReadOnly(True)
+        widgets["Serial"].setText(key)
+        widgets["Request"].setReadOnly(True)
+        widgets["Request"].setLineWrapMode(
+            QtWidgets.QPlainTextEdit.WidgetWidth)
+
+        widgets["RequestPlaceholder"].setParent(widgets["Request"])
+
+        if activate:
+            widgets["RequestPlaceholder"].setText(
+                "Click 'Generate' to generate a new request"
+            )
+        else:
+            widgets["RequestPlaceholder"].setText(
+                "Click 'Deactivate' to deactivate and generate a new request"
+                "\n\n"
+                "CAUTION: If you deactivate Maya without deactivating\n"
+                "online, your licence will still be considered active\n"
+                "and cannot be reactivated.\n"
+                "\n"
+                "If this happens, contact support@ragdolldynamics.com"
+            )
+
+        widgets["ResponsePlaceholder"].setText("Paste the response here")
+        widgets["ResponsePlaceholder"].setParent(widgets["Response"])
+
+        for name in ("ResponsePlaceholder", "RequestPlaceholder"):
+            placeholder = widgets[name]
+            placeholder.setObjectName(name)
+            placeholder.move(px(5), px(5))
+            placeholder.show()
+
+        layout = QtWidgets.QGridLayout(self)
+        layout.addWidget(widgets["HelpText"], 0, 0)
+        layout.addWidget(widgets["Serial"], 1, 0)
+
+        if activate:
+            layout.addWidget(widgets["Generate"], 5, 0, 1, 2)
+            layout.addWidget(widgets["Request"], 6, 0, 1, 2)
+            layout.addWidget(widgets["Response"], 7, 0, 1, 2)
+            layout.addWidget(widgets["Activate"], 8, 0, 1, 2)
+        else:
+            layout.addWidget(widgets["Request"], 5, 0, 1, 2)
+            layout.addWidget(widgets["Deactivate"], 6, 0, 1, 2)
+
+        self.setStyleSheet("""
+            QLabel {
+                color: #eee;
+            }
+
+            #ResponsePlaceholder, #RequestPlaceholder {
+                color: #777;
+                opacity: 0.5;
+            }
+
+            QDialog {
+                background: #333;
+            }
+
+            QPlainTextEdit {
+                font-family: Courier;
+                background: #222;
+            }
+        """)
+
+        self.setMinimumSize(px(400), px(400))
+
+        widgets["Generate"].clicked.connect(self.on_generate_clicked)
+        widgets["Activate"].clicked.connect(self.on_activate_clicked)
+        widgets["Deactivate"].clicked.connect(self.on_deactivate_clicked)
+        widgets["Response"].textChanged.connect(self.on_response)
+
+        self._activate = activate
+        self._key = key
+        self._widgets = widgets
+        self._reqfname = os.path.join(
+            tempfile.gettempdir(), "ragdollTempRequest.xml"
+        )
+        self._resfname = os.path.join(
+            tempfile.gettempdir(), "ragdollTempResponse.xml"
+        )
+
+        if activate:
+            self.on_generate_clicked()
+
+        self.on_response()
+
+    def on_deactivate_clicked(self):
+        print("deactivation_request_to_file: %s" % self._reqfname)
+        if licence.deactivation_request_to_file(self._reqfname) != 0:
+            return log.warning("Failed, see Script Editor")
+
+        self.refresh()
+
+    def on_generate_clicked(self):
+        if licence.activation_request_to_file(self._key, self._reqfname) != 0:
+            return log.warning("Failed, see Script Editor")
+
+        self.refresh()
+
+    def on_activate_clicked(self):
+        text = self._widgets["Response"].toPlainText()
+        assert text, "No response found"
+
+        with open(self._resfname, "w") as f:
+            f.write(text)
+
+        if licence.activate_from_file(self._resfname) != 0:
+            return log.warning("Failed, see Script Editor")
+
+        self.close()
+
+    def on_response(self):
+        text = self._widgets["Response"].toPlainText()
+        self._widgets["ResponsePlaceholder"].setVisible(text == "")
+        self._widgets["Activate"].setEnabled(text != "")
+
+    def refresh(self):
+        text = ""
+
+        try:
+            with open(self._reqfname) as f:
+                text = f.read()
+        except Exception:
+            pass
+
+        self.set_request(text)
+
+    def set_request(self, text):
+        self._widgets["Request"].setPlainText(text)
+        self._widgets["RequestPlaceholder"].setVisible(text == "")
 
 
 def center_window(window):

@@ -59,18 +59,15 @@ def export(fname=None, data=None):
 
     """
 
-    # Pull on solver, both at the start and first frame
-    # to ensure everything is initialised.
-    initial_time = cmdx.current_time()
-    for solver in cmdx.ls(type="rdSolver"):
-        start_time = solver["_startTime"].as_time()
-        cmdx.current_time(start_time)
-        solver["startState"].read()
-        cmdx.current_time(start_time + 1)
-        solver["currentState"].read()
-    cmdx.current_time(initial_time)
+    if data is None:
+        # Pull on solver, both at the start and first frame
+        # to ensure everything is initialised.
+        for solver in cmdx.ls(type="rdSolver"):
+            start_time = int(solver["_startTime"].as_time().value)
+            solver["startState"].read(time=cmdx.time(start_time))
+            solver["currentState"].read(time=cmdx.time(start_time + 1))
 
-    data = data or json.loads(cmds.ragdollDump())
+        data = json.loads(cmds.ragdollDump())
 
     if "ui" not in data:
         data["ui"] = {}
@@ -1020,6 +1017,7 @@ class Loader(object):
         Joint = self._registry.get(Subs["relative"], "JointComponent")
         Limit = self._registry.get(Subs["relative"], "LimitComponent")
 
+        print("Renaming %s -> %s" % (marker, Name["value"]))
         mod.rename_node(marker, Name["value"])
 
         input_type = {

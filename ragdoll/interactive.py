@@ -734,6 +734,9 @@ def install_menu():
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
 
+    item("groupMarkers", group_markers)
+    item("ungroupMarkers", ungroup_markers)
+
     divider("Transfer")
 
     item("recordMarkers", record_markers, record_markers_options)
@@ -787,7 +790,7 @@ def install_menu():
 
         divider()
 
-        item("createLollipop", create_lollipop)
+        item("createLollipop", create_lollipops)
 
         divider()
 
@@ -813,7 +816,10 @@ def install_menu():
     with submenu("System", icon="system.png"):
         divider("Scene")
 
-        item("deleteAllPhysics", delete_physics, delete_physics_options)
+        item("deleteAllPhysics", delete_all_physics, delete_physics_options,
+             label="Delete All Physics")
+        item("deleteAllPhysics", delete_physics_from_selection,
+             delete_physics_options, label="Delete Physics from Selection")
 
         divider()
 
@@ -1376,6 +1382,9 @@ def assign_marker(selection=None, **opts):
         "createGround": _opt("markersCreateGround", opts),
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
+        "connect": False,
+        "group": _opt("markersAssignGroup", opts),
+        "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
         "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
@@ -1383,28 +1392,62 @@ def assign_marker(selection=None, **opts):
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
-    solver = _find_current_solver(opts["createGround"])
+    solver = None
+    if opts["solver"] != 0:
+
+        # The UI may have remained open, providing the user with
+        # out-of-date options that may no longer exist.
+        try:
+            items = options.items("markersAssignSolver")
+            solver = items[opts["solver"]]
+            solver = cmdx.encode(solver)
+
+        except IndexError:
+            options.write("markersAssignSolver", 0)
+
+    if not solver:
+        solver = _find_current_solver(opts["createGround"])
 
     if not solver:
         return
 
+    group = None
+
+    if opts["group"] == 0:  # No group
+        pass
+
+    if opts["group"] == 1:  # Append to existing
+        root_transform = selection[0]
+        root_marker = root_transform["message"].output(type="rdMarker")
+
+        # Append to this group
+        if root_marker:
+            group = root_marker["startState"].output(type="rdGroup")
+
+        # Create otherwise make one
+        if not group:
+            group = True
+
+    if opts["group"] == 2:  # New group
+        group = True
+
     markers = []
 
     try:
-        for transform in selection:
-            new_marker = commands.assign_marker(transform, solver, opts={
-                "autoLimit": opts["autoLimit"],
-                "density": opts["density"],
-                "materialInChannelBox": bool(opts["materialInChannelBox"]),
-                "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
-                "limitInChannelBox": bool(opts["limitInChannelBox"]),
-            })
-            markers.append(new_marker)
+        markers += commands.assign_markers(selection, solver, group, opts={
+            "connect": opts["connect"],
+            "autoLimit": opts["autoLimit"],
+            "density": opts["density"],
+            "materialInChannelBox": bool(opts["materialInChannelBox"]),
+            "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
+            "limitInChannelBox": bool(opts["limitInChannelBox"]),
+        })
+
     except RuntimeError as e:
         raise i__.UserWarning("Already assigned", str(e))
 
     if opts["createLollipop"]:
-        commands.create_lollipop(markers)
+        commands.create_lollipops(markers)
 
     if opts["createObjectSet"]:
         _add_to_objset(markers)
@@ -1415,59 +1458,55 @@ def assign_marker(selection=None, **opts):
     return kSuccess
 
 
-@i__.with_undo_chunk
-@with_exception_handling
 def assign_and_connect(selection=None, **opts):
-    selection = selection or cmdx.selection()
-    selection = cmdx.ls(selection, type=("transform", "joint"))
+    return assign_marker(selection, **dict({
+        "connect": True,
+    }, **opts))
 
-    if not selection:
+
+def markers_from_selection(selection=None):
+    markers = []
+
+    for selected in selection or cmdx.selection():
+        if selected.isA(cmdx.kDagNode):
+            selected = selected["message"].output(type="rdMarker")
+
+        if selected and selected.isA("rdMarker"):
+            markers += [selected]
+
+    return markers
+
+
+@with_exception_handling
+@i__.with_undo_chunk
+def group_markers(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if not markers:
         raise i__.UserWarning(
-            "Bad Selection",
-            "Select one or more controls to assign markers to."
+            "No markers found",
+            "Select one or more markers to group."
         )
 
-    opts = dict({
-        "createGround": _opt("markersCreateGround", opts),
-        "createObjectSet": _opt("markersCreateObjectSet", opts),
-        "createLollipop": _opt("markersCreateLollipop", opts),
-        "autoLimit": _opt("markersAutoLimit", opts),
-        "density": _opt("markersDensity", opts),
-        "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
-        "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
-        "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-    }, **(opts or {}))
+    commands.group_markers(markers)
 
-    solver = _find_current_solver(opts["createGround"])
+    return True
 
-    if not solver:
-        return
 
-    try:
-        assigned = commands.assign_markers(selection, solver, opts={
-            "autoLimit": opts["autoLimit"],
-            "density": opts["density"],
-            "materialInChannelBox": opts["materialInChannelBox"],
-            "shapeInChannelBox": opts["shapeInChannelBox"],
-            "limitInChannelBox": opts["limitInChannelBox"],
-        })
+@with_exception_handling
+@i__.with_undo_chunk
+def ungroup_markers(selection=None, **opts):
+    markers = markers_from_selection(selection)
 
-    except commands.AlreadyAssigned as e:
-        raise i__.UserWarning("Already assigned", str(e))
+    if not markers:
+        raise i__.UserWarning(
+            "No markers found",
+            "Select one or more markers to group."
+        )
 
-    except Exception as e:
-        raise i__.UserWarning("An unexpected error occurred", str(e))
+    commands.ungroup_markers(markers)
 
-    if opts["createLollipop"]:
-        commands.create_lollipop(assigned)
-
-    if opts["createObjectSet"]:
-        _add_to_objset(assigned)
-
-    cmds.select(list(t.shortest_path() for t in selection))
-    cmds.refresh()
-
-    return kSuccess
+    return True
 
 
 @i__.with_undo_chunk
@@ -2132,7 +2171,7 @@ def snap_to_sim(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def create_lollipop(selection=None, **opts):
+def create_lollipops(selection=None, **opts):
     selection = selection or cmdx.sl()
     markers = set()
 
@@ -2149,7 +2188,7 @@ def create_lollipop(selection=None, **opts):
             "Select one or more markers to assign a lollipop to."
         )
 
-    commands.create_lollipop(markers)
+    commands.create_lollipops(markers)
 
     return kSuccess
 
@@ -2428,6 +2467,16 @@ def edit_marker_constraint_frames(selection=None):
     return kSuccess
 
 
+def delete_all_physics(selection=None, **opts):
+    options.write("deleteFromSelection", False)
+    delete_physics(selection, **opts)
+
+
+def delete_physics_from_selection(selection=None, **opts):
+    options.write("deleteFromSelection", True)
+    delete_physics(selection, **opts)
+
+
 @i__.with_undo_chunk
 @with_exception_handling
 def delete_physics(selection=None, **opts):
@@ -2609,6 +2658,7 @@ def _Arg(var, label=None, callback=None):
 
     # Used elsewhere
     _ = var.pop("arg", var["name"])
+    _ = var.pop("originalItems", None)
 
     depends = var.pop("depends", [])
     for dependency in depends:
@@ -2688,11 +2738,38 @@ def extract_markers_options(*args):
     return _Window("extractMarkers", extract_markers)
 
 
+def _update_solver_options():
+    if "originalItems" not in __.optionvars["markersAssignSolver"]:
+        items = __.optionvars["markersAssignSolver"]["items"][:]
+        __.optionvars["markersAssignSolver"]["originalItems"] = items
+
+    solvers = cmdx.ls(type="rdSolver")
+    solvers = [solver.shortestPath() for solver in solvers]
+    items = solvers + __.optionvars["markersAssignSolver"]["originalItems"]
+
+    __.optionvars["markersAssignSolver"]["items"] = items
+
+
+def _update_group_options():
+    if "originalItems" not in __.optionvars["markersAssignGroup"]:
+        items = __.optionvars["markersAssignGroup"]["items"][:]
+        __.optionvars["markersAssignGroup"]["originalItems"] = items
+
+    groups = cmdx.ls(type="rdGroup")
+    groups = [group.shortestPath() for group in groups]
+    items = __.optionvars["markersAssignGroup"]["originalItems"] + groups
+    __.optionvars["markersAssignGroup"]["items"] = items
+
+
 def assign_marker_options(*args):
+    _update_solver_options()
+    _update_group_options()
     return _Window("assignMarker", assign_marker)
 
 
 def assign_and_connect_options(*args):
+    _update_solver_options()
+    _update_group_options()
     return _Window("assignGroup", assign_and_connect)
 
 

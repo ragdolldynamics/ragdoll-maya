@@ -41,8 +41,9 @@ from .constants import (
 
     # rdMarker.inputType enums
     InputInherit,
-    InputOff,
     InputKinematic,
+    InputDynamic,
+    InputOff,
     InputGuide,
 
     # rdSolver.type enums
@@ -361,9 +362,8 @@ __all__ = [
     "DisplayVelocity",
     "DisplayContacts",
     "InputInherit",
-    "InputOff",
     "InputKinematic",
-    "InputGuide",
+    "InputDynamic",
     "PGSSolverType",
     "TGSSolverType",
     "BoxShape",
@@ -410,4 +410,8 @@ __all__ = [
 
     "deletePhysics",
     "deleteAllPhysics",
+
+    # Deprecated
+    "InputOff",
+    "InputGuide",
 ]

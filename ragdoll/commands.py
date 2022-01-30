@@ -79,11 +79,18 @@ def create_solver(name=None, opts=None):
     return solver
 
 
-def assign_markers(transforms, solver, opts=None):
+def assign_markers(transforms, solver, group=True, opts=None):
     """Assign markers to `transforms` belonging to `solver`
 
     Each marker transfers the translation and rotation of each transform
     and generates its physical equivalent, ready for recording.
+
+    Arguments:
+        transforms (list): One or more transforms to assign markers onto
+        solver (rdSolver): Add newly created markers to this solver
+        group (rdGroup, optional): Add markers to this group, or to a
+            new group with `group=True` (default)
+        opts (dict, optional): Options, see below
 
     Options:
         autoLimit (bool): Transfer locked channels into physics limits
@@ -102,10 +109,12 @@ def assign_markers(transforms, solver, opts=None):
 
     opts = dict({
         "autoLimit": False,
+        "connect": True,
         "density": constants.DensityFlesh,
         "materialInChannelBox": True,
         "shapeInChannelBox": True,
         "limitInChannelBox": False,
+        "preventDuplicateMarker": True,
     }, **(opts or {}))
 
     if len(transforms) == 1:
@@ -129,28 +138,15 @@ def assign_markers(transforms, solver, opts=None):
                 % len(existing)
             )
 
-    parent_marker = transforms[0]["worldMatrix"][0].output(type="rdMarker")
+    parent_marker = transforms[0]["message"].output(type="rdMarker")
+    markers = []
 
-    group = None
-    root_transform = transforms[0]
-
-    if len(transforms) > 1:
-        if parent_marker:
-            group = parent_marker["startState"].output(type="rdGroup")
-
-            # Already got a marker
-            transforms.pop(0)
-
-        if not group:
-            with cmdx.DagModifier() as mod:
-                name = root_transform.name(namespace=False)
-                group = _create_group(
-                    mod, name="%s_rGroup" % name, solver=solver
-                )
-
-    markers = list()
     with cmdx.DGModifier() as dgmod:
         for index, transform in enumerate(transforms):
+            if opts["preventDuplicateMarker"]:
+                if transform["message"].output(type="rdMarker"):
+                    continue
+
             name = "rMarker_%s" % transform.name()
             marker = nodes.create("rdMarker", dgmod, name=name)
 
@@ -177,8 +173,7 @@ def assign_markers(transforms, solver, opts=None):
                 dgmod.connect(shape["local"],
                               marker["inputGeometry"])
 
-            # It's a limb
-            if parent_marker or len(transforms) > 1:
+            if opts["connect"] and (parent_marker or len(transforms) > 1):
                 geo = _infer_geometry(transform,
                                       parent_transform,
                                       children)
@@ -187,8 +182,6 @@ def assign_markers(transforms, solver, opts=None):
 
             # It's a lone object
             else:
-                dgmod.set_attr(marker["inputType"], constants.InputOff)
-
                 if shape:
                     geo = _interpret_shape(shape)
 
@@ -196,9 +189,13 @@ def assign_markers(transforms, solver, opts=None):
                     geo = _infer_geometry(transform)
                     geo.shape_type = constants.CapsuleShape
 
-            # Make the root passive
-            if len(transforms) > 1 and not parent_marker:
-                dgmod.set_attr(marker["inputType"], constants.InputKinematic)
+            if opts["connect"]:
+                if parent_marker:
+                    dgmod.connect(parent_marker["ragdollId"],
+                                  marker["parentMarker"])
+                else:
+                    dgmod.set_attr(marker["inputType"],
+                                   constants.InputKinematic)
 
             dgmod.set_attr(marker["shapeType"], geo.shape_type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
@@ -240,17 +237,7 @@ def assign_markers(transforms, solver, opts=None):
             dgmod.lock_attr(marker["recordToExistingKeys"])
             dgmod.lock_attr(marker["recordToExistingTangents"])
 
-            if group:
-                _add_to_group(dgmod, marker, group)
-
-                if parent_marker is not None:
-                    dgmod.connect(parent_marker["ragdollId"],
-                                  marker["parentMarker"])
-
-                parent_marker = marker
-
-            else:
-                _add_to_solver(dgmod, marker, solver)
+            _add_to_solver(dgmod, marker, solver)
 
             # Keep next_available_index() up-to-date
             dgmod.do_it()
@@ -264,7 +251,17 @@ def assign_markers(transforms, solver, opts=None):
             if opts["autoLimit"]:
                 auto_limit(dgmod, marker)
 
+            parent_marker = marker
             markers.append(marker)
+
+    if group is True:
+        root_transform = transforms[0]
+        name = root_transform.name(namespace=False) + "_rGroup"
+        group = create_group(solver, name)
+
+    if group:
+        for marker in markers:
+            add_to_group(marker, group)
 
     toggle_channel_box_attributes(markers, opts={
         "materialAttributes": opts["materialInChannelBox"],
@@ -275,12 +272,40 @@ def assign_markers(transforms, solver, opts=None):
     return markers
 
 
-def assign_marker(transform, solver, opts=None):
+def assign_marker(transform, solver, group=None, opts=None):
     """Convenience function for passing and recieving a single `transform`"""
-    return assign_markers([transform], solver, opts)[0]
+    assert not isinstance(transform, (tuple, list)), (
+        "`transform` should not be a list: %s" % str(transform))
+
+    opts = dict({"connect": False}, **(opts or {}))
+    return assign_markers([transform], solver, group, opts)[0]
 
 
-def create_lollipop(markers):
+def group_markers(markers, name=None):
+    solver = _find_solver(markers[0])
+
+    if name is None:
+        root_transform = markers[0]["src"].input()
+        name = root_transform.name(namespace=False) + "_rGroup"
+
+    with cmdx.DagModifier() as mod:
+        group = _create_group(mod, name, solver)
+
+        for marker in markers:
+            _add_to_group(mod, marker, group)
+
+    return group
+
+
+def ungroup_markers(markers):
+    solver = _find_solver(markers[0])
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            _add_to_solver(mod, marker, solver)
+
+
+def create_lollipops(markers, opts=None):
     r"""Create a NURBS control for `marker` for convenience
 
        ____
@@ -296,6 +321,43 @@ def create_lollipop(markers):
 
     """
 
+    opts = dict({
+        "basicAttributes": True,
+        "advancedAttributes": True,
+        "groupAttributes": True,
+    }, **(opts or {}))
+
+    basic_proxy_attributes = (
+        "inputType",
+        "driveSpace",
+        "driveStiffness",
+        "driveDampingRatio",
+    )
+
+    advanced_proxy_attributes = (
+        "driveAbsoluteLinear",
+        "driveAbsoluteAngular",
+        "driveSpaceCustom",
+        "linearDamping",
+        "angularDamping",
+        "driveInterpolation",
+        "driveAbsoluteLinearX",
+        "driveAbsoluteLinearY",
+        "driveAbsoluteLinearZ",
+        "driveAngularAmountTwist",
+        "driveAngularAmountSwing",
+    )
+
+    group_proxy_attributes = (
+        "selfCollide",
+        "inputType",
+        "driveSpace",
+        "driveStiffness",
+        "driveDampingRatio",
+    )
+
+    lollipops = []
+
     with cmdx.DagModifier() as mod:
         for marker in markers:
             transform = marker["src"].input()
@@ -308,15 +370,15 @@ def create_lollipop(markers):
             name = name + "_MRK"
 
             lol = mod.create_node("transform", name=name, parent=transform)
-            mod.set_keyable(lol["translateX"], False)
-            mod.set_keyable(lol["translateY"], False)
-            mod.set_keyable(lol["translateZ"], False)
-            mod.set_keyable(lol["rotateX"], False)
-            mod.set_keyable(lol["rotateY"], False)
-            mod.set_keyable(lol["rotateZ"], False)
-            mod.set_keyable(lol["scaleX"], False)
-            mod.set_keyable(lol["scaleY"], False)
-            mod.set_keyable(lol["scaleZ"], False)
+
+            for channel in ("translate", "rotate", "scale"):
+                for axis in "XYZ":
+                    mod.set_keyable(lol[channel + axis], False)
+
+                    if channel == "translate":
+                        mod.set_locked(lol[channel + axis], True)
+
+            mod.set_keyable(lol["visibility"], False)
 
             mod.set_attr(lol["overrideEnabled"], True)
             mod.set_attr(lol["overrideShading"], False)
@@ -344,6 +406,49 @@ def create_lollipop(markers):
 
             # Hide from channelbox
             mod.set_attr(curve["isHistoricallyInteresting"], False)
+
+            lollipops += [lol]
+
+    any_attributes = (
+        opts["basicAttributes"] or
+        opts["advancedAttributes"] or
+        opts["group_parent"]
+    )
+
+    if any_attributes:
+        if opts["basicAttributes"] or opts["advancedAttributes"]:
+            proxy = internal.UserAttributes(marker, lol, owner=marker)
+
+            if opts["basicAttributes"]:
+                proxy.add_divider("Marker")
+
+                for attr in basic_proxy_attributes:
+                    proxy.add(attr)
+
+            if opts["basicAttributes"]:
+                proxy.add_divider("Advanced")
+
+                for attr in advanced_proxy_attributes:
+                    proxy.add(attr)
+
+            proxy.do_it()
+
+        if opts["groupAttributes"]:
+            if not marker["parentMarker"].connected:
+                group = marker["startState"].output(type="rdGroup")
+
+                if group is not None:
+                    proxy = internal.UserAttributes(group, lol, owner=group)
+                    proxy.add_divider("Group")
+
+                    for attr in group_proxy_attributes:
+                        # Avoid clashes with names on the marker
+                        name = attr[0].upper() + attr[1:]
+                        proxy.add(attr, long_name="group%s" % name)
+
+                    proxy.do_it()
+
+    return lollipops
 
 
 def auto_limit(mod, marker):
@@ -614,7 +719,7 @@ def create_ground(solver, options=None):
         axis=cmdx.up_axis()
     ))
 
-    marker = assign_markers([plane], solver)[0]
+    marker = assign_marker(plane, solver)
 
     with cmdx.DagModifier() as mod:
         mod.set_attr(marker["inputType"], constants.InputKinematic)
@@ -1494,7 +1599,6 @@ def _take_ownership(mod, rdnode, node):
     # Is the node already owned?
     existing_connection = node["message"].output(plug=True)
     if existing_connection and existing_connection.name() == "owner":
-        print("%s / %s" % (rdnode, node))
         mod.disconnect(node["message"], existing_connection)
 
     # Ensure next_available_index is up-to-date
@@ -1504,8 +1608,13 @@ def _take_ownership(mod, rdnode, node):
     mod.connect(node["message"], plug[index])
 
 
+def create_group(solver, name=None):
+    with cmdx.DagModifier() as mod:
+        return _create_group(mod, name, solver)
+
+
 def _create_group(mod, name, solver):
-    name = internal.unique_name(name)
+    name = internal.unique_name(name or "rGroup")
     shape_name = internal.shape_name(name)
     group_parent = mod.create_node("transform", name=name)
     group = nodes.create("rdGroup", mod,
@@ -1527,15 +1636,32 @@ def _create_group(mod, name, solver):
 
 
 def _remove_membership(mod, marker):
-    existing = marker["ragdollId"].outputs(
+    existing = list(marker["startState"].outputs(
         type=("rdGroup", "rdSolver"),
-        plugs=True
-    )
+    ))
 
     for other in existing:
-        mod.disconnect(marker["ragdollId"], other)
+        mod.disconnect(marker["startState"], other["inputStart"])
+        mod.disconnect(marker["currentState"], other["inputCurrent"])
 
     mod.do_it()
+
+    # Delete empty
+    for other in existing:
+        if other["inputStart"].count() < 1:
+            mod.delete(other)
+
+    mod.do_it()
+
+
+def add_to_group(marker, group):
+    with cmdx.DagModifier() as mod:
+        _add_to_group(mod, marker, group)
+
+
+def add_to_solver(marker, solver):
+    with cmdx.DagModifier() as mod:
+        _add_to_solver(mod, marker, solver)
 
 
 def _add_to_group(mod, marker, group):

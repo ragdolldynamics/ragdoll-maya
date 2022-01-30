@@ -652,6 +652,8 @@
         "summary": "Assign marker to this node",
         "description": "Add a unique marker to the selected node, such that Ragdoll can find and simulate it.",
         "options": [
+            "markersAssignSolver",
+            "markersAssignGroup",
             "markersDensity",
             "markersAutoLimit",
             "markersCreateGround",
@@ -662,7 +664,8 @@
 
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
-            "markersChannelBoxLimit"
+            "markersChannelBoxLimit",
+            "useProxyAttributes"
         ]
     },
 
@@ -672,6 +675,8 @@
         "summary": "Assign marker to this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
+            "markersAssignSolver",
+            "markersAssignGroup",
             "markersDensity",
             "markersAutoLimit",
             "markersCreateGround",
@@ -682,14 +687,15 @@
 
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
-            "markersChannelBoxLimit"
+            "markersChannelBoxLimit",
+            "useProxyAttributes"
         ]
     },
 
     "assignHierarchy": {
         "label": "Assign to Hierarchy",
         "enable": false,
-        "icon": "ragdoll.png",
+        "icon": "hierarchy.png",
         "summary": "Assign marker to this group of nodes",
         "description": "Add a series of markers to the selected nodes, such that Ragdoll can find and simulate the hierarchy it creates.",
         "options": [
@@ -698,6 +704,22 @@
             "markersAutoLimit",
             "markersCreateLollipop"
         ]
+    },
+
+    "groupMarkers": {
+        "label": "Group",
+        "icon": "group.png",
+        "summary": "Group the selected markers",
+        "description": "Create a new group containing the currently selected markers. The group carries settings that affect all members within that group, such as Stiffness and Damping.",
+        "options": []
+    },
+
+    "ungroupMarkers": {
+        "label": "Ungroup",
+        "icon": "ungroup.png",
+        "summary": "Ungroup the selected markers",
+        "description": "Remove markers from their group, making them standalone.",
+        "options": []
     },
 
     "assignConstraint": {

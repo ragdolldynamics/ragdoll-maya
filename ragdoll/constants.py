@@ -24,9 +24,8 @@ TGSSolverType = 1
 
 # Markers
 InputInherit = 0
-InputOff = 1
 InputKinematic = 2
-InputGuide = 3
+InputDynamic = 3
 
 DisplayDefault = 0
 DisplayWire = 1
@@ -96,7 +95,8 @@ All = 2
 # Deprecated
 #
 
-
+InputGuide = 3
+InputOff = 3
 X = "X"
 Y = "Y"
 Z = "Z"

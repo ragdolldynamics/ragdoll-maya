@@ -845,6 +845,24 @@
         "help": "Gain a potential performance boost at the expense of reliability of the output."
     },
 
+    "markersAssignSolver": {
+        "name": "markersAssignSolver",
+        "label": "Solver",
+        "type": "Enum",
+        "items": ["Create New Solver"],
+        "default": 0,
+        "help": "Add newly created markers to this solver."
+    },
+
+    "markersAssignGroup": {
+        "name": "markersAssignGroup",
+        "label": "Group",
+        "type": "Enum",
+        "items": ["No Group", "Append to Selected", "Create New Group"],
+        "default": 1,
+        "help": "Add newly created markers to this group."
+    },
+
     "markersExtractAndAttach": {
         "name": "markersExtractAndAttach",
         "label": "Attach Controls",
@@ -858,7 +876,7 @@
         "label": "Protect Original Input",
         "type": "Boolean",
         "default": true,
-        "help": "Ensure none of your existing connections, such as constraints, on a recorded control are affected. NOTE: This will become the new default and this option will be removed."
+        "help": "Ensure none of your existing connections, such as constraints, on a recorded control are affected. <b>NOTE</b>: This will become the new default and this option will be removed."
     },
 
     "markersRecordSimplify": {
@@ -1122,7 +1140,7 @@
         "name": "useProxyAttributes",
         "type": "Boolean",
         "default": false,
-        "help": "Use native Maya proxy attributes for Ragdoll user attributes. CAUTION! This is unstable and may fatal crash Maya, especially during deletion of physics."
+        "help": "Use native Maya proxy attributes for lollipop attributes. These make the Graph Editor less nice to work with, but enables multiple lollipops to reference the same Marker."
     },
     "useUIDrawManager": {
         "name": "useUIDrawManager",

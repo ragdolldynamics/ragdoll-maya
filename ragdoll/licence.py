@@ -232,6 +232,7 @@ def deactivate():
 
 
 def activation_request_to_file(key, fname):
+    fname = fname.replace("\\", "/")  # Just in case
     status = cmds.ragdollLicence(activationRequestToFile=(key, fname))
 
     if status == STATUS_OK:

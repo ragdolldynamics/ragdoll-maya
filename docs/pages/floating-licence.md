@@ -200,32 +200,27 @@ Let's cover some common scenarios.
 
 ### Can I activate my server offline?
 
-Yes.
+Lifetime licences, yes. Monthly licences, no.
 
 Like node-locked licences, the floating licence server can be activated without an internet connection to the machine running the server.
 
 The procedure is the same on each platform.
 
-1. Generate an activation request
-2. Send activation request to licencing@ragdolldynamics.com
-3. Activate with activation response
+1. Generate an activation request from the computer running the licence server
+2. Go to https://ragdolldynamics.com/offline
+3. Activate using the response from the same computer
+
+Here's how to generate the request.
 
 ```bash
 ./turbofloatserver -areq="~/ActivationRequest.xml" -a="YOUR-SERIAL-NUMBER" 
-./turbofloatserver -aresp="~/ActivationResponse.xml" -a
 ```
 
-!!! hint "Coming up"
-    This will be automated in a later release, for activation/deactivation through a Web UI.
+And here's how to apply the response.
 
-<!-- 
-
-Author note.
-
-1. If an online activation was done before attempting to do it offline, you might need to manually deactivate it before sending an activation response.
-2. The end-user might need to send a request from the same machine/vm as they apply the response to. Actually, probably most definitely this must be the case.
-
--->
+```bash
+./turbofloatserver -aresp="~/ActivationResponse.xml" -a
+```
 
 <br>
 

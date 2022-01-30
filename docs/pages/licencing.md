@@ -31,7 +31,7 @@ Once activated without a `Product Key`, Ragdoll enters "Apprentice Mode", and is
 - Ragdoll Apprentice cannot be used in the same pipeline as commercial versions of Ragdoll
 - Ragdoll Apprentice uses its own file format for Maya scenes
 
-See the [Ragdoll EULA](https://files.ragdolldynamics.com/api/public/dl/ZmfQearE/EULA%20-%20Ragdoll%20Dynamics.pdf) for details.
+See the [Ragdoll EULA](https://ragdolldynamics.com/eula) for details.
 
 <br>
 
@@ -209,69 +209,35 @@ data = licence.data()
 
 ## Offline Activation
 
-Haven't got no internet?
+Lifetime licences may be activated offline.
 
-No problem, here's what you do.
+!!! info "What about monthly licences?"
+    These require an internet connection. Floating licences require internet only for the licence server itself, meaning your workstations can remain disconnected and protected. Node-locked licences require internet on the machine being activated.
 
-1. Generate an **"activation request"** file
-2. Send the contents of this file, or the file itself to licencing@ragdolldynamics.com
-3. Receive a **"activation response"** file
-4. Activate using this file
+1. Launch the Offline Activation Wizard
+2. Copy/paste the activation request into https://ragdolldynamics.com/offline
+3. Click Activate
+4. Copy/paste the activation *response* into the Wizard
+5. Profit
 
-It requires pasting some *Python* commands into the **Maya Script Editor**.
-
-**1. Generate Request**
-
-```py
-from maya import cmds
-from ragdoll import licence
-key = "YOUR-VERY-LONG-KEY-HERE"
-fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=0)
-licence.activation_request_to_file(key, fname[0]) if fname else cmds.warning("Cancelled")
-```
-
-**2. Email Us**
-
-Either send the file, or the contents of the file, to licencing@ragdolldynamics.com.
-
-**3. Receive a response**
-
-We'll abrakadabra this file before you can say [Taumatawhakatangi­hangakoauauotamatea­turipukakapikimaunga­horonukupokaiwhen­uakitanatahu](https://en.wikipedia.org/wiki/Taumatawhakatangi%C2%ADhangakoauauotamatea%C2%ADturipukakapikimaunga%C2%ADhoronukupokaiwhen%C2%ADuakitanatahu).
-
-**4. Activate**
-
-Once you've got a response, activate your licence like this.
-
-```py
-from maya import cmds
-from ragdoll import licence
-fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=1)
-licence.activate_from_file(fname[0]) if fname else cmds.warning("Cancelled")
-```
+https://user-images.githubusercontent.com/2152766/151695125-ded8c7f2-077d-4db6-8ea9-499a30f7c5c3.mp4 controls
 
 <br>
 
 ## Offline Deactivation
 
-Licences are node-locked (floating licences coming soon), which means that if you need to move a licence from one machine to another you can do so by *deactivating* an activated licence, and then activating it elsewhere.
+Similar to Activation, Deactivation happens via the Offline Deactivation Wizard.
 
-The process is similar to activation.
+1. Launch the Offline Deactivation Wizard
+2. Copy/paste the deactivation request into https://ragdolldynamics.com/offline
+3. Click Deactivate
+4. Profit
 
-**Generate Request**
+!!! warning "Caution"
+    Once you press `Deactivate`, then from Maya's perspective your licence will be deactivated. However, the licence server will not know of your deactivation until you paste the request into online deactivation page.
 
-```py
-from maya import cmds
-from ragdoll import licence
-fname = cmds.fileDialog2(fileFilter="*.xml", dialogStyle=1, fileMode=0)
-licence.deactivation_request_to_file(fname)
-```
+    This means that it is possible to deactivate a licence but forget to tell the licence server about it, which means you will not be able to reactivate it elsewhere.
 
-**Email Us**
+    If this happens, reach out to support@ragdolldynamics.com and we may manually deactivate it for you.
 
-Send this file to licencing@ragdolldynamics.com. Once we have confirmed receipt of this file, you will be able to re-activate Ragdoll on another machine.
-
-<br>
-
-## Offline Licence Roadmap
-
-Apologies for the tedious nature of offline licence management at the moment! Not long from now, you will be able to manage your licences *online* without sending any emails.
+https://user-images.githubusercontent.com/2152766/151695127-ad177ba8-f7e7-425a-99df-6aa541c81b8e.mp4 controls

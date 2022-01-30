@@ -136,6 +136,10 @@ def default(arg):
     return __.optionvars[arg].get("default")
 
 
+def items(arg):
+    return __.optionvars[arg].get("items", [])[:]
+
+
 def install(reset=False):
     """Ensure default optionvars exists
 

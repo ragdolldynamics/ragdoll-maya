@@ -1486,6 +1486,10 @@ class Separator(QArgument):
 
     """
 
+    def __init__(self, name, **kwargs):
+        super(Separator, self).__init__(name, **kwargs)
+        self._data["editable"] = False
+
     def create(self):
         widget = _with_entered_exited(QtWidgets.QWidget, self)()
 

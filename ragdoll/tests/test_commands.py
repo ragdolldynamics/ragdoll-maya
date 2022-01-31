@@ -72,3 +72,19 @@ def test_delete_group_deletes_markers():
     cmdx.delete(group)
 
     assert_equals(len(cmdx.ls(type="rdMarker")), 0)
+
+
+def test_group_with_existing():
+    _new()
+
+    a = cmdx.create_node("transform", name="a")
+    b = cmdx.create_node("transform", name="b", parent=a)
+    c = cmdx.create_node("transform", name="c", parent=b)
+
+    solver = commands.create_solver()
+    group = commands.create_group(solver)
+    commands.assign_markers([a, b], solver, group)
+
+    marker = commands.assign_marker(c, solver, group)
+
+    assert_equals(marker["startState"].output(), group)

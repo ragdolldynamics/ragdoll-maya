@@ -1392,21 +1392,40 @@ def assign_marker(selection=None, **opts):
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
     }, **(opts or {}))
 
+    _update_solver_options()
+    _update_group_options()
+
     solver = None
-    if opts["solver"] != 0:
+    solver_items = options.items("markersAssignSolver")
+    NewSolver = len(solver_items) - 1
+
+    if opts["solver"] != NewSolver:
 
         # The UI may have remained open, providing the user with
         # out-of-date options that may no longer exist.
         try:
-            items = options.items("markersAssignSolver")
-            solver = items[opts["solver"]]
+            solver = solver_items[opts["solver"]]
             solver = cmdx.encode(solver)
 
-        except IndexError:
+        except (cmdx.ExistError, IndexError):
             options.write("markersAssignSolver", 0)
 
     if not solver:
-        solver = _find_current_solver(opts["createGround"])
+        if not validate_evaluation_mode():
+            return
+
+        if not validate_cached_playback():
+            return
+
+        if not validate_playbackspeed():
+            return
+
+        solver = commands.create_solver(opts={
+            "frameskipMethod": options.read("frameskipMethod")
+        })
+
+        if opts["createGround"]:
+            commands.create_ground(solver)
 
     if not solver:
         return
@@ -1430,6 +1449,13 @@ def assign_marker(selection=None, **opts):
 
     if opts["group"] == 2:  # New group
         group = True
+
+    if opts["group"] > 2:
+        try:
+            items = options.items("markersAssignGroup")
+            group = cmdx.encode(items[opts["group"]])
+        except (cmdx.ExistError, IndexError):
+            group = None
 
     markers = []
 

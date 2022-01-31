@@ -1,4 +1,7 @@
-from nose.tools import assert_almost_equals
+from nose.tools import (
+    assert_almost_equals,
+    assert_equals,
+)
 from ragdoll.vendor import cmdx
 from ragdoll import interactive as ri
 from maya import cmds
@@ -315,3 +318,66 @@ def test_locked_rotate_channels():
 
     # The default limit around the remaining unlocked axis is 45 degrees
     assert_almost_equals(b["rz", cmdx.Degrees].read(), -45.0, 0)
+
+
+def test_group_existing_interactive():
+    _new()
+
+    a = cmds.createNode("transform", name="a")
+    b = cmds.createNode("transform", name="b", parent=a)
+    c = cmds.createNode("transform", name="c", parent=b)
+
+    cmds.select((a, b))
+
+    # Group created
+    ri.assign_marker()
+
+    assert_equals(len(cmds.ls(type="rdGroup")), 1)
+
+    cmds.select(c)
+    ri.assign_marker(group=3)  # Third index is an existing group
+
+    # No new group was created
+    assert_equals(len(cmds.ls(type="rdGroup")), 1)
+
+
+def test_solver_existing_interactive():
+    _new()
+
+    a = cmds.createNode("transform", name="a")
+    b = cmds.createNode("transform", name="b", parent=a)
+    c = cmds.createNode("transform", name="c", parent=b)
+
+    cmds.select((a, b))
+
+    # Group created
+    ri.assign_marker()
+
+    assert_equals(len(cmds.ls(type="rdSolver")), 1)
+
+    cmds.select(c)
+    ri.assign_marker(solver=0)  # 0th index is the first existing solver
+
+    # No new group was created
+    assert_equals(len(cmds.ls(type="rdSolver")), 1)
+
+
+def test_solver_new_interactive():
+    _new()
+
+    a = cmds.createNode("transform", name="a")
+    b = cmds.createNode("transform", name="b", parent=a)
+    c = cmds.createNode("transform", name="c", parent=b)
+
+    cmds.select((a, b))
+
+    # Group created
+    ri.assign_marker()
+
+    assert_equals(len(cmds.ls(type="rdSolver")), 1)
+
+    cmds.select(c)
+    ri.assign_marker(solver=1)  # 1+ is each existing solver
+
+    # No new group was created
+    assert_equals(len(cmds.ls(type="rdSolver")), 2)

@@ -261,7 +261,7 @@ def assign_markers(transforms, solver, group=True, opts=None):
 
     if group:
         for marker in markers:
-            add_to_group(marker, group)
+            move_to_group(marker, group)
 
     toggle_channel_box_attributes(markers, opts={
         "materialAttributes": opts["materialInChannelBox"],
@@ -358,6 +358,47 @@ def create_lollipops(markers, opts=None):
 
     lollipops = []
 
+    any_attributes = (
+        opts["basicAttributes"] or
+        opts["advancedAttributes"] or
+        opts["group_parent"]
+    )
+
+    def add_attributes(marker, lol):
+        if opts["basicAttributes"] or opts["advancedAttributes"]:
+            proxy = internal.UserAttributes(
+                marker, lol, owner=marker)
+
+            if opts["basicAttributes"]:
+                proxy.add_divider("Marker")
+
+                for attr in basic_proxy_attributes:
+                    proxy.add(attr)
+
+            if opts["advancedAttributes"]:
+                proxy.add_divider("Advanced")
+
+                for attr in advanced_proxy_attributes:
+                    proxy.add(attr)
+
+            proxy.do_it()
+
+        if opts["groupAttributes"]:
+            if not marker["parentMarker"].connected:
+                group = marker["startState"].output(type="rdGroup")
+
+                if group is not None:
+                    proxy = internal.UserAttributes(
+                        group, lol, owner=group)
+                    proxy.add_divider("Group")
+
+                    for attr in group_proxy_attributes:
+                        # Avoid clashes with names on the marker
+                        name = attr[0].upper() + attr[1:]
+                        proxy.add(attr, long_name="group%s" % name)
+
+                    proxy.do_it()
+
     with cmdx.DagModifier() as mod:
         for marker in markers:
             transform = marker["src"].input()
@@ -409,44 +450,8 @@ def create_lollipops(markers, opts=None):
 
             lollipops += [lol]
 
-    any_attributes = (
-        opts["basicAttributes"] or
-        opts["advancedAttributes"] or
-        opts["group_parent"]
-    )
-
-    if any_attributes:
-        if opts["basicAttributes"] or opts["advancedAttributes"]:
-            proxy = internal.UserAttributes(marker, lol, owner=marker)
-
-            if opts["basicAttributes"]:
-                proxy.add_divider("Marker")
-
-                for attr in basic_proxy_attributes:
-                    proxy.add(attr)
-
-            if opts["basicAttributes"]:
-                proxy.add_divider("Advanced")
-
-                for attr in advanced_proxy_attributes:
-                    proxy.add(attr)
-
-            proxy.do_it()
-
-        if opts["groupAttributes"]:
-            if not marker["parentMarker"].connected:
-                group = marker["startState"].output(type="rdGroup")
-
-                if group is not None:
-                    proxy = internal.UserAttributes(group, lol, owner=group)
-                    proxy.add_divider("Group")
-
-                    for attr in group_proxy_attributes:
-                        # Avoid clashes with names on the marker
-                        name = attr[0].upper() + attr[1:]
-                        proxy.add(attr, long_name="group%s" % name)
-
-                    proxy.do_it()
+            if any_attributes:
+                add_attributes(marker, lol)
 
     return lollipops
 
@@ -1654,12 +1659,12 @@ def _remove_membership(mod, marker):
     mod.do_it()
 
 
-def add_to_group(marker, group):
+def move_to_group(marker, group):
     with cmdx.DagModifier() as mod:
         _add_to_group(mod, marker, group)
 
 
-def add_to_solver(marker, solver):
+def move_to_solver(marker, solver):
     with cmdx.DagModifier() as mod:
         _add_to_solver(mod, marker, solver)
 

@@ -734,9 +734,6 @@ def install_menu():
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
 
-    item("groupMarkers", group_markers)
-    item("ungroupMarkers", ungroup_markers)
-
     divider("Transfer")
 
     item("recordMarkers", record_markers, record_markers_options)
@@ -759,6 +756,8 @@ def install_menu():
              create_fixed_constraint, label="Weld")
 
     with submenu("Edit", icon="kinematic.png"):
+
+        divider("Hierarchy")
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
@@ -768,6 +767,18 @@ def install_menu():
 
         item("unparentMarker", unparent_marker, label="Unparent")
         item("untargetMarker", untarget_marker, label="Untarget")
+
+        divider("Membership")
+
+        item("groupMarkers", group_markers)
+        item("ungroupMarkers", ungroup_markers)
+        item("moveToGroup", move_to_group)
+
+        divider()
+
+        item("mergeSolvers")
+        item("extractFromSolver")
+        item("moveToSolver")
 
     with submenu("Cache", icon="bake.png"):
         item("cacheSolver", cache_all, label="Cache")
@@ -790,7 +801,7 @@ def install_menu():
 
         divider()
 
-        item("createLollipop", create_lollipops)
+        item("createLollipop", create_lollipops, create_lollipops_options)
 
         divider()
 
@@ -1379,10 +1390,11 @@ def assign_marker(selection=None, **opts):
         )
 
     opts = dict({
+        "connect": False,
+
         "createGround": _opt("markersCreateGround", opts),
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
-        "connect": False,
         "group": _opt("markersAssignGroup", opts),
         "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
@@ -1390,6 +1402,12 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
+
+        # Lollipop options
+        "basicAttributes": _opt("lollipopBasicAttributes", opts),
+        "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
+        "groupAttributes": _opt("lollipopGroupAttributes", opts),
+
     }, **(opts or {}))
 
     _update_solver_options()
@@ -1456,6 +1474,7 @@ def assign_marker(selection=None, **opts):
             group = cmdx.encode(items[opts["group"]])
         except (cmdx.ExistError, IndexError):
             group = None
+            options.write("markersAssignGroup", 1)
 
     markers = []
 
@@ -1473,7 +1492,11 @@ def assign_marker(selection=None, **opts):
         raise i__.UserWarning("Already assigned", str(e))
 
     if opts["createLollipop"]:
-        commands.create_lollipops(markers)
+        commands.create_lollipops(markers, opts={
+            "basicAttributes": opts["basicAttributes"],
+            "advancedAttributes": opts["advancedAttributes"],
+            "groupAttributes": opts["groupAttributes"],
+        })
 
     if opts["createObjectSet"]:
         _add_to_objset(markers)
@@ -1515,6 +1538,35 @@ def group_markers(selection=None, **opts):
         )
 
     commands.group_markers(markers)
+
+    return True
+
+
+@with_exception_handling
+@i__.with_undo_chunk
+def move_to_group(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "No markers found",
+            "Select one or more markers to group."
+        )
+
+    groups = _filtered_selection("rdGroup", selection)
+
+    if len(groups) < 1:
+        raise i__.UserWarning(
+            "No group found",
+            "Select some markers and a group to add things together."
+        )
+
+    if len(groups) > 1:
+        log.warning("Multiple groups selected, using %s" % groups[0])
+
+    group = groups[0]
+    for marker in markers:
+        commands.move_to_group(marker, group)
 
     return True
 
@@ -2198,6 +2250,12 @@ def snap_to_sim(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_lollipops(selection=None, **opts):
+    opts = dict({
+        "basicAttributes": _opt("lollipopBasicAttributes", opts),
+        "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
+        "groupAttributes": _opt("lollipopGroupAttributes", opts),
+    }, **(opts or {}))
+
     selection = selection or cmdx.sl()
     markers = set()
 
@@ -2214,7 +2272,7 @@ def create_lollipops(selection=None, **opts):
             "Select one or more markers to assign a lollipop to."
         )
 
-    commands.create_lollipops(markers)
+    commands.create_lollipops(markers, opts=opts)
 
     return kSuccess
 
@@ -2762,6 +2820,10 @@ def replace_marker_mesh_options(*args):
 
 def extract_markers_options(*args):
     return _Window("extractMarkers", extract_markers)
+
+
+def create_lollipops_options(*args):
+    return _Window("createLollipop", create_lollipops)
 
 
 def _update_solver_options():

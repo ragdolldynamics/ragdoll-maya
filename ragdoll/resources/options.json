@@ -787,6 +787,30 @@
         "help": "Add an extra 'lollipop' control to marked nodes, to more easily find relevant marker attributes."
     },
 
+    "lollipopBasicAttributes": {
+        "name": "lollipopBasicAttributes",
+        "label": "Basic Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward basic attributes from marker to the channel box of the Lollipop ."
+    },
+
+    "lollipopAdvancedAttributes": {
+        "name": "lollipopAdvancedAttributes",
+        "label": "Advanced Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward advanced attributes from marker to the channel box of the Lollipop ."
+    },
+
+    "lollipopGroupAttributes": {
+        "name": "lollipopGroupAttributes",
+        "label": "Group Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Forward group attributes to the root lollipop."
+    },
+
     "markersIgnoreJoints": {
         "name": "markersIgnoreJoints",
         "label": "Ignore Joints",
@@ -858,9 +882,9 @@
         "name": "markersAssignGroup",
         "label": "Group",
         "type": "Enum",
-        "items": ["No Group", "Append to Selected", "Create New Group"],
+        "items": ["No Group", "Add to Existing", "Create New Group"],
         "default": 1,
-        "help": "Add newly created markers to this group."
+        "help": "Add newly created markers to this group.<br>Add to Existing will try and find the group of the first selected marker and include the newly assigned markers to it as well."
     },
 
     "markersExtractAndAttach": {
@@ -1139,7 +1163,7 @@
     "useProxyAttributes": {
         "name": "useProxyAttributes",
         "type": "Boolean",
-        "default": false,
+        "default": true,
         "help": "Use native Maya proxy attributes for lollipop attributes. These make the Graph Editor less nice to work with, but enables multiple lollipops to reference the same Marker."
     },
     "useUIDrawManager": {

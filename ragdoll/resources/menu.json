@@ -664,8 +664,7 @@
 
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
-            "markersChannelBoxLimit",
-            "useProxyAttributes"
+            "markersChannelBoxLimit"
         ]
     },
 
@@ -720,6 +719,38 @@
         "summary": "Ungroup the selected markers",
         "description": "Remove markers from their group, making them standalone.",
         "options": []
+    },
+
+    "moveToGroup": {
+        "label": "Move to Group",
+        "icon": "addtogroup.png",
+        "summary": "Move selected markers to group",
+        "description": "Move markers from whatever group they are currently in, if any, into the selected group.",
+        "options": []
+    },
+
+    "mergeSolvers": {
+        "enable": false,
+        "label": "Merge Solvers",
+        "icon": "combine.png",
+        "summary": "Merge two or more solvers into one.",
+        "description": "Move the contents of two or more solvers into one shared solver, where they can interact with each other."
+    },
+
+    "extractFromSolver": {
+        "enable": false,
+        "label": "Extract Markers",
+        "icon": "extract.png",
+        "summary": "Extract markers into new solver.",
+        "description": "Move markers *out* of one solver and into a new solver, where they can run in parallel with the original, without interacting with each other."
+    },
+
+    "moveToSolver": {
+        "enable": false,
+        "label": "Move Markers",
+        "icon": "move.png",
+        "summary": "Move markers into existing solver.",
+        "description": "Move markers from one solver into another, where they can interact with other markers in the destination solver."
     },
 
     "assignConstraint": {
@@ -961,6 +992,10 @@
         "summary": "Create a new lollipop for the selected marker.",
         "description": "This creates a new lollipop for the marker such that it becomes easier to find in the viewport and Channel Box.",
         "options": [
+            "lollipopBasicAttributes",
+            "lollipopAdvancedAttributes",
+            "lollipopGroupAttributes",
+            "useProxyAttributes"
         ]
     },
 

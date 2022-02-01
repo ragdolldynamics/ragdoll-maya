@@ -1453,7 +1453,7 @@ def assign_marker(selection=None, **opts):
     if opts["group"] == 0:  # No group
         pass
 
-    if opts["group"] == 1:  # Append to existing
+    if opts["group"] == 1 and len(selection) > 1:  # Append to existing
         root_transform = selection[0]
         root_marker = root_transform["message"].output(type="rdMarker")
 

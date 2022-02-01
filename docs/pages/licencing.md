@@ -211,7 +211,7 @@ data = licence.data()
 
 Lifetime licences may be activated offline.
 
-!!! info "What about monthly licences?"
+??? info "What about monthly licences?"
     These require an internet connection. Floating licences require internet only for the licence server itself, meaning your workstations can remain disconnected and protected. Node-locked licences require internet on the machine being activated.
 
 1. Launch the Offline Activation Wizard

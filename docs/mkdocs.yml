@@ -151,4 +151,3 @@ plugins:
           "tutorials/rally_car/": "/legacy/rally_car/"
           "tutorials/dynamic_tail/": "/legacy/dynamic_tail/"
           "releases/": "/news/"
-          "releases/2022.01.21": "/releases/2022.01.31"

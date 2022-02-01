@@ -257,7 +257,9 @@ def assign_markers(transforms, solver, group=True, opts=None):
     if group is True:
         root_transform = transforms[0]
         name = root_transform.name(namespace=False) + "_rGroup"
-        group = create_group(solver, name)
+        group = create_group(solver, name, opts={
+            "selfCollide": not opts["connect"]
+        })
 
     if group:
         for marker in markers:
@@ -1613,9 +1615,18 @@ def _take_ownership(mod, rdnode, node):
     mod.connect(node["message"], plug[index])
 
 
-def create_group(solver, name=None):
+def create_group(solver, name=None, opts=None):
+    opts = dict({
+        "selfCollide": False,
+    }, **(opts or {}))
+
     with cmdx.DagModifier() as mod:
-        return _create_group(mod, name, solver)
+        group = _create_group(mod, name, solver)
+
+        for key, value in opts.items():
+            mod.set_attr(group[key], value)
+
+        return group
 
 
 def _create_group(mod, name, solver):

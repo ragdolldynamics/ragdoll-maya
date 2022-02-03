@@ -60,7 +60,8 @@ def create(typ, mod, name, parent=None):
 
     elif typ in ("rdDistanceConstraint",
                  "rdFixedConstraint",
-                 "rdPinConstraint"):
+                 "rdPinConstraint",
+                 "rdTarget"):
         name = internal.unique_name(name)
         node = mod.create_node(typ, name=name, parent=parent)
         mod.set_attr(node["version"], internal.version())

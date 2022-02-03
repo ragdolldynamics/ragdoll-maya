@@ -909,6 +909,34 @@ def create_pin_constraint(child, opts=None):
     return con
 
 
+@internal.with_undo_chunk
+def create_target(marker, opts=None):
+    assert marker.isA("rdMarker"), "%s was not a marker" % marker.type()
+
+    solver = _find_solver(marker)
+    assert solver and solver.isA("rdSolver"), (
+        "%s was not part of a solver" % marker
+    )
+
+    source_transform = marker["src"].input(type=cmdx.kDagNode)
+    source_name = source_transform.name(namespace=False)
+
+    name = internal.unique_name("%s_rTarget" % source_name)
+    shape_name = internal.shape_name(name)
+
+    with cmdx.DagModifier() as mod:
+        transform = mod.create_node("transform", name=name)
+        trg = nodes.create("rdTarget",
+                           mod, shape_name, parent=transform)
+
+        mod.connect(marker["ragdollId"], trg["marker"])
+
+        _take_ownership(mod, trg, transform)
+        _add_constraint(mod, trg, solver)
+
+    return trg
+
+
 def reset_constraint_frames(mod, marker, **opts):
     """Reset constraint frames
 

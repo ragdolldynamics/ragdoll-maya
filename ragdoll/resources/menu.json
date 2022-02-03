@@ -1045,6 +1045,16 @@
 
     },
 
+    "createTarget": {
+        "label": "Target",
+        "icon": "control.png",
+        "summary": "Create a new target",
+        "description": "",
+        "options": []
+    },
+
+
+
     "#": "---------",
     "#": " Logging ",
     "#": "---------",

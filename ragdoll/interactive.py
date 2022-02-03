@@ -755,6 +755,9 @@ def install_menu():
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
+        if c.RAGDOLL_DEVELOPER:
+            item("createTarget", create_target)
+
     with submenu("Edit", icon="kinematic.png"):
 
         divider("Hierarchy")
@@ -1681,6 +1684,27 @@ def create_pin_constraint(selection=None, **opts):
         cons += [con.path()]
 
     cmds.select(cons)
+
+    return True
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def create_target(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if len(markers) < 1:
+        raise i__.UserWarning(
+            "No marker found",
+            "Select one or more markers to assign targets to"
+        )
+
+    targets = []
+    for marker in markers:
+        target = commands.create_target(marker)
+        targets += [target.parent().path()]
+
+    cmds.select(targets)
 
     return True
 

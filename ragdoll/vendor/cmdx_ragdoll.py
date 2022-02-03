@@ -4569,7 +4569,7 @@ class EulerRotation(om.MEulerRotation):
 Euler = EulerRotation
 
 
-def NurbsCurveData(points, degree=1, form=om1.MFnNurbsCurve.kOpen):
+def NurbsCurveData(points, degree=1, form=om.MFnNurbsCurve.kOpen):
     """Tuple of points to MObject suitable for nurbsCurve-typed data
 
     Arguments:
@@ -4596,13 +4596,13 @@ def NurbsCurveData(points, degree=1, form=om1.MFnNurbsCurve.kOpen):
 
     degree = min(3, max(1, degree))
 
-    cvs = om1.MPointArray()
-    curveFn = om1.MFnNurbsCurve()
-    data = om1.MFnNurbsCurveData()
+    cvs = om.MPointArray()
+    curveFn = om.MFnNurbsCurve()
+    data = om.MFnNurbsCurveData()
     mobj = data.create()
 
     for point in points:
-        cvs.append(om1.MPoint(*point))
+        cvs.append(om.MPoint(*point))
 
     curveFn.createWithEditPoints(cvs,
                                  degree,
@@ -5095,6 +5095,9 @@ def _python_to_mod(value, plug, mod):
     elif isinstance(value, om.MMatrix):
         obj = om.MFnMatrixData().create(value)
         mod.newPlugValue(mplug, obj)
+
+    elif isinstance(value, om.MObject):
+        mod.newPlugValue(mplug, value)
 
     elif isinstance(value, om.MEulerRotation):
         for index, value in enumerate(value):

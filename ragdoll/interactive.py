@@ -788,6 +788,18 @@ def install_menu():
         item("linkSolver", link_solver)
         item("unlinkSolver", unlink_solver)
 
+    with submenu("Fields", icon="force.png"):
+        item("airField", air_field)
+        item("dragField", drag_field)
+        item("gravityField", gravity_field)
+        item("newtonField", newton_field)
+        item("radialField", radial_field)
+        item("turbulenceField", turbulence_field)
+        item("uniformField", uniform_field)
+        item("vortexField", vortex_field)
+        item("volumeAxis", volume_axis)
+        item("volumeCurve", volume_curve)
+
     divider("Utilities")
 
     with submenu("Utilities", icon="magnet.png"):
@@ -2425,6 +2437,126 @@ def unlink_solver(selection=None, **opts):
     cmds.select(cmds.ls(selection=True))
 
     return kSuccess
+
+
+def air_field(selection=None, **opts):
+    _field("airField", opts={
+        "directionX": 1.0,
+        "speed": 0.1,
+        "magnitude": 100,
+    })
+    return kSuccess
+
+
+def drag_field(selection=None, **opts):
+    _field("dragField", opts={
+        "magnitude": 100,
+    })
+    return kSuccess
+
+
+def gravity_field(selection=None, **opts):
+    up = cmdx.up_axis()
+
+    _field("gravityField", {
+        "directionY": up.y,
+        "directionZ": up.z,
+        "magnitude": -98.2,
+    })
+
+    return kSuccess
+
+
+def newton_field(selection=None, **opts):
+    _field("newtonField", opts={
+        "magnitude": 100.0,
+    })
+
+    return kSuccess
+
+
+def radial_field(selection=None, **opts):
+    _field("radialField", opts={
+        "magnitude": 10.0,
+    })
+
+    return kSuccess
+
+
+def turbulence_field(selection=None, **opts):
+    _field("turbulenceField", opts={
+        "magnitude": 10.0,
+    })
+
+    return kSuccess
+
+
+def uniform_field(selection=None, **opts):
+    _field("uniformField", opts={
+        "directionX": 1.0,
+        "magnitude": 100.0,
+    })
+
+    return kSuccess
+
+
+def vortex_field(selection=None, **opts):
+    up = cmdx.up_axis()
+
+    _field("vortexField", opts={
+        "axisY": -up.y,
+        "axisZ": -up.z,
+        "magnitude": 100.0,
+        "attenuation": 1.0,
+    })
+
+    return kSuccess
+
+
+def volume_axis(selection=None, **opts):
+    _field("volumeAxisField", opts={
+        "magnitude": 10.0,
+        "volumeShape": 1,  # Cube
+    })
+
+    return kSuccess
+
+def volume_curve(selection=None, **opts):
+    field = _field("volumeAxisField", opts={
+        "volumeShape": 7,  # Curve
+        "magnitude": 10,
+        "sectionRadius": 2,
+        "awayFromAxis": 0,
+        "alongAxis": 1,
+    })
+
+    # Generate the default curve
+    with cmdx.DagModifier() as mod:
+        name = i__.unique_name("volumeAxisFieldCurve")
+        shape_name = i__.shape_name(name)
+        parent = mod.create_node("transform", name=name)
+        shape = mod.create_node("nurbsCurve", name=shape_name, parent=parent)
+        mod.set_attr(shape["cached"], cmdx.NurbsCurveData(
+            points=((0, 0, 0), (1, 1, 0), (0, 2, 0)),
+            degree=2
+        ))
+
+        mod.connect(shape["worldSpace"][0], field["inputCurve"])
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def _field(typ, opts=None):
+    field = commands.create_field(typ, opts)
+
+    for solver in cmdx.ls(type="rdSolver"):
+        commands.affect_solver(field, solver)
+
+    cmds.select(str(field))
+
+    return field
 
 
 @contextlib.contextmanager

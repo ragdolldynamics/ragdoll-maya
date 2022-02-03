@@ -1046,6 +1046,90 @@
     },
 
     "#": "---------",
+    "#": " Fields ",
+    "#": "---------",
+
+    "airField": {
+        "label": "Air",
+        "icon": "turbulence.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "dragField": {
+        "label": "Drag",
+        "icon": "transfer_attributes.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "gravityField": {
+        "label": "Gravity",
+        "icon": "com.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "newtonField": {
+        "label": "Newton",
+        "icon": "freeze.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "radialField": {
+        "label": "Radial",
+        "icon": "assign.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "turbulenceField": {
+        "label": "Turbulence",
+        "icon": "chaos.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "uniformField": {
+        "label": "Uniform",
+        "icon": "uniformforce.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "vortexField": {
+        "label": "Vortex",
+        "icon": "swirl.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "volumeAxis": {
+        "label": "Volume Axis",
+        "icon": "box.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "volumeCurve": {
+        "label": "Volume Curve",
+        "icon": "trajectory2.png",
+        "summary": "Create a field emulating air.",
+        "description": "It's a Maya Air field",
+        "options": []
+    },
+
+    "#": "---------",
     "#": " Logging ",
     "#": "---------",
 

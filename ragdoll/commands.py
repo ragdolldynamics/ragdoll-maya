@@ -789,6 +789,11 @@ def create_distance_constraint(parent, child, opts=None):
         _take_ownership(mod, con, transform)
         _add_constraint(mod, con, solver)
 
+        # Constraints were originally created without taking scale
+        # into account, this attribute exists only for backwards
+        # compatibility and have no other reason for ever being False
+        mod.set_attr(con["useScale"], True)
+
     return con
 
 
@@ -1649,6 +1654,30 @@ def _create_group(mod, name, solver):
     _take_ownership(mod, group, group_parent)
 
     return group
+
+
+def create_field(typ, opts=None):
+    opts = opts or {}
+
+    with cmdx.DagModifier() as mod:
+        field = mod.create_node(typ)
+
+        if field.has_attr("currentTime"):
+            time1 = cmdx.encode("time1")
+            mod.connect(time1["outTime"], field["currentTime"])
+
+        for attr, value in opts.items():
+            mod.set_attr(field[attr], value)
+
+    cmds.select(str(field))
+
+    return field
+
+
+def affect_solver(field, solver):
+    with cmdx.DagModifier() as mod:
+        index = solver["inputFields"].next_available_index()
+        mod.connect(field["message"], solver["inputFields"][index])
 
 
 def _remove_membership(mod, marker):

@@ -71,7 +71,8 @@ global proc AErdMarkerTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "asleep";
-            editorTemplate -addControl "disableGravity";
+            editorTemplate -addControl "ignoreGravity";
+            editorTemplate -addControl "ignoreFields";
             editorTemplate -addControl "densityCustom";
             editorTemplate -addControl "angularMass";
             editorTemplate -addControl "centerOfMass";
@@ -106,4 +107,5 @@ global proc AErdMarkerTemplate(string $nodeName) {
     editorTemplate -suppress "caching";
     editorTemplate -suppress "nodeState";
     editorTemplate -suppress "frozen";
+    editorTemplate -suppress "disableGravity";
 }

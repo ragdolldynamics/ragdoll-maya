@@ -800,6 +800,10 @@ def install_menu():
         item("volumeAxis", volume_axis)
         item("volumeCurve", volume_curve)
 
+        divider()
+
+        item("useSelectedAsSource", use_selected_as_source)
+
     divider("Utilities")
 
     with submenu("Utilities", icon="magnet.png"):
@@ -2521,6 +2525,7 @@ def volume_axis(selection=None, **opts):
 
     return kSuccess
 
+
 def volume_curve(selection=None, **opts):
     field = _field("volumeAxisField", opts={
         "volumeShape": 7,  # Curve
@@ -2555,6 +2560,38 @@ def _field(typ, opts=None):
         commands.affect_solver(field, solver)
 
     cmds.select(str(field))
+
+    return field
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def use_selected_as_source(selection=None, **opts):
+    markers = markers_from_selection()
+
+    if len(markers) < 1:
+        raise i__.UserWarning(
+            "No marker selected",
+            "Select both a marker and a field"
+        )
+
+    if len(markers) > 1:
+        log.warning("Multiple markers selected, using %s" % markers[0])
+
+    fields = selection or cmdx.sl(type="field", selection=True)
+
+    if len(fields) < 1:
+        raise i__.UserWarning(
+            "No field selected",
+            "Select both a marker and a field"
+        )
+
+    marker = markers[0]
+    with cmdx.DGModifier() as mod:
+        for field in fields:
+            decompose = mod.create_node("decomposeMatrix")
+            mod.connect(marker["outputMatrix"], decompose["inputMatrix"])
+            mod.connect(decompose["outputTranslate"], field["translate"])
 
     return field
 

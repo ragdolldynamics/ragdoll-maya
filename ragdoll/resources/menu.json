@@ -1129,6 +1129,14 @@
         "options": []
     },
 
+    "useSelectedAsSource": {
+        "label": "Use Selected as Source",
+        "icon": "source.png",
+        "summary": "Emit forces the selected Marker.",
+        "description": "Connect the output position of a marker for use as origin of the force(s) emitted by the selected field.",
+        "options": []
+    },
+
     "#": "---------",
     "#": " Logging ",
     "#": "---------",

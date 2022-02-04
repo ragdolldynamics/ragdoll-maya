@@ -34,7 +34,7 @@ nav:
     - Videos: tutorials/videos.md
     - Manikin: tutorials/manikin.md
     - Full Ragdoll: tutorials/manikin_ragdoll.md
-    - IK: tutorials/manikin_ik.md
+    - Inverse Kinematics: tutorials/manikin_ik.md
     - Mocap Chap: tutorials/mocap_chap.md
     - Rookie Wasp: tutorials/rookie_wasp.md
   - Download: download.md

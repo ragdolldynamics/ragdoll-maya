@@ -1131,9 +1131,17 @@
 
     "useSelectedAsSource": {
         "label": "Use Selected as Source",
-        "icon": "source.png",
-        "summary": "Emit forces the selected Marker.",
+        "icon": "source2.png",
+        "summary": "Emit forces the using selected Marker.",
         "description": "Connect the output position of a marker for use as origin of the force(s) emitted by the selected field.",
+        "options": []
+    },
+
+    "disconnectSource": {
+        "label": "Disconnect Source",
+        "icon": "unsource.png",
+        "summary": "Stop using a marker as source of the selected field.",
+        "description": "Disonnect the output position of a marker for use as origin of the force(s) emitted by the selected field.",
         "options": []
     },
 

@@ -803,6 +803,7 @@ def install_menu():
         divider()
 
         item("useSelectedAsSource", use_selected_as_source)
+        item("disconnectSource", disconnect_source)
 
     divider("Utilities")
 
@@ -2596,6 +2597,27 @@ def use_selected_as_source(selection=None, **opts):
             commands._take_ownership(mod, marker, decompose)
 
     return field
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def disconnect_source(selection=None, **opts):
+    fields = selection or cmdx.sl(type="field", selection=True)
+
+    if len(fields) < 1:
+        raise i__.UserWarning(
+            "No field selected",
+            "Select a field to disconnect a source from"
+        )
+
+    with cmdx.DGModifier() as mod:
+        for field in fields:
+            decompose = field["translate"].input(type="decomposeMatrix")
+
+            if not decompose:
+                continue
+
+            mod.delete_node(decompose)
 
 
 @contextlib.contextmanager

@@ -87,9 +87,11 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "wakeCounter";
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
-            editorTemplate -addControl "limitAutoOrient";
-            editorTemplate -addControl "offsetMatrix";
+            editorTemplate -addControl "fieldSeed";
             editorTemplate -addControl "limitLinearMotion";
+            editorTemplate -addControl "limitAutoOrient";
+
+            editorTemplate -addControl "offsetMatrix";
             editorTemplate -beginLayout "Constraint Frames" -collapse true;
                 editorTemplate -addControl "parentFrame";
                 editorTemplate -addControl "childFrame";

@@ -2593,6 +2593,8 @@ def use_selected_as_source(selection=None, **opts):
             mod.connect(marker["outputMatrix"], decompose["inputMatrix"])
             mod.connect(decompose["outputTranslate"], field["translate"])
 
+            commands._take_ownership(mod, marker, decompose)
+
     return field
 
 

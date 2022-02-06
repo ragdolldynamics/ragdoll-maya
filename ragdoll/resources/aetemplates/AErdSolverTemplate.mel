@@ -53,6 +53,8 @@ global proc AErdSolverTemplate(string $nodeName) {
             // editorTemplate -addControl "enableEnhancedFriction";
             // editorTemplate -label "Continuous Collision Detection" -addControl "enableCCD";
             editorTemplate -addControl "bounceThresholdVelocity";
+            editorTemplate -addControl "maxLinearDriveForce";
+            editorTemplate -addControl "maxAngularDriveForce";
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "threadCount";

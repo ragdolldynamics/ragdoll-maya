@@ -1719,7 +1719,7 @@ class Enum(QArgument):
         if initial is None:
             initial = self["default"]
 
-        if initial is not None and initial < len(items):
+        if initial is not None:
             if isinstance(initial, int):
                 index = initial
                 index = 0 if index > len(items) else index

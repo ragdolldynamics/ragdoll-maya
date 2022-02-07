@@ -52,6 +52,9 @@ def create(typ, mod, name, parent=None):
         # Avoid markers getting too excited
         mod.set_attr(node["maxDepenetrationVelocity"], 20.0)
 
+        # This used to be the default
+        mod.set_attr(node["capsuleLengthAlongY"], False)
+
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)
 

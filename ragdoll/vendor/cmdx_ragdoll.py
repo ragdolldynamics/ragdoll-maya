@@ -4245,6 +4245,12 @@ class TransformationMatrix(om.MTransformationMatrix):
     def asMatrixInverse(self):  # type: () -> MatrixType
         return MatrixType(super(TransformationMatrix, self).asMatrixInverse())
 
+    def asScaleMatrix(self):  # type: () -> MatrixType
+        return MatrixType(super(TransformationMatrix, self).asScaleMatrix())
+
+    def asRotateMatrix(self):  # type: () -> MatrixType
+        return MatrixType(super(TransformationMatrix, self).asRotateMatrix())
+
     if ENABLE_PEP8:
         x_axis = xAxis
         y_axis = yAxis
@@ -4256,6 +4262,8 @@ class TransformationMatrix(om.MTransformationMatrix):
         set_scale = setScale
         as_matrix = asMatrix
         as_matrix_inverse = asMatrixInverse
+        as_scale_matrix = asScaleMatrix
+        as_rotate_matrix = asRotateMatrix
 
 
 class MatrixType(om.MMatrix):

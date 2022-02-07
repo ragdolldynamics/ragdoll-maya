@@ -265,7 +265,7 @@ def test_negative_non_uniform_scale():
         b = mod.create_node("transform", name="b", parent=a)
         c = mod.create_node("transform", name="c", parent=b)
 
-        mod.set_attr(a["scaleX"], -2.0)
+        mod.set_attr(a["scaleX"], -1.0)
         mod.set_attr(a["ty"], 3.0)
         mod.set_attr(b["tx"], 1.0)
         mod.set_attr(c["tx"], 1.0)
@@ -278,12 +278,59 @@ def test_negative_non_uniform_scale():
     group["driveStiffness"] = 0.01
 
     cmdx.min_time(1)
-    cmdx.max_time(50)
+    cmdx.max_time(30)
 
     ri.record_markers()
 
-    cmdx.current_time(50)
-    assert_almost_equals(b["rz"].read(), cmdx.radians(-53.0), 1)
+    cmdx.current_time(30)
+    assert_almost_equals(b["rz", cmdx.Degrees].read(), -50.25, 1)
+
+
+def test_negative_non_uniform_scale2():
+    # A more special case, based on Roy's rig
+    _new()
+
+    with cmdx.DagModifier() as mod:
+        a = mod.create_node("transform", name="a")
+        b = mod.create_node("transform", name="b", parent=a)
+        c = mod.create_node("transform", name="c", parent=b)
+
+        mod.set_attr(a["tx"], 0.028)
+        mod.set_attr(a["ty"], 5.762)
+        mod.set_attr(a["tz"], 1.024)
+
+        mod.set_attr(b["scaleZ"], -1.0)
+        mod.set_attr(b["tx"], -0.19)
+        mod.set_attr(b["ty"], 0.942)
+        mod.set_attr(b["tz"], -0.334)
+        mod.set_attr(b["rx"], cmdx.radians(86.831))
+        mod.set_attr(b["ry"], cmdx.radians(15.163))
+        mod.set_attr(b["rz"], cmdx.radians(100.711))
+
+        mod.set_attr(c["scaleZ"], -1.0)
+        mod.set_attr(c["tx"], -1.306)
+        mod.set_attr(c["ty"], -0.327)
+        mod.set_attr(c["tz"], 3.804)
+        mod.set_attr(c["rx"], cmdx.radians(-79.561))
+        mod.set_attr(c["ry"], cmdx.radians(61.743))
+        mod.set_attr(c["rz"], cmdx.radians(9.128))
+
+    cmds.select(str(a), str(b), str(c))
+    ri.assign_group()
+
+    # Give them some droop
+    group = cmdx.ls(type="rdGroup")[0]
+    group["driveStiffness"] = 0.01
+
+    cmdx.min_time(1)
+    cmdx.max_time(40)
+
+    ri.record_markers()
+
+    cmdx.current_time(40)
+    assert_almost_equals(c["rx", cmdx.Degrees].read(), -76.638, 1)
+    assert_almost_equals(c["ry", cmdx.Degrees].read(), 63.653, 1)
+    assert_almost_equals(c["rz", cmdx.Degrees].read(), -8.884, 1)
 
 
 def test_locked_rotate_channels():

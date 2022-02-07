@@ -1007,6 +1007,14 @@
         "help": "Show limit attributes in Channel Box, like Stiffness and Range"
     },
 
+    "markersChannelBoxAdvancedPose": {
+        "name": "markersChannelBoxAdvancedPose",
+        "label": "Advanced Pose Attributes",
+        "type": "Boolean",
+        "default": false,
+        "help": "Show advanced pose attributes in Channel Box, like World Translate Stiffness"
+    },
+
     "markersDensity": {
         "name": "markersDensity",
         "label": "Density",

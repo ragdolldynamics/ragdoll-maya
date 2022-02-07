@@ -526,6 +526,34 @@ def _on_recording_limit(clientData=None):
     __.recording_timer.start()
 
 
+def _on_manipulator_entered(clientData=None):
+    """User has entered into the manipulator, disable viewport HUD"""
+    __.panel_states = {}
+
+    # We can't use `cmds.getPanel(type="modelPanel")` as it
+    # would return panels that aren't necessarily visible. As it happens,
+    # querying invisible panels yields bogus values. We can't store
+    # and later restore those, as it would make the Viewport menu `Show`
+    # confused about whether the HUD is actually visible or not.
+
+    # So instead, we only worry about currently visible modelPanels
+    # The caveat being that if a user displays new panels during
+    # manipulator use then those won't be handled here.
+    for panel in cmds.getPanel(visiblePanels=True):
+        if not cmds.modelPanel(panel, query=True, exists=True):
+            continue
+
+        state = cmds.modelEditor(panel, query=True, headsUpDisplay=True)
+        cmds.modelEditor(panel, edit=True, headsUpDisplay=False)
+        __.panel_states[panel] = state
+
+
+def _on_manipulator_exited(clientData=None):
+    """User has exited the manipulator, restore viewport HUD"""
+    for panel, state in __.panel_states.items():
+        cmds.modelEditor(panel, edit=True, headsUpDisplay=state)
+
+
 def install_callbacks():
     __.callbacks.append(
         om.MSceneMessage.addCallback(
@@ -580,6 +608,16 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollRecordingLimitEvent", _on_recording_limit)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollManipulatorEntered", _on_manipulator_entered)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollManipulatorExited", _on_manipulator_exited)
     )
 
 
@@ -1419,6 +1457,8 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
+        "advancedPoseInChannelBox": _opt(
+            "markersChannelBoxAdvancedPose", opts),
 
         # Lollipop options
         "basicAttributes": _opt("lollipopBasicAttributes", opts),
@@ -1503,6 +1543,7 @@ def assign_marker(selection=None, **opts):
             "materialInChannelBox": bool(opts["materialInChannelBox"]),
             "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
             "limitInChannelBox": bool(opts["limitInChannelBox"]),
+            "advancedPoseInChannelBox": bool(opts["advancedPoseInChannelBox"]),
         })
 
     except RuntimeError as e:

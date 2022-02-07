@@ -114,6 +114,7 @@ def assign_markers(transforms, solver, group=True, opts=None):
         "materialInChannelBox": True,
         "shapeInChannelBox": True,
         "limitInChannelBox": False,
+        "advancedPoseInChannelBox": False,
         "preventDuplicateMarker": True,
     }, **(opts or {}))
 
@@ -269,6 +270,7 @@ def assign_markers(transforms, solver, group=True, opts=None):
         "materialAttributes": opts["materialInChannelBox"],
         "shapeAttributes": opts["shapeInChannelBox"],
         "limitAttributes": opts["limitInChannelBox"],
+        "advancedPoseAttributes": opts["advancedPoseInChannelBox"],
     })
 
     return markers
@@ -1132,7 +1134,8 @@ def toggle_channel_box_attributes(markers, opts=None):
     opts = dict({
         "materialAttributes": True,
         "shapeAttributes": True,
-        "limitAttributes": True,
+        "limitAttributes": False,
+        "advancedPoseAttributes": False,
     }, **(opts or {}))
 
     # Attributes to be toggled
@@ -1170,6 +1173,18 @@ def toggle_channel_box_attributes(markers, opts=None):
         ".limitRangeZ",
     )
 
+    advanced_pose_attributes = (
+        ".driveSpaceAbsolute",
+        ".driveSpaceRelative",
+        ".driveAngularAmountTwist",
+        ".driveAngularAmountSwing",
+        ".driveAbsoluteLinear",
+        ".driveAbsoluteAngular",
+        ".driveAbsoluteLinearX",
+        ".driveAbsoluteLinearY",
+        ".driveAbsoluteLinearZ",
+    )
+
     attrs = []
 
     if opts["materialAttributes"]:
@@ -1180,6 +1195,9 @@ def toggle_channel_box_attributes(markers, opts=None):
 
     if opts["limitAttributes"]:
         attrs += limit_attrs
+
+    if opts["advancedPoseAttributes"]:
+        attrs += advanced_pose_attributes
 
     if not attrs:
         log.warning("Nothing to toggle")
@@ -1360,6 +1378,7 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     """
 
     geometry = geometry or internal.Geometry()
+    original = root
 
     # Better this than nothing
     if not children:
@@ -1556,10 +1575,16 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     shape_tm = cmdx.Tm(translate=root_pos,
                        rotate=geometry.orient)
     shape_tm.translateBy(offset, cmdx.sPostTransform)
-    shape_tm = cmdx.Tm(shape_tm.asMatrix() * root_tm.asMatrix().inverse())
+    shape_tm = cmdx.Tm(shape_tm.as_matrix() * root_tm.as_matrix().inverse())
 
     geometry.shape_offset = shape_tm.translation()
     geometry.shape_rotation = shape_tm.rotation()
+
+    # Apply possible negative scale to shape rotation
+    # Use `original` in case we're at the tip
+    scale_mtx = original.transform(cmdx.sWorld).as_scale_matrix()
+    shape_mtx = shape_tm.as_matrix()
+    geometry.shape_rotation = cmdx.Tm(shape_mtx * scale_mtx).rotation()
 
     # Take root_scale into account
     if abs(root_scale.x) <= 0:
@@ -1727,120 +1752,6 @@ def _add_to_solver(mod, marker, solver):
     return True
 
 
-def _shapeattributes_from_generator(mod, shape, rigid):
-    """Look at `shape` history for a e.g. polyCube or polySphere
-
-    This function interprets a simple shape, like a box, as a box
-    rather than treat it like an arbitrary convex hull. That enables
-    us to leverage the simpler shape types for improved
-    performance, editability and visibility.
-
-    """
-
-    gen = None
-
-    if "inMesh" in shape and shape["inMesh"].connected:
-        gen = shape["inMesh"].connection()
-
-    elif "create" in shape and shape["create"].connected:
-        gen = shape["create"].connection()
-
-    else:
-        return
-
-    if gen.type() == "polyCube":
-        mod.set_attr(rigid["shapeType"], constants.BoxShape)
-        mod.set_attr(rigid["shapeExtentsX"], gen["width"])
-        mod.set_attr(rigid["shapeExtentsY"], gen["height"])
-        mod.set_attr(rigid["shapeExtentsZ"], gen["depth"])
-
-    elif gen.type() == "polySphere":
-        mod.set_attr(rigid["shapeType"], constants.SphereShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "polyCylinder" and gen["roundCap"]:
-        mod.set_attr(rigid["shapeType"], constants.CylinderShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["height"])
-
-        # Align with Maya's cylinder/capsule axis
-        # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
-        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
-            (0, 0, 90) if gen["axisY"] else
-            (0, 90, 0) if gen["axisZ"] else
-            (0, 0, 0)
-        ))))
-
-    elif gen.type() == "makeNurbCircle":
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "makeNurbSphere":
-        mod.set_attr(rigid["shapeType"], constants.SphereShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-
-    elif gen.type() == "makeNurbCone":
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
-
-    elif gen.type() == "makeNurbCylinder":
-        mod.set_attr(rigid["shapeType"], constants.CylinderShape)
-        mod.set_attr(rigid["shapeRadius"], gen["radius"])
-        mod.set_attr(rigid["shapeLength"], gen["heightRatio"])
-        mod.set_attr(rigid["shapeRotation"], list(map(cmdx.radians, (
-            (0, 0, 90) if gen["axisY"] else
-            (0, 90, 0) if gen["axisZ"] else
-            (0, 0, 0)
-        ))))
-
-
-def _interpret_shape(mod, rigid, shape):
-    """Translate `shape` into rigid shape attributes
-
-    For example, if the shape is a `mesh`, we'll plug that in as
-    a mesh for convex hull generation.
-
-    """
-
-    assert isinstance(rigid, cmdx.DagNode), "%s was not a cmdx.DagNode" % rigid
-    assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
-    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
-    assert rigid.type() == "rdRigid", "%s was not a rdRigid" % rigid
-
-    bbox = shape.bounding_box
-    extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-    center = cmdx.Vector(bbox.center)
-
-    # Account for flat shapes, like a circle
-    radius = extents.x
-    length = max(extents.y, extents.x)
-
-    # Account for X not necessarily being
-    # represented by the width of the bounding box.
-    if radius < internal.tolerance:
-        radius = length * 0.5
-
-    mod.set_attr(rigid["shapeOffset"], center)
-    mod.set_attr(rigid["shapeExtents"], extents)
-    mod.set_attr(rigid["shapeRadius"], radius * 0.5)
-    mod.set_attr(rigid["shapeLength"], length)
-
-    if shape.type() == "mesh":
-        mod.connect(shape["outMesh"], rigid["inputMesh"])
-        mod.set_attr(rigid["shapeType"], constants.MeshShape)
-
-    elif shape.type() == "nurbsCurve":
-        mod.connect(shape["local"], rigid["inputCurve"])
-        mod.set_attr(rigid["shapeType"], constants.MeshShape)
-
-    elif shape.type() == "nurbsSurface":
-        mod.connect(shape["local"], rigid["inputSurface"])
-        mod.set_attr(rigid["shapeType"], constants.MeshShape)
-
-    # In case the shape is connected to a common
-    # generator, like polyCube or polyCylinder
-    _shapeattributes_from_generator(mod, shape, rigid)
-
-
 def _interpret_transform(mod, rigid, transform):
     """Translate `transform` into rigid shape attributes
 
@@ -1932,8 +1843,7 @@ def _interpret_shape(shape):
                 geo.extents.z = average_size / 40.0
                 geo.shape_offset.z = -geo.extents.z / 2.0
 
-        elif gen.type() == "polyCylinder" and gen["roundCap"]:
-            geo.shape_type = constants.CylinderShape
+        elif gen.type() == "polyCylinder":
             geo.radius = gen["radius"].read()
             geo.length = gen["height"].read()
 
@@ -1944,6 +1854,9 @@ def _interpret_shape(shape):
                 (0, 90, 0) if gen["axisZ"] else
                 (0, 0, 0)
             )))
+
+            if gen["roundCap"]:
+                geo.shape_type = constants.CylinderShape
 
         elif gen.type() == "makeNurbCircle":
             geo.radius = gen["radius"]

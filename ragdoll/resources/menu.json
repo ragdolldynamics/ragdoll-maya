@@ -664,7 +664,8 @@
 
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
-            "markersChannelBoxLimit"
+            "markersChannelBoxLimit",
+            "markersChannelBoxAdvancedPose"
         ]
     },
 
@@ -687,6 +688,7 @@
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
             "markersChannelBoxLimit",
+            "markersChannelBoxAdvancedPose",
             "useProxyAttributes"
         ]
     },

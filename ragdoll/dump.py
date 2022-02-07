@@ -1081,14 +1081,9 @@ class Loader(object):
         mod.set_attr(marker["driveStiffness"], MarkerUi["driveStiffness"])
         mod.set_attr(marker["ddra"], MarkerUi["driveDampingRatio"])
         mod.set_attr(marker["dral"], MarkerUi["driveAbsoluteLinear"])
-        mod.set_attr(marker["dlax"], Drive["linearAmount"].x)
-        mod.set_attr(marker["dlay"], Drive["linearAmount"].y)
-        mod.set_attr(marker["dlaz"], Drive["linearAmount"].z)
         mod.set_attr(marker["draa"], MarkerUi["driveAbsoluteAngular"])
         mod.set_attr(marker["list"], MarkerUi["limitStiffness"])
         mod.set_attr(marker["ldra"], MarkerUi["limitDampingRatio"])
-        mod.set_attr(marker["daat"], Drive["angularAmountTwist"])
-        mod.set_attr(marker["daas"], Drive["angularAmountSwing"])
         mod.set_attr(marker["collisionGroup"], MarkerUi["collisionGroup"])
         mod.set_attr(marker["friction"], Rigid["friction"])
         mod.set_attr(marker["restitution"], Rigid["restitution"])
@@ -1101,8 +1096,6 @@ class Loader(object):
         mod.set_attr(marker["mxdv"], Rigid["maxDepenetrationVelocity"])
         mod.set_attr(marker["angularMass"], Rigid["angularMass"])
         mod.set_attr(marker["centerOfMass"], Rigid["centerOfMass"])
-        mod.set_attr(marker["ignoreGravity"], Rigid["ignoreGravity"])
-        mod.set_attr(marker["ignoreFields"], Rigid["ignoreFields"])
         mod.set_attr(marker["lodPreset"], lod_preset)
         mod.set_attr(marker["lodOperator"], lod_op)
         mod.set_attr(marker["lod"], Lod["level"])
@@ -1134,6 +1127,18 @@ class Loader(object):
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
         mod.set_attr(marker["shapeRotation"], rotation)
+
+        # These were added to the .rag file after 2022.02.02
+        try:
+            mod.set_attr(marker["dlax"], Drive["linearAmount"].x)
+            mod.set_attr(marker["dlay"], Drive["linearAmount"].y)
+            mod.set_attr(marker["dlaz"], Drive["linearAmount"].z)
+            mod.set_attr(marker["daat"], Drive["angularAmountTwist"])
+            mod.set_attr(marker["daas"], Drive["angularAmountSwing"])
+            mod.set_attr(marker["ignoreGravity"], Rigid["ignoreGravity"])
+            mod.set_attr(marker["ignoreFields"], Rigid["ignoreFields"])
+        except KeyError:
+            pass
 
         # Preserve destination transforms, where possible
         # In the case of importing onto a different character,

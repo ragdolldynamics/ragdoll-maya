@@ -241,7 +241,7 @@ class _Recorder(object):
             yield ("simulating", progress * 0.50)
 
         marker_to_dagnode = _generate_kinematic_hierarchy(
-            self._solver, tips=True)
+            self._solver, tips=True, visible=True)
 
         for progress in self._cache_to_curves(marker_to_dagnode):
             yield ("transferring", 50 + progress * 0.50)
@@ -787,7 +787,10 @@ def _euler_filter(transforms):
     cmds.filterCurve(rotate_curves, filter="euler")
 
 
-def _generate_kinematic_hierarchy(solver, root=None, tips=False):
+def _generate_kinematic_hierarchy(solver,
+                                  root=None,
+                                  tips=False,
+                                  visible=False):
     markers = _find_markers(solver)
     marker_to_dagnode = {}
 
@@ -814,6 +817,9 @@ def _generate_kinematic_hierarchy(solver, root=None, tips=False):
         marker_to_dagnode[marker] = dagnode
 
         children = marker["ragdollId"].outputs(type="rdMarker", plugs=True)
+
+        if not visible and not parent:
+            mod.set_attr(dagnode["visibility"], visible)
 
         for plug in children:
             if plug.name() != "parentMarker":

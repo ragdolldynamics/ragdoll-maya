@@ -88,6 +88,14 @@ TurboFloatServer.exe -a="YOUR-SERIAL-NUMBER"
 
 There should be no output from the command, unless there's a problem.
 
+??? question "Whitelist?"
+    If you're in a secure network, you may want to limit the licence server to the least amount of external access. You can do so by whitelisting it in your firewall, using this URL and port number.
+
+    - url: `https://wyday.com`
+    - port: `443`
+
+    More details here: https://wyday.com/limelm/help/turbofloat-server/
+
 ??? question "No internet?"
     The licence server can be activated offline.
 

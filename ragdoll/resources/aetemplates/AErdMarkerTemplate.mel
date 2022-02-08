@@ -90,6 +90,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "fieldSeed";
             editorTemplate -addControl "limitLinearMotion";
             editorTemplate -addControl "limitAutoOrient";
+            editorTemplate -addControl "useMeshIslands";
 
             editorTemplate -addControl "offsetMatrix";
             editorTemplate -beginLayout "Constraint Frames" -collapse true;

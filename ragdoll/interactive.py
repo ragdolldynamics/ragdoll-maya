@@ -2109,20 +2109,25 @@ def unparent_marker(selection=None, **opts):
     if not selection:
         raise i__.UserWarning(
             "Selection Problem",
-            "Select a child marker along with "
-            "the marker to make the new parent."
+            "Select a marker to unparent."
         )
 
     for node in selection:
-        marker = None
+        marker = node
 
-        if node.isA(cmdx.kDagNode):
-            marker = node["message"].output(type="rdMarker")
+        if marker.isA(cmdx.kDagNode):
+            marker = marker["message"].output(type="rdMarker")
 
-        if not (marker and marker.type() == "rdMarker"):
+        if not marker:
             raise i__.UserWarning(
-                "No child marker found",
-                "The first selection should be a child marker."
+                "No marker found",
+                "Select a marker to unparent."
+            )
+
+        if marker.type() != "rdMarker":
+            raise i__.UserWarning(
+                "No marker found",
+                "%s was not a marker." % node
             )
 
         commands.unparent_marker(marker)
@@ -2496,7 +2501,8 @@ def air_field(selection=None, **opts):
 
 def drag_field(selection=None, **opts):
     _field("dragField", opts={
-        "magnitude": 100,
+        "magnitude": 10,
+        "directionY": 1,
     })
     return kSuccess
 
@@ -2523,7 +2529,7 @@ def newton_field(selection=None, **opts):
 
 def radial_field(selection=None, **opts):
     _field("radialField", opts={
-        "magnitude": 10.0,
+        "magnitude": 200.0,
     })
 
     return kSuccess
@@ -2532,6 +2538,7 @@ def radial_field(selection=None, **opts):
 def turbulence_field(selection=None, **opts):
     _field("turbulenceField", opts={
         "magnitude": 10.0,
+        "frequency": 0.1,
     })
 
     return kSuccess

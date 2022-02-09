@@ -1496,7 +1496,8 @@ def assign_marker(selection=None, **opts):
             return
 
         solver = commands.create_solver(opts={
-            "frameskipMethod": options.read("frameskipMethod")
+            "frameskipMethod": options.read("frameskipMethod"),
+            "sceneScale": options.read("sceneScale"),
         })
 
         if opts["createGround"]:
@@ -2213,6 +2214,7 @@ def toggle_channel_box_attributes(selection=None, **opts):
         "materialAttributes": _opt("markersChannelBoxMaterial", opts),
         "shapeAttributes": _opt("markersChannelBoxShape", opts),
         "limitAttributes": _opt("markersChannelBoxLimit", opts),
+        "advancedPoseAttributes": _opt("markersChannelBoxAdvancedPose", opts),
     }, **(opts or {}))
 
     markers = cmdx.ls(type="rdMarker")

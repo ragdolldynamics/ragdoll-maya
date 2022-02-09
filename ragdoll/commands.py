@@ -51,6 +51,7 @@ def create_solver(name=None, opts=None):
     """
 
     opts = dict({
+        "sceneScale": 0.1,
         "frameskipMethod": constants.FrameskipPause,
     }, **(opts or {}))
 
@@ -65,6 +66,7 @@ def create_solver(name=None, opts=None):
                               parent=solver_parent)
 
         mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
+        mod.set_attr(solver["spaceMultiplier"], opts["sceneScale"])
 
         # Scale isn't relevant for the solver, what would it mean?
         mod.set_keyable(solver_parent["scaleX"], False)
@@ -1200,15 +1202,20 @@ def toggle_channel_box_attributes(markers, opts=None):
         attrs += advanced_pose_attributes
 
     if not attrs:
-        log.warning("Nothing to toggle")
+        log.debug("Nothing to toggle")
         return False
 
     # Determine whether to show or hide attributes
     visible = markers[0][attrs[0][1:]].channel_box
 
     for marker in markers:
-        for attr in attrs:
-            cmds.setAttr(str(marker) + attr, channelBox=not visible)
+        if marker.is_referenced():
+            for attr in attrs:
+                cmds.setAttr(str(marker) + attr, channelBox=not visible)
+        else:
+            # This will work, but isn't going to be saved along with the scene
+            for attr in attrs:
+                marker[attr].channel_box = not visible
 
     return not visible
 

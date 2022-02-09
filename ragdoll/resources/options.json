@@ -763,6 +763,17 @@
     "#": " Markers ",
     "#": "----------------",
 
+
+    "markersSceneScale": {
+        "name": "markersSceneScale",
+        "label": "Scene Scale",
+        "type": "Float",
+        "default": 0.1,
+        "min": 0.1,
+        "max": 10.0,
+        "help": "Default scene scale of a newly created solver. 0.1 means a character is assumed to be 18 cm tall. I.e. that the world is 0.1x the size of real-world. A value of 1 means 180 cm, a real-world scale."
+    },
+
     "markersCreateGround": {
         "name": "markersCreateGround",
         "label": "Create Ground",

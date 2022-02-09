@@ -655,6 +655,7 @@
             "markersAssignSolver",
             "markersAssignGroup",
             "markersDensity",
+            "markersSceneScale",
             "markersAutoLimit",
             "markersCreateGround",
             "markersCreateObjectSet",
@@ -678,6 +679,7 @@
             "markersAssignSolver",
             "markersAssignGroup",
             "markersDensity",
+            "markersSceneScale",
             "markersAutoLimit",
             "markersCreateGround",
             "markersCreateObjectSet",
@@ -928,7 +930,8 @@
         "options": [
             "markersChannelBoxMaterial",
             "markersChannelBoxShape",
-            "markersChannelBoxLimit"
+            "markersChannelBoxLimit",
+            "markersChannelBoxAdvancedPose"
         ]
     },
 

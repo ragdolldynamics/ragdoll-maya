@@ -759,6 +759,12 @@ class FractionSlider(QtWidgets.QSlider):
     def _onValueChanged(self, value):
         self._floatValueChanged.emit(value / float(self.steps))
 
+    def minimum(self):
+        return super(FractionSlider, self).minimum() / self.steps
+
+    def maximum(self):
+        return super(FractionSlider, self).maximum() / self.steps
+
     def setMinimum(self, value):
         super(FractionSlider, self).setMinimum(value * self.steps)
 

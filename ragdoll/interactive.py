@@ -1497,7 +1497,7 @@ def assign_marker(selection=None, **opts):
 
         solver = commands.create_solver(opts={
             "frameskipMethod": options.read("frameskipMethod"),
-            "sceneScale": options.read("sceneScale"),
+            "sceneScale": options.read("markersSceneScale"),
         })
 
         if opts["createGround"]:

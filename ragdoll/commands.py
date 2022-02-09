@@ -1142,49 +1142,49 @@ def toggle_channel_box_attributes(markers, opts=None):
 
     # Attributes to be toggled
     material_attrs = (
-        ".collide",
-        ".densityType",
+        "collide",
+        "densityType",
         # ".mass",  # Auto-hidden when density is enabled
-        ".friction",
-        ".restitution",
-        ".displayType",
-        ".collisionGroup",
-        ".maxDepenetrationVelocity",  # A.k.a. Hardness
+        "friction",
+        "restitution",
+        "displayType",
+        "collisionGroup",
+        "maxDepenetrationVelocity",  # A.k.a. Hardness
     )
 
     shape_attrs = (
-        ".shapeType",
-        ".shapeExtentsX",
-        ".shapeExtentsY",
-        ".shapeExtentsZ",
-        ".shapeLength",
-        ".shapeRadius",
-        ".shapeOffsetX",
-        ".shapeOffsetY",
-        ".shapeOffsetZ",
-        ".shapeRotationX",
-        ".shapeRotationY",
-        ".shapeRotationZ",
+        "shapeType",
+        "shapeExtentsX",
+        "shapeExtentsY",
+        "shapeExtentsZ",
+        "shapeLength",
+        "shapeRadius",
+        "shapeOffsetX",
+        "shapeOffsetY",
+        "shapeOffsetZ",
+        "shapeRotationX",
+        "shapeRotationY",
+        "shapeRotationZ",
     )
 
     limit_attrs = (
-        ".limitStiffness",
-        ".limitDampingRatio",
-        ".limitRangeX",
-        ".limitRangeY",
-        ".limitRangeZ",
+        "limitStiffness",
+        "limitDampingRatio",
+        "limitRangeX",
+        "limitRangeY",
+        "limitRangeZ",
     )
 
     advanced_pose_attributes = (
-        ".driveSpaceAbsolute",
-        ".driveSpaceRelative",
-        ".driveAngularAmountTwist",
-        ".driveAngularAmountSwing",
-        ".driveAbsoluteLinear",
-        ".driveAbsoluteAngular",
-        ".driveAbsoluteLinearX",
-        ".driveAbsoluteLinearY",
-        ".driveAbsoluteLinearZ",
+        "driveSpaceAbsolute",
+        "driveSpaceRelative",
+        "driveAngularAmountTwist",
+        "driveAngularAmountSwing",
+        "driveAbsoluteLinear",
+        "driveAbsoluteAngular",
+        "driveAbsoluteLinearX",
+        "driveAbsoluteLinearY",
+        "driveAbsoluteLinearZ",
     )
 
     attrs = []
@@ -1206,12 +1206,12 @@ def toggle_channel_box_attributes(markers, opts=None):
         return False
 
     # Determine whether to show or hide attributes
-    visible = markers[0][attrs[0][1:]].channel_box
+    visible = markers[0][attrs[0]].channel_box
 
     for marker in markers:
-        if marker.is_referenced():
+        if not marker.is_referenced():
             for attr in attrs:
-                cmds.setAttr(str(marker) + attr, channelBox=not visible)
+                cmds.setAttr("%s.%s" % (marker, attr), channelBox=not visible)
         else:
             # This will work, but isn't going to be saved along with the scene
             for attr in attrs:

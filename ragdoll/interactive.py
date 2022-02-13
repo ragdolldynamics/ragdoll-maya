@@ -3240,7 +3240,7 @@ def _export_physics_wrapper(thumbnail=None):
         fade=True
     )
 
-    log.info("Successfully imported %d markers in %.2f ms" % stats)
+    log.info("Successfully exported %d markers in %.2f ms" % stats)
 
     return True
 

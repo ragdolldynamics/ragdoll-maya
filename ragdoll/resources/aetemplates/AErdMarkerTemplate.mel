@@ -70,9 +70,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse true;
-            editorTemplate -addControl "asleep";
             editorTemplate -addControl "ignoreGravity";
             editorTemplate -addControl "ignoreFields";
+            editorTemplate -label "Start Asleep" -addControl "asleep";
             editorTemplate -addControl "densityCustom";
             editorTemplate -addControl "angularMass";
             editorTemplate -addControl "centerOfMass";
@@ -88,6 +88,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "maxContactImpulse";
             editorTemplate -addControl "maxDepenetrationVelocity";
             editorTemplate -addControl "fieldSeed";
+            editorTemplate -addControl "fieldCentroids";
             editorTemplate -addControl "limitLinearMotion";
             editorTemplate -addControl "limitAutoOrient";
             editorTemplate -addControl "useMeshIslands";

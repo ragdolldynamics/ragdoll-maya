@@ -31,7 +31,7 @@ def create(typ, mod, name, parent=None):
             mod.set_keyable(node["gravityZ"])
 
         mod.set_attr(node["startTimeCustom"], cmdx.min_time())
-        mod.set_attr(node["maxMassRatio"], 1)  # 10 ^ 1
+        mod.set_attr(node["maxMassRatio"], 2)  # 10 ^ 2
 
         mod.connect(node["ragdollId"], canvas["solver"])
         mod.connect(parent["worldMatrix"][0], node["inputMatrix"])

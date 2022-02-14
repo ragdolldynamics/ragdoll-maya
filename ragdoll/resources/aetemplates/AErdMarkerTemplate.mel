@@ -48,6 +48,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "shapeOffset";
             editorTemplate -addControl "shapeRotation";
             editorTemplate -addControl "useMeshIslands";
+            editorTemplate -addControl "shapeVertexLimit";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Limit" -collapse true;
@@ -77,7 +78,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "densityCustom";
             editorTemplate -addControl "angularMass";
             editorTemplate -addControl "centerOfMass";
-            editorTemplate -addControl "shapeVertexLimit";
             editorTemplate -addControl "enableCCD";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "linearDamping";

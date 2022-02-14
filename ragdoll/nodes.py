@@ -48,7 +48,7 @@ def create(typ, mod, name, parent=None):
 
         # This used to be the default
         mod.set_attr(node["capsuleLengthAlongY"], False)
-        mod.set_attr(node["useMeshIslands"], True)
+        mod.set_attr(node["convexDecomposition"], 1)
 
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)

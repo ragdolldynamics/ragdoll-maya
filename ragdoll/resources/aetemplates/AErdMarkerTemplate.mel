@@ -47,7 +47,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "shapeRadius";
             editorTemplate -addControl "shapeOffset";
             editorTemplate -addControl "shapeRotation";
-            editorTemplate -addControl "useMeshIslands";
+            editorTemplate -addControl "convexDecomposition";
             editorTemplate -addControl "shapeVertexLimit";
         editorTemplate -endLayout;
 

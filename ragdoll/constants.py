@@ -85,6 +85,9 @@ MatchByHierarchy = 1
 RecordFastAndLoose = 0
 RecordNiceAndSteady = 1
 
+ComCentroid = 0
+VolumetricCentroids = 1
+
 # cacheMedia enum indices
 Off = 0
 On = 1

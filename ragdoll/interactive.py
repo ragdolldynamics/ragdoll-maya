@@ -838,10 +838,17 @@ def install_menu():
         item("volumeAxis", volume_axis)
         item("volumeCurve", volume_curve)
 
-        divider()
+        divider("Source")
 
         item("useSelectedAsSource", use_selected_as_source)
         item("disconnectSource", disconnect_source)
+
+        divider("Centroids")
+
+        item("comCentroid", field_com_centroid, label="Center of Mass")
+        item("volumetricCentroids",
+             field_volumetric_centroid,
+             label="Volumetric")
 
     divider("Utilities")
 
@@ -2668,6 +2675,42 @@ def disconnect_source(selection=None, **opts):
                 continue
 
             mod.delete_node(decompose)
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def field_com_centroid(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if len(markers) < 1:
+        raise i__.UserWarning(
+            "No marker(s) selected",
+            "Select one or more markers to edit."
+        )
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            mod.set_attr(marker["fieldCentroids"], c.ComCentroid)
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def field_volumetric_centroid(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if len(markers) < 1:
+        raise i__.UserWarning(
+            "No marker(s) selected",
+            "Select one or more markers to edit."
+        )
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            mod.set_attr(marker["fieldCentroids"], c.VolumetricCentroids)
+
+    return kSuccess
 
 
 @contextlib.contextmanager

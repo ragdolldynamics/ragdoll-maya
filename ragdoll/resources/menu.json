@@ -1150,6 +1150,24 @@
         "options": []
     },
 
+    "comCentroid": {
+        "label": "Center of Mass Centroid",
+        "icon": "centroid.png",
+        "summary": "Apply forces to the exact center of mass.",
+        "description": "Forces applied to the center does not introduce any rotation and can be thought of as a simple, but unrealistic method.",
+        "options": []
+    },
+
+    "volumetricCentroids": {
+        "label": "Volumetric Centroid",
+        "icon": "volume.png",
+        "summary": "Apply forces throughout the volume of a Marker.",
+        "description": "Forces are applied evenly distributed across the Marker volume, resulting in the most natural and realistic result.",
+        "options": []
+    },
+
+
+
     "#": "---------",
     "#": " Logging ",
     "#": "---------",

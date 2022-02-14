@@ -5,7 +5,7 @@ global proc AErdControlTemplate(string $nodeName) {
 
         editorTemplate -addControl "frozen";
 
-        editorTemplate -beginLayout "Visualisation" -collapse true;
+        editorTemplate -beginLayout "Display" -collapse true;
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawShaded";
             editorTemplate -addControl "visibility";

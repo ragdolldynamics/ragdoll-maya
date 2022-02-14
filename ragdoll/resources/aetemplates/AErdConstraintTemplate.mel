@@ -40,7 +40,7 @@ global proc AErdConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "frozen";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Visualisation" -collapse true;
+        editorTemplate -beginLayout "Display" -collapse true;
             editorTemplate -label "Scale" -addControl "drawScale";
             editorTemplate -addControl "twistColor";
             editorTemplate -addControl "swingColor";

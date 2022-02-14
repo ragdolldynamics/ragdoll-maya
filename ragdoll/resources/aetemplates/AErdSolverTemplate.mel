@@ -60,7 +60,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "threadCount";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Visualisation" -collapse true;
+        editorTemplate -beginLayout "Display" -collapse true;
             editorTemplate -addControl "displayType";
             editorTemplate -addControl "drawShapes";
             editorTemplate -addControl "drawConstraints";
@@ -69,8 +69,8 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "drawHierarchy";
             editorTemplate -addControl "drawGroups";
             editorTemplate -addControl "drawFields";
-            editorTemplate -addControl "drawFieldScale";
-            editorTemplate -addControl "drawFieldIterations";
+            editorTemplate -label "Field Scale" -addControl "drawFieldScale";
+            editorTemplate -label "Field Iterations" -addControl "drawFieldIterations";
             // editorTemplate -addControl "lightDirection";
         editorTemplate -endLayout;
 

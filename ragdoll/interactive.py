@@ -643,7 +643,21 @@ def install_plugin():
         # May already have been loaded prior to calling install
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
-    # Required by tools.py
+    # This is added to MAYA_PLUG_IN_PATH via the Maya module,
+    # but during development there is no module.
+    vendor_path = os.path.normpath(os.path.dirname(cmdx.__file__)).lower()
+    plugin_path = os.path.normpath(os.environ["MAYA_PLUG_IN_PATH"]).lower()
+    if vendor_path not in plugin_path:
+        log.info("cmdx added to MAYA_PLUG_IN_PATH")
+        os.environ["MAYA_PLUG_IN_PATH"] = os.pathsep.join([
+            os.environ["MAYA_PLUG_IN_PATH"],
+            vendor_path
+        ])
+
+    # Required for undo
+    cmds.loadPlugin("cmdx_ragdoll", quiet=True)
+
+    # Required by commands.py
     cmds.loadPlugin("matrixNodes", quiet=True)
 
     __.version_str = cmds.pluginInfo(c.RAGDOLL_PLUGIN_NAME,

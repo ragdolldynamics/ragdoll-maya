@@ -7957,7 +7957,9 @@ def install():
 
     """
 
-    cmds.loadPlugin(__file__, quiet=True)
+    plugin_name = os.path.basename(__file__).rsplit(".", 1)[0]
+    if not cmds.pluginInfo(plugin_name, query=True, loaded=True):
+        cmds.loadPlugin(__file__, quiet=True)
 
     self.installed = True
 

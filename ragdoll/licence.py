@@ -13,6 +13,7 @@ STATUS_INET = 4                 # Connection to the server failed.
 STATUS_KEY_FOR_TURBOFLOAT = 20  # Used a floating key to activate node-locked
 STATUS_INET_DELAYED = 21        # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5                # Maximum number of activations reached
+STATUS_FEATURES_CHANGED = 22    # Licence fields have changed
 STATUS_TRIAL_EXPIRED = 30       # Trial expired
 STATUS_NO_FREE_LEASES = 5       # Maximum number of leases reached
 
@@ -86,7 +87,7 @@ def _install_floating():
 def _install_nodelocked(key=None):
     status = cmds.ragdollLicence(init=True)
 
-    if status == STATUS_OK:
+    if status in (STATUS_OK, STATUS_FEATURES_CHANGED):
         log.debug("Successfully initialised Ragdoll licence.")
 
         if key is not None and not cmds.ragdollLicence(isActivated=True):

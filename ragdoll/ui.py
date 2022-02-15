@@ -1794,6 +1794,16 @@ class SplashScreen(QtWidgets.QDialog):
             )
         )
 
+        if data["expires"]:
+            days = data.get("expiryDays", -1)
+            expiry = self._widgets["expiryDate"]
+
+            if days > 0:
+                datestring = self._expiry_string(days)
+                expiry.setText("Expires %s" % datestring)
+            else:
+                expiry.setText("Expired")
+
     def on_deactivated(self):
         log.info("Ragdoll is deactivated")
 

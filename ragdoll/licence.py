@@ -339,6 +339,7 @@ def data():
         # How many days until expiration
         expires=cmds.ragdollLicence(expires=True, query=True),
         expiryDays=cmds.ragdollLicence(expiryDays=True, query=True),
+        expiry=cmds.ragdollLicence(expiry=True, query=True),
 
         # Date of Annual Upgrade Program end
         annualUpgradeProgram=cmds.ragdollLicence(

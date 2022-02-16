@@ -131,6 +131,7 @@ plugins:
   - mkdocs-redirects:
       use_directory_urls: false
       redirect_maps:
+          "": "https://ragdolldynamics.com"
           "documentation/active_rigid/": "/legacy/active_rigid/"
           "documentation/active_chain/": "/legacy/active_chain/"
           "documentation/bake_simulation/": "/legacy/bake_simulation/"

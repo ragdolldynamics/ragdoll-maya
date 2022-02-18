@@ -1711,6 +1711,9 @@ def affect_solver(field, solver):
         index = solver["inputFields"].next_available_index()
         mod.connect(field["message"], solver["inputFields"][index])
 
+        # Delete field alongside this solver
+        _take_ownership(mod, field, solver)
+
 
 def _remove_membership(mod, marker):
     existing = list(marker["startState"].outputs(

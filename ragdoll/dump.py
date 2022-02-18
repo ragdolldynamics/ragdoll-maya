@@ -1018,7 +1018,6 @@ class Loader(object):
         Limit = self._registry.get(Subs["relative"], "LimitComponent")
         Drive = self._registry.get(Subs["absolute"], "DriveComponent")
 
-        print("Renaming %s -> %s" % (marker, Name["value"]))
         mod.rename_node(marker, Name["value"])
 
         input_type = {
@@ -1121,9 +1120,6 @@ class Loader(object):
         mod.set_attr(marker["shapeOffset"], Desc["offset"])
         mod.set_attr(marker["color"], Color["value"])
 
-        mod.set_attr(marker["inputGeometryMatrix"],
-                     MarkerUi["inputGeometryMatrix"])
-
         # These are exported as Quaternion
         rotation = Desc["rotation"].asEulerRotation()
         mod.set_attr(marker["shapeRotation"], rotation)
@@ -1187,6 +1183,9 @@ class Loader(object):
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
+
+                mod.set_attr(marker["inputGeometryMatrix"],
+                             MarkerUi["inputGeometryMatrix"])
 
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.

@@ -643,19 +643,29 @@ def install_plugin():
         # May already have been loaded prior to calling install
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
-    # This is added to MAYA_PLUG_IN_PATH via the Maya module,
-    # but during development there is no module.
-    vendor_path = os.path.normpath(os.path.dirname(cmdx.__file__)).lower()
-    plugin_path = os.path.normpath(os.environ["MAYA_PLUG_IN_PATH"]).lower()
-    if vendor_path not in plugin_path:
-        log.info("cmdx added to MAYA_PLUG_IN_PATH")
-        os.environ["MAYA_PLUG_IN_PATH"] = os.pathsep.join([
-            os.environ["MAYA_PLUG_IN_PATH"],
-            vendor_path
-        ])
-
     # Required for undo
-    cmds.loadPlugin("cmdx_ragdoll", quiet=True)
+    try:
+        cmds.loadPlugin("cmdx_ragdoll", quiet=True)
+    except RuntimeError:
+        # This is added to MAYA_PLUG_IN_PATH via the Maya module,
+        # but during development there is no module.
+        vendor_path = os.path.normpath(os.path.dirname(cmdx.__file__)).lower()
+        plugin_path = os.path.normpath(os.environ["MAYA_PLUG_IN_PATH"]).lower()
+        if vendor_path not in plugin_path:
+            log.info("cmdx added to MAYA_PLUG_IN_PATH")
+            os.environ["MAYA_PLUG_IN_PATH"] = os.pathsep.join([
+                os.environ["MAYA_PLUG_IN_PATH"],
+                vendor_path
+            ])
+
+        try:
+            cmds.loadPlugin("cmdx_ragdoll", quiet=True)
+
+        except RuntimeError:
+            # Not being loaded will prompt Maya 2022 users for permission
+            # once it loads itself from the /vendor directory. This isn't
+            # ideal, but it's better than breaking all Ragdoll.
+            pass
 
     # Required by commands.py
     cmds.loadPlugin("matrixNodes", quiet=True)

@@ -250,26 +250,19 @@ def install():
         return
 
     options.install()
-    install_telemetry() if c.RAGDOLL_TELEMETRY else None
     install_logger()
     install_plugin()
-    licence.install(c.RAGDOLL_AUTO_SERIAL)
 
     options.write("shaderPath", _resource("shaders"))
     options.write("fontPath", _resource("fonts"))
     options.write("iconPath", _resource("icons"))
 
     if _is_interactive():
-        telemetry.install()
+        install_telemetry() if c.RAGDOLL_TELEMETRY else None
         install_callbacks()
 
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
-
-        # Temporarily work around incompatibility with pre-popupalated
-        # controllers. This is the option from the Maya Preferences
-        # called "Include controllers in evaluation graph"
-        cmds.optionVar(iv=("prepopulateController", 0))
 
         # 2018 and consolidation doesn't play nicely without animated shaders
         if cmdx.__maya_version__ < 2019:
@@ -392,6 +385,8 @@ def install_telemetry():
 
     with open(crash_fname, "w") as f:
         f.write("Nothing to see here")
+
+    telemetry.install()
 
 
 def uninstall_telemetry():
@@ -526,8 +521,42 @@ def _on_recording_limit(clientData=None):
     __.recording_timer.start()
 
 
+def _fit_to_view():
+    manip = json.loads(cmds.ragdollDump(manipulator=True))
+    if manip["solverPath"]:
+        cmds.viewFit(manip["solverPath"], animate=True)
+
+
+def _install_fit_to_view():
+    from PySide2 import QtWidgets, QtCore
+
+    _uninstall_fit_to_view()
+
+    win = ui.MayaWindow()
+    __.shortcut = QtWidgets.QShortcut("F", win)
+    __.shortcut.setContext(QtCore.Qt.ApplicationShortcut)
+    __.shortcut.activated.connect(_fit_to_view)
+
+
+def _uninstall_fit_to_view():
+    try:
+        # Just deleting this thing is not enough, apparently
+        __.shortcut.setEnabled(False)
+        __.shortcut.setKey(None)
+        __.shortcut.activated.disconnect(_fit_to_view)
+        del(__.shortcut)
+
+    except Exception as e:
+        log.debug("Had trouble uninstalling the View to Fit hotkey")
+        log.debug(str(e))
+
+
 def _on_manipulator_entered(clientData=None):
-    """User has entered into the manipulator, disable viewport HUD"""
+    """User has entered into the manipulator"""
+
+    if options.read("manipulatorFitToViewOverride"):
+        _install_fit_to_view()
+
     __.panel_states = {}
 
     # We can't use `cmds.getPanel(type="modelPanel")` as it
@@ -552,6 +581,9 @@ def _on_manipulator_exited(clientData=None):
     """User has exited the manipulator, restore viewport HUD"""
     for panel, state in __.panel_states.items():
         cmds.modelEditor(panel, edit=True, headsUpDisplay=state)
+
+    if options.read("manipulatorFitToViewOverride"):
+        _uninstall_fit_to_view()
 
 
 def install_callbacks():
@@ -1076,9 +1108,6 @@ def install_menu():
     divider()
 
     label = "Ragdoll %s" % __.version_str
-
-    if licence.data()["isNonCommercial"]:
-        label += " (nc)"
 
     item("ragdoll", welcome_user, label=label)
 

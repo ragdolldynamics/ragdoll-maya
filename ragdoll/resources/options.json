@@ -1147,6 +1147,18 @@
         "default": true,
         "help": "Make sure Maya's playback speed is set to 'Play every frame'."
     },
+    "manipulatorFitToViewOverride": {
+        "name": "manipulatorFitToViewOverride",
+        "type": "Boolean",
+        "default": false,
+        "help": "Experimental fit-to-view during interactions with the Manipulator."
+    },
+    "manipulatorMayaSelect": {
+        "name": "manipulatorMayaSelect",
+        "type": "Boolean",
+        "default": true,
+        "help": "Synchronise the Manipulator and Maya selection."
+    },
     "validateRotateAxis": {
         "name": "validateRotateAxis",
         "type": "Boolean",

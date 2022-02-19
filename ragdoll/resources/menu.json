@@ -574,6 +574,8 @@
             "validateLegacyOpenGL2",
             "validateScalePivot",
             "validatePlaybackSpeed",
+            "manipulatorFitToViewOverride",
+            "manipulatorMayaSelect",
             "reloadShaders"
         ]
     },

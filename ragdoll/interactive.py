@@ -49,74 +49,12 @@ from . import (
     upgrade,
     ui,
     options,
-    licence,
     dump,
     recording,
     telemetry,
     constants as c,
     internal as i__,
     __
-)
-
-# Backwards compatibility
-from .legacy.interactive import (
-    export_physics as legacy_export_physics,
-    export_physics_options as legacy_export_physics_options,
-    import_physics_options as legacy_import_physics_options,
-    import_physics_from_file as legacy_import_physics_from_file,
-    create_active_rigid as legacy_create_active_rigid,
-    create_active_chain as legacy_create_active_chain,
-    create_chain_options as legacy_create_chain_options,
-    create_passive_rigid as legacy_create_passive_rigid,
-    create_passive_options as legacy_create_passive_options,
-    create_muscle as legacy_create_muscle,
-    create_muscle_options as legacy_create_muscle_options,
-    create_point_constraint as legacy_create_point_constraint,
-    create_orient_constraint as legacy_create_orient_constraint,
-    create_parent_constraint as legacy_create_parent_constraint,
-    create_hinge_constraint as legacy_create_hinge_constraint,
-    create_socket_constraint as legacy_create_socket_constraint,
-    ignore_contacts_constraint as legacy_ignore_contacts_constraint,
-    create_animation_constraint as legacy_create_animation_constraint,
-    create_animation_constraint_options as legacy_create_anim_cons_options,
-    create_hard_pin as legacy_create_hard_pin,
-    create_hard_pin_options as legacy_create_hard_pin_options,
-    create_soft_pin as legacy_create_soft_pin,
-    create_soft_pin_options as legacy_create_soft_pin_options,
-    create_mimic as legacy_create_mimic,
-    create_mimic_options as legacy_create_mimic_options,
-    create_push_force as legacy_create_push_force,
-    create_push_force_options as legacy_create_push_force_options,
-    create_pull_force as legacy_create_pull_force,
-    create_pull_force_options as legacy_create_pull_force_options,
-    create_uniform_force as legacy_create_uniform_force,
-    create_uniform_force_options as legacy_create_uniform_force_options,
-    create_turbulence_force as legacy_create_turbulence_force,
-    create_turbulence_force_options as legacy_create_turbulence_force_options,
-    create_slice as legacy_create_slice,
-    assign_force as legacy_assign_force,
-    bake_simulation as legacy_bake_simulation,
-    bake_simulation_options as legacy_bake_simulation_options,
-    multiply_selected as legacy_multiply_selected,
-    multiply_selected_options as legacy_multiply_selected_options,
-    create_dynamic_control as legacy_create_dynamic_control,
-    edit_shape as legacy_edit_shape,
-    edit_shape_options as legacy_edit_shape_options,
-    edit_constraint_frames as legacy_edit_constraint_frames,
-    duplicate_selected as legacy_duplicate_selected,
-    transfer_selected as legacy_transfer_selected,
-    replace_mesh as legacy_replace_mesh,
-    replace_mesh_options as legacy_replace_mesh_options,
-    convert_to_polygons as legacy_convert_to_polygons,
-    extract_from_scene as legacy_extract_from_scene,
-    move_to_scene as legacy_move_to_scene,
-    combine_scenes as legacy_combine_scenes,
-    set_initial_state as legacy_set_initial_state,
-    set_initial_state_options as legacy_set_initial_state_options,
-    clear_initial_state as legacy_clear_initial_state,
-    clear_initial_state_options as legacy_clear_initial_state_options,
-    show_constraint_editor as legacy_show_constraint_editor,
-    _constraint_options as _legacy_constraint_options
 )
 
 log = logging.getLogger("ragdoll")
@@ -965,145 +903,6 @@ def install_menu():
             item("loggingInfo", logging_info)
             item("loggingWarning", logging_warning)
             item("loggingDebug", logging_debug)
-
-    with submenu("Legacy", icon="legacy.png"):
-        divider("Create")
-
-        item("activeRigid", legacy_create_active_rigid, create_rigid_options)
-        item("activeChain",
-             legacy_create_active_chain,
-             legacy_create_chain_options)
-        item("passiveRigid",
-             legacy_create_passive_rigid,
-             legacy_create_passive_options)
-        item("tissue")
-        item("cloth")
-        item("muscle",
-             legacy_create_muscle,
-             legacy_create_muscle_options)
-        item("fluid")
-
-        divider("Manipulate")
-
-        with submenu("Constraints", icon="constraint.png"):
-            item("point", legacy_create_point_constraint,
-                 _legacy_constraint_options(c.PointConstraint))
-            item("orient", legacy_create_orient_constraint,
-                 _legacy_constraint_options(c.OrientConstraint))
-            item("parent", legacy_create_parent_constraint,
-                 _legacy_constraint_options(c.ParentConstraint))
-            item("hinge", legacy_create_hinge_constraint,
-                 _legacy_constraint_options(c.HingeConstraint))
-            item("socket", legacy_create_socket_constraint,
-                 _legacy_constraint_options(c.SocketConstraint))
-
-            divider("Utilities")
-
-            item("ignoreContacts", legacy_ignore_contacts_constraint,
-                 _legacy_constraint_options(c.IgnoreContactsConstraint))
-
-            item("animationConstraint",
-                 legacy_create_animation_constraint,
-                 legacy_create_anim_cons_options)
-
-            divider("Gizmos")
-
-            item("editConstraintFrames",
-                 legacy_edit_constraint_frames,
-                 label="Edit Pivots")
-
-            item("constraintEditor", legacy_show_constraint_editor)
-
-        with submenu("Controls", icon="control.png"):
-            item("hardPin", legacy_create_hard_pin,
-                 legacy_create_hard_pin_options)
-            item("softPin", legacy_create_soft_pin,
-                 legacy_create_soft_pin_options)
-            item("mimic", legacy_create_mimic, legacy_create_mimic_options)
-            item("motor")
-            item("actuator")
-            item("trigger")
-
-        with submenu("Forces", icon="turbulence.png"):
-            item("push",
-                 legacy_create_push_force,
-                 legacy_create_push_force_options)
-            item("pull",
-                 legacy_create_pull_force,
-                 legacy_create_pull_force_options)
-            item("directional",
-                 legacy_create_uniform_force,
-                 legacy_create_uniform_force_options)
-            item("wind",
-                 legacy_create_turbulence_force,
-                 legacy_create_turbulence_force_options)
-
-            divider()
-
-            item("visualiser", legacy_create_slice)
-            item("assignToSelected", legacy_assign_force)
-
-        divider("Utilities")
-
-        with submenu("Animation", icon="animation.png"):
-            item("bakeSimulation",
-                 legacy_bake_simulation,
-                 legacy_bake_simulation_options)
-
-            divider("I/O")
-
-            item("exportPhysics",
-                 legacy_export_physics,
-                 legacy_export_physics_options)
-            item("importPhysics",
-                 legacy_import_physics_from_file,
-                 legacy_import_physics_options)
-
-            divider("Utilities")
-
-            item("multiplySelected",
-                 legacy_multiply_selected,
-                 legacy_multiply_selected_options)
-
-            item("createDynamicControl",
-                 legacy_create_dynamic_control,
-                 legacy_create_dynamic_control)
-
-        with submenu("Rigging", icon="rigging.png"):
-            divider("Gizmos")
-
-            item("editShape", legacy_edit_shape, legacy_edit_shape_options)
-            item("editConstraintFrames", legacy_edit_constraint_frames)
-
-            divider()
-
-            item("duplicateSelected", legacy_duplicate_selected)
-            item("transferAttributes", legacy_transfer_selected)
-            item("replaceMesh",
-                 legacy_replace_mesh,
-                 legacy_replace_mesh_options)
-
-            if c.RAGDOLL_DEVELOPER:
-                divider("Development")
-                item("convertToPolygons", legacy_convert_to_polygons)
-
-            divider("Scene Management")
-
-            item("extractFromScene", legacy_extract_from_scene)
-            item("moveToScene", legacy_move_to_scene)
-            item("combineScenes", legacy_combine_scenes)
-
-            divider("Initial State")
-
-            item("setInitialState", legacy_set_initial_state,
-                 legacy_set_initial_state_options)
-            item("clearInitialState", legacy_clear_initial_state,
-                 legacy_clear_initial_state_options)
-
-        with submenu("Select", icon="select.png"):
-            item("selectSolvers", select_solvers)
-            item("selectMarkers", select_markers)
-            item("selectGroups", select_groups)
 
     divider()
 
@@ -3148,11 +2947,6 @@ def reset_preferences(*args):
     log.info("Successfully reset Ragdoll preferences")
 
 
-def create_rigid_options(*args):
-    window = _Window("activeRigid", legacy_create_active_rigid)
-    return window
-
-
 def replace_marker_mesh_options(*args):
     return _Window("markerReplaceMesh", replace_marker_mesh)
 
@@ -3471,7 +3265,5 @@ def export_physics_options(*args):
 
 
 # Backwards compatibility
-create_rigid = legacy_create_active_rigid
-create_collider = legacy_create_passive_rigid
 assign_single = assign_marker
 assign_group = assign_and_connect

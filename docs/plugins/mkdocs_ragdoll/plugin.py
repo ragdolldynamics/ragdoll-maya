@@ -510,6 +510,20 @@ class MenuGeneratorPlugin(BasePlugin):
         self.enabled = True
         self.latest_version = list(get_releases())[0][0]
 
+        try:
+            import urllib
+            url = "https://ragdolldynamics.com/version"
+            res = urllib.request.urlopen(url)
+            if res.getcode() == 200:
+                data = json.loads(res.read())
+                self.latest_version = data.get("version")
+
+        except Exception as e:
+            # Not a big deal
+            sys.stderr.write(
+                "ERROR: Wasn't able to get latest version: %s\n" % e
+            )
+
     def on_page_markdown(self, markdown, page, config, files):
         if not self.enabled:
             return markdown

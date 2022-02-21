@@ -14,6 +14,10 @@ global proc AErdGroupTemplate(string $nodeName) {
             editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveStiffness";
             editorTemplate -addControl "driveDampingRatio";
+
+            editorTemplate -addControl "linearMotion";
+            editorTemplate -addControl "driveRelativeLinearStiffness";
+            editorTemplate -addControl "driveRelativeLinearDampingRatio";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

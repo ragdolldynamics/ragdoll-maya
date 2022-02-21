@@ -131,7 +131,7 @@ def has_upgrade(node, from_version):
         return from_version < 20211112
 
     if node.type() == "rdMarker":
-        return from_version < 20220225
+        return from_version < 20211129
 
     if node.type() == "rdGroup":
         return from_version < 20211007
@@ -221,10 +221,6 @@ def marker(node, from_version, to_version):
 
     if from_version < 20211129:
         _marker_20211007_20211129(node)
-        upgraded = True
-
-    if from_version < 20220225:
-        _marker_20211129_20220225(node)
         upgraded = True
 
     return upgraded
@@ -495,30 +491,6 @@ def _marker_20211007_20211129(marker):
 
     with cmdx.DagModifier() as mod:
         mod.set_attr(marker["originMatrix"], marker["inputMatrix"].as_matrix())
-
-
-@try_it
-def _marker_20211129_20220225(marker):
-    """angularMotion was added"""
-
-    log.info("Upgrading %s to 2022.02.25" % marker)
-
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(marker["useMotion"], True)
-
-        for axis in "XYZ":
-            rng = marker["limitRange" + axis]
-            motion = marker["limitAngularMotion" + axis]
-
-            if rng == 0:
-                mod.set_attr(motion, constants.MotionFree)
-
-            elif rng > 0:
-                mod.set_attr(motion, constants.MotionLimited)
-
-            elif rng < 0:
-                mod.set_attr(rng, cmdx.radians(45))
-                mod.set_attr(motion, constants.MotionLocked)
 
 
 @try_it

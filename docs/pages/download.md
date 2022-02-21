@@ -127,10 +127,7 @@ The plug-in is now available via the Plug-in Manager.
     Your scenes will still open, but the solver will be disabled. Contact [licence@ragdolldynamics.com](mailto:licence@ragdolldynamics.com) for renewal of your licence.
 
 ??? question "What happens when I skip frames?"
-    The simulation gracefully pauses until you revisit the last simulated frame.
-
-??? question "How do I disable the ground?"
-    A static collider is automatically added on the Maya grid per default, it can be disabled on the `rdScene` node via the `.useGround` attribute.
+    The simulation gracefully pauses until you revisit the last simulated frame. See the `Frameskip Method` attribute on the `rdSolver` node for another option, `Ignore`. This will continue simulating, and ignore any skipped frames. Good for real-time playback with audio.
 
 ??? question "Can I use Rez?"
     Yes, the only environment variable needed for Rez is `MAYA_MODULE_PATH`, such as:
@@ -150,8 +147,4 @@ The plug-in is now available via the Plug-in Manager.
 
 As of `Ragdoll {{ config.latest_version }}` these are the current known limitations of Ragdoll.
 
-- Maya 2022.0 crashes when calling `Delete Physics`, use Maya 2022.1
-
-<div class="hboxlayout align-center">
-    <a href="/releases/2021.04.23#known-issues" class="button blue"><b>More</b></a>
-</div>
+- No known limitations as of 2022.02.20

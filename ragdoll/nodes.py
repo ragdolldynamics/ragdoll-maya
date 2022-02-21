@@ -48,7 +48,6 @@ def create(typ, mod, name, parent=None):
 
         # This used to be the default
         mod.set_attr(node["capsuleLengthAlongY"], False)
-        mod.set_attr(node["useMotion"], True)
         mod.set_attr(node["convexDecomposition"], 1)
 
     elif typ == "rdGroup":

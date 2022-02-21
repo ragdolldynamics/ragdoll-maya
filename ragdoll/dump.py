@@ -957,6 +957,12 @@ class Loader(object):
             "Custom": 3
         }.get(GroupUi["driveSpace"], 1)
 
+        linear_motion = {
+            "Locked": constants.MotionLocked,
+            "Limited": constants.MotionLimited,
+            "Free": constants.MotionFree,
+        }.get(GroupUi.get("linearMotion"), 0)
+
         mod.set_attr(group["inputType"], input_type)
         mod.set_attr(group["driveSpace"], drive_space)
         mod.set_attr(group["enabled"], GroupUi["enabled"])
@@ -964,6 +970,16 @@ class Loader(object):
         mod.set_attr(group["driveStiffness"], GroupUi["stiffness"])
         mod.set_attr(group["driveDampingRatio"], GroupUi["dampingRatio"])
         mod.set_attr(group["driveSpaceCustom"], GroupUi["driveSpaceCustom"])
+
+        # Added 2022.02.25
+        try:
+            mod.set_attr(group["limo"], linear_motion)
+            mod.set_attr(group["drls"],
+                         GroupUi["driveRelativeLinearStiffness"])
+            mod.set_attr(group["drld"],
+                         GroupUi["driveRelativeLinearDampingRatio"])
+        except KeyError:
+            pass
 
     def _apply_constraint(self, mod, entity, con):
         Joint = self._registry.get(entity, "JointComponent")
@@ -1037,6 +1053,13 @@ class Loader(object):
             "Absolute": 2,
             "Custom": 3
         }.get(MarkerUi["driveSpace"], 0)
+
+        linear_motion = {
+            "Inherit": constants.MotionInherit,
+            "Locked": constants.MotionLocked,
+            "Limited": constants.MotionLimited,
+            "Free": constants.MotionFree,
+        }.get(MarkerUi.get("linearMotion"), 0)
 
         density_type = {
             "Off": constants.DensityOff,
@@ -1137,6 +1160,16 @@ class Loader(object):
             mod.set_attr(marker["daas"], Drive["angularAmountSwing"])
             mod.set_attr(marker["ignoreGravity"], Rigid["ignoreGravity"])
             mod.set_attr(marker["ignoreFields"], Rigid["ignoreFields"])
+        except KeyError:
+            pass
+
+        # Added 2022.02.25
+        try:
+            mod.set_attr(marker["limo"], linear_motion)
+            mod.set_attr(marker["drls"],
+                         MarkerUi["driveRelativeLinearStiffness"])
+            mod.set_attr(marker["drld"],
+                         MarkerUi["driveRelativeLinearDampingRatio"])
         except KeyError:
             pass
 

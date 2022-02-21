@@ -530,7 +530,11 @@ class Loader(object):
             rdsolver = commands.create_solver(transform_name)
             rdsolvers[entity] = rdsolver
 
-        if self._opts["preserveAttributes"]:
+        # Don't apply attributes from solver if the solver
+        # already existed in the scene.
+        override = self._opts["overrideSolver"]
+
+        if self._opts["preserveAttributes"] and override:
             with cmdx.DagModifier() as mod:
                 for entity, rdsolver in rdsolvers.items():
                     try:

@@ -88,6 +88,11 @@ RecordNiceAndSteady = 1
 ComCentroid = 0
 VolumetricCentroids = 1
 
+MotionInherit = -1
+MotionLocked = 0
+MotionLimited = 1
+MotionFree = 2
+
 # cacheMedia enum indices
 Off = 0
 On = 1

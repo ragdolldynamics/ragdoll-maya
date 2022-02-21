@@ -38,6 +38,10 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "driveAbsoluteLinear";
             editorTemplate -addControl "driveAbsoluteAngular";
             editorTemplate -addControl "driveAbsoluteLinearAmount";
+            editorTemplate -addControl "driveRelativeLinearStiffness";
+            editorTemplate -addControl "driveRelativeLinearDampingRatio";
+            editorTemplate -addControl "driveRelativeAngularStiffness";
+            editorTemplate -addControl "driveRelativeAngularDampingRatio";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Default Shape" -collapse true;
@@ -55,6 +59,17 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "limitStiffness";
             editorTemplate -addControl "limitDampingRatio";
             editorTemplate -addControl "limitRange";
+            editorTemplate -addControl "limitLinearMotion";
+            editorTemplate -addControl "limitAngularMotion";
+
+            editorTemplate -beginLayout "Advanced Limit" -collapse true;
+                editorTemplate -addControl "limitLinearMotionX";
+                editorTemplate -addControl "limitLinearMotionY";
+                editorTemplate -addControl "limitLinearMotionZ";
+                editorTemplate -addControl "limitAngularMotionX";
+                editorTemplate -addControl "limitAngularMotionY";
+                editorTemplate -addControl "limitAngularMotionZ";
+            editorTemplate -endLayout;
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Level of Detail" -collapse true;
@@ -90,7 +105,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "maxDepenetrationVelocity";
             editorTemplate -addControl "fieldSeed";
             editorTemplate -addControl "fieldCentroids";
-            editorTemplate -addControl "limitLinearMotion";
             editorTemplate -addControl "limitAutoOrient";
             editorTemplate -addControl "useMeshIslands";
 

@@ -28,10 +28,20 @@ RAGDOLL_PLUGIN = os.getenv("RAGDOLL_PLUGIN", "ragdoll")
 RAGDOLL_PLUGIN_NAME = os.path.basename(RAGDOLL_PLUGIN)
 
 
+def try_it(func):
+    # Don't let the failure of one upgrade path
+    # hinder the upgrade of subsequent paths.
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            traceback.print_exc()
+
+    return wrapper
+
+
 @internal.with_undo_chunk
 def upgrade_all():
-    print("Updating..")
-
     # Also fetch plug-in version from the same mouth, rather
     # than rely on what's coming out of interactive.py. Since
     # upgrading should work headless too!
@@ -121,7 +131,7 @@ def has_upgrade(node, from_version):
         return from_version < 20211112
 
     if node.type() == "rdMarker":
-        return from_version < 20211129
+        return from_version < 20220225
 
     if node.type() == "rdGroup":
         return from_version < 20211007
@@ -213,6 +223,10 @@ def marker(node, from_version, to_version):
         _marker_20211007_20211129(node)
         upgraded = True
 
+    if from_version < 20220225:
+        _marker_20211129_20220225(node)
+        upgraded = True
+
     return upgraded
 
 
@@ -257,12 +271,14 @@ Individual upgrade paths
 """
 
 
+@try_it
 def _scene_00000000_20201015(node):
     """TGS was introduced, let's maintain backwards compatibility though"""
     log.info("Upgrading %s to 2020.10.15" % node)
     node["solverType"] = constants.PGSSolverType
 
 
+@try_it
 def _scene_20201015_20210313(node):
     """Support for Z-up got added"""
     log.info("Upgrading %s to 2021.03.13" % node)
@@ -278,6 +294,7 @@ def _scene_20201015_20210313(node):
             mod.set_keyable(node["gravityZ"])
 
 
+@try_it
 def _rigid_00000000_20201015(node):
     """Introduced the .restMatrix"""
     log.info("Upgrading %s to 2020.10.15" % node)
@@ -287,12 +304,14 @@ def _rigid_00000000_20201015(node):
         cmds.setAttr(node["restMatrix"].path(), tuple(rest), type="matrix")
 
 
+@try_it
 def _rigid_20201015_20201016(node):
     """Introduced .color"""
     log.info("Upgrading %s to 2020.10.16" % node)
     node["color"] = internal.random_color()
 
 
+@try_it
 def _scene_20201016_20210228(scene):
     """Array indices are automatically removed since 02-28
 
@@ -323,6 +342,7 @@ def _scene_20201016_20210228(scene):
                 mod._modifier.removeMultiInstance(element._mplug, True)
 
 
+@try_it
 def _rigid_20201016_20210228(rigid):
     """Introduced .cachedRestMatrix"""
     log.info("Upgrading %s to 2021.02.28" % rigid)
@@ -337,6 +357,7 @@ def _rigid_20201016_20210228(rigid):
                         rigid["restMatrix"])
 
 
+@try_it
 def _rigid_20210228_20210308(rigid):
     """Introduced .startTime"""
     log.info("Upgrading %s to 2021.03.08" % rigid)
@@ -347,6 +368,7 @@ def _rigid_20210228_20210308(rigid):
         mod.connect(scene["startTime"], rigid["startTime"])
 
 
+@try_it
 def _rigid_20210423_20210427(rigid):
     """Introduced .startTime"""
     log.info("Upgrading %s to 2021.04.27" % rigid)
@@ -356,6 +378,7 @@ def _rigid_20210423_20210427(rigid):
                      rigid["cachedRestMatrix"].as_matrix())
 
 
+@try_it
 def _constraint_multiplier_20210308_20210411(mult):
     log.info("Upgrading %s to 2021.04.11" % mult)
 
@@ -367,6 +390,7 @@ def _constraint_multiplier_20210308_20210411(mult):
             mod.connect(mult["ragdollId"], other)
 
 
+@try_it
 def _rigid_multiplier_20210308_20210411(mult):
     log.info("Upgrading %s to 2021.04.11" % mult)
 
@@ -378,6 +402,7 @@ def _rigid_multiplier_20210308_20210411(mult):
             mod.connect(mult["ragdollId"], other)
 
 
+@try_it
 def _solver_20210928_20211007(solver):
     log.info("Upgrading %s to 2021.10.07" % solver)
 
@@ -393,10 +418,12 @@ def _solver_20210928_20211007(solver):
         mod.connect(transform["worldMatrix"][0], solver["inputMatrix"])
 
 
+@try_it
 def _solver_20210928_20211024(solver):
     log.info("Upgrading %s to 2021.10.24" % solver)
 
 
+@try_it
 def _solver_20211024_20211112(solver):
     """rdCanvas node was added"""
     log.info("Upgrading %s to 2021.11.12" % solver)
@@ -413,6 +440,7 @@ def _solver_20211024_20211112(solver):
         mod.connect(solver["ragdollId"], canvas["solver"])
 
 
+@try_it
 def _marker_20210928_20211007(marker):
     log.info("Upgrading %s to 2021.10.07" % marker)
 
@@ -451,6 +479,7 @@ def _marker_20210928_20211007(marker):
                 mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
+@try_it
 def _marker_20211007_20211129(marker):
     """originMatrix was added
 
@@ -468,6 +497,31 @@ def _marker_20211007_20211129(marker):
         mod.set_attr(marker["originMatrix"], marker["inputMatrix"].as_matrix())
 
 
+@try_it
+def _marker_20211129_20220225(marker):
+    """angularMotion was added"""
+
+    log.info("Upgrading %s to 2022.02.25" % marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["useMotion"], True)
+
+        for axis in "XYZ":
+            rng = marker["limitRange" + axis]
+            motion = marker["limitAngularMotion" + axis]
+
+            if rng == 0:
+                mod.set_attr(motion, constants.MotionFree)
+
+            elif rng > 0:
+                mod.set_attr(motion, constants.MotionLimited)
+
+            elif rng < 0:
+                mod.set_attr(rng, cmdx.radians(45))
+                mod.set_attr(motion, constants.MotionLocked)
+
+
+@try_it
 def _group_20210928_20211007(group):
     log.info("Upgrading %s to 2021.10.07" % group)
 

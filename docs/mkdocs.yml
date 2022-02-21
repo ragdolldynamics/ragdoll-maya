@@ -46,27 +46,6 @@ nav:
   - Serialisation: serialisation.md
   - News:  # Automatically generated
     - 2021.07.15: releases/2021.07.15.md
-  - Legacy:
-    - Active Rigid: legacy/active_rigid.md
-    - Active Chain: legacy/active_chain.md
-    - Active Character: legacy/character.md
-    - Constraints: legacy/legacy_constraints.md
-    - Soft Pin: legacy/soft_pin.md
-    - Hard Pin: legacy/hard_pin.md
-    - Mimic: legacy/mimic.md
-    - Forces: legacy/forces.md
-    - Bake Simulation: legacy/bake_simulation.md
-    - Import Physics: legacy/import_physics.md
-    - Export Physics: legacy/export_physics.md
-    - Scene Management: legacy/scene_management.md
-    - Cycle Protection: legacy/cycle_protection.md
-    - Pivot Editor: legacy/pivot_editor.md
-    - Debugging Tips: legacy/debugging_tips.md
-    - Performance Tips: legacy/performance_tips.md
-    - Tutorials:
-      - Bouncing Ball: legacy/bouncing_ball.md
-      - Rally Car: legacy/rally_car.md
-      - Manikin: legacy/manikin.md
   - About: about.md
 
 icons:

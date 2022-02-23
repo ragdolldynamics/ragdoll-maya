@@ -92,19 +92,23 @@ def create_solver(name=None, opts=None):
 
 
 @_wraps(_commands.assign_marker)
-def assign_marker(transform, solver, opts=None):
+def assign_marker(transform, solver, group=None, opts=None):
     _assert_is_nodepath(transform)
     _assert_is_nodepath(solver)
 
     transform = _cmdx.encode(transform)
     solver = _cmdx.encode(solver)
     return _return(
-        _commands.assign_marker(transform, solver=solver, opts=opts)
+        _commands.assign_marker(
+            transform,
+            solver=solver,
+            opts=opts
+        )
     )
 
 
 @_wraps(_commands.assign_markers)
-def assign_markers(transforms, solver, opts=None):
+def assign_markers(transforms, solver, group=True, opts=None):
     _assert_is_nodepaths(transforms)
     _assert_is_nodepath(solver)
     _assert_is_a(solver, "rdSolver")
@@ -113,7 +117,12 @@ def assign_markers(transforms, solver, opts=None):
     transforms = [_cmdx.encode(transform) for transform in transforms]
 
     return _return(
-        _commands.assign_markers(transforms, solver=solver, opts=opts)
+        _commands.assign_markers(
+            transforms,
+            solver=solver,
+            group=group,
+            opts=opts
+        )
     )
 
 

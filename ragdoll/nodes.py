@@ -53,6 +53,9 @@ def create(typ, mod, name, parent=None):
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)
 
+    elif typ == "rdEnvironment":
+        node = mod.create_node(typ, name=name)
+
     elif typ in ("rdDistanceConstraint",
                  "rdFixedConstraint",
                  "rdPinConstraint"):
@@ -63,7 +66,9 @@ def create(typ, mod, name, parent=None):
         raise TypeError("Unrecognised Ragdoll type '%s'" % typ)
 
     time1 = cmdx.encode("time1")
-    mod.connect(time1["outTime"], node["currentTime"])
     mod.set_attr(node["version"], internal.version())
+
+    if node.has_attr("currentTime"):
+        mod.connect(time1["outTime"], node["currentTime"])
 
     return node

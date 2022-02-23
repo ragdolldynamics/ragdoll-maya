@@ -1422,28 +1422,16 @@ def assign_environment(selection=None, **opts):
     if not solver:
         return kFailure
 
-    with cmdx.DGModifier() as mod:
-        for mesh in cmdx.selection():
+    for mesh in cmdx.selection():
+        if not mesh.isA(cmdx.kShape):
+            mesh = mesh.shape(type="mesh")
 
-            if not mesh.isA(cmdx.kShape):
-                mesh = mesh.shape(type="mesh")
+        if not mesh.isA(cmdx.kMesh):
+            raise i__.UserWarning(
+                "Select a polygon mesh to use for an environment"
+            )
 
-            if not mesh.isA(cmdx.kMesh):
-                raise i__.UserWarning(
-                    "Select a polygon mesh to use for an environment"
-                )
-
-            name = mesh.parent().name(namespace=False)
-            name = "rEnvironment_%s" % name
-            env = mod.create_node("rdEnvironment", name=name)
-            mod.connect(mesh["worldMatrix"][0], env["inputGeometryMatrix"])
-            mod.connect(mesh["outMesh"], env["inputGeometry"])
-
-            index = solver["inputStart"].next_available_index()
-            mod.connect(env["startState"], solver["inputStart"][index])
-            mod.connect(env["currentState"], solver["inputCurrent"][index])
-
-            # commands._take_ownership(mod, mesh, env)
+        commands.assign_environment(mesh, solver)
 
     return kSuccess
 

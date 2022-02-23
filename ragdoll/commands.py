@@ -289,6 +289,21 @@ def assign_marker(transform, solver, group=None, opts=None):
     return assign_markers([transform], solver, group, opts)[0]
 
 
+def assign_environment(mesh, solver):
+    with cmdx.DGModifier() as mod:
+        name = mesh.parent().name(namespace=False)
+        name = "rEnvironment_%s" % name
+        env = nodes.create("rdEnvironment", mod, name)
+        mod.connect(mesh["worldMatrix"][0], env["inputGeometryMatrix"])
+        mod.connect(mesh["outMesh"], env["inputGeometry"])
+
+        index = solver["inputStart"].next_available_index()
+        mod.connect(env["startState"], solver["inputStart"][index])
+        mod.connect(env["currentState"], solver["inputCurrent"][index])
+
+    return env
+
+
 def group_markers(markers, name=None):
     solver = _find_solver(markers[0])
 

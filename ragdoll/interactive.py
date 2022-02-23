@@ -765,6 +765,7 @@ def install_menu():
     item("assignMarker", assign_marker, assign_marker_options)
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
+    item("assignEnvironment", assign_environment)
 
     divider("Transfer")
 
@@ -1219,29 +1220,35 @@ def _rewind(scene):
     cmdx.currentTime(start_time)
 
 
-def _find_current_solver(create_ground=True):
-    if not validate_evaluation_mode():
-        return
+def _find_current_solver(solver):
+    solver_items = options.items("markersAssignSolver")
+    NewSolver = len(solver_items) - 1
 
-    if not validate_cached_playback():
-        return
+    if solver == NewSolver:
+        if not validate_evaluation_mode():
+            return
 
-    if not validate_playbackspeed():
-        return
+        if not validate_cached_playback():
+            return
 
-    solver = cmdx.ls(type="rdSolver")
+        if not validate_playbackspeed():
+            return
 
-    if solver:
-        return solver[0]
+        solver = commands.create_solver(opts={
+            "frameskipMethod": options.read("frameskipMethod"),
+            "sceneScale": options.read("markersSceneScale"),
+        })
 
     else:
-        opts = {
-            "frameskipMethod": options.read("frameskipMethod")
-        }
-        solver = commands.create_solver(opts=opts)
+        # The UI may have remained open, providing the user with
+        # out-of-date options that may no longer exist.
+        try:
+            solver = solver_items[solver]
+            solver = cmdx.encode(solver)
 
-        if create_ground:
-            commands.create_ground(solver)
+        except (cmdx.ExistError, IndexError):
+            solver = None
+            options.write("markersAssignSolver", 0)
 
     return solver
 
@@ -1329,41 +1336,13 @@ def assign_marker(selection=None, **opts):
     _update_solver_options()
     _update_group_options()
 
-    solver = None
-    solver_items = options.items("markersAssignSolver")
-    NewSolver = len(solver_items) - 1
-
-    if opts["solver"] != NewSolver:
-
-        # The UI may have remained open, providing the user with
-        # out-of-date options that may no longer exist.
-        try:
-            solver = solver_items[opts["solver"]]
-            solver = cmdx.encode(solver)
-
-        except (cmdx.ExistError, IndexError):
-            options.write("markersAssignSolver", 0)
+    solver = _find_current_solver(opts["solver"])
 
     if not solver:
-        if not validate_evaluation_mode():
-            return
+        return kFailure
 
-        if not validate_cached_playback():
-            return
-
-        if not validate_playbackspeed():
-            return
-
-        solver = commands.create_solver(opts={
-            "frameskipMethod": options.read("frameskipMethod"),
-            "sceneScale": options.read("markersSceneScale"),
-        })
-
-        if opts["createGround"]:
-            commands.create_ground(solver)
-
-    if not solver:
-        return
+    if opts["createGround"]:
+        commands.create_ground(solver)
 
     group = None
 
@@ -1429,6 +1408,40 @@ def assign_and_connect(selection=None, **opts):
     return assign_marker(selection, **dict({
         "connect": True,
     }, **opts))
+
+
+def assign_environment(selection=None, **opts):
+    opts = dict({
+        "solver": _opt("markersAssignSolver", opts),
+    })
+
+    solver = _find_current_solver(opts["solver"])
+
+    if not solver:
+        return kFailure
+
+    with cmdx.DGModifier() as mod:
+        for mesh in cmdx.selection():
+
+            if not mesh.isA(cmdx.kShape):
+                mesh = mesh.shape(type="mesh")
+
+            if not mesh.isA(cmdx.kMesh):
+                raise i__.UserWarning(
+                    "Select a polygon mesh to use for an environment"
+                )
+
+            name = mesh.parent().name(namespace=False)
+            name = "rEnvironment_%s" % name
+            env = mod.create_node("rdEnvironment", name=name)
+            mod.connect(mesh["worldMatrix"][0], env["inputGeometryMatrix"])
+            mod.connect(mesh["outMesh"], env["inputGeometry"])
+
+            index = solver["inputStart"].next_available_index()
+            mod.connect(env["startState"], solver["inputStart"][index])
+            mod.connect(env["currentState"], solver["inputCurrent"][index])
+
+    return kSuccess
 
 
 def markers_from_selection(selection=None):

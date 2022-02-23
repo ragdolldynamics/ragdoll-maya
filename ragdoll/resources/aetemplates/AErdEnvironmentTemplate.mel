@@ -1,0 +1,25 @@
+//AErdEnvironmentTemplate.mel
+
+global proc AErdEnvironmentTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "Input" -collapse false;
+            editorTemplate -addControl "enabled";
+            editorTemplate -addControl "friction";
+            editorTemplate -addControl "restitution";
+            editorTemplate -addControl "collisionGroup";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+
+    // Tell the attribute editor not to display the attributes we
+    // don't care about.
+    editorTemplate -suppress "inputGeometry";
+    editorTemplate -suppress "frozen";
+    editorTemplate -suppress "caching";
+    editorTemplate -suppress "nodeState";
+}

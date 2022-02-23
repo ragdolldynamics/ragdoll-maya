@@ -290,6 +290,7 @@ class _Type(int):
 MFn = om.MFn
 kDagNode = _Type(om.MFn.kDagNode)
 kShape = _Type(om.MFn.kShape)
+kMesh = _Type(om.MFn.kMesh)
 kTransform = _Type(om.MFn.kTransform)
 kJoint = _Type(om.MFn.kJoint)
 kSet = _Type(om.MFn.kSet)

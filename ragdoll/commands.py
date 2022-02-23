@@ -97,10 +97,12 @@ def assign_markers(transforms, solver, group=True, opts=None):
     Options:
         autoLimit (bool): Transfer locked channels into physics limits
         density (enum): Auto-compute mass based on volume and a density,
-            such as Flesh or Wood
+            such as api.Flesh or api.Wood
         materialInChannelBox (bool): Show material attributes in Channel Box
         shapeInChannelBox (bool): Show shape attributes in Channel Box
         limitInChannelBox (bool): Show limit attributes in Channel Box
+        advancedPoseInChannelBox (bool): Show advanced pose attributes
+            in Channel Box
 
     """
 

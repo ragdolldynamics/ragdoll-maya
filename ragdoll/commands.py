@@ -1265,6 +1265,10 @@ def delete_physics(nodes, dry_run=False):
                       "rdDistanceConstraint",
                       "rdFixedConstraint")))
 
+    for shape in shapes:
+        if shape.has_attr("outMesh"):
+            dgnodes += list(shape["outMesh"].outputs(type="rdEnvironment"))
+
     shapes = filter(None, shapes)
     shapes = list(shapes) + nodes
     nodes = shapes + dgnodes

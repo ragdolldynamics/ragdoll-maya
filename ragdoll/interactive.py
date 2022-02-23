@@ -765,7 +765,7 @@ def install_menu():
     item("assignMarker", assign_marker, assign_marker_options)
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
-    item("assignEnvironment", assign_environment)
+    item("assignEnvironment", assign_environment, assign_environment_options)
 
     divider("Transfer")
 
@@ -1415,6 +1415,8 @@ def assign_environment(selection=None, **opts):
         "solver": _opt("markersAssignSolver", opts),
     })
 
+    _update_solver_options()
+
     solver = _find_current_solver(opts["solver"])
 
     if not solver:
@@ -1440,6 +1442,8 @@ def assign_environment(selection=None, **opts):
             index = solver["inputStart"].next_available_index()
             mod.connect(env["startState"], solver["inputStart"][index])
             mod.connect(env["currentState"], solver["inputCurrent"][index])
+
+            # commands._take_ownership(mod, mesh, env)
 
     return kSuccess
 
@@ -3005,6 +3009,11 @@ def assign_and_connect_options(*args):
     _update_solver_options()
     _update_group_options()
     return _Window("assignGroup", assign_and_connect)
+
+
+def assign_environment_options(*args):
+    _update_solver_options()
+    return _Window("assignEnvironment", assign_environment)
 
 
 def record_markers_options(*args):

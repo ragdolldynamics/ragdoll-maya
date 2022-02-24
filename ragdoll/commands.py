@@ -96,11 +96,6 @@ def assign_markers(transforms, solver, opts=None):
         autoLimit (bool): Transfer locked channels into physics limits
         density (enum): Auto-compute mass based on volume and a density,
             such as api.Flesh or api.Wood
-        materialInChannelBox (bool): Show material attributes in Channel Box
-        shapeInChannelBox (bool): Show shape attributes in Channel Box
-        limitInChannelBox (bool): Show limit attributes in Channel Box
-        advancedPoseInChannelBox (bool): Show advanced pose attributes
-            in Channel Box
 
     """
 
@@ -114,13 +109,10 @@ def assign_markers(transforms, solver, opts=None):
     )
 
     opts = dict({
+        "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
-        "density": constants.DensityFlesh,
-        "materialInChannelBox": True,
-        "shapeInChannelBox": True,
-        "limitInChannelBox": False,
-        "advancedPoseInChannelBox": False,
+        "refit": True,
         "preventDuplicateMarker": True,
     }, **(opts or {}))
 
@@ -146,6 +138,7 @@ def assign_markers(transforms, solver, opts=None):
             )
 
     parent_marker = transforms[0]["message"].output(type="rdMarker")
+    refit_root = parent_marker
     markers = []
 
     with cmdx.DGModifier() as dgmod:
@@ -264,12 +257,8 @@ def assign_markers(transforms, solver, opts=None):
             parent_marker = marker
             markers.append(marker)
 
-    toggle_channel_box_attributes(markers, opts={
-        "materialAttributes": opts["materialInChannelBox"],
-        "shapeAttributes": opts["shapeInChannelBox"],
-        "limitAttributes": opts["limitInChannelBox"],
-        "advancedPoseAttributes": opts["advancedPoseInChannelBox"],
-    })
+    if opts["refit"] and refit_root is not None:
+        reset_shape(refit_root)
 
     return markers
 
@@ -931,6 +920,38 @@ def create_pin_constraint(child, opts=None):
     return con
 
 
+def _find_source_transform(marker):
+    return marker["sourceTransform"].input(type=cmdx.kTransform)
+
+
+def reset_shape(marker):
+    with cmdx.DagModifier() as mod:
+        parent_marker = marker["parentMarker"].input(type="rdMarker")
+        child_markers = tuple(marker["ragdollId"].outputs(
+            plugs="parentMarker", type="rdMarker"))
+
+        parent = None
+        children = []
+
+        if parent_marker:
+            parent = _find_source_transform(parent_marker)
+
+        if child_markers:
+            children = [
+                _find_source_transform(m.node())
+                for m in child_markers
+            ]
+
+        transform = marker["src"].input(type=cmdx.kTransform)
+        geo = _infer_geometry(transform, parent, children)
+        mod.set_attr(marker["shapeType"], geo.shape_type)
+        mod.set_attr(marker["shapeExtents"], geo.extents)
+        mod.set_attr(marker["shapeLength"], geo.length)
+        mod.set_attr(marker["shapeRadius"], geo.radius)
+        mod.set_attr(marker["shapeRotation"], geo.shape_rotation)
+        mod.set_attr(marker["shapeOffset"], geo.shape_offset)
+
+
 def reset_constraint_frames(mod, marker, **opts):
     """Reset constraint frames
 
@@ -1187,15 +1208,10 @@ def toggle_channel_box_attributes(markers, opts=None):
     )
 
     advanced_pose_attributes = (
-        "driveSpaceAbsolute",
-        "driveSpaceRelative",
         "driveAngularAmountTwist",
         "driveAngularAmountSwing",
         "driveAbsoluteLinear",
         "driveAbsoluteAngular",
-        "driveAbsoluteLinearX",
-        "driveAbsoluteLinearY",
-        "driveAbsoluteLinearZ",
     )
 
     attrs = []
@@ -1465,7 +1481,45 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     root_scale = root_tm.scale()
 
     # There is a lot we can gather from the childhood
-    if children:
+    if len(children) > 1 and root.is_a("joint"):
+        corner1, corner2 = cmdx.Point(), cmdx.Point()
+
+        for child in children:
+            pos = child.translation()
+
+            # Find bottom-right corner
+            if pos.x < corner1.x:
+                corner1.x = pos.x
+            if pos.y < corner1.y:
+                corner1.y = pos.y
+            if pos.z < corner1.z:
+                corner1.z = pos.z
+
+            # Find top-left corner
+            if pos.x > corner2.x:
+                corner2.x = pos.x
+            if pos.y > corner2.y:
+                corner2.y = pos.y
+            if pos.z > corner2.z:
+                corner2.z = pos.z
+
+        bbox = cmdx.BoundingBox(corner1, corner2)
+        offset = cmdx.Vector(bbox.center)
+        size = cmdx.Vector(
+            max(0.25, bbox.width),
+            max(0.25, bbox.height),
+            max(0.25, bbox.depth)
+        )
+
+        geometry.length = max(size)
+        geometry.extents = size
+        geometry.shape_offset = offset
+        geometry.shape_rotation = orient
+        geometry.shape_type = constants.BoxShape
+
+        return geometry
+
+    elif children:
 
         # Support multi-child scenarios
         #

@@ -1407,6 +1407,24 @@ def assign_marker(selection=None, **opts):
     if opts["createObjectSet"]:
         _add_to_objset(markers)
 
+    channel_box = {
+        "materialInChannelBox": False,
+        "shapeInChannelBox": False,
+        "limitInChannelBox": False,
+        "advancedPoseInChannelBox": False,
+    }
+
+    for key, value in channel_box.items():
+        channel_box[key] = opts[key]
+
+    if any(channel_box.values()):
+        commands.toggle_channel_box_attributes(markers, opts={
+            "materialAttributes": channel_box["materialInChannelBox"],
+            "shapeAttributes": channel_box["shapeInChannelBox"],
+            "limitAttributes": channel_box["limitInChannelBox"],
+            "advancedPoseAttributes": channel_box["advancedPoseInChannelBox"],
+        })
+
     cmds.select(list(t.shortest_path() for t in selection))
     cmds.refresh()
 

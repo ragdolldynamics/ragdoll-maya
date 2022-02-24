@@ -746,7 +746,6 @@
     },
 
     "mergeSolvers": {
-        "enable": false,
         "label": "Merge Solvers",
         "icon": "combine.png",
         "summary": "Merge two or more solvers into one.",
@@ -754,7 +753,6 @@
     },
 
     "extractFromSolver": {
-        "enable": false,
         "label": "Extract Markers",
         "icon": "extract.png",
         "summary": "Extract markers into new solver.",
@@ -762,8 +760,7 @@
     },
 
     "moveToSolver": {
-        "enable": false,
-        "label": "Move Markers",
+        "label": "Move to Solver",
         "icon": "move.png",
         "summary": "Move markers into existing solver.",
         "description": "Move markers from one solver into another, where they can interact with other markers in the destination solver."

@@ -809,9 +809,9 @@ def install_menu():
 
         divider()
 
-        item("mergeSolvers")
-        item("extractFromSolver")
-        item("moveToSolver")
+        item("mergeSolvers", merge_solvers)
+        item("extractFromSolver", extract_from_solver)
+        item("moveToSolver", move_to_solver)
 
     with submenu("Cache", icon="bake.png"):
         item("cacheSolver", cache_all, label="Cache")
@@ -1223,6 +1223,7 @@ def _rewind(scene):
 def _find_current_solver(solver):
     solver_items = options.items("markersAssignSolver")
     NewSolver = len(solver_items) - 1
+    is_new = False
 
     if solver == NewSolver:
         if not validate_evaluation_mode():
@@ -1238,6 +1239,7 @@ def _find_current_solver(solver):
             "frameskipMethod": options.read("frameskipMethod"),
             "sceneScale": options.read("markersSceneScale"),
         })
+        is_new = True
 
     else:
         # The UI may have remained open, providing the user with
@@ -1250,7 +1252,7 @@ def _find_current_solver(solver):
             solver = None
             options.write("markersAssignSolver", 0)
 
-    return solver
+    return solver, is_new
 
 
 def _find_solver_for(marker):
@@ -1336,14 +1338,15 @@ def assign_marker(selection=None, **opts):
     _update_solver_options()
     _update_group_options()
 
-    solver = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(opts["solver"])
 
     if not solver:
         return kFailure
 
-    if opts["createGround"]:
+    if is_new and opts["createGround"]:
         commands.create_ground(solver)
 
+    owner = solver
     group = None
 
     if opts["group"] == 0:  # No group
@@ -1367,15 +1370,21 @@ def assign_marker(selection=None, **opts):
     if opts["group"] > 2:
         try:
             items = options.items("markersAssignGroup")
-            group = cmdx.encode(items[opts["group"]])
+            owner = cmdx.encode(items[opts["group"]])
         except (cmdx.ExistError, IndexError):
-            group = None
             options.write("markersAssignGroup", 1)
+
+    if group is True:
+        root_transform = selection[0]
+        name = root_transform.name(namespace=False) + "_rGroup"
+        owner = commands.create_group(owner, name, opts={
+            "selfCollide": not opts["connect"]
+        })
 
     markers = []
 
     try:
-        markers += commands.assign_markers(selection, solver, group, opts={
+        markers += commands.assign_markers(selection, owner, opts={
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
@@ -1417,7 +1426,7 @@ def assign_environment(selection=None, **opts):
 
     _update_solver_options()
 
-    solver = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(opts["solver"])
 
     if not solver:
         return kFailure
@@ -1447,6 +1456,44 @@ def markers_from_selection(selection=None):
             markers += [selected]
 
     return markers
+
+
+@with_exception_handling
+@i__.with_undo_chunk
+def merge_solvers(selection=None, **opts):
+    solvers = _filtered_selection("rdSolver", selection)
+
+    if not solvers:
+        raise i__.UserWarning(
+            "No solvers found",
+            "Select one or more solvers to group."
+        )
+
+    if len(solvers) != 2:
+        raise i__.UserWarning(
+            "Invalid Selection",
+            "Select 2 solvers, the latter will contain the former."
+        )
+
+    commands.merge_solvers(solvers[0], solvers[1])
+
+    return True
+
+
+@with_exception_handling
+@i__.with_undo_chunk
+def extract_from_solver(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "No markers found",
+            "Select one or more markers to group."
+        )
+
+    commands.extract_from_solver(markers)
+
+    return True
 
 
 @with_exception_handling
@@ -1490,6 +1537,35 @@ def move_to_group(selection=None, **opts):
     group = groups[0]
     for marker in markers:
         commands.move_to_group(marker, group)
+
+    return True
+
+
+@with_exception_handling
+@i__.with_undo_chunk
+def move_to_solver(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "No markers found",
+            "Select one or more markers to group."
+        )
+
+    solvers = _filtered_selection("rdSolver", selection)
+
+    if len(solvers) < 1:
+        raise i__.UserWarning(
+            "No group found",
+            "Select some markers and a group to add things together."
+        )
+
+    if len(solvers) > 1:
+        log.warning("Multiple solvers selected, using %s" % solvers[0])
+
+    solver = solvers[0]
+    for marker in markers:
+        commands.move_to_solver(marker, solver)
 
     return True
 

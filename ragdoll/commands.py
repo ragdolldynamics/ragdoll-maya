@@ -81,7 +81,7 @@ def create_solver(name=None, opts=None):
     return solver
 
 
-def assign_markers(transforms, solver, group=True, opts=None):
+def assign_markers(transforms, solver, opts=None):
     """Assign markers to `transforms` belonging to `solver`
 
     Each marker transfers the translation and rotation of each transform
@@ -89,9 +89,7 @@ def assign_markers(transforms, solver, group=True, opts=None):
 
     Arguments:
         transforms (list): One or more transforms to assign markers onto
-        solver (rdSolver): Add newly created markers to this solver
-        group (rdGroup, optional): Add markers to this group, or to a
-            new group with `group=True` (default)
+        solver (rdSolver or rdGroup): Add newly created markers to this solver
         opts (dict, optional): Options, see below
 
     Options:
@@ -105,6 +103,10 @@ def assign_markers(transforms, solver, group=True, opts=None):
             in Channel Box
 
     """
+
+    assert solver and solver.is_a(("rdSolver", "rdGroup")), (
+        "%s was not a solver or group" % solver
+    )
 
     assert len(transforms) > 0, "Nothing to assign_markers to"
     assert all(isinstance(t, cmdx.Node) for t in transforms), (
@@ -242,7 +244,10 @@ def assign_markers(transforms, solver, group=True, opts=None):
             dgmod.lock_attr(marker["recordToExistingKeys"])
             dgmod.lock_attr(marker["recordToExistingTangents"])
 
-            _add_to_solver(dgmod, marker, solver)
+            if solver.is_a("rdSolver"):
+                _add_to_solver(dgmod, marker, solver)
+            else:
+                _add_to_group(dgmod, marker, solver)
 
             # Keep next_available_index() up-to-date
             dgmod.do_it()
@@ -258,17 +263,6 @@ def assign_markers(transforms, solver, group=True, opts=None):
 
             parent_marker = marker
             markers.append(marker)
-
-    if group is True:
-        root_transform = transforms[0]
-        name = root_transform.name(namespace=False) + "_rGroup"
-        group = create_group(solver, name, opts={
-            "selfCollide": not opts["connect"]
-        })
-
-    if group:
-        for marker in markers:
-            move_to_group(marker, group)
 
     toggle_channel_box_attributes(markers, opts={
         "materialAttributes": opts["materialInChannelBox"],
@@ -286,7 +280,7 @@ def assign_marker(transform, solver, group=None, opts=None):
         "`transform` should not be a list: %s" % str(transform))
 
     opts = dict({"connect": False}, **(opts or {}))
-    return assign_markers([transform], solver, group, opts)[0]
+    return assign_markers([transform], solver, opts)[0]
 
 
 def assign_environment(mesh, solver):
@@ -1763,6 +1757,68 @@ def move_to_group(marker, group):
 def move_to_solver(marker, solver):
     with cmdx.DagModifier() as mod:
         _add_to_solver(mod, marker, solver)
+
+
+def extract_from_solver(markers):
+    assert isinstance(markers, (tuple, list)), (
+        "%s was not a list" % str(markers)
+    )
+
+    solvers = tuple(filter(None, {
+        m["startState"].output(type=("rdSolver", "rdGroup")) for m in markers
+    }))
+
+    assert len(solvers) > 0, (
+        "Markers were not part of any solver: \"%s\" "
+        % ", ".join(str(m) for m in markers)
+    )
+    assert len(solvers) == 1, (
+        "Markers must be part of the same solver: \"%s\" -> \"%s\""
+        % (", ".join(str(m) for m in markers),
+           ", ".join(str(s) for s in solvers))
+    )
+
+    original = list(solvers)[0]
+
+    if original.isA("rdGroup"):
+        original = original["startState"].output(type="rdSolver")
+
+    assert original and original.isA("rdSolver"), "No solver was found"
+
+    name = original.name(namespace=False) + "_extracted"
+    new = create_solver(name, opts={
+        "sceneScale": original["spaceMultiplier"].read()
+    })
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            _add_to_solver(mod, marker, new)
+
+            # Keep next available index up-to-date
+            mod.do_it()
+
+    return new
+
+
+def merge_solvers(a, b):
+    with cmdx.DagModifier() as mod:
+        for el in a["inputStart"]:
+            _add_to_solver(mod, el.input(), b)
+
+            # Keep next available index up-to-date
+            mod.do_it()
+
+    # The `_add_to_solver` call automatically deletes the solver
+    # once empty. But, if it isn't empty then that might indicate
+    # that the inputStart and inputCurrent array attributes have
+    # gotten out of sync.
+
+    if a.exists:
+        log.warning(
+            "%s is still alive, this may be a problem." % a
+        )
+
+    return True
 
 
 def _add_to_group(mod, marker, group):

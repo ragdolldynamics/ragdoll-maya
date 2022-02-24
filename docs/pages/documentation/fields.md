@@ -210,22 +210,6 @@ https://user-images.githubusercontent.com/2152766/153839253-65fa756c-373f-40e3-9
 
 <br>
 
-#### Force Modes
-
-Fields can apply to your markers in 2 different ways.
-
-| Mode             | Description | Math
-|:-----------------|:------------|:----------
-| Force            | Traditional force            | `mass * distance / time^2`
-| Impulse          | Typically used for contacts  | `mass * distance / time`
-
-!!! question "Which should I use?"
-    The default is `Force`, whereas `Impulse` is what is typically used for collision handling. Experiment, and let us know which you prefer!
-
-https://user-images.githubusercontent.com/2152766/153840245-90a8b6b1-1270-4e4a-9849-d973e837aaed.mp4 controls
-
-<br>
-
 ### More
 
 Being native to Maya, Autodesk has some documentation of its own here.

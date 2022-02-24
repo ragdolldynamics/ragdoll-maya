@@ -106,27 +106,26 @@ markdown_extensions:
 
 plugins:
   - search
-  - git-revision-date
+  # - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false
       redirect_maps:
           "": "https://ragdolldynamics.com"
-          "documentation/active_rigid/": "/legacy/active_rigid/"
-          "documentation/active_chain/": "/legacy/active_chain/"
-          "documentation/bake_simulation/": "/legacy/bake_simulation/"
-          "documentation/character/": "/legacy/character/"
-          "documentation/cycle_protection/": "/legacy/cycle_protection/"
-          "documentation/debugging_tips/": "/legacy/debugging_tips/"
-          "documentation/legacy_forces/": "/legacy/forces/"
-          "documentation/hard_pin/": "/legacy/hard_pin/"
-          "documentation/mimic/": "/legacy/mimic/"
-          "documentation/performance_tips/": "/legacy/performance_tips/"
-          "documentation/pivot_editor/": "/legacy/pivot_editor/"
-          "documentation/scene_management/": "/legacy/scene_management/"
-          "documentation/shapes/": "/legacy/shapes/"
-          "documentation/soft_pin/": "/legacy/soft_pin/"
-          "tutorials/bouncing_ball/": "/legacy/bouncing_ball/"
-          "tutorials/rally_car/": "/legacy/rally_car/"
-          "tutorials/dynamic_tail/": "/legacy/dynamic_tail/"
+          "documentation/active_rigid/": "/overview"
+          "documentation/active_chain/": "/overview"
+          "documentation/bake_simulation/": "/overview"
+          "documentation/character/": "/overview"
+          "documentation/cycle_protection/": "/overview"
+          "documentation/debugging_tips/": "/overview"
+          "documentation/hard_pin/": "/overview"
+          "documentation/mimic/": "/overview"
+          "documentation/performance_tips/": "/overview"
+          "documentation/pivot_editor/": "/overview"
+          "documentation/scene_management/": "/overview"
+          "documentation/shapes/": "/overview"
+          "documentation/soft_pin/": "/overview"
+          "tutorials/bouncing_ball/": "/tutorials"
+          "tutorials/rally_car/": "/tutorials"
+          "tutorials/dynamic_tail/": "/tutorials"
           "releases/": "/news/"

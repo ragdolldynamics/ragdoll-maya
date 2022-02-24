@@ -35,10 +35,6 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -label "Rotate Damping" -addControl "angularConstraintDamping";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Fields" -collapse true;
-            editorTemplate -addControl "forceMode";
-        editorTemplate -endLayout;
-
         editorTemplate -beginLayout "Scale" -collapse true;
             editorTemplate -addControl "timeMultiplier";
             editorTemplate -addControl "spaceMultiplier";

@@ -1,5 +1,7 @@
 # Usage: ./serve.ps1
-rez env -e "PYTHONPATH=$(pwd)/plugins;$(pwd)/../" `
+rez env `
+    -e "PYTHONPATH=$(pwd)/plugins;$(pwd)/../" `
+    -e "FOR_DISABLE_CONSOLE_CTRL_HANDLER=1" `
     git `
     nltk `
     maya-2022 `

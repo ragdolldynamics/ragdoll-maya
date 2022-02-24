@@ -4,7 +4,7 @@ from maya import cmds
 from ragdoll import api
 from ragdoll.vendor import cmdx
 
-from . import _new, _save
+from . import _new
 
 from nose.tools import (
     assert_almost_equals,
@@ -21,7 +21,35 @@ def test_basics():
     api.createDistanceConstraint(marker1, marker2)
 
 
-def test_assign_group():
+def test_create_group():
+    _new()
+    solver = api.createSolver()
+    group = api.createGroup(solver)
+
+    joint1 = cmds.joint()
+    cmds.move(0, 5, 0)
+    joint2 = cmds.joint()
+    cmds.move(5, 5, 0)
+    cmds.joint()  # tip
+    cmds.move(10, 5, 0)
+
+    markers = api.assignMarkers([joint1, joint2], group)
+
+    # Check the results
+    marker = cmdx.encode(markers[0])
+    group = marker["startState"].output(type="rdGroup")
+    group["driveStiffness"] = 0.001
+    cmdx.min_time(1)
+    cmdx.max_time(50)
+    api.recordPhysics(solver)
+
+    joint2 = cmdx.encode(joint2)
+    assert_almost_equals(
+        joint2["rz", cmdx.Degrees].read(time=cmdx.time(50)), -32, 0
+    )
+
+
+def test_assign_and_connect():
     _new()
     solver = api.createSolver()
     joint1 = cmds.joint()
@@ -33,9 +61,10 @@ def test_assign_group():
     markers = api.assignMarkers([joint1, joint2], solver)
 
     # Check the results
-    marker = cmdx.encode(markers[0])
-    group = marker["startState"].output(type="rdGroup")
-    group["driveStiffness"] = 0.001
+    for marker in markers:
+        marker = cmdx.encode(marker)
+        marker["driveStiffness"] = 0.001
+
     cmdx.min_time(1)
     cmdx.max_time(50)
     api.recordPhysics(solver)

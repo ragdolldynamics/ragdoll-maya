@@ -21,12 +21,13 @@ nav:
     - Solver: documentation/solver.md
     - Manipulator: documentation/manipulator.md
     - Constraints: documentation/constraints.md
-    # - Forces: documentation/forces.md
-    # - Import Physics: documentation/import_physics.md
+    - Fields: documentation/fields.md
+    - Import Physics: documentation/import_physics.md
     # - Export Physics: documentation/export_physics.md
     - Record Simulation: documentation/record_simulation.md
     - Snap to Simulation: documentation/snap_to_simulation.md
     - Retargeting: documentation/retargeting.md
+    - Level Of Detail: documentation/level_of_detail.md
     - Cache: documentation/cache.md
     - Link: documentation/link.md
     - Utilities: documentation/utilities.md
@@ -119,8 +120,6 @@ plugins:
           "documentation/debugging_tips/": "/legacy/debugging_tips/"
           "documentation/legacy_forces/": "/legacy/forces/"
           "documentation/hard_pin/": "/legacy/hard_pin/"
-          "documentation/import_physics/": "/legacy/import_physics/"
-          "documentation/export_physics/": "/legacy/export_physics/"
           "documentation/mimic/": "/legacy/mimic/"
           "documentation/performance_tips/": "/legacy/performance_tips/"
           "documentation/pivot_editor/": "/legacy/pivot_editor/"

@@ -110,14 +110,6 @@ The `Behaviour` can be set either for a whole group of markers, or each Marker i
 
 <br>
 
-#### Initial State
-
-Treat the input as a starting position, but nothing else.
-
-https://user-images.githubusercontent.com/2152766/134478792-d7f4fc46-fea0-468a-9ec0-7737072263a1.mp4 controls
-
-<br>
-
 #### Kinematic
 
 Follow the input exactly, no exceptions. Not even collisions.
@@ -126,7 +118,7 @@ https://user-images.githubusercontent.com/2152766/134478795-daa12066-c151-4fd5-a
 
 <br>
 
-#### Pose Match
+#### Dynamic
 
 Follow the local pose of your animation.
 
@@ -239,6 +231,68 @@ How much influence one Marker should have over another during contact.
     2. Increase `Gravity`, also under the solver node
 
     To make something "bend" faster, like an arm flexing, that would be controlled via the `Guide Strength` and typically what causes it to reach a given speed and then stay there is governed by the `Rotate Damping`. That's how much of any motion should be cancelled out, to stabilise the motion. A very *fast* motion would have very little damping, but then also run the risk of "overshooting". That is, of passing the point at which you wanted it to reach.
+
+<br>
+
+#### Density
+
+![image](https://user-images.githubusercontent.com/2152766/148947446-5e6773c0-0f50-4702-876c-f76b4439a2c5.png)
+
+Ragdoll can  automatically compute a suitable mass for each Marker, based on the volume of your shape and a density of your choosing.
+
+In other words, big objects become heavy, small objects become light.
+
+**Before**
+
+https://user-images.githubusercontent.com/2152766/146757327-507ea062-d4e7-45dd-b9a1-59406340fc89.mp4 controls
+
+**After**
+
+https://user-images.githubusercontent.com/2152766/146757333-b56046c7-467f-4edf-91b8-45d260ffc101.mp4 controls
+
+<br>
+
+##### Presets
+
+Provide a custom density, or choose from one of the provided ones.
+
+| Density    | Value
+|:-----------|:------------
+| `Off`        | Do not compute, use the `Mass` attribute
+| `Cotton`     | Very sparse, 0.05 grams per cubic centimeter
+| `Wood`       | Sparse, 0.2 grams per cubic centimeter
+| `Flesh`      | Default, 1.0g/cm3
+| `Uranium`    | Dense, 19.0g/cm3
+| `Black Hole` | Very, very dense
+| `Custom`     | You pick
+
+Mass is computed based on the *volume* of your shape, along with a density of your choosing.
+
+https://user-images.githubusercontent.com/2152766/146945079-396470bc-7af0-43fe-96ee-2009e64ac328.mp4 controls
+
+<br>
+
+##### Options
+
+Choose between various densities either at creation-time or after creation.
+
+https://user-images.githubusercontent.com/2152766/146948273-726f27dc-eecb-45d4-8a5a-567d05447afe.mp4 controls
+
+<br>
+
+##### Visualise
+
+The computed mass updates interactively as you change the size and type of your shape, including convex hulls!
+
+https://user-images.githubusercontent.com/2152766/146948277-f5511ded-8dc4-4136-9b40-e788c20c686a.mp4 controls
+
+In the Manipulator, you'll be able to not only only edit the density, but preview the *computed* mass given the current shape volume and density you provide.
+
+https://user-images.githubusercontent.com/2152766/148936727-1b69776a-c95d-4759-8e34-38a9f958e69a.mp4 controls
+
+![image](https://user-images.githubusercontent.com/2152766/147099761-2cb88dcf-e23f-491f-8801-21cf6ccfde87.png)
+
+![image](https://user-images.githubusercontent.com/2152766/149519861-53d118b3-e4be-48b4-bf88-b1ae77ae8147.png)
 
 <br>
 

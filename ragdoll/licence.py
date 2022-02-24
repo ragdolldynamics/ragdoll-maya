@@ -4,6 +4,7 @@ import os
 import sys
 from maya import cmds
 import logging
+from . import constants
 
 STATUS_OK = 0                   # All OK
 STATUS_FAIL = 1                 # General error
@@ -133,8 +134,12 @@ def current_key():
     return cmds.ragdollLicence(serial=True)
 
 
-def request_lease(ip="127.0.0.1", port=13):
+def request_lease(ip=None, port=None):
     """Request a licence from `ip` on `port`"""
+
+    if not (ip and port):
+        ip, port = constants.RAGDOLL_FLOATING.split(":")
+
     status = cmds.ragdollLicence(requestLease=(ip, port))
 
     if status == STATUS_OK:

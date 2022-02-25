@@ -1208,10 +1208,13 @@ def toggle_channel_box_attributes(markers, opts=None):
     )
 
     advanced_pose_attributes = (
-        "driveAngularAmountTwist",
-        "driveAngularAmountSwing",
+        # "driveAngularAmountTwist",
+        # "driveAngularAmountSwing",
         "driveAbsoluteLinear",
         "driveAbsoluteAngular",
+        # "driveAbsoluteLinearX",
+        # "driveAbsoluteLinearY",
+        # "driveAbsoluteLinearZ",
     )
 
     attrs = []

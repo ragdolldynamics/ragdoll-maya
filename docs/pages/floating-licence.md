@@ -88,14 +88,6 @@ TurboFloatServer.exe -a="YOUR-SERIAL-NUMBER"
 
 There should be no output from the command, unless there's a problem.
 
-??? question "Whitelist?"
-    If you're in a secure network, you may want to limit the licence server to the least amount of external access. You can do so by whitelisting it in your firewall, using this URL and port number.
-
-    - url: `https://wyday.com`
-    - port: `443`
-
-    More details here: https://wyday.com/limelm/help/turbofloat-server/
-
 ??? question "No internet?"
     The licence server can be activated offline.
 
@@ -206,6 +198,17 @@ Let's cover some common scenarios.
 
 <br>
 
+### Can I limit the internet access of my licence server?
+
+If you're in a secure network, you may want to limit the licence server to the least amount of external access. You can do so by "whitelisting" it in your firewall, using this URL and port number.
+
+- url: `https://wyday.com`
+- port: `443`
+
+More details here: https://wyday.com/limelm/help/turbofloat-server/
+
+<br>
+
 ### Can I activate my server offline?
 
 Lifetime licences, yes. Monthly licences, no.
@@ -266,6 +269,28 @@ The default port is `13` and can be edited via the `TurboFloatServer-config.xml`
 ```
 
 - [More Configuration Options](https://wyday.com/limelm/help/turbofloat-server/#config)
+
+<br>
+
+### Can I move my licence server to a different machine?
+
+Yes.
+
+To move a licence, you can deactivate it and then activate it again someplace else.
+
+```bash
+TurboFloatServer -deact
+```
+
+This will deactivate the server. The same can be done if your licence server is offline, by passing a filename to the command.
+
+```bash
+TurboFloatServer -deact="deactivation_request.xml"
+```
+
+Open this file and paste the contents of it into the offline deactivation wizard here.
+
+- https://ragdolldynamics.com/offline
 
 <br>
 

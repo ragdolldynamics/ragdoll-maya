@@ -106,7 +106,7 @@ markdown_extensions:
 
 plugins:
   - search
-  # - git-revision-date
+  - git-revision-date
   - mkdocs-ragdoll
   - mkdocs-redirects:
       use_directory_urls: false

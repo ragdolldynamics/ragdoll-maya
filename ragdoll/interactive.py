@@ -868,6 +868,7 @@ def install_menu():
         divider()
 
         item("markersAutoLimit", auto_limit)
+        item("resetShape", reset_shape)
         item("resetMarkerConstraintFrames", reset_marker_constraint_frames)
         item("editMarkerConstraintFrames", edit_marker_constraint_frames)
 
@@ -2204,6 +2205,17 @@ def reset_marker_constraint_frames(selection=None, **opts):
 
         with cmdx.DGModifier() as mod:
             commands.reset_constraint_frames(mod, marker)
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_shape(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    for marker in markers:
+        commands.reset_shape(marker)
 
     return kSuccess
 

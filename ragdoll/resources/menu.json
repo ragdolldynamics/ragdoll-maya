@@ -917,6 +917,13 @@
         "options": []
     },
 
+    "resetShape": {
+        "label": "Reset Shape",
+        "icon": "capsule.png",
+        "summary": "Reset shape settings based on new conditions.",
+        "description": "This will recompute the selected shape, given any new position, scale or orientation of the source transform. Useful in case you accidentally break things or have made changes you'd like to refresh."
+    },
+
     "resetMarkerConstraintFrames": {
         "label": "Reset Constraint Frames",
         "icon": "reset_constraint.png",

@@ -1421,6 +1421,16 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     geometry = geometry or internal.Geometry()
     original = root
 
+    shape = root.shape(type=("mesh",
+                             "nurbsCurve",
+                             "nurbsSurface"))
+
+    if shape:
+        geometry = _interpret_shape(shape)
+
+    else:
+        geometry.shape_type = constants.CapsuleShape
+
     # Better this than nothing
     if not children:
         children = []
@@ -1725,6 +1735,19 @@ def _take_ownership(mod, rdnode, node):
 
 
 def create_group(solver, name=None, opts=None):
+    """Create a new group under `solver` with `name` and `opts`
+
+    Arguments:
+        solver (rdSolver): Owning solver of this group
+        name (str, optional): A custom name for this group
+        opts (dict, optional): Default attributes of this group
+
+    Options:
+        selfCollide (bool): Whether or not members of this
+            group should collide with each other.
+
+    """
+
     opts = dict({
         "selfCollide": False,
     }, **(opts or {}))

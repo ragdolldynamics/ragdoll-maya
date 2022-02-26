@@ -1807,7 +1807,7 @@ def affect_solver(field, solver):
         mod.connect(field["message"], solver["inputFields"][index])
 
         # Delete field alongside this solver
-        _take_ownership(mod, field, solver)
+        _take_ownership(mod, solver, field)
 
 
 def _remove_membership(mod, marker):

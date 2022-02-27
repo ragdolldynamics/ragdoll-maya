@@ -1,4 +1,4 @@
-from . import internal
+from . import internal, constants
 from .vendor import cmdx
 
 
@@ -49,6 +49,9 @@ def create(typ, mod, name, parent=None):
         # This used to be the default
         mod.set_attr(node["capsuleLengthAlongY"], False)
         mod.set_attr(node["convexDecomposition"], 1)
+
+        # Prefer the simpler visualisation
+        mod.set_attr(node["fieldCentroids"], constants.ComCentroid)
 
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)

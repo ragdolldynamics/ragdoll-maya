@@ -185,6 +185,11 @@ def assign_markers(transforms, solver, opts=None):
                 if shape:
                     geo = _interpret_shape(shape)
 
+                    # In case of a zero-sized mesh
+                    if geo.radius < 0.001:
+                        geo.radius = 1
+                        geo.extents = cmdx.Vector(1, 1, 1)
+
                 else:
                     geo = _infer_geometry(transform)
                     geo.shape_type = constants.CapsuleShape
@@ -273,6 +278,19 @@ def assign_marker(transform, solver, group=None, opts=None):
 
 
 def assign_environment(mesh, solver):
+    """Use the triangles of `mesh` for static collision detection
+
+    Arguments:
+        mesh (mesh): A polygonal mesh shape node
+        solver (rdSolver): The solver the environment should participate in
+
+    """
+
+    assert mesh and mesh.is_a("mesh"), "%s was not a `mesh` type" % mesh
+    assert solver and solver.is_a("rdSolver"), (
+        "%s was not a rdSolver type" % solver
+    )
+
     with cmdx.DGModifier() as mod:
         name = mesh.parent().name(namespace=False)
         name = "rEnvironment_%s" % name

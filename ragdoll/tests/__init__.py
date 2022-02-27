@@ -19,31 +19,16 @@ def _new(start=1, end=120):
     cmds.currentTime(start)
 
 
-def _play(node, start=1, end=5):
-    if node.type() == "rdRigid":
-        attr = "outputTranslateY"
-    elif node.isA(cmdx.kTransform):
-        attr = "translateY"
-    else:
-        raise TypeError("How do I evaluate %s?" % node)
+def _play(solver, start=1, end=5):
+    assert solver.isA("rdSolver"), "%s was not a solver" % solver
 
     for frame in range(start, end):
-        node[attr].read()  # Trigger evaluation
         cmds.currentTime(frame, update=True)
 
-
-def _step(node, steps=1):
-    if node.type() == "rdRigid":
-        attr = "outputTranslateY"
-    elif node.isA(cmdx.kTransform):
-        attr = "translateY"
-    else:
-        raise TypeError("How do I evaluate %s?" % node)
-
-    ct = int(cmds.currentTime(query=True))
-    for time in range(ct, ct + steps + 1):
-        cmds.currentTime(time, update=True)
-        node[attr].read()  # Trigger evaluation
+        if frame == start:
+            solver["startState"].read()
+        else:
+            solver["currentState"].read()
 
 
 def _rewind(scene):

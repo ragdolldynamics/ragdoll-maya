@@ -94,6 +94,10 @@ MotionLocked = 0
 MotionLimited = 1
 MotionFree = 2
 
+DecompositionOff = 0
+DecompositionIslands = 1
+DecompositionAutomatic = 2
+
 # cacheMedia enum indices
 Off = 0
 On = 1

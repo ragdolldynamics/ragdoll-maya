@@ -5,7 +5,7 @@ from nose.tools import (
 from ragdoll.vendor import cmdx
 from ragdoll import interactive as ri
 from maya import cmds
-from . import _new, _step
+from . import _new
 
 
 def test_uniform_scale():
@@ -215,7 +215,7 @@ def test_record_from_not_start_frame():
     cmdx.min_time(1)
     cmdx.max_time(50)
 
-    _step(c, 25)
+    cmds.currentTime(10)
 
     ri.record_markers()
 

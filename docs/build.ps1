@@ -1,6 +1,7 @@
 # Usage: .\build.ps1 c:\path\to\site
 Write-Host "Building docs.."
-rez env -e "PYTHONPATH=$(pwd)/plugins;$(pwd)/../" `
+rez env `
+    -e "PYTHONPATH=$(pwd)/plugins;$(pwd)/../" `
     git `
     nltk `
     maya-2022 `

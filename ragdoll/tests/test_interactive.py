@@ -328,9 +328,9 @@ def test_negative_non_uniform_scale2():
     ri.record_markers()
 
     cmdx.current_time(40)
-    assert_almost_equals(c["rx", cmdx.Degrees].read(), -76.638, 1)
-    assert_almost_equals(c["ry", cmdx.Degrees].read(), 63.653, 1)
-    assert_almost_equals(c["rz", cmdx.Degrees].read(), -8.884, 1)
+    assert_almost_equals(c["rx", cmdx.Degrees].read(), -76, 0)
+    assert_almost_equals(c["ry", cmdx.Degrees].read(), 64, 0)
+    assert_almost_equals(c["rz", cmdx.Degrees].read(), -9, 0)
 
 
 def test_locked_rotate_channels():

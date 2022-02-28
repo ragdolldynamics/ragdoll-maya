@@ -1326,6 +1326,7 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
+        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1348,7 +1349,7 @@ def assign_marker(selection=None, **opts):
         commands.create_ground(solver)
 
     owner = solver
-    group = None
+    new_group = False
 
     if opts["group"] == 0:  # No group
         pass
@@ -1356,17 +1357,20 @@ def assign_marker(selection=None, **opts):
     if opts["group"] == 1 and len(selection) > 1:  # Append to existing
         root_transform = selection[0]
         root_marker = root_transform["message"].output(type="rdMarker")
+        existing_group = None
 
         # Append to this group
-        if root_marker:
-            group = root_marker["startState"].output(type="rdGroup")
+        if root_marker is not None:
+            existing_group = root_marker["startState"].output(type="rdGroup")
 
         # Create otherwise make one
-        if not group:
-            group = True
+        if existing_group is not None:
+            owner = existing_group
+        else:
+            new_group = True
 
     if opts["group"] == 2:  # New group
-        group = True
+        new_group = True
 
     if opts["group"] > 2:
         try:
@@ -1375,12 +1379,15 @@ def assign_marker(selection=None, **opts):
         except (cmdx.ExistError, IndexError):
             options.write("markersAssignGroup", 1)
 
-    if group is True:
+    if new_group:
         root_transform = selection[0]
         name = root_transform.name(namespace=False) + "_rGroup"
-        owner = commands.create_group(owner, name, opts={
+        owner = commands.create_group(solver, name, opts={
             "selfCollide": not opts["connect"]
         })
+
+    if owner is None:
+        owner = solver
 
     markers = []
 
@@ -1389,10 +1396,7 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "materialInChannelBox": bool(opts["materialInChannelBox"]),
-            "shapeInChannelBox": bool(opts["shapeInChannelBox"]),
-            "limitInChannelBox": bool(opts["limitInChannelBox"]),
-            "advancedPoseInChannelBox": bool(opts["advancedPoseInChannelBox"]),
+            "refit": opts["refit"],
         })
 
     except RuntimeError as e:

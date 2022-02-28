@@ -906,6 +906,14 @@
         "help": "This will apply the same Parent and Orient constraints onto the assigned controls are Record Simulation, without actually recording anything."
     },
 
+    "markersRefit": {
+        "name": "markersRefit",
+        "label": "Refit Root Shape",
+        "type": "Boolean",
+        "default": false,
+        "help": "On making a fork, recompute the shape of the first selection, taking the newly added child into account."
+    },
+
     "markersRecordProtectOriginalInput": {
         "name": "markersRecordProtectOriginalInput",
         "label": "Protect Original Input",

@@ -960,7 +960,30 @@ def reset_shape(marker):
             ]
 
         transform = marker["src"].input(type=cmdx.kTransform)
-        geo = _infer_geometry(transform, parent, children)
+
+        if parent_marker:
+            geo = _infer_geometry(transform,
+                                  parent,
+                                  children)
+
+            geo.shape_type = constants.CapsuleShape
+
+        else:
+            shape = transform.shape(type=("mesh",
+                                          "nurbsCurve",
+                                          "nurbsSurface"))
+
+            if shape:
+                geo = _interpret_shape(shape)
+
+                # In case of a zero-sized mesh
+                if geo.radius < 0.001:
+                    geo.radius = 1
+                    geo.extents = cmdx.Vector(1, 1, 1)
+
+            else:
+                geo = _infer_geometry(transform)
+
         mod.set_attr(marker["shapeType"], geo.shape_type)
         mod.set_attr(marker["shapeExtents"], geo.extents)
         mod.set_attr(marker["shapeLength"], geo.length)
@@ -1438,16 +1461,6 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     geometry = geometry or internal.Geometry()
     original = root
 
-    shape = root.shape(type=("mesh",
-                             "nurbsCurve",
-                             "nurbsSurface"))
-
-    if shape:
-        geometry = _interpret_shape(shape)
-
-    else:
-        geometry.shape_type = constants.CapsuleShape
-
     # Better this than nothing
     if not children:
         children = []
@@ -1511,47 +1524,7 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     root_scale = root_tm.scale()
 
     # There is a lot we can gather from the childhood
-    if len(children) > 1 and root.is_a("joint"):
-        corner1, corner2 = cmdx.Point(), cmdx.Point()
-
-        for child in children:
-            pos = child.translation()
-
-            # Find bottom-right corner
-            if pos.x < corner1.x:
-                corner1.x = pos.x
-            if pos.y < corner1.y:
-                corner1.y = pos.y
-            if pos.z < corner1.z:
-                corner1.z = pos.z
-
-            # Find top-left corner
-            if pos.x > corner2.x:
-                corner2.x = pos.x
-            if pos.y > corner2.y:
-                corner2.y = pos.y
-            if pos.z > corner2.z:
-                corner2.z = pos.z
-
-        bbox = cmdx.BoundingBox(corner1, corner2)
-        offset = cmdx.Vector(bbox.center)
-        size = cmdx.Vector(
-            max(0.25, bbox.width),
-            max(0.25, bbox.height),
-            max(0.25, bbox.depth)
-        )
-
-        geometry.length = max(size)
-        geometry.extents = size
-        geometry.shape_offset = offset
-        geometry.shape_type = constants.BoxShape
-        geometry.radius = root["radius"].read()
-
-        geometry.radius = max(geometry.length * 0.1, geometry.radius)
-
-        return geometry
-
-    elif children:
+    if children:
 
         # Support multi-child scenarios
         #

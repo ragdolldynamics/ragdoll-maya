@@ -440,6 +440,9 @@ def mp4(markdown, page):
         url = match.group(1).strip().rstrip()
         extras = match.group(3).strip().rstrip()
 
+        if "nocontrols" not in extras:
+            extras += " controls"
+
         return (
             '\n{prefix}<p><video autoplay class="poster"'
             ' muted loop width=100% {extras}>'

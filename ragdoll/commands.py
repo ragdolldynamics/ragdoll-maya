@@ -192,7 +192,6 @@ def assign_markers(transforms, solver, opts=None):
 
                 else:
                     geo = _infer_geometry(transform)
-                    geo.shape_type = constants.CapsuleShape
 
             if opts["connect"]:
                 if parent_marker:
@@ -1545,8 +1544,10 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
         geometry.length = max(size)
         geometry.extents = size
         geometry.shape_offset = offset
-        geometry.shape_rotation = orient
         geometry.shape_type = constants.BoxShape
+        geometry.radius = root["radius"].read()
+
+        geometry.radius = max(geometry.length * 0.1, geometry.radius)
 
         return geometry
 

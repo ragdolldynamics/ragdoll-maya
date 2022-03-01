@@ -112,7 +112,7 @@ def assign_markers(transforms, solver, opts=None):
         "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
-        "refit": True,
+        "refit": False,
         "preventDuplicateMarker": True,
     }, **(opts or {}))
 
@@ -1667,17 +1667,28 @@ def _infer_geometry(root,
         >>> tuple(map(int, map(cmdx.degrees, geo.offset)))
         (0, 0, 0)
 
+        # A 2-joint chain
+        #
+        # o-------o  Length and offset from here
+        #
+        >>> a = cmdx.create_node("joint")
+        >>> b = cmdx.create_node("joint", parent=a)
+        >>> b["tx"] = 2.0
+        >>> geo = _infer_geometry(a)
+        >>> geo.type == constants.CapsuleShape
+        True
+
     """
 
     geometry = geometry or internal.Geometry()
     original = root
 
-    if not (parent or children):
-        return _find_geometry_from_lone_transform(root)
-
     # Automatically find children
     if children is constants.Auto:
         children = _find_children(root)
+
+    if not (parent or children):
+        return _find_geometry_from_lone_transform(root)
 
     # Special case of a tip without children
     #
@@ -1786,6 +1797,10 @@ def _infer_geometry(root,
 
     geometry.offset = shape_tm.translation()
     geometry.rotation = shape_tm.rotation()
+
+    # Special case of having a length but nothing else
+    if geometry.length > 0 and geometry.type == constants.SphereShape:
+        geometry.type == constants.CapsuleShape
 
     # Apply possible negative scale to shape rotation
     # Use `original` in case we're at the tip

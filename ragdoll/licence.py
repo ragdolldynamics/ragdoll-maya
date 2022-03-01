@@ -34,9 +34,13 @@ def install(key=None):
     """
 
     if os.getenv("RAGDOLL_FLOATING"):
-        _install_floating()
+        status = _install_floating()
     else:
-        _install_nodelocked(key)
+        status = _install_nodelocked(key)
+
+    self._last_status = status
+
+    return status
 
 
 def _parse_environment():
@@ -60,25 +64,14 @@ def _install_floating():
     status = cmds.ragdollLicence(initFloating=True)
 
     if status == STATUS_OK:
-        log.debug("Successfully initialised Ragdoll licence.")
-    else:
-        log.error(
-            "Failed to initialise floating licence, error code '%d'"
-            % status
-        )
-        return status
-
-    status = request_lease(ip, port)
-
-    if status == STATUS_OK:
         log.debug("Successfully leased a Ragdoll licence.")
 
     elif status == STATUS_INET:
         log.warning("Could not connect to licence server")
 
     else:
-        log.warning(
-            "Failed to lease floating licence, error code '%d'"
+        log.error(
+            "Failed to initialise floating licence, error code '%d'"
             % status
         )
 
@@ -123,8 +116,6 @@ def _install_nodelocked(key=None):
             "Unexpected error occurred with licencing, "
             "this is a bug. Tell someone."
         )
-
-    self._last_status = status
 
     return status
 
@@ -307,6 +298,10 @@ def reverify():
 
 def data():
     """Return overall information about the current Ragdoll licence"""
+
+    if self._last_status < 0:
+        install()
+
     return dict(
         lastStatus=self._last_status,
 

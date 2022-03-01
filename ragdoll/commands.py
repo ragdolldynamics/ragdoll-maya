@@ -1439,13 +1439,18 @@ def _find_geometry_from_lone_transform(root):
 
     """
 
+    geometry = internal.Geometry()
+
     shape = root.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
 
     if shape:
-        return _interpret_shape(shape)
+        geometry = _interpret_shape(shape)
 
-    # Nothing left to go on
-    return internal.Geometry()
+    elif root.is_a(cmdx.kJoint):
+        joint_scale = cmds.jointDisplayScale(query=True)
+        geometry.radius = root["radius"].read() * joint_scale
+
+    return geometry
 
 
 def _find_children(root):

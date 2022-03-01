@@ -98,6 +98,8 @@ DecompositionOff = 0
 DecompositionIslands = 1
 DecompositionAutomatic = 2
 
+Auto = None
+
 # cacheMedia enum indices
 Off = 0
 On = 1

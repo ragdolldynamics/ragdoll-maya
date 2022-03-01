@@ -1458,7 +1458,7 @@ def assign_environment(selection=None, **opts):
         if not mesh.isA(cmdx.kShape):
             mesh = mesh.shape(type="mesh")
 
-        if not mesh.isA(cmdx.kMesh):
+        if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
                 "Select a polygon mesh to use for an environment"
             )

@@ -151,9 +151,9 @@ def assign_markers(transforms, solver, opts=None):
             marker = nodes.create("rdMarker", dgmod, name=name)
 
             try:
-                children = [transforms[index + 1]]
+                child_transforms = [transforms[index + 1]]
             except IndexError:
-                children = None
+                child_transforms = None
 
             if parent_marker:
                 parent_transform = parent_marker["inputMatrix"].input()
@@ -173,25 +173,12 @@ def assign_markers(transforms, solver, opts=None):
                 dgmod.connect(shape["local"],
                               marker["inputGeometry"])
 
+            geo = _infer_geometry(transform,
+                                  parent_transform,
+                                  child_transforms)
+
             if opts["connect"] and (parent_marker or len(transforms) > 1):
-                geo = _infer_geometry(transform,
-                                      parent_transform,
-                                      children)
-
-                geo.shape_type = constants.CapsuleShape
-
-            # It's a lone object
-            else:
-                if shape:
-                    geo = _interpret_shape(shape)
-
-                    # In case of a zero-sized mesh
-                    if geo.radius < 0.001:
-                        geo.radius = 1
-                        geo.extents = cmdx.Vector(1, 1, 1)
-
-                else:
-                    geo = _infer_geometry(transform)
+                geo.type = constants.CapsuleShape
 
             if opts["connect"]:
                 if parent_marker:
@@ -201,12 +188,12 @@ def assign_markers(transforms, solver, opts=None):
                     dgmod.set_attr(marker["inputType"],
                                    constants.InputKinematic)
 
-            dgmod.set_attr(marker["shapeType"], geo.shape_type)
+            dgmod.set_attr(marker["shapeType"], geo.type)
             dgmod.set_attr(marker["shapeExtents"], geo.extents)
             dgmod.set_attr(marker["shapeLength"], geo.length)
             dgmod.set_attr(marker["shapeRadius"], geo.radius)
-            dgmod.set_attr(marker["shapeRotation"], geo.shape_rotation)
-            dgmod.set_attr(marker["shapeOffset"], geo.shape_offset)
+            dgmod.set_attr(marker["shapeRotation"], geo.rotation)
+            dgmod.set_attr(marker["shapeOffset"], geo.offset)
             dgmod.set_attr(marker["densityType"], opts["density"])
 
             # Assign some random color, within some nice range
@@ -961,35 +948,19 @@ def reset_shape(marker):
 
         transform = marker["src"].input(type=cmdx.kTransform)
 
+        geo = _infer_geometry(transform,
+                              parent,
+                              children)
+
         if parent_marker:
-            geo = _infer_geometry(transform,
-                                  parent,
-                                  children)
+            geo.type = constants.CapsuleShape
 
-            geo.shape_type = constants.CapsuleShape
-
-        else:
-            shape = transform.shape(type=("mesh",
-                                          "nurbsCurve",
-                                          "nurbsSurface"))
-
-            if shape:
-                geo = _interpret_shape(shape)
-
-                # In case of a zero-sized mesh
-                if geo.radius < 0.001:
-                    geo.radius = 1
-                    geo.extents = cmdx.Vector(1, 1, 1)
-
-            else:
-                geo = _infer_geometry(transform)
-
-        mod.set_attr(marker["shapeType"], geo.shape_type)
+        mod.set_attr(marker["shapeType"], geo.type)
         mod.set_attr(marker["shapeExtents"], geo.extents)
         mod.set_attr(marker["shapeLength"], geo.length)
         mod.set_attr(marker["shapeRadius"], geo.radius)
-        mod.set_attr(marker["shapeRotation"], geo.shape_rotation)
-        mod.set_attr(marker["shapeOffset"], geo.shape_offset)
+        mod.set_attr(marker["shapeRotation"], geo.rotation)
+        mod.set_attr(marker["shapeOffset"], geo.offset)
 
 
 def reset_constraint_frames(mod, marker, **opts):
@@ -1446,7 +1417,234 @@ def _find_solver(leaf):
     return leaf
 
 
-def _infer_geometry(root, parent=None, children=None, geometry=None):
+def _find_geometry_from_lone_transform(root):
+    """Given a transform without parent or children, figure out default shape
+
+    Examples:
+        >>> lone = cmdx.create_node("transform")
+        >>> geo = _find_geometry_from_lone_transform(lone)
+        >>> geo.radius
+        1.0
+        >>> geo.type == constants.SphereShape
+        True
+
+        >>> lone_shape, _ = map(cmdx.encode, cmds.polyCube())
+        >>> geo = _find_geometry_from_lone_transform(lone_shape)
+        >>> geo.type == constants.BoxShape
+        True
+        >>> geo.radius
+        0.5
+        >>> tuple(geo.extents)
+        (1.0, 1.0, 1.0)
+
+    """
+
+    shape = root.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
+
+    if shape:
+        return _interpret_shape(shape)
+
+    # Nothing left to go on
+    return internal.Geometry()
+
+
+def _find_children(root):
+    children = []
+
+    # Consider cases where children have no distance from their parent,
+    # common in offset groups without an actual offset in them. Such as
+    # for organisational purposes
+    #
+    # | hip_grp
+    # .-o offset_grp      <-- Some translation
+    #   .-o hip_ctl
+    #     .-o hip_loc   <-- Identity matrix
+    #
+    root_pos = root.translation(cmdx.sWorld)
+    for child in root.children(type=root.type()):
+        child_pos = child.translation(cmdx.sWorld)
+
+        if not root_pos.is_equivalent(child_pos):
+            children += [child]
+
+    return children
+
+
+def _position_incl_pivot(node, debug=False):
+    """Return the final position of the translate and rotate handles
+
+    That includes the rotate pivot, which isn't part
+    of the worldspace matrix.
+
+    """
+
+    if node.type() == "joint":
+        return node.translation(cmdx.sWorld)
+
+    rotate_pivot = node.transformation().rotatePivot()
+
+    world_tm = node.transform(cmdx.sWorld)
+    world_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
+
+    pos = world_tm.translation()
+
+    if debug:
+        loc = cmdx.encode(cmds.spaceLocator(name=node.name())[0])
+        loc["translate"] = pos
+
+    return pos
+
+
+def _length_and_orient_from_childhood(root, parent, children):
+    r"""Return length and orientation from childhood
+
+    Use the childhood to look for clues as to how a shape may
+    be oriented.
+
+    Examples:
+        # A single child
+        #
+        # o-----------------> x
+        #
+        >>> parent = cmdx.create_node("joint")
+        >>> child = cmdx.create_node("joint", parent=parent)
+        >>> child["tx"] = 5.0
+        >>> length, orient = _length_and_orient_from_childhood(
+        ...     parent, None, [child])
+        ...
+        >>> length
+        5.0
+
+        # X is the default axis
+        >>> euler = orient.as_euler_rotation()
+        >>> tuple(map(int, map(cmdx.degrees, euler)))
+        (0, 0, 0)
+
+        # A Z-facing child
+        #
+        # o-----------------> z
+        #
+        >>> parent = cmdx.create_node("joint")
+        >>> child = cmdx.create_node("joint", parent=parent)
+        >>> child["tz"] = 2.5
+        >>> length, orient = _length_and_orient_from_childhood(
+        ...     parent, None, [child])
+        ...
+        >>> length
+        2.5
+        >>> euler = orient.as_euler_rotation()
+        >>> tuple(map(int, map(cmdx.degrees, euler)))
+        (0, -90, 0)
+
+        # A fork in Y
+        #
+        # o     o  - c, d
+        #  \   /
+        #   \ /
+        #    o     - b
+        #    |
+        #    o     - a
+        #
+        >>> a = cmdx.create_node("joint")
+        >>> b = cmdx.create_node("joint", parent=a)
+        >>> c = cmdx.create_node("joint", parent=b)
+        >>> d = cmdx.create_node("joint", parent=b)
+        >>> b["ty"] = 1
+        >>> c["ty"] = 1
+        >>> d["ty"] = 1
+        >>> c["tx"] = 0.5
+        >>> d["tx"] = -0.5
+        >>> length, orient = _length_and_orient_from_childhood(
+        ...     b, a, [c, d])
+        ...
+        >>> # Length is the hypothenuse of X and Y coordinates
+        >>> #   .
+        >>> #   |\
+        >>> # y | \ length
+        >>> #   |__\
+        >>> #   x
+        >>> #
+        >>> # Namely: sqrt(x**2 + y**2)
+        >>> "%.2f" % length == "1.12"
+        True
+        >>> euler = orient.as_euler_rotation()
+        >>> tuple(map(int, map(cmdx.degrees, euler)))
+        (0, 0, 90)
+
+    """
+
+    length = 0.0
+    orient = cmdx.Quaternion()
+    root_pos = _position_incl_pivot(root)
+
+    # Support multi-child scenarios
+    #
+    #         o
+    #        /
+    #  o----o--o
+    #        \
+    #         o
+    #
+    positions = []
+    for child in children:
+        positions += [_position_incl_pivot(child)]
+
+    pos2 = cmdx.Vector()
+    for pos in positions:
+        pos2 += pos
+    pos2 /= len(positions)
+
+    # Find center joint if multiple children
+    #
+    # o o o  <-- Which is in the middle?
+    #  \|/
+    #   o
+    #   |
+    #
+    distances = []
+    for pos in positions + [root_pos]:
+        distances += [(pos - pos2).length()]
+    center_index = distances.index(min(distances))
+    center_node = (children + [root])[center_index]
+
+    # Roots typically get this, where e.g.
+    #
+    #      o
+    #      |
+    #      o  <-- Root
+    #     / \
+    #    o   o
+    #
+    if center_node != root:
+        parent = parent or root.parent(type=root.type())
+
+        if not parent:
+            # Try using grand-child instead
+            parent = center_node.child(type=root.type())
+
+        if parent:
+            up = _position_incl_pivot(parent)
+            up = (up - root_pos).normal()
+        else:
+            up = cmdx.up_axis()
+
+        aim = (pos2 - root_pos).normal()
+        cross = aim ^ up  # Make axes perpendicular
+        up = cross ^ aim
+
+        orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
+        orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
+
+        center_node_pos = _position_incl_pivot(center_node)
+        length = (center_node_pos - root_pos).length()
+
+    return length, orient
+
+
+def _infer_geometry(root,
+                    parent=constants.Auto,
+                    children=constants.Auto,
+                    geometry=None):
     """Find length and orientation from `root`
 
     This function looks at the child and parent of any given root for clues as
@@ -1454,32 +1652,32 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     first child.
 
     Arguments:
-        root (root): The root from which to derive length and orientation
+        root (transform): The root from which to derive length and orientation
+        parent (transform, optional): Use this for direction
+        children (list of transforms, optional): Use this for size
+        geometry (internal.Geometry, optional): Build upon this geometry
+
+    Examples:
+        # A standalone tip joint
+        >>> tip = cmdx.create_node("joint")
+        >>> tip["radius"] = 1.234
+        >>> geo = _infer_geometry(tip)
+        >>> geo.radius
+        1.234
+        >>> tuple(map(int, map(cmdx.degrees, geo.offset)))
+        (0, 0, 0)
 
     """
 
     geometry = geometry or internal.Geometry()
     original = root
 
-    # Better this than nothing
-    if not children:
-        children = []
+    if not (parent or children):
+        return _find_geometry_from_lone_transform(root)
 
-        # Consider cases where children have no distance from their parent,
-        # common in offset groups without an actual offset in them. Such as
-        # for organisational purposes
-        #
-        # | hip_grp
-        # .-o offset_grp      <-- Some translation
-        #   .-o hip_ctl
-        #     .-o hip_loc   <-- Identity matrix
-        #
-        root_pos = root.translation(cmdx.sWorld)
-        for child in root.children(type=root.type()):
-            child_pos = child.translation(cmdx.sWorld)
-
-            if not root_pos.is_equivalent(child_pos):
-                children += [child]
+    # Automatically find children
+    if children is constants.Auto:
+        children = _find_children(root)
 
     # Special case of a tip without children
     #
@@ -1489,120 +1687,51 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
     #    o------------o
     #
     # In this case, reuse however long the parent is
-    if not children and parent:
+    if parent and not children:
         children = [root]
         root = parent
         parent = None
 
-    def position_incl_pivot(node, debug=False):
-        """Return the final position of the translate and rotate handles
-
-        That includes the rotate pivot, which isn't part
-        of the worldspace matrix.
-
-        """
-
-        if node.type() == "joint":
-            return node.translation(cmdx.sWorld)
-
-        rotate_pivot = node.transformation().rotatePivot()
-
-        world_tm = node.transform(cmdx.sWorld)
-        world_tm.translateBy(rotate_pivot, cmdx.sPreTransform)
-
-        pos = world_tm.translation()
-
-        if debug:
-            loc = cmdx.encode(cmds.spaceLocator(name=node.name())[0])
-            loc["translate"] = pos
-
-        return pos
-
     orient = cmdx.Quaternion()
     root_tm = root.transform(cmdx.sWorld)
-    root_pos = position_incl_pivot(root)
+    root_pos = _position_incl_pivot(root)
     root_scale = root_tm.scale()
 
     # There is a lot we can gather from the childhood
     if children:
+        length, orient = _length_and_orient_from_childhood(
+            root, parent, children)
 
-        # Support multi-child scenarios
-        #
-        #         o
-        #        /
-        #  o----o--o
-        #        \
-        #         o
-        #
-        positions = []
-        for child in children:
-            positions += [position_incl_pivot(child)]
+        geometry.length = length
+        geometry.orient = orient
 
-        pos2 = cmdx.Vector()
-        for pos in positions:
-            pos2 += pos
-        pos2 /= len(positions)
+    # Where there is a length, there is a radius
+    #
+    #  ___________  ___
+    # /           \  |  radius
+    # \___________/ _|_
+    #
+    #
+    # Joints ship with a `radius` attribute, very convenient
+    if root.has_attr("radius"):
+        joint_scale = cmds.jointDisplayScale(query=True)
+        geometry.radius = root["radius"].read() * joint_scale
 
-        # Find center joint if multiple children
-        #
-        # o o o  <-- Which is in the middle?
-        #  \|/
-        #   o
-        #   |
-        #
-        distances = []
-        for pos in positions + [root_pos]:
-            distances += [(pos - pos2).length()]
-        center_index = distances.index(min(distances))
-        center_node = (children + [root])[center_index]
-
-        # Roots typically get this, where e.g.
-        #
-        #      o
-        #      |
-        #      o  <-- Root
-        #     / \
-        #    o   o
-        #
-        if center_node != root:
-            parent = parent or root.parent(type=root.type())
-
-            if not parent:
-                # Try using grand-child instead
-                parent = center_node.child(type=root.type())
-
-            if parent:
-                up = position_incl_pivot(parent)
-                up = (up - root_pos).normal()
-            else:
-                up = cmdx.up_axis()
-
-            aim = (pos2 - root_pos).normal()
-            cross = aim ^ up  # Make axes perpendicular
-            up = cross ^ aim
-
-            orient *= cmdx.Quaternion(cmdx.Vector(0, 1, 0), up)
-            orient *= cmdx.Quaternion(orient * cmdx.Vector(1, 0, 0), aim)
-
-            center_node_pos = position_incl_pivot(center_node)
-            length = (center_node_pos - root_pos).length()
-
-            geometry.orient = orient
-            geometry.length = length
-
+    # Find Radius and Offset
+    #
+    #   ________________________  ___
+    #  / _                      \  |
+    # | / \_________.            | |  radius (1.0)
+    # | \_/         |            | |
+    #  \____________|___________/ _|_
+    #               |
+    #            offset (1, 0, 0)
+    #
     if geometry.length > 0.0:
-
-        if geometry.radius:
-            # Pre-populated somewhere above
-            radius = geometry.radius
-
-        # Joints for example ship with this attribute built-in, very convenient
-        elif "radius" in root:
-            joint_scale = cmds.jointDisplayScale(query=True)
-            radius = root["radius"].read() * joint_scale
+        offset = orient * cmdx.Vector(geometry.length / 2.0, 0, 0)
 
         # If we don't have that, try and establish one from the bounding box
-        else:
+        if not geometry.radius > 0.0:
             shape = root.shape(type=("mesh", "nurbsCurve", "nurbsSurface"))
 
             if shape:
@@ -1625,13 +1754,11 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
             else:
                 # If there's no visible geometry what so ever, we have
                 # very little to go on in terms of establishing a radius.
-                radius = geometry.length * 0.1
+                geometry.radius = geometry.length * 0.1
 
-        size = cmdx.Vector(geometry.length, radius, radius)
-        offset = orient * cmdx.Vector(geometry.length / 2.0, 0, 0)
-
-        geometry.extents = cmdx.Vector(geometry.length, radius * 2, radius * 2)
-        geometry.radius = radius
+        geometry.extents = cmdx.Vector(geometry.length,
+                                       geometry.radius * 2,
+                                       geometry.radius * 2)
 
     else:
         size, center = _hierarchy_bounding_size(root)
@@ -1653,19 +1780,18 @@ def _infer_geometry(root, parent=None, children=None, geometry=None):
         offset = center - tm.translation()
 
     # Compute final shape matrix with these ingredients
-    shape_tm = cmdx.Tm(translate=root_pos,
-                       rotate=geometry.orient)
+    shape_tm = cmdx.Tm(translate=root_pos, rotate=geometry.orient)
     shape_tm.translateBy(offset, cmdx.sPostTransform)
-    shape_tm = cmdx.Tm(shape_tm.as_matrix() * root_tm.as_matrix().inverse())
+    shape_tm = cmdx.Tm(shape_tm.as_matrix() * root_tm.as_matrix_inverse())
 
-    geometry.shape_offset = shape_tm.translation()
-    geometry.shape_rotation = shape_tm.rotation()
+    geometry.offset = shape_tm.translation()
+    geometry.rotation = shape_tm.rotation()
 
     # Apply possible negative scale to shape rotation
     # Use `original` in case we're at the tip
     scale_mtx = original.transform(cmdx.sWorld).as_scale_matrix()
     shape_mtx = shape_tm.as_matrix()
-    geometry.shape_rotation = cmdx.Tm(shape_mtx * scale_mtx).rotation()
+    geometry.rotation = cmdx.Tm(shape_mtx * scale_mtx).rotation()
 
     # Take root_scale into account
     if abs(root_scale.x) <= 0:
@@ -1911,34 +2037,71 @@ def _add_to_solver(mod, marker, solver):
     return True
 
 
-def _interpret_transform(mod, rigid, transform):
-    """Translate `transform` into rigid shape attributes
+def find_geometry(root, parent=None, children=None):
+    if root.is_a(cmdx.kJoint):
+        return _interpret_joint(root, parent, children)
 
-    Primarily joints, that have a radius and length.
+    return internal.Geometry()
 
-    """
 
-    if transform.isA(cmdx.kJoint):
-        mod.set_attr(rigid["shapeType"], constants.CapsuleShape)
+def _interpret_joint(joint, parent=None, children=None):
+    geo = internal.Geometry()
 
-        # Orient inner shape to wherever the joint is pointing
-        # as opposed to whatever its jointOrient is facing
-        geometry = _infer_geometry(transform)
+    # Bare essentials
+    geo.radius = joint["radius"].read()
+    geo.length = 0
+    geo.type = constants.SphereShape
 
-        mod.set_attr(rigid["shapeOffset"], geometry.shape_offset)
-        mod.set_attr(rigid["shapeRotation"], geometry.shape_rotation)
-        mod.set_attr(rigid["shapeLength"], geometry.length)
-        mod.set_attr(rigid["shapeRadius"], geometry.radius)
-        mod.set_attr(rigid["shapeExtents"], geometry.extents)
+    # There is a lot we can gather from the childhood
+    if not children:
+        pass
+
+    elif len(children) == 1:
+        pass
+
+    elif len(children) > 1:
+        corner1, corner2 = cmdx.Point(), cmdx.Point()
+
+        for child in children:
+            pos = child.translation()
+
+            # Find bottom-right corner
+            if pos.x < corner1.x:
+                corner1.x = pos.x
+            if pos.y < corner1.y:
+                corner1.y = pos.y
+            if pos.z < corner1.z:
+                corner1.z = pos.z
+
+            # Find top-left corner
+            if pos.x > corner2.x:
+                corner2.x = pos.x
+            if pos.y > corner2.y:
+                corner2.y = pos.y
+            if pos.z > corner2.z:
+                corner2.z = pos.z
+
+        bbox = cmdx.BoundingBox(corner1, corner2)
+        offset = cmdx.Vector(bbox.center)
+        size = cmdx.Vector(
+            max(0.25, bbox.width),
+            max(0.25, bbox.height),
+            max(0.25, bbox.depth)
+        )
+
+        geo.length = max(size)
+        geo.extents = size
+        geo.offset = offset
+        geo.type = constants.BoxShape
+        geo.radius = joint["radius"].read()
+
+        geo.radius = max(geo.length * 0.1, geo.radius)
+
+    return geo
 
 
 def _interpret_shape(shape):
-    """Translate `shape` into rigid shape attributes
-
-    For example, if the shape is a `mesh`, we'll plug that in as
-    a mesh for convex hull generation.
-
-    """
+    """Translate `shape` into marker shape attributes"""
 
     assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
     assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
@@ -1957,7 +2120,7 @@ def _interpret_shape(shape):
         radius = length * 0.5
 
     geo = internal.Geometry()
-    geo.shape_offset = center
+    geo.offset = center
     geo.extents = extents
     geo.radius = radius * 0.5
     geo.length = length
@@ -1965,7 +2128,7 @@ def _interpret_shape(shape):
     gen = None
 
     # Guilty until proven innocent
-    geo.shape_type = constants.MeshShape
+    geo.type = constants.MeshShape
 
     if "inMesh" in shape and shape["inMesh"].connected:
         gen = shape["inMesh"].connection()
@@ -1978,17 +2141,17 @@ def _interpret_shape(shape):
         # generator, like polyCube or polyCylinder
 
         if gen.type() == "polyCube":
-            geo.shape_type = constants.BoxShape
+            geo.type = constants.BoxShape
             geo.extents.x = gen["width"].read()
             geo.extents.y = gen["height"].read()
             geo.extents.z = gen["depth"].read()
 
         elif gen.type() == "polySphere":
-            geo.shape_type = constants.SphereShape
+            geo.type = constants.SphereShape
             geo.radius = gen["radius"].read()
 
         elif gen.type() == "polyPlane":
-            geo.shape_type = constants.BoxShape
+            geo.type = constants.BoxShape
             geo.extents.x = gen["width"].read()
             geo.extents.z = gen["height"].read()
 
@@ -1996,11 +2159,11 @@ def _interpret_shape(shape):
             if gen["axisY"]:
                 average_size = (geo.extents.x + geo.extents.y) / 2.0
                 geo.extents.y = average_size / 40.0
-                geo.shape_offset.y = -geo.extents.y / 2.0
+                geo.offset.y = -geo.extents.y / 2.0
             else:
                 average_size = (geo.extents.x + geo.extents.y) / 2.0
                 geo.extents.z = average_size / 40.0
-                geo.shape_offset.z = -geo.extents.z / 2.0
+                geo.offset.z = -geo.extents.z / 2.0
 
         elif gen.type() == "polyCylinder":
             geo.radius = gen["radius"].read()
@@ -2008,20 +2171,20 @@ def _interpret_shape(shape):
 
             # Align with Maya's cylinder/capsule axis
             # TODO: This doesn't account for partial values, like 0.5, 0.1, 1.0
-            geo.shape_rotation = list(map(cmdx.radians, (
+            geo.rotation = list(map(cmdx.radians, (
                 (0, 0, 90) if gen["axisY"] else
                 (0, 90, 0) if gen["axisZ"] else
                 (0, 0, 0)
             )))
 
             if gen["roundCap"]:
-                geo.shape_type = constants.CylinderShape
+                geo.type = constants.CylinderShape
 
         elif gen.type() == "makeNurbCircle":
             geo.radius = gen["radius"]
 
         elif gen.type() == "makeNurbSphere":
-            geo.shape_type = constants.SphereShape
+            geo.type = constants.SphereShape
             geo.radius = gen["radius"]
 
         elif gen.type() == "makeNurbCone":
@@ -2029,14 +2192,19 @@ def _interpret_shape(shape):
             geo.length = gen["heightRatio"]
 
         elif gen.type() == "makeNurbCylinder":
-            geo.shape_type = constants.CylinderShape
+            geo.type = constants.CylinderShape
             geo.radius = gen["radius"]
             geo.length = gen["heightRatio"]
-            geo.shape_rotation = list(map(cmdx.radians, (
+            geo.rotation = list(map(cmdx.radians, (
                 (0, 0, 90) if gen["axisY"] else
                 (0, 90, 0) if gen["axisZ"] else
                 (0, 0, 0)
             )))
+
+    # In case of a zero-sized mesh
+    if geo.radius < 0.001:
+        geo.radius = 1
+        geo.extents = cmdx.Vector(1, 1, 1)
 
     return geo
 

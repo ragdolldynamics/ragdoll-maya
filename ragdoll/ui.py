@@ -904,6 +904,22 @@ class HelpPage(QtWidgets.QWidget):
             media_layout.addWidget(QtWidgets.QLabel("- No media"))
 
 
+class DuckArgParser(QtWidgets.QWidget):
+    changed = QtCore.Signal(QtCore.QObject)
+    entered = QtCore.Signal(QtCore.QObject)
+    exited = QtCore.Signal(QtCore.QObject)
+
+    help_wanted = QtCore.Signal()
+    help_entered = QtCore.Signal()
+    help_exited = QtCore.Signal()
+
+    def setDescription(self, text):
+        pass
+
+    def setIcon(self, fname):
+        pass
+
+
 class Options(QtWidgets.QMainWindow):
     instance = None
 
@@ -955,7 +971,9 @@ class Options(QtWidgets.QMainWindow):
             "Background": QtWidgets.QLabel(),
             "Foreground": QtWidgets.QLabel(),
 
-            "Parser": qargparse.QArgumentParser(args, style={
+            "Parser": args
+            if isinstance(args, DuckArgParser)
+            else qargparse.QArgumentParser(args, style={
                 "comboboxFillWidth": False,
 
                 # We'll defer these to the footer

@@ -56,6 +56,9 @@ from . import (
     internal as i__,
     __
 )
+from .widgets import (
+    manipulator as ui_manip,
+)
 
 log = logging.getLogger("ragdoll")
 
@@ -1280,34 +1283,28 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    # 1. chekc for memorized sovler
-    #   todo
+    solvers = None
 
-    # 2. find one solver from selection
+    # 1. find one solver from selection
     selection = selection or cmdx.sl()
     if selection:
         downstreams = cmds.listHistory(selection, future=True, levels=3)
         # note: there should be only rdMarker or rdGroup or both sit between
         #   geo shape/transform node and rdSolver node, which is levels=3 away.
         solvers = cmdx.ls(downstreams, type="rdSolver")
-    else:
-        solvers = None
 
-    solvers = solvers or cmdx.ls(type="rdSolver")
+    if not solvers:
+        # 2. chekc for memorized sovler
+        current = ui_manip.get_current_solver()
+        solvers = [current] if current else cmdx.ls(type="rdSolver")
 
-    if len(solvers) < 1:
-        raise i__.UserWarning(
-            "No solver found",
-            "No solver found to manipulate."
-        )
-
-    if len(solvers) > 1:
-        markers_manipulator_options()
-        # note: this option box should filter down to only one solver
-    else:
+    if len(solvers) == 1:
         cmds.select(str(solvers[0]))
         cmds.setToolTo("ShowManips")
         log.info("Manipulating %s" % solvers[0])
+    else:
+        markers_manipulator_options(solvers=solvers)
+        # note: this option box should filter down to only one solver
 
     return kSuccess
 
@@ -3021,10 +3018,10 @@ def _Arg(var, label=None, callback=None):
     return arg
 
 
-def _Window(key, command=None, cls=None):
+def _Window(key, command=None, args=None, cls=None):
     parent = ui.MayaWindow()
     menuitem = __.menuitems[key]
-    args = map(_Arg, menuitem.get("options", []))
+    args = args or map(_Arg, menuitem.get("options", []))
 
     win = (cls or ui.Options)(
         key,
@@ -3108,14 +3105,21 @@ def _update_group_options():
     __.optionvars["markersAssignGroup"]["items"] = items
 
 
-def markers_manipulator_options(*args):
-    # list out solvers
-    #   * <=3, a simple btn bar, with outliner color
-    #   *  >3, show best guess, and all others in a comboBox
-    #   also,
-    #   able to remember the decsion for following operations when "apply" btn
-    #   hit.
-    return _Window("markersManipulator", markers_manipulator)
+def markers_manipulator_options(*args, **kwargs):
+    solvers = kwargs.pop("solvers", None) or cmdx.ls(type="rdSolver")
+
+    if len(solvers) < 1:
+        raise i__.UserWarning(
+            "No solver found",
+            "No solver found to manipulate."
+        )
+
+    if len(solvers) > 3:
+        args = ui_manip.FullSolverSelector(solvers)
+    else:
+        args = ui_manip.SlimSolverSelector(solvers)
+
+    return _Window("markersManipulator", markers_manipulator, args=args)
 
 
 def assign_marker_options(*args):

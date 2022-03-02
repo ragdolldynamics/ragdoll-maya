@@ -173,12 +173,13 @@ def assign_markers(transforms, solver, opts=None):
                 dgmod.connect(shape["local"],
                               marker["inputGeometry"])
 
-            geo = _infer_geometry(transform,
-                                  parent_transform,
-                                  child_transforms)
-
             if opts["connect"] and (parent_marker or len(transforms) > 1):
-                geo.type = constants.CapsuleShape
+                geo = _infer_geometry(transform,
+                                      parent_transform,
+                                      child_transforms)
+
+            else:
+                geo = _infer_geometry(transform)
 
             if opts["connect"]:
                 if parent_marker:
@@ -1445,8 +1446,10 @@ def _find_geometry_from_lone_transform(root):
 
     if shape:
         geometry = _interpret_shape(shape)
+    else:
+        geometry.radius = 1.0
 
-    elif root.is_a(cmdx.kJoint):
+    if root.is_a(cmdx.kJoint):
         joint_scale = cmds.jointDisplayScale(query=True)
         geometry.radius = root["radius"].read() * joint_scale
 
@@ -1805,7 +1808,7 @@ def _infer_geometry(root,
 
     # Special case of having a length but nothing else
     if geometry.length > 0 and geometry.type == constants.SphereShape:
-        geometry.type == constants.CapsuleShape
+        geometry.type = constants.CapsuleShape
 
     # Apply possible negative scale to shape rotation
     # Use `original` in case we're at the tip
@@ -1830,6 +1833,9 @@ def _infer_geometry(root,
 
     # Keep radius at minimum 10% of its length to avoid stick-figures
     geometry.radius = max(geometry.length * 0.1, geometry.radius)
+
+    if not geometry.radius > 0:
+        geometry.radius = 1.0
 
     return geometry
 

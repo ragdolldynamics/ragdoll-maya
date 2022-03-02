@@ -51,6 +51,7 @@ from . import (
     options,
     dump,
     recording,
+    licence,
     telemetry,
     constants as c,
     internal as i__,
@@ -244,6 +245,7 @@ def uninstall():
     uninstall_ui()
     options.uninstall()
     cmdx.uninstall()
+    licence.uninstall()
 
     if _is_interactive():
         uninstall_callbacks()

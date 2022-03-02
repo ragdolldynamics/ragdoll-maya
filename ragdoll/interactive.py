@@ -758,7 +758,7 @@ def install_menu():
          # Programatically displayed during logging
          visible=False)
 
-    item("markersManipulator", markers_manipulator)
+    item("markersManipulator", markers_manipulator, markers_manipulator_options)
 
     divider("Markers")
 
@@ -1280,8 +1280,20 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
+    # 1. chekc for memorized sovler
+    #   todo
+
+    # 2. find one solver from selection
     selection = selection or cmdx.sl()
-    solvers = cmdx.ls(type="rdSolver")
+    if selection:
+        downstreams = cmds.listHistory(selection, future=True, levels=3)
+        # note: there should be only rdMarker or rdGroup or both sit between
+        #   geo shape/transform node and rdSolver node, which is levels=3 away.
+        solvers = cmdx.ls(downstreams, type="rdSolver")
+    else:
+        solvers = None
+
+    solvers = solvers or cmdx.ls(type="rdSolver")
 
     if len(solvers) < 1:
         raise i__.UserWarning(
@@ -1290,13 +1302,12 @@ def markers_manipulator(selection=None, **opts):
         )
 
     if len(solvers) > 1:
-        log.warning(
-            "Multiple solvers found, manipulating %s" % solvers[0]
-        )
-
-    cmds.select(str(solvers[0]))
-    cmds.setToolTo("ShowManips")
-    log.info("Manipulating %s" % solvers[0])
+        markers_manipulator_options()
+        # note: this option box should filter down to only one solver
+    else:
+        cmds.select(str(solvers[0]))
+        cmds.setToolTo("ShowManips")
+        log.info("Manipulating %s" % solvers[0])
 
     return kSuccess
 
@@ -3095,6 +3106,16 @@ def _update_group_options():
     groups = [group.shortestPath() for group in groups]
     items = __.optionvars["markersAssignGroup"]["originalItems"] + groups
     __.optionvars["markersAssignGroup"]["items"] = items
+
+
+def markers_manipulator_options(*args):
+    # list out solvers
+    #   * <=3, a simple btn bar, with outliner color
+    #   *  >3, show best guess, and all others in a comboBox
+    #   also,
+    #   able to remember the decsion for following operations when "apply" btn
+    #   hit.
+    return _Window("markersManipulator", markers_manipulator)
 
 
 def assign_marker_options(*args):

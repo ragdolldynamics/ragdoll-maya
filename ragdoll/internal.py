@@ -275,19 +275,13 @@ def struct(name, **kwargs):
 # Components
 Geometry = struct(
     "Geometry",
-    orient=cmdx.Quaternion(),
+    type=constants.SphereShape,
     extents=cmdx.Vector(1, 1, 1),
+    radius=1.0,
     length=0.0,
-    radius=0.0,
-    shape_type=constants.SphereShape,
-    shape_offset=cmdx.Vector(),
-    shape_rotation=cmdx.Vector(),
-    compute_mass=lambda self: (
-        self.extents.x *
-        self.extents.y *
-        self.extents.z *
-        0.01
-    )
+    orient=cmdx.Quaternion(),
+    offset=cmdx.Vector(),
+    rotation=cmdx.Vector(),
 )
 
 

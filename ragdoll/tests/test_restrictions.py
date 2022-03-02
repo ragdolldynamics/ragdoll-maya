@@ -18,9 +18,6 @@ from ragdoll.vendor import cmdx
 
 from . import _new
 
-is_unlimited = cmds.ragdollLicence(product=True, query=True) == "enterprise"
-is_commercial = not cmds.ragdollLicence(isNonCommercial=True, query=True)
-
 
 def test_export_10():
     # The user can only ever export 10 markers from a Personal licence
@@ -39,7 +36,9 @@ def test_export_10():
     for entity in registry.view("MarkerUIComponent"):
         print("  - %s" % registry.get(entity, "NameComponent")["value"])
 
-    if is_unlimited:
+    product = cmds.ragdollLicence(product=True, query=True)
+
+    if product == "enterprise":
         assert_equals(registry.count("MarkerUIComponent"), 15)
     else:
         assert_equals(registry.count("MarkerUIComponent"), 10)
@@ -62,6 +61,8 @@ def test_record_100():
 
     # It'll have fallen far beyond minus 10
     assert_less(value_at_100, -10)
+
+    is_commercial = not cmds.ragdollLicence(isNonCommercial=True, query=True)
 
     if is_commercial:
         # Since we're able to record past 100 frames, the box will

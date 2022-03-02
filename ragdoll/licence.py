@@ -131,6 +131,7 @@ def request_lease(ip=None, port=None):
     if not (ip and port):
         try:
             ip, port = constants.RAGDOLL_FLOATING.split(":")
+            port = int(port)
         except Exception:
             raise ValueError(
                 "Malformatted RAGDOLL_FLOATING environment variable: "

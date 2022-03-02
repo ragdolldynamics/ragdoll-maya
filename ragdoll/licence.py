@@ -129,7 +129,13 @@ def request_lease(ip=None, port=None):
     """Request a licence from `ip` on `port`"""
 
     if not (ip and port):
-        ip, port = constants.RAGDOLL_FLOATING.split(":")
+        try:
+            ip, port = constants.RAGDOLL_FLOATING.split(":")
+        except Exception:
+            raise ValueError(
+                "Malformatted RAGDOLL_FLOATING environment variable: "
+                % constants.RAGDOLL_FLOATING
+            )
 
     status = cmds.ragdollLicence(requestLease=(ip, port))
 

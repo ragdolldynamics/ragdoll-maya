@@ -2098,7 +2098,7 @@ def merge_solvers(a, b):
     # that the inputStart and inputCurrent array attributes have
     # gotten out of sync.
 
-    if a.exists:
+    if a.exists and not a.is_referenced:
         log.warning(
             "%s is still alive, this may be a problem." % a
         )

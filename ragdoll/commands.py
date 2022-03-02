@@ -1541,7 +1541,7 @@ def _length_and_orient_from_childhood(root, parent, children):
         >>> length
         2.5
         >>> euler = orient.as_euler_rotation()
-        >>> tuple(map(int, map(cmdx.degrees, euler)))
+        >>> tuple(map(int, map(round, map(cmdx.degrees, euler))))
         (0, -90, 0)
 
         # A fork in Y
@@ -1576,7 +1576,7 @@ def _length_and_orient_from_childhood(root, parent, children):
         >>> "%.2f" % length == "1.12"
         True
         >>> euler = orient.as_euler_rotation()
-        >>> tuple(map(int, map(cmdx.degrees, euler)))
+        >>> tuple(map(int, map(round, map(cmdx.degrees, euler))))
         (0, 0, 90)
 
     """

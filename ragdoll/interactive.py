@@ -3119,7 +3119,11 @@ def markers_manipulator_options(*args, **kwargs):
     else:
         args = ui_manip.SlimSolverSelector(solvers)
 
-    return _Window("markersManipulator", markers_manipulator, args=args)
+    def _command():
+        args.on_accepted()
+        return markers_manipulator()
+
+    return _Window("markersManipulator", _command, args=args)
 
 
 def assign_marker_options(*args):

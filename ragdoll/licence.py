@@ -17,10 +17,12 @@ STATUS_INUSE = 5                # Maximum number of activations reached
 STATUS_FEATURES_CHANGED = 22    # Licence fields have changed
 STATUS_TRIAL_EXPIRED = 30       # Trial expired
 STATUS_NO_FREE_LEASES = 5       # Maximum number of leases reached
+STATUS_ALREADY_LEASED = 6       # Lease already attained
 
 log = logging.getLogger("ragdoll")
 self = sys.modules[__name__]
 self._last_status = -1
+self._installed = False
 
 
 def install(key=None):
@@ -39,8 +41,13 @@ def install(key=None):
         status = _install_nodelocked(key)
 
     self._last_status = status
+    self._installed = True
 
     return status
+
+
+def uninstall():
+    self._installed = False
 
 
 def _parse_environment():
@@ -128,6 +135,14 @@ def current_key():
 def request_lease(ip=None, port=None):
     """Request a licence from `ip` on `port`"""
 
+    assert constants.RAGDOLL_FLOATING, (
+        "Lease only relevant for floating licences"
+    )
+
+    if not self._installed:
+        # Lease is automatically attained during install
+        return self.install()
+
     if not (ip and port):
         try:
             ip, port = constants.RAGDOLL_FLOATING.split(":")
@@ -142,6 +157,9 @@ def request_lease(ip=None, port=None):
 
     if status == STATUS_OK:
         log.debug("Successfully acquired a lease")
+
+    elif status == STATUS_ALREADY_LEASED:
+        log.warning("Already leased")
 
     elif status == STATUS_NO_FREE_LEASES:
         log.warning("All available licences are occupied")
@@ -306,7 +324,7 @@ def reverify():
 def data():
     """Return overall information about the current Ragdoll licence"""
 
-    if self._last_status < 0:
+    if not self._installed:
         install()
 
     return dict(

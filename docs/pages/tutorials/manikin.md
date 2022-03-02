@@ -173,7 +173,7 @@ https://user-images.githubusercontent.com/2152766/145269594-29ca3623-b5bf-4cb9-b
 That's enough setup, let's drop him!
 
 1. Select `hip_ctl`
-2. Set `Behavior = Initial State`
+2. Set `Behaviour = Dynamic`
 3. Drop the Manikin a few times
 
 !!! hint "New Concept"
@@ -188,7 +188,10 @@ The default behaviour for `Assign and Connect` is to give the first selection - 
 !!! question "What does Kinematic mean?"
     **Kinematic** means "copy the animation into simulation and make no changes to it"
 
-By instead setting this to `Initial State`, then Ragdoll will only use the animation for the starting position and orientation of the simulation.
+By instead setting this to `Dynamic`, then Ragdoll will only use the animation for the starting position and orientation of the simulation.
+
+!!! tip "Inherit"
+    Alternatively, you can set it to `Inherit` to have it *inherit* the value of the `rGroup` node that was created for the whole character.
 
 <br>
 

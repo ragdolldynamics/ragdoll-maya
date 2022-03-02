@@ -51,15 +51,15 @@ https://user-images.githubusercontent.com/2152766/129519170-59d6a109-e9eb-4fd0-8
 
 #### Limits
 
-Next see how our character behaves when there isn't any animation around to steer it.
+Next let's see how our character behaves when there isn't any animation around to steer it.
 
 1. Select `hip_ctl_rGroup`
-2. Set `Behavior = Initial State`
+2. Set `Behaviour = Dynamic`
+2. Set `Pose Stiffness = 0.0`
 
-As in our last tutorial when we changed the `hip_ctl` from `Kinematic` to `Initial State`, now we do the same but for the whole character!
+As in our last tutorial when we changed the `hip_ctl` from `Kinematic` to `Dynamic`, now we do the same but for the whole character!
 
 https://user-images.githubusercontent.com/2152766/145388195-22886314-833f-4785-9b80-1d90b35d54e7.mp4 controls
-
 
 *Yikes!* That's a mess. No longer is the animation holding a pose together, it's all up to gravity and the anatomy of our character now.
 
@@ -182,7 +182,7 @@ For your reference, here is the completed scene with the Manikin file referenced
 
 #### Damped Limits
 
-You can tune the behavior of each limit to capture the look you're after, such as making things a little more **damped**.
+You can tune the behaviour of each limit to capture the look you're after, such as making things a little more **damped**.
 
 https://user-images.githubusercontent.com/2152766/145394548-4c74d571-d6fc-4266-93b6-4d5058a3247e.mp4 controls
 

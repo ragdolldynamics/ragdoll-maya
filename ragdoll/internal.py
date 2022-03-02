@@ -277,7 +277,7 @@ Geometry = struct(
     "Geometry",
     type=constants.SphereShape,
     extents=cmdx.Vector(1, 1, 1),
-    radius=1.0,
+    radius=0.0,
     length=0.0,
     orient=cmdx.Quaternion(),
     offset=cmdx.Vector(),

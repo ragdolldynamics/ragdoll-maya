@@ -1318,6 +1318,7 @@ def assign_marker(selection=None, **opts):
     opts = dict({
         "connect": False,
 
+        "refit": _opt("markersRefit", opts),
         "createGround": _opt("markersCreateGround", opts),
         "createObjectSet": _opt("markersCreateObjectSet", opts),
         "createLollipop": _opt("markersCreateLollipop", opts),
@@ -1395,6 +1396,7 @@ def assign_marker(selection=None, **opts):
 
     try:
         markers += commands.assign_markers(selection, owner, opts={
+            "refit": opts["refit"],
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],

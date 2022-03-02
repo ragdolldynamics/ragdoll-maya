@@ -112,7 +112,7 @@ def assign_markers(transforms, solver, opts=None):
         "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
-        "refit": False,
+        "refit": True,
         "preventDuplicateMarker": True,
     }, **(opts or {}))
 
@@ -953,9 +953,6 @@ def reset_shape(marker):
                               parent,
                               children)
 
-        if parent_marker:
-            geo.type = constants.CapsuleShape
-
         mod.set_attr(marker["shapeType"], geo.type)
         mod.set_attr(marker["shapeExtents"], geo.extents)
         mod.set_attr(marker["shapeLength"], geo.length)
@@ -1649,6 +1646,63 @@ def _length_and_orient_from_childhood(root, parent, children):
     return length, orient
 
 
+def _find_geometry_from_fork(root, children):
+    r"""Encapsulate all children of a fork
+
+          ______
+    o----o-----o|
+         |\     |
+         | \    |
+         |__o___|
+
+    """
+
+    assert root.is_a(cmdx.kTransform), "root must be a transform"
+    assert len(children) > 1, (
+        "This won't make sense with any less than 2 children"
+    )
+
+    geometry = internal.Geometry()
+    geometry.radius = root["radius"].read()
+
+    corner1, corner2 = cmdx.Point(), cmdx.Point()
+
+    for child in children:
+        pos = child.translation()
+
+        # Find bottom-right corner
+        if pos.x < corner1.x:
+            corner1.x = pos.x
+        if pos.y < corner1.y:
+            corner1.y = pos.y
+        if pos.z < corner1.z:
+            corner1.z = pos.z
+
+        # Find top-left corner
+        if pos.x > corner2.x:
+            corner2.x = pos.x
+        if pos.y > corner2.y:
+            corner2.y = pos.y
+        if pos.z > corner2.z:
+            corner2.z = pos.z
+
+    bbox = cmdx.BoundingBox(corner1, corner2)
+    offset = cmdx.Vector(bbox.center)
+    size = cmdx.Vector(
+        max([0.25, geometry.radius * 2, bbox.width]),
+        max([0.25, geometry.radius * 2, bbox.height]),
+        max([0.25, geometry.radius * 2, bbox.depth])
+    )
+
+    geometry.type = constants.BoxShape
+    geometry.length = max(size)
+    geometry.extents = size
+    geometry.offset = offset
+    geometry.radius = max(geometry.radius, geometry.length * 0.1)
+
+    return geometry
+
+
 def _infer_geometry(root,
                     parent=constants.Auto,
                     children=constants.Auto,
@@ -1690,6 +1744,7 @@ def _infer_geometry(root,
 
     geometry = geometry or internal.Geometry()
     original = root
+    inverted = False
 
     # Automatically find children
     if children is constants.Auto:
@@ -1710,6 +1765,12 @@ def _infer_geometry(root,
         children = [root]
         root = parent
         parent = None
+        inverted = True
+
+    all_joints = all(child.is_a(cmdx.kJoint) for child in children)
+
+    if children and len(children) > 1 and all_joints:
+        return _find_geometry_from_fork(root, children)
 
     orient = cmdx.Quaternion()
     root_tm = root.transform(cmdx.sWorld)

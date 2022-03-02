@@ -2,15 +2,13 @@
 
 Congratulations on your purchase of a floating licence for **Ragdoll Dynamics**!
 
+## Overview
+
 This page will help you get set-up with a licence server, on-premise, and instruct Ragdoll to "lease" a licence from it. The server itself can run on any machine and any platform, including Windows, Linux and MacOS, so long as it is accessible from the machine running Ragdoll.
 
-??? into "Test Connectivity"
-    To test whether machine A is accessible from machine B, try `ping`.
+**Windows, Linux and MacOS**
 
-    ```bash
-    ping 10.0.0.13
-    # Reply from 10.0.0.13: bytes=32 time=1ms TTL=117
-    ```
+The server can run on a different operating system than your workstations. For example, a common scenario is having the server running on Linux and workstations run on a combination of Windows, MacOS and Linux.
 
 On each platform, the procedure is the same.
 
@@ -67,20 +65,28 @@ Here's what you need to do in order to run the licence server on the Windows pla
 
 ### Download
 
-You'll need both of these.
-
 - [`TurboFloat-Server-Windows.zip`](https://files.ragdolldynamics.com/api/public/dl/PdFO00Vv/TurboFloat-Server-Windows.zip)
-- [`TurboActivate.dat`](https://files.ragdolldynamics.com/api/public/dl/6lMDDMdn/TurboActivate.dat)
 
-Unzip into a folder that looks like this.
+Inside of this file you will find this.
 
 ![image](https://user-images.githubusercontent.com/2152766/117801629-73809f80-b24c-11eb-83ee-c5b548a8c2f0.png)
+
+Edit the `.xml` file with a `port` you would like to use.
+
+!!! note "Port number"
+    Make note of this port number as you will need it later when connecting to it from Maya.
+
+!!! note "64-bit Server"
+    If you need a 32-bit version of the server, find the appropriate `TurboFloat` binaries here.
+
+    - https://wyday.com/download/
+
 
 <br>
 
 ### Activate
 
-Next we'll need to activate the server.
+Next we'll need to activate the server. Open a `cmd.exe` or PowerShell prompt and type in the following.
 
 ```bash
 TurboFloatServer.exe -a="YOUR-SERIAL-NUMBER"
@@ -99,7 +105,7 @@ Now you're ready to launch the server!
 
 ### Start
 
-This next command will launch the server in the current PowerShell or cmd.exe terminal you are in.
+This next command will launch the server.
 
 ```bash
 TurboFloatServer.exe -x
@@ -111,7 +117,9 @@ TurboFloatServer.exe -x
 
 All good? Great.
 
-In order for the server to run in the background, and restart itself whenever the machine reboots, you'll need to install it as a "service".
+**Optional**
+
+At this point, you can optionally have the server restart itself and run in the background by installing it as a "service".
 
 ```bash
 TurboFloatServer.exe -i
@@ -195,6 +203,17 @@ licence.drop_lease()
 ## FAQ
 
 Let's cover some common scenarios.
+
+<br>
+
+### How can I test connectivity between my machines?
+
+To test whether machine A is accessible from machine B, try `ping`.
+
+```bash
+ping 10.0.0.13
+# Reply from 10.0.0.13: bytes=32 time=1ms TTL=117
+```
 
 <br>
 

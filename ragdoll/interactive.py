@@ -761,7 +761,7 @@ def install_menu():
          # Programatically displayed during logging
          visible=False)
 
-    item("markersManipulator", markers_manipulator, markers_manipulator_options)
+    item("markersManipulator", markers_manipulator)
 
     divider("Markers")
 
@@ -1285,7 +1285,7 @@ def _add_to_objset(markers):
 def markers_manipulator(selection=None, **opts):
     solvers = None
 
-    # 1. find one solver from selection
+    # find one solver from selection
     selection = selection or cmdx.sl()
     if selection:
         downstreams = cmds.listHistory(selection, future=True, levels=3)
@@ -1293,18 +1293,36 @@ def markers_manipulator(selection=None, **opts):
         #   geo shape/transform node and rdSolver node, which is levels=3 away.
         solvers = cmdx.ls(downstreams, type="rdSolver")
 
-    if not solvers:
-        # 2. chekc for memorized sovler
-        current = ui_manip.get_current_solver()
-        solvers = [current] if current else cmdx.ls(type="rdSolver")
+    solvers = solvers or cmdx.ls(type="rdSolver")
+    s_count = len(solvers)
 
-    if len(solvers) == 1:
+    if s_count < 1:
+        raise i__.UserWarning(
+            "No solver found",
+            "No solver found to manipulate."
+        )
+    elif s_count == 1:
         cmds.select(str(solvers[0]))
         cmds.setToolTo("ShowManips")
         log.info("Manipulating %s" % solvers[0])
+
+    elif s_count <= 3:
+        widget = ui_manip.SlimSolverSelector(
+            solvers=solvers,
+            parent=ui.MayaWindow()
+        )
+        widget.solver_picked.connect(markers_manipulator)
+        widget.open()
+
     else:
-        markers_manipulator_options(solvers=solvers)
-        # note: this option box should filter down to only one solver
+        best_guess = None  # todo: pick from viewport
+        widget = ui_manip.FullSolverSelector(
+            solvers=solvers,
+            best_guess=best_guess,
+            parent=ui.MayaWindow()
+        )
+        widget.solver_picked.connect(markers_manipulator)
+        widget.open()
 
     return kSuccess
 
@@ -3018,10 +3036,10 @@ def _Arg(var, label=None, callback=None):
     return arg
 
 
-def _Window(key, command=None, args=None, cls=None):
+def _Window(key, command=None, cls=None):
     parent = ui.MayaWindow()
     menuitem = __.menuitems[key]
-    args = args or map(_Arg, menuitem.get("options", []))
+    args = map(_Arg, menuitem.get("options", []))
 
     win = (cls or ui.Options)(
         key,
@@ -3103,27 +3121,6 @@ def _update_group_options():
     groups = [group.shortestPath() for group in groups]
     items = __.optionvars["markersAssignGroup"]["originalItems"] + groups
     __.optionvars["markersAssignGroup"]["items"] = items
-
-
-def markers_manipulator_options(*args, **kwargs):
-    solvers = kwargs.pop("solvers", None) or cmdx.ls(type="rdSolver")
-
-    if len(solvers) < 1:
-        raise i__.UserWarning(
-            "No solver found",
-            "No solver found to manipulate."
-        )
-
-    if len(solvers) > 3:
-        args = ui_manip.FullSolverSelector(solvers)
-    else:
-        args = ui_manip.SlimSolverSelector(solvers)
-
-    def _command():
-        args.on_accepted()
-        return markers_manipulator()
-
-    return _Window("markersManipulator", _command, args=args)
 
 
 def assign_marker_options(*args):

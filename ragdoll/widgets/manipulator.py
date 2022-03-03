@@ -1,41 +1,63 @@
 
+import os
 from PySide2 import QtCore, QtWidgets, QtGui
-from ..ui import DuckArgParser
-
-# State
-__ = type("internal", (object,), {})
-__.remember = False
-__.preferred_solver = None
+from ..vendor import cmdx
 
 
-def get_current_solver():
-    s = __.preferred_solver
-    if not __.remember:
-        __.preferred_solver = None
-    return s
+def _resource(*fname):
+    dirname = os.path.dirname(__file__)
+    dirname = os.path.dirname(dirname)
+    resdir = os.path.join(dirname, "resources")
+    return os.path.normpath(os.path.join(resdir, *fname))
 
 
-def set_current_solver(solver_shape):
-    # todo: type check
-    __.preferred_solver = solver_shape
+def elide(string, length=120):
+    string = str(string)
+    placeholder = "..."
+    length -= len(placeholder)
+
+    if len(string) <= length:
+        return string
+
+    half = int(length / 2)
+    return string[:half] + placeholder + string[-half:]
 
 
-class SlimSolverSelector(DuckArgParser):
+def get_outliner_color(node):
+    # type: (cmdx.DagNode) -> QtGui.QColor or None
+    if node.parent()["useOutlinerColor"]:
+        return QtGui.QColor.fromRgbF(*node.parent()["outlinerColor"])
+    elif node["useOutlinerColor"]:
+        return QtGui.QColor.fromRgbF(*node["outlinerColor"])
+
+
+class SolverButton(QtWidgets.QPushButton):
+    _icon = QtGui.QIcon(_resource("icons", "solver.png"))
+
+    def __init__(self, solver, parent=None):
+        # type: (cmdx.DagNode, QtWidgets.QWidget) -> None
+        super(SolverButton, self).__init__(parent=parent)
+        text_color = get_outliner_color(solver)
+        self.setText(elide(solver.shortest_path()))
+        self.setIcon(self._icon)
+
+        self._dag_path = solver.shortest_path()
+
+    @property
+    def dag_path(self):
+        return self._dag_path
+
+
+class SlimSolverSelector(QtWidgets.QDialog):
+    solver_picked = QtCore.Signal(str)
 
     def __init__(self, solvers, parent=None):
+        # type: (list[cmdx.DagNode], QtWidgets.QWidget) -> None
         super(SlimSolverSelector, self).__init__(parent=parent)
-        # todo:
-        #   1. a simple btn bar, with solver node's outliner color
-        #   2. remember the decision for following operations when "apply" btn
-        #      hit.
+        self.setWindowTitle("Which Solver ?")
 
         solver_bar = QtWidgets.QWidget()
-        solver_btn = [QtWidgets.QPushButton(str(s)) for s in solvers]
-        for btn in solver_btn:
-            btn.setCheckable(True)
-        solver_btn[0].setChecked(True)  # default
-
-        memorize = QtWidgets.QCheckBox("Remember for this session")
+        solver_btn = [SolverButton(solver) for solver in solvers]
 
         layout = QtWidgets.QHBoxLayout(solver_bar)
         for btn in solver_btn:
@@ -44,61 +66,42 @@ class SlimSolverSelector(DuckArgParser):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(solver_bar)
-        layout.addWidget(memorize)
-        layout.addStretch(True)
+        # todo: guidance image
 
         for btn in solver_btn:
-            btn.toggled.connect(self.on_solver_toggled)
+            btn.clicked.connect(self.on_solver_clicked)
 
         self._solver_btn = solver_btn
-        self._memorize = memorize
 
-    def on_solver_toggled(self, checked):
-        clicked = self.sender()
-
-        def check(b, state):
-            b.blockSignals(True)
-            b.setChecked(state)
-            b.blockSignals(False)
-
-        unchecked = []
-        for btn in self._solver_btn:
-            if btn is not clicked:
-                check(btn, False)
-                unchecked.append(btn)
-
-        if not checked:
-            check(unchecked[0], True)
-
-    def on_accepted(self):
-        selected = next(b for b in self._solver_btn if b.isChecked())
-        selected = selected.text()
-        set_current_solver(selected)
-        __.remember = self._memorize.isChecked()
+    def on_solver_clicked(self):
+        clicked = self.sender()  # type: SolverButton
+        self.solver_picked.emit(clicked.dag_path)
+        self.close()
 
 
-class FullSolverSelector(DuckArgParser):
-    def __init__(self, solvers, parent=None):
+class FullSolverSelector(QtWidgets.QDialog):
+    solver_picked = QtCore.Signal(str)
+
+    def __init__(self, solvers, best_guess=None, parent=None):
+        # type: (list[cmdx.DagNode], cmdx.DagNode, QtWidgets.QWidget) -> None
         super(FullSolverSelector, self).__init__(parent=parent)
-        # todo:
-        #   1. get best guess from view and set as default option
-        #   2. remember the decision for following operations when "apply" btn
-        #      hit.
+        self.setWindowTitle("Which Solver ?")
 
         combo = QtWidgets.QComboBox()
-        combo.addItems([str(s) for s in solvers])
-        memorize = QtWidgets.QCheckBox("Remember for this session")
+        combo.addItems([solver.shortest_path() for solver in solvers])
+
+        confirm = QtWidgets.QPushButton("Pick")
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(combo)
-        layout.addWidget(memorize)
-        layout.addStretch(True)
+        layout.addWidget(confirm)
+        # todo: guidance image
+
+        confirm.clicked.connect(self.on_solver_picked)
 
         self._combo = combo
-        self._memorize = memorize
 
-    def on_accepted(self):
-        selected = self._combo.currentText()
-        set_current_solver(selected)
-        __.remember = self._memorize.isChecked()
+    def on_solver_picked(self):
+        self.solver_picked.emit(self._combo.currentText())
+        self.close()

@@ -1,6 +1,7 @@
 
 import os
 from PySide2 import QtCore, QtWidgets, QtGui
+from ..vendor.qargparse import px
 from ..vendor import cmdx
 
 
@@ -37,9 +38,18 @@ class SolverButton(QtWidgets.QPushButton):
     def __init__(self, solver, parent=None):
         # type: (cmdx.DagNode, QtWidgets.QWidget) -> None
         super(SolverButton, self).__init__(parent=parent)
-        text_color = get_outliner_color(solver)
-        self.setText(elide(solver.shortest_path()))
         self.setIcon(self._icon)
+        self.setIconSize(QtCore.QSize(px(128), px(128)))
+        self.setText(elide(solver.shortest_path()))
+
+        text_color = get_outliner_color(solver)
+        text_style = ("color: %s;" % text_color.name()) if text_color else ""
+
+        self.setStyleSheet("""
+        * {
+            %s
+        }
+        """ % text_style)
 
         self._dag_path = solver.shortest_path()
 

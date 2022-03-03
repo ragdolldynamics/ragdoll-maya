@@ -28,7 +28,7 @@ def test_export_10():
         cube1, _ = cmds.polyCube()
         api.assignMarker(cube1, solver)
 
-    # Only 1 markers will be exported
+    # Only 10 markers will be exported
     data = api.exportPhysics()
     registry = dump.Registry(data)
 
@@ -36,12 +36,7 @@ def test_export_10():
     for entity in registry.view("MarkerUIComponent"):
         print("  - %s" % registry.get(entity, "NameComponent")["value"])
 
-    product = cmds.ragdollLicence(product=True, query=True)
-
-    if product == "enterprise":
-        assert_equals(registry.count("MarkerUIComponent"), 15)
-    else:
-        assert_equals(registry.count("MarkerUIComponent"), 10)
+    assert_equals(registry.count("MarkerUIComponent"), 10)
 
 
 def test_record_100():
@@ -62,14 +57,5 @@ def test_record_100():
     # It'll have fallen far beyond minus 10
     assert_less(value_at_100, -10)
 
-    is_commercial = not cmds.ragdollLicence(isNonCommercial=True, query=True)
-
-    if is_commercial:
-        # Since we're able to record past 100 frames, the box will
-        # have kept falling further than frame 100
-        commercial = 0
-        assert_less(value_at_110, value_at_100 + commercial)
-    else:
-        # Since recording stops at 100, any frame after that will be the same
-        non_commercial = 0
-        assert_equals(value_at_110, value_at_100 + non_commercial)
+    # Since recording stops at 100, any frame after that will be the same
+    assert_equals(value_at_110, value_at_100)

@@ -1981,7 +1981,6 @@ def _create_group(mod, name, solver):
 
     if constants.RAGDOLL_DEVELOPER:
         mod.set_keyable(group["articulated"], True)
-        mod.set_keyable(group["articulationType"], True)
 
     _take_ownership(mod, group, group_parent)
 

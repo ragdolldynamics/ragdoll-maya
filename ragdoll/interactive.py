@@ -42,7 +42,9 @@ import contextlib
 
 from maya import cmds
 from maya.utils import MayaGuiLogHandler
-from maya.api import OpenMaya as om
+from maya import OpenMaya as om1        # api 1
+from maya import OpenMayaUI as omUI1    # api 1
+from maya.api import OpenMaya as om     # api 2
 from .vendor import cmdx, qargparse
 from . import (
     commands,
@@ -1281,44 +1283,127 @@ def _add_to_objset(markers):
             mod.do_it()
 
 
+def _nodes_in_viewport(cam=None, long_name=False):
+    """Get viewport framed objects
+    """
+    if not cam:  # get active viewport
+        viewport = cmds.playblast(activeEditor=True)
+        cam = cmds.modelEditor(viewport, query=True, activeView=True, cam=True)
+
+    # Add camera to MDagPath.
+    mdag_path = om1.MDagPath()
+    sel = om1.MSelectionList()
+    sel.add(cam)
+    sel.getDagPath(0, mdag_path)
+
+    # Create frustum object with camera.
+    view = omUI1.M3dView.active3dView()
+    draw_traversal = omUI1.MDrawTraversal()
+    draw_traversal.setFrustum(mdag_path, view.portWidth(), view.portHeight())
+    # Traverse scene to get all objects in the camera's view.
+    draw_traversal.traverse()
+
+    frustum_objs = []
+    get_path = om1.MDagPath.fullPathName if long_name \
+        else om1.MDagPath.partialPathName
+    # Loop through objects within frustum.
+    for i in range(draw_traversal.numberOfItems()):
+        dag_path = om1.MDagPath()
+        draw_traversal.itemPath(i, dag_path)
+
+        obj = get_path(dag_path)
+        if cmds.objExists(obj):
+            frustum_objs.append(obj)
+
+    return frustum_objs
+
+
+def _solvers_in_viewport():
+    """
+    :return: list of solver nodes that are connected to markers in viewport
+    """
+    nodes = _nodes_in_viewport()
+
+    def get_solver(shape_node):
+        plug = shape_node + ".outMesh"
+        if not cmds.objExists(plug):
+            return
+        markers = cmds.listConnections(plug, type="rdMarker")
+        if markers:
+            marker = markers[0]  # should have only one marker, right ?
+            plug = marker + ".currentState"
+            solvers = cmds.listConnections(plug, type="rdSolver")
+            if solvers:
+                return solvers[0]
+
+    return cmdx.ls(filter(None, [get_solver(n) for n in nodes]))
+
+
+def _solvers_hint(solvers):
+
+    def get_solver(rd_node):
+        if rd_node.type() == "rdSolver":
+            return rd_node
+        else:
+            return get_solver(rd_node["startState"].connection())
+
+    root_markers = {}
+    for marker in cmdx.ls(type="rdMarker"):
+        if not marker["parentMarker"].connection():
+            _solver = get_solver(marker)
+            if _solver not in root_markers:
+                root_markers[_solver] = marker
+
+    return [root_markers.get(solver) for solver in solvers]
+
+
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    solvers = None
-
-    # find one solver from selection
+    rd_nodes = None
     selection = selection or cmdx.sl()
-    if selection:
+
+    if selection and len(selection) == 1:
+        types_to_manips = ["rdSolver", "rdGroup", "rdMarker"]
+        rd_nodes = cmdx.ls(selection, type=types_to_manips)
+
+    if selection and not rd_nodes:
+        # find one solver from selection
         downstreams = cmds.listHistory(selection, future=True, levels=3)
         # note: there should be only rdMarker or rdGroup or both sit between
         #   geo shape/transform node and rdSolver node, which is levels=3 away.
-        solvers = cmdx.ls(downstreams, type="rdSolver")
+        rd_nodes = cmdx.ls(downstreams, type="rdSolver")
 
-    solvers = solvers or cmdx.ls(type="rdSolver")
-    s_count = len(solvers)
+    rd_nodes = rd_nodes or cmdx.ls(type="rdSolver")
+    rd_count = len(rd_nodes)
 
-    if s_count < 1:
+    if rd_count < 1:
         raise i__.UserWarning(
             "No solver found",
             "No solver found to manipulate."
         )
-    elif s_count == 1:
-        cmds.select(str(solvers[0]))
-        cmds.setToolTo("ShowManips")
-        log.info("Manipulating %s" % solvers[0])
 
-    elif s_count <= 3:
+    elif rd_count == 1:
+        cmds.select(str(rd_nodes[0]))
+        cmds.setToolTo("ShowManips")
+        log.info("Manipulating %s" % rd_nodes[0])
+
+    elif rd_count <= 3:
+        solvers = rd_nodes
         widget = ui_manip.SlimSolverSelector(
             solvers=solvers,
+            hints=_solvers_hint(solvers),
             parent=ui.MayaWindow()
         )
         widget.solver_picked.connect(markers_manipulator)
         widget.open()
 
-    else:
-        best_guess = None  # todo: pick from viewport
+    else:  # 3+
+        solvers = rd_nodes
+        best_guesses = _solvers_in_viewport()
         widget = ui_manip.FullSolverSelector(
             solvers=solvers,
-            best_guess=best_guess,
+            best_guesses=best_guesses,
+            best_hints=_solvers_hint(best_guesses),
             parent=ui.MayaWindow()
         )
         widget.solver_picked.connect(markers_manipulator)

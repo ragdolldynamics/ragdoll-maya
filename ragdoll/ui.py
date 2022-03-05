@@ -1557,6 +1557,21 @@ class SplashScreen(QtWidgets.QDialog):
         self.refresh()
 
     def on_deactivate_offline(self):
+        msgbox = QtWidgets.QMessageBox()
+        msgbox.setWindowTitle("Deactivate Ragdoll")
+        msgbox.setTextFormat(QtCore.Qt.RichText)
+        msgbox.setText(
+            "Do you want me to deactivate Ragdoll on this machine? "
+            "I'll try and revert to a trial licence."
+            "<br><br>"
+            "<b>WARNING</b>: This will close your currently opened file"
+        )
+        msgbox.setStandardButtons(QtWidgets.QMessageBox.Yes |
+                                  QtWidgets.QMessageBox.No)
+
+        if msgbox.exec_() != QtWidgets.QMessageBox.Yes:
+            return log.info("Cancelled")
+
         data = licence.data()
         key = data["key"]
         modal = OfflineDialog(False, key, self)
@@ -1600,15 +1615,32 @@ class SplashScreen(QtWidgets.QDialog):
         self.refresh()
 
     def on_drop_clicked(self):
+        msgbox = QtWidgets.QMessageBox()
+        msgbox.setWindowTitle("Drop Lease")
+        msgbox.setTextFormat(QtCore.Qt.RichText)
+        msgbox.setText(
+            "Are you sure? "
+            "<br><br>"
+            "<b>WARNING</b>: This will close your currently opened file"
+        )
+        msgbox.setStandardButtons(QtWidgets.QMessageBox.Yes |
+                                  QtWidgets.QMessageBox.No)
+
+        if msgbox.exec_() != QtWidgets.QMessageBox.Yes:
+            return log.info("Cancelled")
+
         licence.drop_lease()
         self.refresh()
 
     def on_deactivate_clicked(self):
         msgbox = QtWidgets.QMessageBox()
         msgbox.setWindowTitle("Deactivate Ragdoll")
+        msgbox.setTextFormat(QtCore.Qt.RichText)
         msgbox.setText(
-            "Do you want me to deactivate Ragdoll on this machine?\n\n"
+            "Do you want me to deactivate Ragdoll on this machine? "
             "I'll try and revert to a trial licence."
+            "<br><br>"
+            "<b>WARNING</b>: This will close your currently opened file"
         )
         msgbox.setStandardButtons(QtWidgets.QMessageBox.Yes |
                                   QtWidgets.QMessageBox.No)

@@ -27,6 +27,28 @@ class HTMLSkinnedButton(QtWidgets.QPushButton):
         painter.end()  # important
 
 
+class ToolTipHoverMixin(object):
+    tip_shown = QtCore.Signal(str)
+
+    def __init__(self):
+        assert isinstance(self, QtWidgets.QWidget)
+
+    def enterEvent(self, event):
+        # type: (QtCore.QEvent) -> None
+        self.tip_shown.emit(self.toolTip() or "")
+
+    def leaveEvent(self, event):
+        # type: (QtCore.QEvent) -> None
+        self.tip_shown.emit("")
+
+
+class TippedLabel(QtWidgets.QLabel, ToolTipHoverMixin):
+
+    def __init__(self, *args, **kwargs):
+        super(TippedLabel, self).__init__(*args, **kwargs)
+        ToolTipHoverMixin.__init__(self)
+
+
 class FramelessDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
@@ -60,23 +82,3 @@ class FramelessDialog(QtWidgets.QDialog):
             self.move(self.pos() + _delta_pos)
         self._last_pos = _current_pose
         super(FramelessDialog, self).mouseMoveEvent(event)
-
-    def paintEvent(self, event):
-        # type: (QtGui.QPaintEvent) -> None
-        p = QtGui.QPainter(self)
-        p.setRenderHint(p.Antialiasing)
-
-        if self.testAttribute(QtCore.Qt.WA_StyleSheetTarget):
-            opt = QtWidgets.QStyleOption()
-            opt.initFrom(self)
-            self.style().drawPrimitive(QtWidgets.QStyle.PE_Widget, opt, p, self)
-            p.end()
-            return
-
-        rect = QtCore.QRectF(QtCore.QPointF(0, 0), self.size())
-        p.setPen(QtCore.Qt.NoPen)
-        p.setBrush(self.palette().brush(self.backgroundRole()))
-        p.drawRoundedRect(rect, 8, 8, QtCore.Qt.AbsoluteSize)
-        p.end()
-
-        # todo: drop-shadow

@@ -193,7 +193,8 @@ class SolverSelectorDialog(FramelessDialog):
         layout.setMargin(32)
         layout.addWidget(main)
 
-        main.setStyleSheet("#XXX {background: #333}")
+        main.setObjectName("Frameless")
+        main.setStyleSheet("#Frameless {background: #333}")
 
         fx = QtWidgets.QGraphicsDropShadowEffect(self)
         fx.setBlurRadius(32)

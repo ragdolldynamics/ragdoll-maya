@@ -1315,13 +1315,13 @@ def markers_manipulator(selection=None, **opts):
 
     else:
         solvers = rd_nodes
-        widget = ui_manip.SolverSelectorDialog(
+        dialog = ui_manip.SolverSelectorDialog(
             solvers=solvers,
             best_guess=None,  # todo: best-guess from viewport
             parent=ui.MayaWindow()
         )
-        widget.solver_picked.connect(markers_manipulator)
-        widget.open()
+        dialog.solver_picked.connect(markers_manipulator)
+        dialog.open()
 
     return kSuccess
 

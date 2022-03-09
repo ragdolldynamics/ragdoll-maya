@@ -1283,85 +1283,6 @@ def _add_to_objset(markers):
             mod.do_it()
 
 
-def _nodes_in_viewport(cam=None, long_name=False):
-    """Get viewport framed objects
-    """
-    if not cam:  # get active viewport
-        viewport = cmds.playblast(activeEditor=True)
-        cam = cmds.modelEditor(viewport, query=True, activeView=True, cam=True)
-
-    # Add camera to MDagPath.
-    mdag_path = om1.MDagPath()
-    sel = om1.MSelectionList()
-    sel.add(cam)
-    sel.getDagPath(0, mdag_path)
-
-    cam_fn = om1.MFnCamera(mdag_path.node())
-    cam_xform = om1.MFnTransform(mdag_path.transform())
-    cam_matrix = cam_xform.transformation().asMatrix()
-
-    view = omUI1.M3dView.active3dView()
-    h_fov_util = om1.MScriptUtil()
-    h_fov_ptr = h_fov_util.asDoublePtr()
-    v_fov_util = om1.MScriptUtil()
-    v_fov_ptr = v_fov_util.asDoublePtr()
-    cam_fn.getPortFieldOfView(
-        view.portWidth(),
-        view.portHeight(),
-        h_fov_ptr,
-        v_fov_ptr,
-    )
-    h_fov = h_fov_util.getDouble(h_fov_ptr)
-    aspect = view.portWidth() / view.portHeight()
-
-    # Create frustum object with camera.
-    draw_traversal = omUI1.MDrawTraversal()
-    draw_traversal.setPerspFrustum(
-        h_fov / 2,  # narrow down
-        aspect,
-        0.1,  # todo: get from camera
-        10000,
-        cam_matrix,
-    )
-    # Traverse scene to get all objects in the camera's view.
-    draw_traversal.traverse()
-
-    frustum_objs = []
-    get_path = om1.MDagPath.fullPathName if long_name \
-        else om1.MDagPath.partialPathName
-    # Loop through objects within frustum.
-    for i in range(draw_traversal.numberOfItems()):
-        dag_path = om1.MDagPath()
-        draw_traversal.itemPath(i, dag_path)
-
-        obj = get_path(dag_path)
-        if cmds.objExists(obj):
-            frustum_objs.append(obj)
-
-    return frustum_objs
-
-
-def _solvers_in_viewport():
-    """
-    :return: list of solver nodes that are connected to markers in viewport
-    """
-    nodes = _nodes_in_viewport()
-
-    def get_solver(shape_node):
-        plug = shape_node + ".outMesh"
-        if not cmds.objExists(plug):
-            return
-        markers = cmds.listConnections(plug, type="rdMarker")
-        if markers:
-            marker = markers[0]  # should have only one marker, right ?
-            plug = marker + ".currentState"
-            solvers = cmds.listConnections(plug, type="rdSolver")
-            if solvers:
-                return solvers[0]
-
-    return cmdx.ls(filter(None, [get_solver(n) for n in nodes]))
-
-
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
     rd_nodes = None
@@ -1394,10 +1315,9 @@ def markers_manipulator(selection=None, **opts):
 
     else:
         solvers = rd_nodes
-        framed_solvers = _solvers_in_viewport()
         widget = ui_manip.SolverSelectorDialog(
             solvers=solvers,
-            best_guess=framed_solvers[0] if framed_solvers else None,
+            best_guess=None,  # todo: best-guess from viewport
             parent=ui.MayaWindow()
         )
         widget.solver_picked.connect(markers_manipulator)

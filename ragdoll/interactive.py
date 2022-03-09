@@ -1362,24 +1362,6 @@ def _solvers_in_viewport():
     return cmdx.ls(filter(None, [get_solver(n) for n in nodes]))
 
 
-def _solvers_hint(solvers):
-
-    def get_solver(rd_node):
-        if rd_node.type() == "rdSolver":
-            return rd_node
-        else:
-            return get_solver(rd_node["startState"].connection())
-
-    root_markers = {}
-    for marker in cmdx.ls(type="rdMarker"):
-        if not marker["parentMarker"].connection():
-            _solver = get_solver(marker)
-            if _solver not in root_markers:
-                root_markers[_solver] = marker
-
-    return [root_markers.get(solver) for solver in solvers]
-
-
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
     rd_nodes = None

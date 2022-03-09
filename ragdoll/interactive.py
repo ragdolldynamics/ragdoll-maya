@@ -1296,10 +1296,33 @@ def _nodes_in_viewport(cam=None, long_name=False):
     sel.add(cam)
     sel.getDagPath(0, mdag_path)
 
-    # Create frustum object with camera.
+    cam_fn = om1.MFnCamera(mdag_path.node())
+    cam_xform = om1.MFnTransform(mdag_path.transform())
+    cam_matrix = cam_xform.transformation().asMatrix()
+
     view = omUI1.M3dView.active3dView()
+    h_fov_util = om1.MScriptUtil()
+    h_fov_ptr = h_fov_util.asDoublePtr()
+    v_fov_util = om1.MScriptUtil()
+    v_fov_ptr = v_fov_util.asDoublePtr()
+    cam_fn.getPortFieldOfView(
+        view.portWidth(),
+        view.portHeight(),
+        h_fov_ptr,
+        v_fov_ptr,
+    )
+    h_fov = h_fov_util.getDouble(h_fov_ptr)
+    aspect = view.portWidth() / view.portHeight()
+
+    # Create frustum object with camera.
     draw_traversal = omUI1.MDrawTraversal()
-    draw_traversal.setFrustum(mdag_path, view.portWidth(), view.portHeight())
+    draw_traversal.setPerspFrustum(
+        h_fov / 2,  # narrow down
+        aspect,
+        0.1,  # todo: get from camera
+        10000,
+        cam_matrix,
+    )
     # Traverse scene to get all objects in the camera's view.
     draw_traversal.traverse()
 
@@ -1387,23 +1410,12 @@ def markers_manipulator(selection=None, **opts):
         cmds.setToolTo("ShowManips")
         log.info("Manipulating %s" % rd_nodes[0])
 
-    elif rd_count <= 3:
+    else:
         solvers = rd_nodes
-        widget = ui_manip.SlimSolverSelector(
+        framed_solvers = _solvers_in_viewport()
+        widget = ui_manip.SolverSelectorDialog(
             solvers=solvers,
-            hints=_solvers_hint(solvers),
-            parent=ui.MayaWindow()
-        )
-        widget.solver_picked.connect(markers_manipulator)
-        widget.open()
-
-    else:  # 3+
-        solvers = rd_nodes
-        best_guesses = _solvers_in_viewport()
-        widget = ui_manip.FullSolverSelector(
-            solvers=solvers,
-            best_guesses=best_guesses,
-            best_hints=_solvers_hint(best_guesses),
+            best_guess=framed_solvers[0] if framed_solvers else None,
             parent=ui.MayaWindow()
         )
         widget.solver_picked.connect(markers_manipulator)

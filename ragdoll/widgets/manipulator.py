@@ -38,6 +38,15 @@ def compute_solver_size(registry, solver):
     return solver_size
 
 
+def get_all_solver_size(registry):
+    solvers = list(registry.view("SolverComponent"))
+    solver_size = dict.fromkeys(solvers, 0)
+    for entity in registry.view():
+        scene_comp = registry.get(entity, "SceneComponent")
+        solver_size[scene_comp["entity"]] += 1
+    return solver_size
+
+
 def get_outliner_color(node):
     # type: (cmdx.DagNode) -> str or None
     parent = node.parent()
@@ -50,8 +59,8 @@ def get_outliner_color(node):
 class SolverButton(QtWidgets.QPushButton):
     tip_shown = QtCore.Signal(str)
 
-    def __init__(self, registry, solver=None, parent=None):
-        # type: (Registry, cmdx.DagNode, QtWidgets.QWidget) -> None
+    def __init__(self, solver_sizes, solver=None, parent=None):
+        # type: (dict, cmdx.DagNode, QtWidgets.QWidget) -> None
         super(SolverButton, self).__init__(parent=parent)
 
         body = QtWidgets.QWidget()
@@ -81,16 +90,16 @@ class SolverButton(QtWidgets.QPushButton):
         layout = QtWidgets.QHBoxLayout(body)
         layout.addWidget(icon)
         layout.addSpacing(4)
-        layout.addWidget(info, stretch=True)
+        layout.addWidget(info, stretch=True, alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(body, alignment=QtCore.Qt.AlignCenter)
+        layout.addWidget(body, alignment=QtCore.Qt.AlignLeft)
 
         key_name.tip_shown.connect(self.tip_shown)
         key_size.tip_shown.connect(self.tip_shown)
 
-        self._registry = registry
+        self._solver_sizes = solver_sizes
         self._name = val_name
         self._size = val_size
         self._dag_path = None
@@ -114,8 +123,13 @@ class SolverButton(QtWidgets.QPushButton):
         return self._dag_path
 
     def set_solver(self, solver):
-        solver_name = elide(solver.name(), length=60)
-        solver_size = compute_solver_size(self._registry, solver)
+        solver_id = int(solver["ragdollId"])
+        solver_size = self._solver_sizes[solver_id]
+        has_same_size = any(
+            _id != solver_id and size == solver_size
+            for _id, size in self._solver_sizes.items()
+        )
+        solver_name = solver.shortest_path() if has_same_size else solver.name()
         solver_color = get_outliner_color(solver) or ""
 
         self._name.setText(solver_name)
@@ -132,24 +146,6 @@ class SolverButton(QtWidgets.QPushButton):
 class SolverSelectorDialog(FramelessDialog):
     solver_picked = QtCore.Signal(str)
 
-    # todo:
-    #   * button
-    #       - solver name
-    #       - solver size
-    #       - solver namespace if any and the sizes are the same
-    #       - one of root marker if needed
-    #   * tool-tip
-    #       - show additional info when button hovered
-    #           (but not suitable for explaining per entry on button because
-    #            those are being rendered as one image)
-    #   * find a place to display solver size
-    #       (an overall scene state UI, able to embed into viewport as HUD)
-    #
-
-    # todo: guidance image
-    #   Hint: When a Marker is selected, Ragdoll will manipulate the solver
-    #   it belongs to
-
     def __init__(self, solvers, best_guess=None, parent=None):
         """
         Args:
@@ -161,6 +157,7 @@ class SolverSelectorDialog(FramelessDialog):
 
         dump = json.loads(cmds.ragdollDump())
         registry = Registry(dump)
+        solver_sizes = get_all_solver_size(registry)
         # todo: check ragdollDump schema version ?
 
         main = QtWidgets.QWidget()
@@ -168,9 +165,9 @@ class SolverSelectorDialog(FramelessDialog):
         title = QtWidgets.QLabel("Pick Solver")
 
         if len(solvers) > 3:
-            view = self._init_full(registry, solvers, best_guess)
+            view = self._init_full(solver_sizes, solvers, best_guess)
         else:
-            view = self._init_slim(registry, solvers)
+            view = self._init_slim(solver_sizes, solvers)
 
         pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
         pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
@@ -202,11 +199,11 @@ class SolverSelectorDialog(FramelessDialog):
         fx.setColor("black")
         self.setGraphicsEffect(fx)
 
-    def _init_slim(self, registry, solvers):
-        # type: (Registry, list[cmdx.DagNode]) -> QtWidgets.QWidget
+    def _init_slim(self, solver_sizes, solvers):
+        # type: (dict, list[cmdx.DagNode]) -> QtWidgets.QWidget
         view = QtWidgets.QWidget()
         solver_bar = QtWidgets.QWidget()
-        solver_btn_row = [SolverButton(registry, s) for s in solvers]
+        solver_btn_row = [SolverButton(solver_sizes, s) for s in solvers]
 
         layout = QtWidgets.QHBoxLayout(solver_bar)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -224,11 +221,11 @@ class SolverSelectorDialog(FramelessDialog):
 
         return view
 
-    def _init_full(self, registry, solvers, best_guess=None):
-        # type: (Registry, list[cmdx.DagNode], cmdx.DagNode) -> QtWidgets.QWidget
+    def _init_full(self, solver_sizes, solvers, best_guess=None):
+        # type: (dict, list[cmdx.DagNode], cmdx.DagNode) -> QtWidgets.QWidget
         view = QtWidgets.QWidget()
         solver_bar = QtWidgets.QWidget()
-        solver_btn_row = [SolverButton(registry)]
+        solver_btn_row = [SolverButton(solver_sizes)]
 
         combo = QtWidgets.QComboBox()
         _icon = QtGui.QIcon(_resource("icons", "solver.png"))

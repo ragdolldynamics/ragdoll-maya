@@ -193,12 +193,12 @@ class SolverSelectorDialog(FramelessDialog):
         layout.addWidget(main)
 
         main.setObjectName("Frameless")
-        main.setStyleSheet("#Frameless {background: #333}")
+        main.setStyleSheet("#Frameless {background: #444}")
 
         fx = QtWidgets.QGraphicsDropShadowEffect(self)
         fx.setBlurRadius(32)
         fx.setOffset(0)
-        fx.setColor("black")
+        fx.setColor(QtGui.QColor("black"))
         self.setGraphicsEffect(fx)
 
     def _init_slim(self, solver_sizes, solvers):

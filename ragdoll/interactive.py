@@ -2461,7 +2461,7 @@ def unlink_solver(selection=None, **opts):
         solvers += [solver]
 
     for solver in solvers:
-        commands.unlink(solver)
+        commands.unlink_solver(solver)
         log.info("Successfully unlinked %s" % solver)
 
     # Trigger a draw refresh

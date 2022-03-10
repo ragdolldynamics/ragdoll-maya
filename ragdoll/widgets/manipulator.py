@@ -169,6 +169,7 @@ class SolverSelectorDialog(FramelessDialog):
         else:
             view = self._init_slim(solver_sizes, solvers)
 
+        # note: this dialog has fixed width by the banner
         pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
         pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
         footer = QtWidgets.QLabel()
@@ -186,6 +187,7 @@ class SolverSelectorDialog(FramelessDialog):
         layout.addWidget(body)
         layout.addWidget(footer)
 
+        # for the drop-shadow
         layout = QtWidgets.QVBoxLayout(self)
         layout.setMargin(32)
         layout.addWidget(main)

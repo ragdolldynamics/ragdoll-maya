@@ -245,13 +245,7 @@ class SolverSelectorDialog(FramelessDialog):
             view = self._init_slim(solver_sizes, solvers)
 
         # note: this dialog has fixed width by the banner
-        pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
-        pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
-        footer = QtWidgets.QLabel()
-        footer.setObjectName("Background")
-        footer.setPixmap(pixmap)
-        footer.setFixedHeight(px(75))
-        footer.setFixedWidth(px(570))
+        footer = RoundedFooter()
 
         hint = QtWidgets.QTextEdit()
         hint.setObjectName("Hint")
@@ -353,3 +347,39 @@ class SolverSelectorDialog(FramelessDialog):
     def on_solver_changed(self, index):
         solver = self._combo.itemData(index)
         self._solvers[-1].set_solver(solver)
+
+
+class RoundedFooter(QtWidgets.QLabel):
+
+    def __init__(self, *args, **kwargs):
+        super(RoundedFooter, self).__init__(*args, **kwargs)
+        self.setObjectName("Background")
+        self.setFixedHeight(px(75))
+        self.setFixedWidth(px(570))
+
+        pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
+        pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
+
+        self._image = pixmap
+
+    def paintEvent(self, event):
+        r = px(10)
+        w = self.width()
+        h = self.height()
+
+        # make a half rounded rect (sharped top, rounded bottom)
+        #   ___________________
+        #  |                  |
+        #  |                  |
+        #  \_________________/
+        #
+        path = QtGui.QPainterPath()
+        path.setFillRule(QtCore.Qt.WindingFill)
+        path.addRoundedRect(QtCore.QRect(0, 0, w, h), r, r)
+        path.addRect(QtCore.QRect(0, 0, r, r))
+        path.addRect(QtCore.QRect(w - r, 0, r, r))
+
+        painter = QtGui.QPainter(self)
+        painter.setClipPath(path.simplified())
+        painter.setRenderHint(painter.Antialiasing)
+        painter.drawPixmap(0, 0, self._image)

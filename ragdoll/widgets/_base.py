@@ -1,5 +1,6 @@
 
 from PySide2 import QtCore, QtWidgets, QtGui
+from ..vendor.qargparse import px
 
 
 class FramelessDialog(QtWidgets.QDialog):
@@ -41,10 +42,14 @@ class FramelessDialog(QtWidgets.QDialog):
         super(FramelessDialog, self).showEvent(event)
 
         if widget:
+            r = px(10)
             color = widget.palette().color(QtGui.QPalette.Background)
-            widget.setStyleSheet(
-                "#%s {background: %s}" % (widget.objectName(), color.name())
-            )
+            widget.setStyleSheet("""
+            #%s {
+                background: %s;
+                border-radius: %dpx;
+            }
+            """ % (widget.objectName(), color.name(), r))
 
     def mousePressEvent(self, event):
         # type: (QtGui.QMouseEvent) -> None

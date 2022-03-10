@@ -55,7 +55,8 @@ def solver_ui_name_by_sizes(solver_sizes, solver):
         _id != solver_id and size == solver_size
         for _id, size in solver_sizes.items()
     )
-    return solver.shortest_path() if has_same_size else solver.name()
+    transform = solver.parent()
+    return transform.shortest_path() if has_same_size else transform.name()
 
 
 def get_outliner_color(node):

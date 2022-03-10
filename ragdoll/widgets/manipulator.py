@@ -16,6 +16,31 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname))
 
 
+with open(_resource("ui", "style.css")) as f:
+    stylesheet = f.read()
+
+
+def _scaled_stylesheet(style):
+    """Replace any mention of <num>px with scaled version
+
+    This way, you can still use px without worrying about what
+    it will look like at HDPI resolution.
+
+    """
+
+    output = []
+    for line in style.splitlines():
+        line = line.rstrip()
+        if line.endswith("px;"):
+            key, value = line.rsplit(" ", 1)
+            value = px(int(value[:-3]))
+            line = "%s %dpx;" % (key, value)
+        output += [line]
+    result = "\n".join(output)
+    result = result % {"res": _resource().replace("\\", "/")}
+    return result
+
+
 def elide(string, length=120):
     string = str(string)
     placeholder = "..."
@@ -84,11 +109,11 @@ class SolverButton(QtWidgets.QPushButton):
         icon = QtWidgets.QLabel()
         icon.setPixmap(_pixmap)
 
-        key_name = TippedLabel("name:")
-        val_name = QtWidgets.QLabel()
+        key_name = QtWidgets.QLabel("name:")
+        val_name = TippedLabel()
 
-        key_size = TippedLabel("size:")
-        val_size = QtWidgets.QLabel()
+        key_size = QtWidgets.QLabel("size:")
+        val_size = TippedLabel()
 
         key_name.setStyleSheet("QLabel {color: rgba(240,240,240,125)}")
         key_size.setStyleSheet("QLabel {color: rgba(240,240,240,125)}")
@@ -109,8 +134,8 @@ class SolverButton(QtWidgets.QPushButton):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(body, alignment=QtCore.Qt.AlignLeft)
 
-        key_name.tip_shown.connect(self.tip_shown)
-        key_size.tip_shown.connect(self.tip_shown)
+        val_name.tip_shown.connect(self.tip_shown)
+        val_size.tip_shown.connect(self.tip_shown)
 
         self._solver_sizes = solver_sizes
         self._name = val_name
@@ -142,6 +167,12 @@ class SolverButton(QtWidgets.QPushButton):
 
         self._name.setText(solver_name)
         self._size.setText(str(solver_size))
+
+        self._name.setToolTip("Shortest name of this solver:\n %s"
+                              % solver.dag_path())
+        self._size.setToolTip("Size of the solver. The sum of all component "
+                              "related to this solver, e.g. count of markers, "
+                              "constraints, and other ragdoll nodes.")
 
         if solver_color:
             self._name.setStyleSheet("QLabel {color: %s}" % solver_color)
@@ -201,13 +232,28 @@ class SolverSelectorDialog(FramelessDialog):
         pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
         pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
         footer = QtWidgets.QLabel()
+        footer.setObjectName("Background")
         footer.setPixmap(pixmap)
         footer.setFixedHeight(px(75))
         footer.setFixedWidth(px(570))
 
+        hint = QtWidgets.QLabel()
+        hint.setObjectName("Hint")
+        helptext = "Pro tip: To avoid this dialog, select a marker before " \
+                   "calling the Manipulator"
+        hint.setProperty("defaultText", helptext)
+        hint.setText(helptext)
+        hint.setParent(footer)
+        hint.move(px(80), px(9))
+        hint.setFixedWidth(px(350))
+        hint.setFixedHeight(px(75))
+        hint.setWordWrap(True)
+        hint.setAlignment(QtCore.Qt.AlignTop)
+
         layout = QtWidgets.QVBoxLayout(body)
-        layout.setContentsMargins(20, 14, 20, 8)
+        layout.setContentsMargins(20, 24, 20, 8)
         layout.addWidget(title)
+        layout.addSpacing(8)
         layout.addWidget(view)
 
         layout = QtWidgets.QVBoxLayout(main)
@@ -229,6 +275,14 @@ class SolverSelectorDialog(FramelessDialog):
         fx.setColor(QtGui.QColor("black"))
         self.setGraphicsEffect(fx)
 
+        self.setStyleSheet(_scaled_stylesheet(stylesheet))
+
+        self._hint = hint
+        self._helptext = helptext
+
+    def on_tip_shown(self, text):
+        self._hint.setText(text or self._helptext)
+
     def _init_slim(self, solver_sizes, solvers):
         # type: (dict, list[cmdx.DagNode]) -> QtWidgets.QWidget
         view = QtWidgets.QWidget()
@@ -245,6 +299,7 @@ class SolverSelectorDialog(FramelessDialog):
 
         for btn in solver_btn_row:
             btn.clicked.connect(self.on_solver_clicked)
+            btn.tip_shown.connect(self.on_tip_shown)
 
         self._solvers = solver_btn_row
         self._combo = None
@@ -270,6 +325,7 @@ class SolverSelectorDialog(FramelessDialog):
 
         for btn in solver_btn_row:
             btn.clicked.connect(self.on_solver_clicked)
+            btn.tip_shown.connect(self.on_tip_shown)
         solver_combo.currentIndexChanged.connect(self.on_solver_changed)
 
         self._solvers = solver_btn_row

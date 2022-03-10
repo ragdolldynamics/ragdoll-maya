@@ -27,11 +27,8 @@ class HTMLSkinnedButton(QtWidgets.QPushButton):
         painter.end()  # important
 
 
-class ToolTipHoverMixin(object):
+class TippedLabel(QtWidgets.QLabel):
     tip_shown = QtCore.Signal(str)
-
-    def __init__(self):
-        assert isinstance(self, QtWidgets.QWidget)
 
     def enterEvent(self, event):
         # type: (QtCore.QEvent) -> None
@@ -40,13 +37,6 @@ class ToolTipHoverMixin(object):
     def leaveEvent(self, event):
         # type: (QtCore.QEvent) -> None
         self.tip_shown.emit("")
-
-
-class TippedLabel(QtWidgets.QLabel, ToolTipHoverMixin):
-
-    def __init__(self, *args, **kwargs):
-        super(TippedLabel, self).__init__(*args, **kwargs)
-        ToolTipHoverMixin.__init__(self)
 
 
 class FramelessDialog(QtWidgets.QDialog):

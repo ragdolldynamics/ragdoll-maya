@@ -434,7 +434,7 @@ class _Recorder(object):
                 matrix = values["outputMatrix"]
                 parent_matrix = cmdx.Mat4()
 
-                if parent in self._cache:
+                if parent in self._cache and _is_enabled(parent):
                     parent_matrix = self._cache[parent][frame]["outputMatrix"]
 
                 tm = cmdx.Tm(matrix * parent_matrix.inverse())
@@ -790,6 +790,10 @@ def _euler_filter(transforms):
     cmds.filterCurve(rotate_curves, filter="euler")
 
 
+def _is_enabled(marker):
+    return marker["enabled"].read() and not marker["_culled"].read()
+
+
 def _generate_kinematic_hierarchy(solver,
                                   root=None,
                                   tips=False,
@@ -800,7 +804,8 @@ def _generate_kinematic_hierarchy(solver,
     def find_roots():
         roots = set()
         for marker in markers:
-            if marker["parentMarker"].input(type="rdMarker"):
+            parent = marker["parentMarker"].input(type="rdMarker")
+            if parent and _is_enabled(parent):
                 continue
 
             roots.add(marker)
@@ -810,7 +815,7 @@ def _generate_kinematic_hierarchy(solver,
 
     # Recursively create childhood
     def recurse(mod, marker, parent=None):
-        if not (marker["enabled"].read() and not marker["_culled"].read()):
+        if not _is_enabled(marker):
             return
 
         parent = marker_to_dagnode.get(parent)

@@ -238,6 +238,7 @@ class SolverSelectorDialog(FramelessDialog):
 
         body = QtWidgets.QWidget()
         title = QtWidgets.QLabel("Pick Solver")
+        title.setStyleSheet("QLabel {font-size: 24px;}")
 
         if len(solvers) > 3:
             view = self._init_full(solver_sizes, solvers, best_guess)
@@ -262,7 +263,7 @@ class SolverSelectorDialog(FramelessDialog):
         hint.setAlignment(QtCore.Qt.AlignTop)
 
         layout = QtWidgets.QVBoxLayout(body)
-        layout.setContentsMargins(10, 24, 10, 8)
+        layout.setContentsMargins(18, 24, 18, 8)
         layout.addWidget(title)
         layout.addSpacing(8)
         layout.addWidget(view)
@@ -292,6 +293,7 @@ class SolverSelectorDialog(FramelessDialog):
             layout.addWidget(btn)
 
         layout = QtWidgets.QVBoxLayout(view)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(solver_bar)
 
         for btn in solver_btn_row:
@@ -317,6 +319,7 @@ class SolverSelectorDialog(FramelessDialog):
             layout.addWidget(btn)
 
         layout = QtWidgets.QVBoxLayout(view)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(solver_bar)
         layout.addWidget(solver_combo)
 

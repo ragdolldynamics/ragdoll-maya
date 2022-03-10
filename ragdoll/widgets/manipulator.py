@@ -79,7 +79,8 @@ class SolverButton(QtWidgets.QPushButton):
         info = QtWidgets.QWidget()
 
         _icon_img = _resource("icons", "solver.png")
-        _pixmap = QtGui.QIcon(_icon_img).pixmap(px(48)).scaledToWidth(px(48))
+        _pixmap = QtGui.QIcon(_icon_img).pixmap(px(32))
+        _pixmap = _pixmap.scaledToWidth(px(32), QtCore.Qt.SmoothTransformation)
         icon = QtWidgets.QLabel()
         icon.setPixmap(_pixmap)
 

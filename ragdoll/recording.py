@@ -100,6 +100,9 @@ class _Recorder(object):
             "mode": constants.RecordNiceAndSteady,
         }, **(opts or {}))
 
+        # Make sure solver is initialised
+        solver["startState"].read()
+
         start_time = opts["startTime"]
         end_time = opts["endTime"]
         solver_start_time = solver["_startTime"].as_time()

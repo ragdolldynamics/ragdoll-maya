@@ -249,17 +249,18 @@ class SolverSelectorDialog(FramelessDialog):
         footer.setFixedHeight(px(75))
         footer.setFixedWidth(px(570))
 
-        hint = QtWidgets.QLabel()
+        hint = QtWidgets.QTextEdit()
         hint.setObjectName("Hint")
+        hint.setParent(footer)
+        hint.setReadOnly(True)
+        hint.setLineWrapMode(hint.WidgetWidth)
         helptext = "Pro tip: To avoid this dialog, select a marker before " \
                    "calling the Manipulator"
         hint.setProperty("defaultText", helptext)
         hint.setText(helptext)
-        hint.setParent(footer)
-        hint.move(px(80), px(9))
-        hint.setFixedWidth(px(350))
+        hint.move(px(30), px(9))
+        hint.setFixedWidth(px(400))
         hint.setFixedHeight(px(75))
-        hint.setWordWrap(True)
         hint.setAlignment(QtCore.Qt.AlignTop)
 
         layout = QtWidgets.QVBoxLayout(body)
@@ -276,10 +277,9 @@ class SolverSelectorDialog(FramelessDialog):
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
 
         self._hint = hint
-        self._helptext = helptext
 
     def on_tip_shown(self, text):
-        self._hint.setText(text or self._helptext)
+        self._hint.setText(text or self._hint.property("defaultText"))
 
     def _init_slim(self, solver_sizes, solvers):
         # type: (dict, list[cmdx.DagNode]) -> QtWidgets.QWidget

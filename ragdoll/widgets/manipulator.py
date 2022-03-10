@@ -3,7 +3,7 @@ import os
 import json
 from maya import cmds
 from PySide2 import QtCore, QtWidgets, QtGui
-from ._base import FramelessDialog, TippedLabel
+from ._base import FramelessDialog
 from ..vendor.qargparse import px
 from ..vendor import cmdx
 from ..dump import Registry
@@ -102,6 +102,18 @@ def get_outliner_color(node):
         return QtGui.QColor.fromRgbF(*parent["outlinerColor"]).name()
     elif node["useOutlinerColor"]:
         return QtGui.QColor.fromRgbF(*node["outlinerColor"]).name()
+
+
+class TippedLabel(QtWidgets.QLabel):
+    tip_shown = QtCore.Signal(str)
+
+    def enterEvent(self, event):
+        # type: (QtCore.QEvent) -> None
+        self.tip_shown.emit(self.toolTip() or "")
+
+    def leaveEvent(self, event):
+        # type: (QtCore.QEvent) -> None
+        self.tip_shown.emit("")
 
 
 class SolverButton(QtWidgets.QPushButton):

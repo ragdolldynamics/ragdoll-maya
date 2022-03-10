@@ -47,6 +47,17 @@ def get_all_solver_size(registry):
     return solver_size
 
 
+def solver_ui_name_by_sizes(solver_sizes, solver):
+    solver_id = int(solver["ragdollId"])
+    solver_size = solver_sizes[solver_id]
+
+    has_same_size = any(
+        _id != solver_id and size == solver_size
+        for _id, size in solver_sizes.items()
+    )
+    return solver.shortest_path() if has_same_size else solver.name()
+
+
 def get_outliner_color(node):
     # type: (cmdx.DagNode) -> str or None
     parent = node.parent()
@@ -123,14 +134,9 @@ class SolverButton(QtWidgets.QPushButton):
         return self._dag_path
 
     def set_solver(self, solver):
-        solver_id = int(solver["ragdollId"])
-        solver_size = self._solver_sizes[solver_id]
-        has_same_size = any(
-            _id != solver_id and size == solver_size
-            for _id, size in self._solver_sizes.items()
-        )
-        solver_name = solver.shortest_path() if has_same_size else solver.name()
+        solver_name = solver_ui_name_by_sizes(self._solver_sizes, solver)
         solver_color = get_outliner_color(solver) or ""
+        solver_size = self._solver_sizes[int(solver["ragdollId"])]
 
         self._name.setText(solver_name)
         self._size.setText(str(solver_size))
@@ -141,6 +147,26 @@ class SolverButton(QtWidgets.QPushButton):
             self._name.setStyleSheet(self.__default_style)
 
         self._dag_path = solver.shortest_path()
+
+
+class SolverComboBox(QtWidgets.QComboBox):
+
+    def __init__(self, solver_sizes, solvers=None, parent=None):
+        # type: (dict, list[cmdx.DagNode], QtWidgets.QWidget) -> None
+        super(SolverComboBox, self).__init__(parent=parent)
+
+        _icon = QtGui.QIcon(_resource("icons", "solver.png"))
+        for i, solver in enumerate(solvers):
+            solver_name = solver_ui_name_by_sizes(solver_sizes, solver)
+            solver_size = solver_sizes[int(solver["ragdollId"])]
+
+            item_name = "[%d] %s" % (solver_size, solver_name)
+            self.addItem(_icon, item_name, solver)
+
+            solver_color = get_outliner_color(solver)
+            if solver_color:
+                q_solver_color = QtGui.QColor(solver_color)
+                self.setItemData(i, q_solver_color, QtCore.Qt.TextColorRole)
 
 
 class SolverSelectorDialog(FramelessDialog):
@@ -228,14 +254,8 @@ class SolverSelectorDialog(FramelessDialog):
         view = QtWidgets.QWidget()
         solver_bar = QtWidgets.QWidget()
         solver_btn_row = [SolverButton(solver_sizes)]
-
-        combo = QtWidgets.QComboBox()
-        _icon = QtGui.QIcon(_resource("icons", "solver.png"))
-        for i, s in enumerate(solvers):
-            combo.addItem(_icon, s.shortest_path(), s)
-            c = get_outliner_color(s)
-            if c:
-                combo.setItemData(i, QtGui.QColor(c), QtCore.Qt.TextColorRole)
+        solver_combo = SolverComboBox(solver_sizes, solvers)
+        # todo: set max width on combobox ?
 
         layout = QtWidgets.QHBoxLayout(solver_bar)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -244,21 +264,22 @@ class SolverSelectorDialog(FramelessDialog):
 
         layout = QtWidgets.QVBoxLayout(view)
         layout.addWidget(solver_bar)
-        layout.addWidget(combo)
+        layout.addWidget(solver_combo)
 
         for btn in solver_btn_row:
             btn.clicked.connect(self.on_solver_clicked)
-        combo.currentIndexChanged.connect(self.on_solver_changed)
+        solver_combo.currentIndexChanged.connect(self.on_solver_changed)
 
         self._solvers = solver_btn_row
-        self._combo = combo
+        self._combo = solver_combo
 
         # init
         if best_guess is None:
             self.on_solver_changed(0)
         else:
-            combo.setCurrentText(best_guess.shortest_path())
-            if combo.currentIndex() == 0:
+            assert best_guess in solvers
+            solver_combo.setCurrentIndex(solvers.index(best_guess))
+            if solver_combo.currentIndex() == 0:
                 self.on_solver_changed(0)
 
         return view

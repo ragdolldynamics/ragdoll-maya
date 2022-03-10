@@ -41,16 +41,26 @@ def _scaled_stylesheet(style):
     return result
 
 
-def elide(string, length=120):
-    string = str(string)
+def elide(dag_path, length=23):
+    dag_path = str(dag_path)
     placeholder = "..."
     length -= len(placeholder)
 
-    if len(string) <= length:
-        return string
+    if len(dag_path) <= length:
+        return dag_path
+
+    if "|" in dag_path:
+        included = []
+        parents, base = dag_path.rsplit("|", 1)
+        for part in parents.split("|"):
+            included.append(part)
+            if sum(map(len, included + [base])) > length:
+                break
+
+        dag_path = "|".join(included + [base])
 
     half = int(length / 2)
-    return string[:half] + placeholder + string[-half:]
+    return dag_path[:half] + placeholder + dag_path[-half:]
 
 
 def compute_solver_size(registry, solver):
@@ -81,7 +91,8 @@ def solver_ui_name_by_sizes(solver_sizes, solver):
         for _id, size in solver_sizes.items()
     )
     transform = solver.parent()
-    return transform.shortest_path() if has_same_size else transform.name()
+    ui_name = transform.shortest_path() if has_same_size else transform.name()
+    return elide(ui_name)
 
 
 def get_outliner_color(node):
@@ -104,30 +115,20 @@ class SolverButton(QtWidgets.QPushButton):
         info = QtWidgets.QWidget()
 
         _icon_img = _resource("icons", "solver.png")
-        _pixmap = QtGui.QIcon(_icon_img).pixmap(px(32))
-        _pixmap = _pixmap.scaledToWidth(px(32), QtCore.Qt.SmoothTransformation)
+        _pixmap = QtGui.QIcon(_icon_img).pixmap(px(24))
+        _pixmap = _pixmap.scaledToWidth(px(24), QtCore.Qt.SmoothTransformation)
         icon = QtWidgets.QLabel()
         icon.setPixmap(_pixmap)
 
-        key_name = QtWidgets.QLabel("name:")
         val_name = TippedLabel()
-
-        key_size = QtWidgets.QLabel("size:")
         val_size = TippedLabel()
 
-        key_name.setStyleSheet("QLabel {color: rgba(240,240,240,125)}")
-        key_size.setStyleSheet("QLabel {color: rgba(240,240,240,125)}")
-
         layout = QtWidgets.QGridLayout(info)
-        layout.setSpacing(4)
-        layout.addWidget(key_name, 0, 0, alignment=QtCore.Qt.AlignRight)
         layout.addWidget(val_name, 0, 1, alignment=QtCore.Qt.AlignLeft)
-        layout.addWidget(key_size, 1, 0, alignment=QtCore.Qt.AlignRight)
         layout.addWidget(val_size, 1, 1, alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QHBoxLayout(body)
         layout.addWidget(icon)
-        layout.addSpacing(4)
         layout.addWidget(info, stretch=True, alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -251,7 +252,7 @@ class SolverSelectorDialog(FramelessDialog):
         hint.setAlignment(QtCore.Qt.AlignTop)
 
         layout = QtWidgets.QVBoxLayout(body)
-        layout.setContentsMargins(20, 24, 20, 8)
+        layout.setContentsMargins(10, 24, 10, 8)
         layout.addWidget(title)
         layout.addSpacing(8)
         layout.addWidget(view)
@@ -290,6 +291,7 @@ class SolverSelectorDialog(FramelessDialog):
         solver_btn_row = [SolverButton(solver_sizes, s) for s in solvers]
 
         layout = QtWidgets.QHBoxLayout(solver_bar)
+        layout.setSpacing(4)
         layout.setContentsMargins(0, 0, 0, 0)
         for btn in solver_btn_row:
             layout.addWidget(btn)

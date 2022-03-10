@@ -41,7 +41,7 @@ def _scaled_stylesheet(style):
     return result
 
 
-def elide(dag_path, length=23):
+def elide(dag_path, length):
     dag_path = str(dag_path)
     placeholder = "..."
     length -= len(placeholder)
@@ -92,7 +92,11 @@ def solver_ui_name_by_sizes(solver_sizes, solver):
     )
     transform = solver.parent()
     ui_name = transform.shortest_path() if has_same_size else transform.name()
-    return elide(ui_name)
+
+    _count = len(solver_sizes)
+    length = 23 if _count == 3 else 46 if _count == 2 else 69
+
+    return elide(ui_name, length)
 
 
 def get_outliner_color(node):

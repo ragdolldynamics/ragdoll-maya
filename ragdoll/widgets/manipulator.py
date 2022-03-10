@@ -232,7 +232,6 @@ class SolverSelectorDialog(FramelessDialog):
         solver_sizes = get_all_solver_size(registry)
         # todo: check ragdollDump schema version ?
 
-        main = QtWidgets.QWidget()
         body = QtWidgets.QWidget()
         title = QtWidgets.QLabel("Pick Solver")
 
@@ -269,24 +268,10 @@ class SolverSelectorDialog(FramelessDialog):
         layout.addSpacing(8)
         layout.addWidget(view)
 
-        layout = QtWidgets.QVBoxLayout(main)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(body)
         layout.addWidget(footer)
-
-        # for the drop-shadow
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setMargin(32)
-        layout.addWidget(main)
-
-        main.setObjectName("Frameless")
-        main.setStyleSheet("#Frameless {background: #444}")
-
-        fx = QtWidgets.QGraphicsDropShadowEffect(self)
-        fx.setBlurRadius(32)
-        fx.setOffset(0)
-        fx.setColor(QtGui.QColor("black"))
-        self.setGraphicsEffect(fx)
 
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
 

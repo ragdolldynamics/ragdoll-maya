@@ -13,8 +13,37 @@ class FramelessDialog(QtWidgets.QDialog):
         )
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
+        fx = QtWidgets.QGraphicsDropShadowEffect(self)
+        fx.setBlurRadius(32)
+        fx.setOffset(0)
+        fx.setColor(QtGui.QColor("black"))
+        self.setGraphicsEffect(fx)
+
+        self._wrapped = False
         self._dragging = False
         self._last_pos = None
+
+    def showEvent(self, event):
+        # type: (QtGui.QShowEvent) -> None
+
+        widget = None
+        if not self._wrapped:
+            widget = QtWidgets.QWidget()
+            widget.setObjectName("_FramelessDialog")
+            widget.setLayout(self.layout())
+
+            layout = QtWidgets.QVBoxLayout(self)
+            layout.setMargin(32)
+            layout.addWidget(widget)
+            self._wrapped = True
+
+        super(FramelessDialog, self).showEvent(event)
+
+        if widget:
+            color = widget.palette().color(QtGui.QPalette.Background)
+            widget.setStyleSheet(
+                "#%s {background: %s}" % (widget.objectName(), color.name())
+            )
 
     def mousePressEvent(self, event):
         # type: (QtGui.QMouseEvent) -> None

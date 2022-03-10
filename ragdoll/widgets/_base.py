@@ -29,6 +29,7 @@ class FramelessDialog(QtWidgets.QDialog):
         widget = None
         if not self._wrapped:
             widget = QtWidgets.QWidget()
+            widget.setAttribute(QtCore.Qt.WA_StyledBackground)
             widget.setObjectName("_FramelessDialog")
             widget.setLayout(self.layout())
 

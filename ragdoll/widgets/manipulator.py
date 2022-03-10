@@ -311,7 +311,6 @@ class SolverSelectorDialog(FramelessDialog):
         solver_bar = QtWidgets.QWidget()
         solver_btn_row = [SolverButton(solver_sizes)]
         solver_combo = SolverComboBox(solver_sizes, solvers)
-        # todo: set max width on combobox ?
 
         layout = QtWidgets.QHBoxLayout(solver_bar)
         layout.setContentsMargins(0, 0, 0, 0)

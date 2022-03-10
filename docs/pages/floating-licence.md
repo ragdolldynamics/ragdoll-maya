@@ -200,6 +200,42 @@ licence.drop_lease()
 
 <br>
 
+## Troubleshooting
+
+Let's have a look at a few common errors and how to solve them.
+
+<br>
+
+### Failed to Save Activation Request
+
+This can happen when attempting to generate an activation request for offline activation.
+
+```bash
+./turbofloatserver -a="KWVT-U5RS-..." -areq="/bad/path/request.xml"
+# <error>: Failed to save the activation request file.
+# <error>: Error code 0x1. Contact support or your system administrator.
+```
+
+The path given, in this case `/bad/path/request.xml` might not be writable. Try a different path.
+
+<br>
+
+### Failed to Load Product Details
+
+This can happen when attempting to activate a floating licence
+
+```bash
+./turbofloatserver -a="KWVT-U5RS-..."
+# <error>: Failed to load the product details file.
+# <error>: Failed to load the settings.
+```
+
+The `turbofloatserver` executable wasn't able to find the `TurboActivate.dat` file. This file should reside in the same folder as `turbofloatserver` and can be downloaded from here.
+
+- https://files.ragdolldynamics.com/api/public/dl/6lMDDMdn/TurboActivate.dat
+
+<br>
+
 ## FAQ
 
 Let's cover some common scenarios.

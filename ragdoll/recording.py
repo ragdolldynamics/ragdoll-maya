@@ -683,6 +683,9 @@ class _Recorder(object):
         destinations = []
 
         for dst, marker in self._dst_to_marker.items():
+            if not _is_enabled(marker):
+                continue
+
             if not self._opts["includeKinematic"]:
                 frames = self._cache[marker].values()
                 if all(frame["kinematic"] for frame in list(frames)):

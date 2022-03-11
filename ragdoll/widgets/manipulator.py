@@ -4,9 +4,12 @@ import json
 from maya import cmds
 
 from PySide2 import QtCore, QtWidgets, QtGui
-
+from ..vendor import cmdx
 from . import base, px
 from .. import dump
+
+# Unused, for type hint in IDEs
+__ = cmdx
 
 
 def _resource(*fname):
@@ -76,12 +79,10 @@ class TippedLabel(QtWidgets.QWidget):
         self._tool_tip = text
 
     def enterEvent(self, event):
-        # type: (QtCore.QEvent) -> None
         self.__entered = True
         self._timer.start(200)
 
     def leaveEvent(self, event):
-        # type: (QtCore.QEvent) -> None
         self.__entered = False
         self._timer.start(0)
 
@@ -90,7 +91,12 @@ class SolverButton(QtWidgets.QPushButton):
     tip_shown = QtCore.Signal(str)
 
     def __init__(self, solver_sizes, solver=None, parent=None):
-        # type: (dict, cmdx.DagNode, QtWidgets.QWidget) -> None
+        """
+        Arguments:
+            solver_sizes (dict):
+            solver (cmdx.DagNode or None):
+            parent (QtWidgets.QWidget or None):
+        """
         super(SolverButton, self).__init__(parent=parent)
 
         body = QtWidgets.QWidget()
@@ -133,7 +139,10 @@ class SolverButton(QtWidgets.QPushButton):
             self.set_solver(solver)
 
     def sizeHint(self):
-        # type: () -> QtCore.QSize
+        """
+        Returns:
+            QtCore.QSize
+        """
         size = QtCore.QSize()
         for child in self.children():
             if isinstance(child, QtWidgets.QLayout):
@@ -165,7 +174,12 @@ class SolverButton(QtWidgets.QPushButton):
 class SolverComboBox(QtWidgets.QComboBox):
 
     def __init__(self, solver_sizes, solvers=None, parent=None):
-        # type: (dict, list[cmdx.DagNode], QtWidgets.QWidget) -> None
+        """
+        Arguments:
+            solver_sizes (dict):
+            solvers (list[cmdx.DagNode]):
+            parent (QtWidgets.QWidget or None):
+        """
         super(SolverComboBox, self).__init__(parent=parent)
 
         _icon = QtGui.QIcon(_resource("icons", "solver.png"))
@@ -196,7 +210,7 @@ class SolverSelectorDialog(base.FramelessDialog):
 
     def __init__(self, solvers, best_guess=None, parent=None):
         """
-        Args:
+        Arguments:
             solvers (list[cmdx.DagNode]):
             best_guess (cmdx.DagNode or None):
             parent (QtWidgets.QWidget or None):
@@ -291,7 +305,13 @@ class SolverSelectorDialog(base.FramelessDialog):
         self._hint.setText(text or "")
 
     def _init_slim(self, solver_sizes, solvers):
-        # type: (dict, list[cmdx.DagNode]) -> QtWidgets.QWidget
+        """
+        Arguments:
+            solver_sizes (dict):
+            solvers (list[cmdx.DagNode]):
+        Returns:
+            QtWidgets.QWidget
+        """
         view = QtWidgets.QWidget()
         solver_bar = QtWidgets.QWidget()
         solver_btn_row = [SolverButton(solver_sizes, s) for s in solvers]
@@ -315,7 +335,14 @@ class SolverSelectorDialog(base.FramelessDialog):
         return view
 
     def _init_full(self, solver_sizes, solvers, best_guess=None):
-        # type: (dict, list[cmdx.DagNode], cmdx.DagNode) -> QtWidgets.QWidget
+        """
+        Arguments:
+            solver_sizes (dict):
+            solvers (list[cmdx.DagNode]):
+            best_guess (cmdx.DagNode or None):
+        Returns:
+            QtWidgets.QWidget
+        """
         view = QtWidgets.QWidget()
         solver_btn = SolverButton(solver_sizes)
         solver_combo = SolverComboBox(solver_sizes, solvers)

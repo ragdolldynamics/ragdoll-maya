@@ -122,7 +122,12 @@ def Component(comp):
 
 
 class Registry(object):
-    def __init__(self, dump):
+    def __init__(self, dump=None):
+        if dump is None:
+            dump = {
+                "entities": {}
+            }
+
         dump = copy.deepcopy(dump)
         dump["entities"] = {
 
@@ -266,7 +271,7 @@ class Loader(object):
         # Transient data, updated on changes to fname and filtering
         self._state = DefaultState()
 
-        self._registry = None
+        self._registry = Registry()
 
         # Original dump
         self._dump = None

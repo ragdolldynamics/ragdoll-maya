@@ -866,27 +866,26 @@ class Loader(object):
         if self._opts["namespace"] == " ":
             comps = []
             for comp in path.split("|"):
-                comp = comp.split(":", 1)[-1]
+                comp = comp.rsplit(":", 1)[-1]
                 comps.append(comp)
             path = "|".join(comps)
 
         # Replace namespace in `path`
         elif self._opts["namespace"]:
+            namespace = self._opts["namespace"].replace(" ", "")
+
             # Give namespace-less paths an empty namespace
             # such that it can be replaced.
             comps = []
             for comp in path.split("|"):
-                if self._opts["namespace"] == " ":
-                    comp = comp.split(":", 1)[-1]
-                else:
-                    if ":" not in comp:
-                        comp = ":" + comp
+                if ":" not in comp:
+                    comp = ":" + comp
+
+                comp = comp.rsplit(":", 1)[-1]
+                comp = ":%s:%s" % (namespace, comp)
                 comps.append(comp)
 
             path = "|".join(comps)
-
-            namespace = self._opts["namespace"].replace(" ", "")
-            path = re.sub(r"\|(.*?)\:", "|%s:" % namespace, path)
 
         if self._opts["matchBy"] == constants.MatchByName:
             path = path.rsplit("|", 1)[-1]

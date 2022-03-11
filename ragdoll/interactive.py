@@ -3334,7 +3334,8 @@ def import_physics_options(*args):
         return result
 
     # Initialise namespaces
-    namespaces = cmds.namespaceInfo(listOnlyNamespaces=True, recurse=True)
+    namespaces = cmds.namespaceInfo(":", listOnlyNamespaces=True, recurse=True)
+    namespaces = namespaces or []  # There may not be any
 
     for default_namespace in ("UI", "shared"):
         try:
@@ -3343,7 +3344,7 @@ def import_physics_options(*args):
             pass
 
     items = ["Off", "From File"]
-    items.extend(":%s" % namespace for namespace in namespaces)
+    items.extend(namespaces)
     items.append("Custom")
 
     __.optionvars["importNamespace"]["items"] = items

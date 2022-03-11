@@ -354,6 +354,14 @@ class InfoToggle(QtWidgets.QPushButton):
         self.setText("Why this pops up ?")
         self.setIcon(QtGui.QIcon(_resource("icons", "info.png")))
 
+    def enterEvent(self, event):
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.PointingHandCursor)
+        super(InfoToggle, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        QtWidgets.QApplication.restoreOverrideCursor()
+        super(InfoToggle, self).leaveEvent(event)
+
 
 class RoundedImageFooter(QtWidgets.QLabel):
 

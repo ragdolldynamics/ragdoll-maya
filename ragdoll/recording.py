@@ -82,6 +82,9 @@ class _Recorder(object):
 
     """
 
+    def __del__(self):
+        self.clean()
+
     def __init__(self, solver, opts=None):
         opts = dict({
             "startTime": None,
@@ -152,6 +155,9 @@ class _Recorder(object):
 
         self._opts = opts
 
+        # Nodes temporarily created by this class, during e.g. record
+        self._temporaries = []
+
         # You found it!
         #
         # However, removing this check won't enable the recording
@@ -176,10 +182,23 @@ class _Recorder(object):
                 "Ragdoll cannot cope with these. See above."
             )
 
+        self.clean()
+
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
         marker_to_joint = _generate_kinematic_hierarchy(self._solver)
+
+        # Keep track of any mess we make
+        def find_roots():
+            roots = set()
+            for joint in marker_to_joint.values():
+                if joint.parent() is None:
+                    roots.add(joint.shortest_path())
+
+            return roots
+
+        self._temporaries.extend(find_roots())
 
         for progress in self._cache_to_curves(marker_to_joint):
             yield ("transferring", 49 + progress * 0.10)
@@ -198,6 +217,10 @@ class _Recorder(object):
         else:
             constraints = self._attach(marker_to_joint)
 
+        self._temporaries.extend(
+            con.shortest_path() for con in constraints
+        )
+
         yield ("baking", 60)
 
         self._bake()
@@ -212,30 +235,7 @@ class _Recorder(object):
         elif self._opts["rotationFilter"] == 2:
             _quat_filter(self._dst_to_marker.keys())
 
-        def cleanup():
-            # Ahead of deleting the constraints, ensure we're on the
-            # solver start frame. Why? Because those are the values we want
-            # stored on the BaseAnimation layer, if the animation was in
-            # fact written to a layer.
-            initial_time = cmdx.current_time()
-            cmdx.current_time(self._solver_start_frame)
-
-            def find_roots():
-                roots = set()
-                for joint in marker_to_joint.values():
-                    if joint.parent() is None:
-                        roots.add(joint.shortest_path())
-
-                return roots
-
-            temp = []
-            temp.extend(find_roots())
-            temp.extend(con.shortest_path() for con in constraints)
-            cmds.delete(temp)
-
-            cmdx.current_time(initial_time)
-
-        cleanup()
+        self.clean()
 
         yield ("done", 100)
 
@@ -257,6 +257,29 @@ class _Recorder(object):
             return self._snap_from_start()
         else:
             return self._snap_from_retarget()
+
+    @property
+    def is_clean(self):
+        if self._temporaries:
+            return False
+        return True
+
+    def clean(self):
+        if not self._temporaries:
+            # All clean
+            return
+
+        # Ahead of deleting tnings, ensure we're on the solver start
+        # frame. Why? Because those are the values we want stored in
+        # the BaseAnimation layer, if the animation was in fact
+        # written to a layer.
+        initial_time = cmdx.current_time()
+        cmdx.current_time(self._solver_start_frame)
+
+        cmds.delete(self._temporaries)
+        cmdx.current_time(initial_time)
+
+        self._temporaries[:] = []
 
     def _snap_from_start(self):
         """Maintain offset from the start frame"""

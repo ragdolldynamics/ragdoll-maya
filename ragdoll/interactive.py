@@ -42,9 +42,7 @@ import contextlib
 
 from maya import cmds
 from maya.utils import MayaGuiLogHandler
-from maya import OpenMaya as om1        # api 1
-from maya import OpenMayaUI as omUI1    # api 1
-from maya.api import OpenMaya as om     # api 2
+from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
 from . import (
     commands,

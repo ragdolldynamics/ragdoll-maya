@@ -230,10 +230,16 @@ class _Recorder(object):
         if self._opts["resetMarkers"]:
             self._reset()
 
-        if self._opts["rotationFilter"] == 1:
-            _euler_filter(self._dst_to_marker.keys())
-        elif self._opts["rotationFilter"] == 2:
-            _quat_filter(self._dst_to_marker.keys())
+        try:
+            if self._opts["rotationFilter"] == 1:
+                _euler_filter(self._dst_to_marker.keys())
+            elif self._opts["rotationFilter"] == 2:
+                _quat_filter(self._dst_to_marker.keys())
+
+        except Exception:
+            # There are a ton of edge cases here, but it shouldn't
+            # prevent the artist from carrying on without filtering
+            pass
 
         self.clean()
 
@@ -446,6 +452,16 @@ class _Recorder(object):
         # Generate animation
         progress = 0
         for marker, dagnode in marker_to_dagnode.items():
+
+            # In the rare case of markers being part of a hierarchy
+            # of other markers, that is not part of any scene. They
+            # would get picked up during the kinematic_hierarchy call,
+            # but not be viable to cache. Let the user know something
+            # is not right
+            if marker not in self._cache:
+                log.warning("%s was skipped" % marker)
+                continue
+
             parent = marker["parentMarker"].input(type="rdMarker")
 
             tx, ty, tz = {}, {}, {}
@@ -801,8 +817,15 @@ def _quat_filter(transforms):
         rotate_channels += ["%s.ry" % transform]
         rotate_channels += ["%s.rz" % transform]
 
-    cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
-    cmds.rotationInterpolation(rotate_channels, c="none")
+    try:
+        cmds.rotationInterpolation(rotate_channels, c="quaternionSlerp")
+        cmds.rotationInterpolation(rotate_channels, c="none")
+    except Exception:
+        log.info(traceback.format_exc())
+        log.warning(
+            "Had trouble applying the Euler filter, "
+            "check the Script Editor for details."
+        )
 
 
 @internal.with_undo_chunk
@@ -817,7 +840,8 @@ def _euler_filter(transforms):
             continue
 
         for channel in ("rx", "ry", "rz"):
-            rotate_curves += [transform[channel].input().name()]
+            curve = transform[channel].input()
+            rotate_curves += [curve.name(namespace=True)]
 
     cmds.filterCurve(rotate_curves, filter="euler")
 
@@ -897,14 +921,18 @@ def _find_markers(solver, markers=None):
         markers = []
 
     for entity in [el.input() for el in solver["inputStart"]]:
-        if not entity:
+        if entity is None:
             continue
 
         if entity.isA("rdMarker"):
             markers.append(entity)
 
         elif entity.isA("rdGroup"):
-            markers.extend(el.input() for el in entity["inputStart"])
+            for other in [el.input() for el in entity["inputStart"]]:
+                if other is None:
+                    continue
+
+                markers.append(other)
 
         elif entity.isA("rdSolver"):
             # A solver will have markers and groups of its own

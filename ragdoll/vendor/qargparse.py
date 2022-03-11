@@ -1730,7 +1730,11 @@ class Enum(QArgument):
             if isinstance(initial, int):
                 index = initial
                 index = 0 if index > len(items) else index
-                initial = items[index]
+
+                try:
+                    initial = items[index]
+                except IndexError:
+                    initial = ""
             else:
                 # Must be str type. If the default str is not in list, will
                 # fallback to the first item silently.

@@ -3142,6 +3142,9 @@ class ImportOptions(Options):
         if not path:
             return log.debug("Cancelled")
 
+        if not path.endswith(".rag"):
+            path += ".rag"
+
         path = os.path.normpath(path)
         dirname, fname = os.path.split(path)
 

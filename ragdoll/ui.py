@@ -1524,6 +1524,9 @@ class SplashScreen(QtWidgets.QDialog):
             self.on_floating(data)
 
         elif data["expires"]:
+            self.on_expires(data["expiryDays"])
+
+        elif data["isTrial"]:
             if data["expiryDays"] < 1:
                 self.on_expired(data["expiryDays"])
             else:
@@ -1682,6 +1685,32 @@ class SplashScreen(QtWidgets.QDialog):
 
     def on_trial(self, trial_days):
         log.info("Ragdoll is in trial mode")
+
+        status = _resource("ui", "mode_orange.png")
+        status = QtGui.QPixmap(status)
+        status = status.scaledToWidth(px(15), QtCore.Qt.SmoothTransformation)
+
+        icon = self._widgets["statusActivated"]
+        icon.setPixmap(status)
+        icon.setToolTip("Licence is in trial mode")
+
+        message = self._widgets["statusMessage"]
+        message.setText(
+            "Ragdoll - %s - Trial Version (node-locked)"
+            % __.version_str
+        )
+
+        datestring = self._expiry_string(trial_days)
+        expiry = self._widgets["expiryDate"]
+        expiry.setText("Expires %s" % datestring)
+
+    def on_expires(self, trial_days):
+        log.info("Ragdoll is in trial mode")
+
+        self._widgets["activate"].hide()
+        self._widgets["activateOffline"].hide()
+        self._widgets["deactivate"].show()
+        self._widgets["deactivateOffline"].show()
 
         status = _resource("ui", "mode_orange.png")
         status = QtGui.QPixmap(status)

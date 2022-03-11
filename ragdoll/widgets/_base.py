@@ -1,6 +1,5 @@
-
 from PySide2 import QtCore, QtWidgets, QtGui
-from ..vendor.qargparse import px
+from . import px
 
 
 class FramelessDialog(QtWidgets.QDialog):
@@ -8,16 +7,16 @@ class FramelessDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(FramelessDialog, self).__init__(parent=parent)
         self.setWindowFlags(
-            self.windowFlags()
-            | QtCore.Qt.FramelessWindowHint
-            | QtCore.Qt.WindowSystemMenuHint
+            self.windowFlags() |
+            QtCore.Qt.FramelessWindowHint |
+            QtCore.Qt.WindowSystemMenuHint
         )
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         fx = QtWidgets.QGraphicsDropShadowEffect(self)
-        fx.setBlurRadius(32)
+        fx.setBlurRadius(px(32))
         fx.setOffset(0)
-        fx.setColor(QtGui.QColor("black"))
+        fx.setColor(QtGui.QColor("#55000000"))  # ARGB
         self.setGraphicsEffect(fx)
 
         self._wrapped = False

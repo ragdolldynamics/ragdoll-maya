@@ -1,12 +1,13 @@
-
 import os
 import json
+
 from maya import cmds
+
 from PySide2 import QtCore, QtWidgets, QtGui
+
+from . import px
 from ._base import FramelessDialog
-from ..vendor.qargparse import px
-from ..vendor import cmdx
-from ..dump import Registry
+from .. import dump
 
 
 def _resource(*fname):
@@ -16,7 +17,7 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname))
 
 
-def get_all_solver_size(registry):
+def _get_all_solver_size(registry):
     solvers = list(registry.view("SolverComponent"))
     solver_size = dict.fromkeys(solvers, 0)
     for entity in registry.view():
@@ -25,7 +26,7 @@ def get_all_solver_size(registry):
     return solver_size
 
 
-def solver_ui_name_by_sizes(solver_sizes, solver):
+def _solver_ui_name_by_sizes(solver_sizes, solver):
     solver_id = int(solver["ragdollId"])
     solver_size = solver_sizes[solver_id]
 
@@ -130,7 +131,7 @@ class SolverButton(QtWidgets.QPushButton):
         return self._dag_path
 
     def set_solver(self, solver):
-        solver_name = solver_ui_name_by_sizes(self._solver_sizes, solver)
+        solver_name = _solver_ui_name_by_sizes(self._solver_sizes, solver)
         solver_size = self._solver_sizes[int(solver["ragdollId"])]
 
         self._name.setText(solver_name)
@@ -153,7 +154,7 @@ class SolverComboBox(QtWidgets.QComboBox):
 
         _icon = QtGui.QIcon(_resource("icons", "solver.png"))
         for i, solver in enumerate(solvers):
-            solver_name = solver_ui_name_by_sizes(solver_sizes, solver)
+            solver_name = _solver_ui_name_by_sizes(solver_sizes, solver)
             solver_size = solver_sizes[int(solver["ragdollId"])]
 
             item_name = "[%d] %s" % (solver_size, solver_name)
@@ -181,9 +182,8 @@ class SolverSelectorDialog(FramelessDialog):
         """
         super(SolverSelectorDialog, self).__init__(parent=parent)
 
-        dump = json.loads(cmds.ragdollDump())
-        registry = Registry(dump)
-        solver_sizes = get_all_solver_size(registry)
+        registry = dump.Registry(json.loads(cmds.ragdollDump()))
+        solver_sizes = _get_all_solver_size(registry)
         # todo: check ragdollDump schema version ?
 
         body = QtWidgets.QWidget()

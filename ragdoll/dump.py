@@ -1163,6 +1163,13 @@ class Loader(object):
         except KeyError:
             pass
 
+        # Added in 2022.03.14
+        try:
+            Origin = self._registry.get(entity, "OriginComponent")
+            mod.set_attr(marker["originMatrix"], Origin["matrix"])
+        except KeyError:
+            pass
+
         # Added 2022.02.25
         try:
             mod.set_attr(marker["limo"], linear_motion)

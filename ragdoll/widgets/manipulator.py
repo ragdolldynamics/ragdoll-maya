@@ -174,7 +174,12 @@ class SolverComboBox(QtWidgets.QComboBox):
             solver_size = solver_sizes[int(solver["ragdollId"])]
 
             item_name = "[%d] %s" % (solver_size, solver_name)
-            self.addItem(_icon, item_name, solver)
+            self.addItem(_icon, item_name)
+
+        self._solvers = solvers
+
+    def get_solver(self, index):
+        return self._solvers[index]
 
 
 helptext = """No valid selection. So, before calling Manipulator or
@@ -321,7 +326,7 @@ class SolverSelectorDialog(base.FramelessDialog):
         layout.addWidget(solver_btn)
 
         def on_solver_changed(index):
-            solver = solver_combo.itemData(index)
+            solver = solver_combo.get_solver(index)
             solver_btn.set_solver(solver)
 
         solver_combo.currentIndexChanged.connect(on_solver_changed)

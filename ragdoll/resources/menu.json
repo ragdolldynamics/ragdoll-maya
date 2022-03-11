@@ -825,11 +825,10 @@
             "markersRecordFilter",
             "markersRecordMaintainOffset2",
             "markersRecordToLayer",
+            "markersRecordAutoCache",
             "markersUseSelection",
             "markersIgnoreJoints",
             "markersRecordKinematic",
-            "markersRecordProtectOriginalInput",
-            "markersRecordReset",
             "markersRecordMode"
         ]
     },

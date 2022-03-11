@@ -1811,6 +1811,7 @@ def record_markers(selection=None, **opts):
         "recordReset": _opt("markersRecordReset", opts),
         "recordSimplify": _opt("markersRecordSimplify", opts),
         "recordFilter": _opt("markersRecordFilter", opts),
+        "autoCache": _opt("markersRecordAutoCache", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
         "mode": _opt("markersRecordMode", opts),
         "protectOriginalInput": _opt(
@@ -1868,10 +1869,11 @@ def record_markers(selection=None, **opts):
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
 
-    # Leave them cached
-    with cmdx.DagModifier() as mod:
-        for solver in solvers:
-            mod.try_set_attr(solver["cache"], c.StaticCache)
+    if opts["autoCache"]:
+        # Leave them cached
+        with cmdx.DagModifier() as mod:
+            for solver in solvers:
+                mod.try_set_attr(solver["cache"], c.StaticCache)
 
     total_frames = 0
     timer = i__.Timer("record")
@@ -1888,9 +1890,7 @@ def record_markers(selection=None, **opts):
                 "rotationFilter": opts["recordFilter"],
                 "toLayer": opts["recordToLayer"],
                 "ignoreJoints": opts["ignoreJoints"],
-                "resetMarkers": opts["recordReset"],
                 "mode": opts["mode"],
-                "protectOriginalInput": opts["protectOriginalInput"],
             }
 
             instance = recording._Recorder(solver, op)

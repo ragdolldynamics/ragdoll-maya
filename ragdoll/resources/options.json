@@ -872,6 +872,14 @@
         "help": "Should I record markers set to `Kinematic`?"
     },
 
+    "markersRecordAutoCache": {
+        "name": "markersRecordAutoCache",
+        "label": "Auto Cache",
+        "type": "Boolean",
+        "default": true,
+        "help": "Leave the simulation cached upon completing the record. This can help compare the recorded result to the simulation, as any subsequent simulation would use the newly recorded animation as input."
+    },
+
     "markersRecordMode": {
         "name": "markersRecordMode",
         "label": "Mode",

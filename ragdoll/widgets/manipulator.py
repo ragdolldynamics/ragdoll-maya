@@ -16,51 +16,6 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname))
 
 
-with open(_resource("ui", "style.css")) as f:
-    stylesheet = f.read()
-
-
-def _scaled_stylesheet(style):
-    """Replace any mention of <num>px with scaled version
-
-    This way, you can still use px without worrying about what
-    it will look like at HDPI resolution.
-
-    """
-
-    output = []
-    for line in style.splitlines():
-        line = line.rstrip()
-        if line.endswith("px;"):
-            key, value = line.rsplit(" ", 1)
-            value = px(int(value[:-3]))
-            line = "%s %dpx;" % (key, value)
-        output += [line]
-    result = "\n".join(output)
-    result = result % {"res": _resource().replace("\\", "/")}
-    return result
-
-
-def elide(dag_path, length):
-    dag_path = str(dag_path)
-    placeholder = "..."
-    length -= len(placeholder)
-
-    if len(dag_path) <= length:
-        return dag_path
-    return placeholder + dag_path[-length:]
-
-
-def compute_solver_size(registry, solver):
-    # note: maybe we could lru_cache this
-    solver_size = 0
-    for entity in registry.view():
-        scene_comp = registry.get(entity, "SceneComponent")
-        if scene_comp["entity"] == solver["ragdollId"]:
-            solver_size += 1
-    return solver_size
-
-
 def get_all_solver_size(registry):
     solvers = list(registry.view("SolverComponent"))
     solver_size = dict.fromkeys(solvers, 0)
@@ -79,16 +34,31 @@ def solver_ui_name_by_sizes(solver_sizes, solver):
         for _id, size in solver_sizes.items()
     )
     transform = solver.parent()
-    ui_name = transform.shortest_path() if has_same_size else transform.name()
-
-    _count = len(solver_sizes)
-    length = 23 if _count == 3 else 46 if _count == 2 else 69
-
-    return elide(ui_name, length)
+    return transform.shortest_path() if has_same_size else transform.name()
 
 
-class TippedLabel(QtWidgets.QLabel):
+class TippedLabel(QtWidgets.QWidget):
     tip_shown = QtCore.Signal(str)
+
+    def __init__(self, label, parent=None):
+        super(TippedLabel, self).__init__(parent=parent)
+
+        label = QtWidgets.QLabel(label)
+        label.setStyleSheet("QLabel {color: rgba(240,240,240,125)}")
+
+        value = QtWidgets.QLabel()
+        value.setAlignment(QtCore.Qt.AlignRight)  # elide from start
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(label)
+        layout.addWidget(value)
+        layout.addStretch(1)  # for pushing value label back to left
+
+        self._value = value
+
+    def setText(self, text):
+        self._value.setText(text)
 
     def enterEvent(self, event):
         # type: (QtCore.QEvent) -> None
@@ -115,16 +85,18 @@ class SolverButton(QtWidgets.QPushButton):
         icon = QtWidgets.QLabel()
         icon.setPixmap(_pixmap)
 
-        val_name = TippedLabel()
-        val_size = TippedLabel()
+        val_name = TippedLabel("Name:")
+        val_size = TippedLabel("Size:")
 
-        layout = QtWidgets.QGridLayout(info)
-        layout.addWidget(val_name, 0, 1, alignment=QtCore.Qt.AlignLeft)
-        layout.addWidget(val_size, 1, 1, alignment=QtCore.Qt.AlignLeft)
+        layout = QtWidgets.QVBoxLayout(info)
+        layout.setSpacing(4)
+        layout.addWidget(val_name)
+        layout.addWidget(val_size)
 
         layout = QtWidgets.QHBoxLayout(body)
-        layout.addWidget(icon)
-        layout.addWidget(info, stretch=True, alignment=QtCore.Qt.AlignLeft)
+        layout.setSpacing(0)
+        layout.addWidget(icon, stretch=0)
+        layout.addWidget(info, stretch=1, alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -212,8 +184,8 @@ class SolverSelectorDialog(FramelessDialog):
         else:
             view = self._init_slim(solver_sizes, solvers)
 
-        # note: this dialog has fixed width by the banner
-        footer = RoundedFooter()
+        pixmap = QtGui.QPixmap(_resource("ui", "background1.png"))
+        footer = RoundedImageFooter(pixmap)
 
         hint = QtWidgets.QTextEdit()
         hint.setObjectName("Hint")
@@ -224,13 +196,10 @@ class SolverSelectorDialog(FramelessDialog):
                    "calling the Manipulator"
         hint.setProperty("defaultText", helptext)
         hint.setText(helptext)
-        hint.move(px(30), px(9))
-        hint.setFixedWidth(px(400))
-        hint.setFixedHeight(px(75))
         hint.setAlignment(QtCore.Qt.AlignTop)
 
         layout = QtWidgets.QVBoxLayout(body)
-        layout.setContentsMargins(18, 24, 18, 8)
+        layout.setContentsMargins(18, 24, 18, 14)
         layout.addWidget(title)
         layout.addSpacing(8)
         layout.addWidget(view)
@@ -240,7 +209,20 @@ class SolverSelectorDialog(FramelessDialog):
         layout.addWidget(body)
         layout.addWidget(footer)
 
-        self.setStyleSheet(_scaled_stylesheet(stylesheet))
+        # sizing
+        self.setFixedWidth(px(380))
+        footer.setFixedHeight(px(70))
+        hint.move(px(10), px(6))
+        hint.setFixedWidth(px(320))
+        hint.setFixedHeight(px(70))
+
+        self.setStyleSheet("""
+        #Hint {
+            color: white;
+            background: transparent;
+            border: none;
+        }
+        """)
 
         self._hint = hint
 
@@ -257,6 +239,7 @@ class SolverSelectorDialog(FramelessDialog):
         layout.setSpacing(4)
         layout.setContentsMargins(0, 0, 0, 0)
         for btn in solver_btn_row:
+            btn.setMinimumWidth(px(150))
             layout.addWidget(btn)
 
         layout = QtWidgets.QVBoxLayout(view)
@@ -266,45 +249,36 @@ class SolverSelectorDialog(FramelessDialog):
         for btn in solver_btn_row:
             btn.clicked.connect(self.on_solver_clicked)
             btn.tip_shown.connect(self.on_tip_shown)
-
-        self._solvers = solver_btn_row
-        self._combo = None
 
         return view
 
     def _init_full(self, solver_sizes, solvers, best_guess=None):
         # type: (dict, list[cmdx.DagNode], cmdx.DagNode) -> QtWidgets.QWidget
         view = QtWidgets.QWidget()
-        solver_bar = QtWidgets.QWidget()
-        solver_btn_row = [SolverButton(solver_sizes)]
+        solver_btn = SolverButton(solver_sizes)
         solver_combo = SolverComboBox(solver_sizes, solvers)
-
-        layout = QtWidgets.QHBoxLayout(solver_bar)
-        layout.setContentsMargins(0, 0, 0, 0)
-        for btn in solver_btn_row:
-            layout.addWidget(btn)
 
         layout = QtWidgets.QVBoxLayout(view)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(solver_bar)
         layout.addWidget(solver_combo)
+        layout.addWidget(solver_btn)
 
-        for btn in solver_btn_row:
-            btn.clicked.connect(self.on_solver_clicked)
-            btn.tip_shown.connect(self.on_tip_shown)
-        solver_combo.currentIndexChanged.connect(self.on_solver_changed)
+        def on_solver_changed(index):
+            solver = solver_combo.itemData(index)
+            solver_btn.set_solver(solver)
 
-        self._solvers = solver_btn_row
-        self._combo = solver_combo
+        solver_combo.currentIndexChanged.connect(on_solver_changed)
+        solver_btn.clicked.connect(self.on_solver_clicked)
+        solver_btn.tip_shown.connect(self.on_tip_shown)
 
         # init
         if best_guess is None:
-            self.on_solver_changed(0)
+            on_solver_changed(0)
         else:
             assert best_guess in solvers
             solver_combo.setCurrentIndex(solvers.index(best_guess))
             if solver_combo.currentIndex() == 0:
-                self.on_solver_changed(0)
+                on_solver_changed(0)
 
         return view
 
@@ -313,22 +287,12 @@ class SolverSelectorDialog(FramelessDialog):
         self.solver_picked.emit(clicked.dag_path)
         self.close()
 
-    def on_solver_changed(self, index):
-        solver = self._combo.itemData(index)
-        self._solvers[-1].set_solver(solver)
 
+class RoundedImageFooter(QtWidgets.QLabel):
 
-class RoundedFooter(QtWidgets.QLabel):
-
-    def __init__(self, *args, **kwargs):
-        super(RoundedFooter, self).__init__(*args, **kwargs)
+    def __init__(self, pixmap, *args, **kwargs):
+        super(RoundedImageFooter, self).__init__(*args, **kwargs)
         self.setObjectName("Background")
-        self.setFixedHeight(px(75))
-        self.setFixedWidth(px(570))
-
-        pixmap = QtGui.QPixmap(_resource("ui", "option_header.png"))
-        pixmap = pixmap.scaledToWidth(px(570), QtCore.Qt.SmoothTransformation)
-
         self._image = pixmap
 
     def paintEvent(self, event):

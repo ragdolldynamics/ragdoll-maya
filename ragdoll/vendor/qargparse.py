@@ -987,8 +987,9 @@ class String(QArgument):
         self._read = lambda: widget.text()
         self._write = lambda value: widget.setText(value)
 
-        if isinstance(self, Info):
+        if isinstance(self, Info) or not self._data.get("editable", True):
             widget.setReadOnly(True)
+
         widget.setPlaceholderText(self._data.get("placeholder") or "")
 
         initial = self["initial"]

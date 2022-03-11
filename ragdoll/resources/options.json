@@ -621,6 +621,7 @@
         "name": "exportPath",
         "label": "Filename",
         "type": "Path",
+        "editable": false,
         "default": "",
         "help": "Export physics to this .rag file."
     },

@@ -2161,6 +2161,11 @@ def reassign_marker(selection=None, **opts):
     with cmdx.DGModifier() as mod:
         mod.connect(b["message"], a["src"])
         mod.connect(b["worldMatrix"][0], a["inputMatrix"])
+
+        if b.has_attr("rotatePivot"):
+            mod.connect(b["rotatePivot"], a["rotatePivot"])
+            mod.connect(b["rotatePivotTranslate"], a["rotatePivotTranslate"])
+
     return kSuccess
 
 

@@ -56,13 +56,17 @@ class TippedLabel(QtWidgets.QWidget):
         layout.addStretch(1)  # for pushing value label back to left
 
         self._value = value
+        self._tool_tip = None
 
     def setText(self, text):
         self._value.setText(text)
 
+    def setToolTip(self, text):
+        self._tool_tip = text
+
     def enterEvent(self, event):
         # type: (QtCore.QEvent) -> None
-        self.tip_shown.emit(self.toolTip() or "")
+        self.tip_shown.emit(self._tool_tip or "")
 
     def leaveEvent(self, event):
         # type: (QtCore.QEvent) -> None

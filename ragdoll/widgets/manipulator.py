@@ -99,15 +99,6 @@ def solver_ui_name_by_sizes(solver_sizes, solver):
     return elide(ui_name, length)
 
 
-def get_outliner_color(node):
-    # type: (cmdx.DagNode) -> str or None
-    parent = node.parent()
-    if parent and parent["useOutlinerColor"]:
-        return QtGui.QColor.fromRgbF(*parent["outlinerColor"]).name()
-    elif node["useOutlinerColor"]:
-        return QtGui.QColor.fromRgbF(*node["outlinerColor"]).name()
-
-
 class TippedLabel(QtWidgets.QLabel):
     tip_shown = QtCore.Signal(str)
 
@@ -158,7 +149,6 @@ class SolverButton(QtWidgets.QPushButton):
         self._name = val_name
         self._size = val_size
         self._dag_path = None
-        self.__default_style = val_name.styleSheet()
 
         if solver is not None:
             self.set_solver(solver)
@@ -179,7 +169,6 @@ class SolverButton(QtWidgets.QPushButton):
 
     def set_solver(self, solver):
         solver_name = solver_ui_name_by_sizes(self._solver_sizes, solver)
-        solver_color = get_outliner_color(solver) or ""
         solver_size = self._solver_sizes[int(solver["ragdollId"])]
 
         self._name.setText(solver_name)
@@ -190,11 +179,6 @@ class SolverButton(QtWidgets.QPushButton):
         self._size.setToolTip("Size of the solver. The sum of all component "
                               "related to this solver, e.g. count of markers, "
                               "constraints, and other ragdoll nodes.")
-
-        if solver_color:
-            self._name.setStyleSheet("QLabel {color: %s}" % solver_color)
-        else:
-            self._name.setStyleSheet(self.__default_style)
 
         self._dag_path = solver.shortest_path()
 
@@ -212,11 +196,6 @@ class SolverComboBox(QtWidgets.QComboBox):
 
             item_name = "[%d] %s" % (solver_size, solver_name)
             self.addItem(_icon, item_name, solver)
-
-            solver_color = get_outliner_color(solver)
-            if solver_color:
-                q_solver_color = QtGui.QColor(solver_color)
-                self.setItemData(i, q_solver_color, QtCore.Qt.TextColorRole)
 
 
 class SolverSelectorDialog(FramelessDialog):

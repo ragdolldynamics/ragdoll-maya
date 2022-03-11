@@ -1378,7 +1378,7 @@ class Table(QArgument):
             })
 
             current_row = None
-            for row, item in enumerate(items):
+            for row, item in enumerate(items or []):
                 child_item = GenericTreeModelItem(item)
                 root_item.addChild(child_item)
 

@@ -896,7 +896,13 @@ def create_pin_constraint(child, opts=None):
 
     source_transform = child["src"].input(type=cmdx.kDagNode)
     source_name = source_transform.name(namespace=False)
-    source_tm = source_transform.transform(cmdx.sWorld)
+
+    if cmds.ragdollLicence(isNonCommercial=True, query=True):
+        # A nont commercial licence cannot read
+        # outputMatrix beyond 100 frames
+        source_tm = source_transform.transform(cmdx.sWorld)
+    else:
+        source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
 
     name = internal.unique_name("%s_rPin" % source_name)
     shape_name = internal.shape_name(name)

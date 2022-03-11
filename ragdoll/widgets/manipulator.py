@@ -100,7 +100,9 @@ class SolverButton(QtWidgets.QPushButton):
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(body, alignment=QtCore.Qt.AlignLeft)
+        layout.addWidget(
+            body, alignment=QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
 
         val_name.tip_shown.connect(self.tip_shown)
         val_size.tip_shown.connect(self.tip_shown)
@@ -158,6 +160,15 @@ class SolverComboBox(QtWidgets.QComboBox):
             self.addItem(_icon, item_name, solver)
 
 
+helptext = """No valid selection. So, before calling Manipulator or
+press "T" key, you could:
+<ul>
+<li>Select a rdSolver shape, rdMarker, or rdGroup node</li>
+<li>Select any assigned control and the Marker in Channel Box</li>
+</ul>
+"""
+
+
 class SolverSelectorDialog(FramelessDialog):
     solver_picked = QtCore.Signal(str)
 
@@ -187,47 +198,77 @@ class SolverSelectorDialog(FramelessDialog):
         pixmap = QtGui.QPixmap(_resource("ui", "background1.png"))
         footer = RoundedImageFooter(pixmap)
 
+        info = InfoToggle()
+        info.setObjectName("Info")
+        info.setParent(footer)
+
         hint = QtWidgets.QTextEdit()
-        hint.setObjectName("Hint")
         hint.setParent(footer)
+        hint.setObjectName("Hint")
+        hint.setVisible(False)
         hint.setReadOnly(True)
         hint.setLineWrapMode(hint.WidgetWidth)
-        helptext = "Pro tip: To avoid this dialog, select a marker before " \
-                   "calling the Manipulator"
-        hint.setProperty("defaultText", helptext)
-        hint.setText(helptext)
         hint.setAlignment(QtCore.Qt.AlignTop)
+
+        tips = QtWidgets.QTextEdit()
+        tips.setVisible(False)
+        tips.setReadOnly(True)
+        tips.setHtml(helptext)
 
         layout = QtWidgets.QVBoxLayout(body)
         layout.setContentsMargins(18, 24, 18, 14)
         layout.addWidget(title)
-        layout.addSpacing(8)
+        layout.addSpacing(12)
         layout.addWidget(view)
+        layout.addWidget(tips)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(body)
         layout.addWidget(footer)
 
+        info.toggled.connect(self.on_info_toggled)
+
         # sizing
         self.setFixedWidth(px(380))
         footer.setFixedHeight(px(70))
+        info.move(px(10), px(6))
         hint.move(px(10), px(6))
         hint.setFixedWidth(px(320))
         hint.setFixedHeight(px(70))
 
         self.setStyleSheet("""
-        #Hint {
+        #Info {
+            color: #AFAFAF;
+            text-align: left;
+            background: transparent;
+            padding: %dpx;
+            border: none;
+            border-radius: %dpx;
+        }
+        #Info:hover {
+            background: rgba(255,255,255,60);
+        }
+        QTextEdit, #Hint {
             color: white;
             background: transparent;
             border: none;
         }
-        """)
+        """ % (px(5), px(4)))
 
+        self._info = info
         self._hint = hint
+        self._stack = [view, tips]
+
+    def on_info_toggled(self, show_tips):
+        self._stack[0].setVisible(False)
+        self._stack[1].setVisible(False)
+        self._stack[int(show_tips)].setVisible(True)
 
     def on_tip_shown(self, text):
-        self._hint.setText(text or self._hint.property("defaultText"))
+        self._info.setVisible(not text)
+        self._hint.setVisible(bool(text))
+        self._hint.setText(text or "")
 
     def _init_slim(self, solver_sizes, solvers):
         # type: (dict, list[cmdx.DagNode]) -> QtWidgets.QWidget
@@ -239,6 +280,7 @@ class SolverSelectorDialog(FramelessDialog):
         layout.setSpacing(4)
         layout.setContentsMargins(0, 0, 0, 0)
         for btn in solver_btn_row:
+            btn.setMinimumHeight(px(75))
             btn.setMinimumWidth(px(150))
             layout.addWidget(btn)
 
@@ -286,6 +328,29 @@ class SolverSelectorDialog(FramelessDialog):
         clicked = self.sender()  # type: SolverButton
         self.solver_picked.emit(clicked.dag_path)
         self.close()
+
+
+class InfoToggle(QtWidgets.QPushButton):
+
+    def __init__(self, parent=None):
+        super(InfoToggle, self).__init__(parent=parent)
+        self.setCheckable(True)
+        self._reset()
+        self.toggled.connect(self._on_toggled)
+
+    def _on_toggled(self, state):
+        if state:
+            self._toggled()
+        else:
+            self._reset()
+
+    def _toggled(self):
+        self.setText("Got it.")
+        self.setIcon(QtGui.QIcon(_resource("icons", "back.png")))
+
+    def _reset(self):
+        self.setText("Why this pops up ?")
+        self.setIcon(QtGui.QIcon(_resource("icons", "info.png")))
 
 
 class RoundedImageFooter(QtWidgets.QLabel):

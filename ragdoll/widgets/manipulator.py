@@ -48,19 +48,7 @@ def elide(dag_path, length):
 
     if len(dag_path) <= length:
         return dag_path
-
-    if "|" in dag_path:
-        included = []
-        parents, base = dag_path.rsplit("|", 1)
-        for part in parents.split("|"):
-            included.append(part)
-            if sum(map(len, included + [base])) > length:
-                break
-
-        dag_path = "|".join(included + [base])
-
-    half = int(length / 2)
-    return dag_path[:half] + placeholder + dag_path[-half:]
+    return placeholder + dag_path[-length:]
 
 
 def compute_solver_size(registry, solver):

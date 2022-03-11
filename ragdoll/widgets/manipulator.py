@@ -219,7 +219,7 @@ class SolverSelectorDialog(FramelessDialog):
         title = QtWidgets.QLabel("Pick Solver")
         title.setStyleSheet("QLabel {font-size: 24px;}")
 
-        if len(solvers) > 3:
+        if len(solvers) > 2:
             view = self._init_full(solver_sizes, solvers, best_guess)
         else:
             view = self._init_slim(solver_sizes, solvers)

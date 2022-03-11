@@ -774,18 +774,27 @@ class _Recorder(object):
                     mod.set_attr(group["inputType"], constants.InputKinematic)
 
 
+def _is_keyed(plug):
+    return plug.input(type=(
+
+        # Regular keyframe
+        "animCurveTA",
+
+        # Keyed on a layer
+        "animBlendNodeAdditiveRotation",
+
+    )) is not None
+
+
 @internal.with_undo_chunk
 @internal.with_timing
 def _quat_filter(transforms):
     """Unroll rotations by converting to quaternions and back to euler"""
     rotate_channels = []
 
-    def is_keyed(plug):
-        return plug.input(type="animCurveTA") is not None
-
     for transform in transforms:
         # Can only unroll transform with all axes keyed
-        if not all(is_keyed(transform[ch]) for ch in ("rx", "ry", "rz")):
+        if not all(_is_keyed(transform[ch]) for ch in ("rx", "ry", "rz")):
             continue
 
         rotate_channels += ["%s.rx" % transform]
@@ -802,12 +811,9 @@ def _euler_filter(transforms):
     """Unroll rotations by applying a euler filter"""
     rotate_curves = []
 
-    def is_keyed(plug):
-        return plug.input(type="animCurveTA") is not None
-
     for transform in transforms:
         # Can only unroll transform with all axes keyed
-        if not all(is_keyed(transform[ch]) for ch in ("rx", "ry", "rz")):
+        if not all(_is_keyed(transform[ch]) for ch in ("rx", "ry", "rz")):
             continue
 
         for channel in ("rx", "ry", "rz"):

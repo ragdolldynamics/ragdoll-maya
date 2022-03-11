@@ -55,8 +55,19 @@ class TippedLabel(QtWidgets.QWidget):
         layout.addWidget(value)
         layout.addStretch(1)  # for pushing value label back to left
 
+        timer = QtCore.QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(self._on_timer_timeout)
+
         self._value = value
+        self._timer = timer
         self._tool_tip = None
+        self.__entered = False
+
+    def _on_timer_timeout(self):
+        text = self._tool_tip if self.__entered else None
+        text = text or ""
+        self.tip_shown.emit(text)
 
     def setText(self, text):
         self._value.setText(text)
@@ -66,11 +77,13 @@ class TippedLabel(QtWidgets.QWidget):
 
     def enterEvent(self, event):
         # type: (QtCore.QEvent) -> None
-        self.tip_shown.emit(self._tool_tip or "")
+        self.__entered = True
+        self._timer.start(200)
 
     def leaveEvent(self, event):
         # type: (QtCore.QEvent) -> None
-        self.tip_shown.emit("")
+        self.__entered = False
+        self._timer.start(0)
 
 
 class SolverButton(QtWidgets.QPushButton):

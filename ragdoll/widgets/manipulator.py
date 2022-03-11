@@ -5,8 +5,7 @@ from maya import cmds
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-from . import px
-from ._base import FramelessDialog
+from . import base, px
 from .. import dump
 
 
@@ -170,7 +169,7 @@ press "T" key, you could:
 """
 
 
-class SolverSelectorDialog(FramelessDialog):
+class SolverSelectorDialog(base.FramelessDialog):
     solver_picked = QtCore.Signal(str)
 
     def __init__(self, solvers, best_guess=None, parent=None):
@@ -188,7 +187,7 @@ class SolverSelectorDialog(FramelessDialog):
 
         body = QtWidgets.QWidget()
         title = QtWidgets.QLabel("Pick Solver")
-        title.setStyleSheet("QLabel {font-size: 24px;}")
+        # title.setStyleSheet("QLabel {font-size: 24px;}")
 
         if len(solvers) > 2:
             view = self._init_full(solver_sizes, solvers, best_guess)

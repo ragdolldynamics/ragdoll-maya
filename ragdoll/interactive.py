@@ -1704,7 +1704,7 @@ def create_pin_constraint(selection=None, **opts):
             )
 
         con = commands.create_pin_constraint(a)
-        cons += [con.path()]
+        cons += [con.parent().path()]
 
     cmds.select(cons)
 
@@ -3259,7 +3259,9 @@ def _export_physics_wrapper(thumbnail=None):
         fade=True
     )
 
-    log.info("Successfully exported %d markers in %.2f ms" % stats)
+    log.info("Successfully exported %d markers in %.2f ms to %s" % (
+        stats[0], stats[1], fname)
+    )
 
     return True
 

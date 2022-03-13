@@ -80,7 +80,7 @@ class TippedLabel(QtWidgets.QWidget):
 
     def enterEvent(self, event):
         self.__entered = True
-        self._timer.start(200)
+        self._timer.start(1000)
 
     def leaveEvent(self, event):
         self.__entered = False
@@ -196,19 +196,10 @@ class SolverComboBox(QtWidgets.QComboBox):
         return self._solvers[index]
 
 
-helptext = """No valid selection. So, before calling Manipulator or
-press "T" key, you could:
-<ul>
-<li>Select a rdSolver shape, rdMarker, or rdGroup node</li>
-<li>Select any assigned control and the Marker in Channel Box</li>
-</ul>
-"""
-
-
 class SolverSelectorDialog(base.FramelessDialog):
     solver_picked = QtCore.Signal(str)
 
-    def __init__(self, solvers, best_guess=None, parent=None):
+    def __init__(self, solvers, help, best_guess=None, parent=None):
         """
         Arguments:
             solvers (list[cmdx.DagNode]):
@@ -247,7 +238,7 @@ class SolverSelectorDialog(base.FramelessDialog):
         tips = QtWidgets.QTextEdit()
         tips.setVisible(False)
         tips.setReadOnly(True)
-        tips.setHtml(helptext)
+        tips.setHtml(help)
 
         layout = QtWidgets.QVBoxLayout(body)
         layout.setContentsMargins(18, 24, 18, 14)
@@ -378,12 +369,23 @@ class SolverSelectorDialog(base.FramelessDialog):
 
 
 class InfoToggle(QtWidgets.QPushButton):
-
     def __init__(self, parent=None):
         super(InfoToggle, self).__init__(parent=parent)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
         self.setCheckable(True)
         self._reset()
         self.toggled.connect(self._on_toggled)
+
+        self.setStyleSheet("""
+            QPushButton {
+                color: white;
+            }
+
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+        """)
 
     def _on_toggled(self, state):
         if state:
@@ -392,20 +394,12 @@ class InfoToggle(QtWidgets.QPushButton):
             self._reset()
 
     def _toggled(self):
-        self.setText("Got it.")
+        self.setText("Got it")
         self.setIcon(QtGui.QIcon(_resource("icons", "back.png")))
 
     def _reset(self):
-        self.setText("Why this pops up ?")
+        self.setText("Why this popup?")
         self.setIcon(QtGui.QIcon(_resource("icons", "info.png")))
-
-    def enterEvent(self, event):
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.PointingHandCursor)
-        super(InfoToggle, self).enterEvent(event)
-
-    def leaveEvent(self, event):
-        QtWidgets.QApplication.restoreOverrideCursor()
-        super(InfoToggle, self).leaveEvent(event)
 
 
 class RoundedImageFooter(QtWidgets.QLabel):

@@ -44,6 +44,8 @@ from maya import cmds
 from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
+from .widgets import solver as solver_widgets
+
 from . import (
     commands,
     upgrade,
@@ -56,9 +58,6 @@ from . import (
     constants as c,
     internal as i__,
     __
-)
-from .widgets import (
-    manipulator as ui_manip,
 )
 
 log = logging.getLogger("ragdoll")
@@ -1289,14 +1288,17 @@ def markers_manipulator(selection=None, **opts):
     selection = selection or cmdx.sl()
 
     if selection and len(selection) == 1:
-        types_to_manips = ["rdSolver", "rdGroup", "rdMarker"]
-        rd_nodes = cmdx.ls(selection, type=types_to_manips)
+        rd_nodes = cmdx.ls(selection, type=(
+            "rdSolver", "rdGroup", "rdMarker"
+        ))
 
     if selection and not rd_nodes:
-        # find one solver from selection
+        # Find one solver from selection
+        # NOTE: There are at most 3 levels of hierarchy in any given solver,
+        #   LEVEL 1: The solver itself
+        #   LEVEL 2: The group, connected to the solver
+        #   LEVEL 3: The marker, connected to the group
         downstreams = cmds.listHistory(selection, future=True, levels=3)
-        # note: there should be only rdMarker or rdGroup or both sit between
-        #   geo shape/transform node and rdSolver node, which is levels=3 away.
         rd_nodes = cmdx.ls(downstreams, type="rdSolver")
 
     rd_nodes = rd_nodes or cmdx.ls(type="rdSolver")
@@ -1314,9 +1316,20 @@ def markers_manipulator(selection=None, **opts):
         log.info("Manipulating %s" % rd_nodes[0])
 
     else:
+        helptext = """\
+            <p>
+            There are multiple solvers in the scene.
+            <br>
+            <br>
+            Use the <b>"T"</b> keyboard shortcut with
+            a solver or marker selected to skip this popup.
+            </p>
+        """
+
         solvers = rd_nodes
-        dialog = ui_manip.SolverSelectorDialog(
+        dialog = solver_widgets.SolverSelectorDialog(
             solvers=solvers,
+            help=helptext,
             best_guess=None,  # todo: best-guess from viewport
             parent=ui.MayaWindow()
         )

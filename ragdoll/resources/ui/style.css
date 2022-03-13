@@ -89,6 +89,8 @@ Timeline QSlider::handle:horizontal {
 
 #Hint {
     color: white;
+    background: transparent;
+    border: none;
 }
 
 Options #Foreground {

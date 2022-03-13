@@ -57,6 +57,9 @@ from . import (
     internal as i__,
     __
 )
+from .widgets import (
+    manipulator as ui_manip,
+)
 
 log = logging.getLogger("ragdoll")
 
@@ -1282,23 +1285,43 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
+    rd_nodes = None
     selection = selection or cmdx.sl()
-    solvers = cmdx.ls(type="rdSolver")
 
-    if len(solvers) < 1:
+    if selection and len(selection) == 1:
+        types_to_manips = ["rdSolver", "rdGroup", "rdMarker"]
+        rd_nodes = cmdx.ls(selection, type=types_to_manips)
+
+    if selection and not rd_nodes:
+        # find one solver from selection
+        downstreams = cmds.listHistory(selection, future=True, levels=3)
+        # note: there should be only rdMarker or rdGroup or both sit between
+        #   geo shape/transform node and rdSolver node, which is levels=3 away.
+        rd_nodes = cmdx.ls(downstreams, type="rdSolver")
+
+    rd_nodes = rd_nodes or cmdx.ls(type="rdSolver")
+    rd_count = len(rd_nodes)
+
+    if rd_count < 1:
         raise i__.UserWarning(
             "No solver found",
             "No solver found to manipulate."
         )
 
-    if len(solvers) > 1:
-        log.warning(
-            "Multiple solvers found, manipulating %s" % solvers[0]
-        )
+    elif rd_count == 1:
+        cmds.select(str(rd_nodes[0]))
+        cmds.setToolTo("ShowManips")
+        log.info("Manipulating %s" % rd_nodes[0])
 
-    cmds.select(str(solvers[0]))
-    cmds.setToolTo("ShowManips")
-    log.info("Manipulating %s" % solvers[0])
+    else:
+        solvers = rd_nodes
+        dialog = ui_manip.SolverSelectorDialog(
+            solvers=solvers,
+            best_guess=None,  # todo: best-guess from viewport
+            parent=ui.MayaWindow()
+        )
+        dialog.solver_picked.connect(markers_manipulator)
+        dialog.open()
 
     return kSuccess
 

@@ -1284,36 +1284,21 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    rd_nodes = None
-    selection = selection or cmdx.sl()
+    selection = solvers_from_selection(selection)
 
-    if selection and len(selection) == 1:
-        rd_nodes = cmdx.ls(selection, type=(
-            "rdSolver", "rdGroup", "rdMarker"
-        ))
+    if not selection:
+        selection = cmdx.ls(type="rdSolver")
 
-    if selection and not rd_nodes:
-        # Find one solver from selection
-        # NOTE: There are at most 3 levels of hierarchy in any given solver,
-        #   LEVEL 1: The solver itself
-        #   LEVEL 2: The group, connected to the solver
-        #   LEVEL 3: The marker, connected to the group
-        downstreams = cmds.listHistory(selection, future=True, levels=3)
-        rd_nodes = cmdx.ls(downstreams, type="rdSolver")
-
-    rd_nodes = rd_nodes or cmdx.ls(type="rdSolver")
-    rd_count = len(rd_nodes)
-
-    if rd_count < 1:
+    if len(selection) < 1:
         raise i__.UserWarning(
             "No solver found",
             "No solver found to manipulate."
         )
 
-    elif rd_count == 1:
-        cmds.select(str(rd_nodes[0]))
+    elif len(selection) == 1:
+        cmds.select(str(selection[0]))
         cmds.setToolTo("ShowManips")
-        log.info("Manipulating %s" % rd_nodes[0])
+        log.info("Manipulating %s" % selection[0])
 
     else:
         helptext = """\
@@ -1326,14 +1311,17 @@ def markers_manipulator(selection=None, **opts):
             </p>
         """
 
-        solvers = rd_nodes
+        def on_picked(solver_name):
+            cmds.select(solver_name)
+            return markers_manipulator()
+
         dialog = solver_widgets.SolverSelectorDialog(
-            solvers=solvers,
+            solvers=selection,
             help=helptext,
             best_guess=None,  # todo: best-guess from viewport
             parent=ui.MayaWindow()
         )
-        dialog.solver_picked.connect(markers_manipulator)
+        dialog.solver_picked.connect(on_picked)
         dialog.open()
 
     return kSuccess
@@ -1519,6 +1507,93 @@ def markers_from_selection(selection=None):
             markers += [selected]
 
     return markers
+
+
+def solvers_from_selection(selection=None):
+    """Find solvers from selection
+
+    Examples:
+        >>> ctrl, _ = cmds.polyCube()
+        >>> cmds.select(ctrl)
+        >>> _ = assign_marker()
+
+        # Initialise solver
+        >>> _ = cmds.getAttr(cmds.ls(type="rdSolver")[0] + ".startState")
+        >>> _ = cmds.getAttr(cmds.ls(type="rdSolver")[0] + ".currentState")
+
+        # Select transform
+        >>> cmds.select(ctrl)
+        >>> len(solvers_from_selection())
+        1
+
+        # Select marker
+        >>> cmds.select(cmds.ls(type="rdMarker"))
+        >>> len(solvers_from_selection())
+        1
+
+        # Select group
+        >>> _ = group_markers()
+        >>> cmds.select(cmds.ls(type="rdGroup"))
+        >>> len(solvers_from_selection())
+        1
+
+        # Select group transform
+        >>> cmds.select(str(cmdx.ls(type="rdGroup")[0].parent()))
+        >>> len(solvers_from_selection())
+        1
+
+        # Select solver transform
+        >>> cmds.select(str(cmdx.ls(type="rdSolver")[0].parent()))
+        >>> len(solvers_from_selection())
+        1
+
+        # Select grouped marker
+        >>> cmds.select(cmds.ls(type="rdMarker"))
+        >>> len(solvers_from_selection())
+        1
+
+        # Select multiple
+        >>> cmds.select(cmds.ls(type=("rdMarker", "rdGroup", "rdSolver")))
+        >>> len(solvers_from_selection())
+        1
+
+    """
+
+    solvers = set()
+    selection = selection or cmdx.selection()
+
+    ragdoll_nodes = []
+    ragdoll_types = (
+        "rdSolver",
+        "rdMarker",
+        "rdGroup",
+        "rdFixedConstraint",
+        "rdPinConstraint",
+        "rdDistanceConstraint"
+    )
+
+    for selected in selection:
+        if selected.isA(cmdx.kTransform):
+            selected = selected["message"].output(type=ragdoll_types)
+
+        if selected and selected.isA(ragdoll_types):
+            ragdoll_nodes += [selected]
+
+    for node in ragdoll_nodes:
+        if node.isA("rdSolver"):
+            solvers.add(node)
+        else:
+            other = node["startState"].output()
+
+            if other:
+                if other.isA("rdSolver"):
+                    solvers.add(other)
+                elif other.isA("rdGroup"):
+                    other = other["startState"].output(type="rdSolver")
+                    if other:
+                        solvers.add(other)
+
+    return tuple(solvers)
 
 
 @with_exception_handling

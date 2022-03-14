@@ -1512,6 +1512,7 @@ class SplashScreen(QtWidgets.QDialog):
 
     def refresh(self):
         data = licence.data()
+        self._data = data
 
         # Reset expiry
         self._widgets["expiryDate"].setText("")
@@ -1527,10 +1528,10 @@ class SplashScreen(QtWidgets.QDialog):
             self.on_expires(data["expiryDays"])
 
         elif data["isTrial"]:
-            if data["expiryDays"] < 1:
-                self.on_expired(data["expiryDays"])
+            if data["trialDays"] < 1:
+                self.on_expired(data["trialDays"])
             else:
-                self.on_trial(data["expiryDays"])
+                self.on_trial(data["trialDays"])
 
         elif data["isActivated"]:
             self.on_activated(data)
@@ -1550,8 +1551,6 @@ class SplashScreen(QtWidgets.QDialog):
 
         else:
             self.on_deactivated()
-
-        self._data = data
 
     def on_activate_offline(self):
         key = self._widgets["serial"].text()
@@ -1575,8 +1574,7 @@ class SplashScreen(QtWidgets.QDialog):
         if msgbox.exec_() != QtWidgets.QMessageBox.Yes:
             return log.info("Cancelled")
 
-        data = licence.data()
-        key = data["key"]
+        key = self._data["key"]
         modal = OfflineDialog(False, key, self)
         modal.exec_()
         self.refresh()

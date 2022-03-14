@@ -35,6 +35,9 @@ def install(key=None):
 
     """
 
+    if self._installed:
+        return log.debug("Licence already installed")
+
     if os.getenv("RAGDOLL_FLOATING"):
         status = _install_floating()
     else:
@@ -47,6 +50,9 @@ def install(key=None):
 
 
 def uninstall():
+    if not self._installed:
+        return log.debug("Licence not yet installed")
+
     self._installed = False
 
 

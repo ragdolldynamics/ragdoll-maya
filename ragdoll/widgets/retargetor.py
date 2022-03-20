@@ -267,6 +267,7 @@ class RetargetWindow(QtWidgets.QDialog):
         widgets["linkSelection"].stateChanged.connect(self._on_link_sel_checked)
         widgets["appendTargets"].clicked.connect(self._on_target_append_clicked)
         widgets["removeTargets"].clicked.connect(self._on_target_remove_clicked)
+        self.destroyed.connect(self.on_destroyed)  # todo: seems not triggered
 
         self.setStyleSheet("""
         QPushButton {
@@ -290,6 +291,10 @@ class RetargetWindow(QtWidgets.QDialog):
         self._widgets = widgets
         self._solvers = None
         self._registry = None
+        self.__job_id = None
+
+    def on_destroyed(self):
+        self._teardown_script_job()
 
     def _on_solver_changed(self, index):
         solver = self._solvers[index]
@@ -298,6 +303,7 @@ class RetargetWindow(QtWidgets.QDialog):
     def _on_marker_changed(self, item):
         marker = cmdx.encode(item.text(0))
         self._list_targets(marker)
+        self._setup_script_job(marker)
 
     def _on_marker_tree_toggled(self, state):
         self._widgets["listToggle"].setChecked(not state)
@@ -325,6 +331,17 @@ class RetargetWindow(QtWidgets.QDialog):
 
     def _on_target_remove_clicked(self):
         pass
+
+    def _setup_script_job(self, marker):
+        self._teardown_script_job()
+        attr = marker["destinationTransforms"].path()
+        self.__job_id = cmds.scriptJob(
+            connectionChange=[attr, self._list_targets],
+        )
+
+    def _teardown_script_job(self):
+        if self.__job_id is not None and cmds.scriptJob(exists=self.__job_id):
+            cmds.scriptJob(kill=self.__job_id, force=True)
 
     def _get_registry(self):
         if self._registry is None:
@@ -400,7 +417,7 @@ class RetargetWindow(QtWidgets.QDialog):
 
     def current_marker(self):
         item = self._views["markers"].currentItem()
-        return item.text(0)
+        return cmdx.encode(item.text(0))
 
     def _list_markers(self, solver, current=None, hierarchical=True):
         marker_view = self._views["markers"]
@@ -459,14 +476,17 @@ class RetargetWindow(QtWidgets.QDialog):
             if found:
                 marker_view.setCurrentItem(found[0])
 
-    def _list_targets(self, marker):
+    def _list_targets(self, marker=None):
         target_view = self._views["targets"]
         target_view.clear()
+        marker = marker or self.current_marker()
         if marker is None:
             return
 
         node_paths = []
         for plug in marker["destinationTransforms"]:
-            node_paths.append(plug.input().shortest_path())
+            p_input = plug.input()
+            if p_input is not None:
+                node_paths.append(p_input.shortest_path())
 
         target_view.set_items(node_paths)

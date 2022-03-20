@@ -212,6 +212,9 @@ class RetargetWindow(QtWidgets.QDialog):
             "targets": QtWidgets.QWidget(),
         }
 
+        views["markers"].setColumnCount(1)
+        views["markers"].setHeaderHidden(True)
+
         widgets["listToggle"].setObjectName("ToggleButton")
         widgets["treeToggle"].setObjectName("ToggleButton")
         widgets["listToggle"].setCheckable(True)
@@ -293,7 +296,7 @@ class RetargetWindow(QtWidgets.QDialog):
         self.set_current(solver)
 
     def _on_marker_changed(self, item):
-        marker = cmdx.encode(item.text())
+        marker = cmdx.encode(item.text(0))
         self._list_targets(marker)
 
     def _on_marker_tree_toggled(self, state):
@@ -332,6 +335,7 @@ class RetargetWindow(QtWidgets.QDialog):
         self._solvers = None
         self._registry = None
         solver_view = self._views["solvers"]
+        solver_view.blockSignals(True)
         solver_view.clear()
 
         registry = self._get_registry()
@@ -350,6 +354,7 @@ class RetargetWindow(QtWidgets.QDialog):
 
             item_name = "[%d] %s" % (solver_size, solver_name)
             solver_view.addItem(_icon, item_name)
+        solver_view.blockSignals(False)
 
         solver_or_marker = solver_or_marker or solvers[0]
         self.set_current(solver_or_marker)
@@ -399,7 +404,7 @@ class RetargetWindow(QtWidgets.QDialog):
 
     def _list_markers(self, solver, current=None, hierarchical=True):
         marker_view = self._views["markers"]
-        marker_view.reset()
+        marker_view.clear()
 
         registry = self._get_registry()
         solver_id = int(solver["ragdollId"])
@@ -418,25 +423,41 @@ class RetargetWindow(QtWidgets.QDialog):
 
         if hierarchical:
             # tree view
-            marker_by_id = {m["ragdollId"]: m for m in markers}
+            marker_by_id = {int(m["ragdollId"]): m for m in markers}
 
-            def list_children(parent_id):
+            def iter_children(parent_id):
                 for entity_ in marker_by_id.keys():
                     rigid = registry.get(entity_, "RigidComponent")
                     if rigid["parentRigid"] == parent_id:
                         yield marker_by_id[entity_]
+
+            def walk_hierarchy(parent_id, parent_item=None):
+                for c_marker in iter_children(parent_id):
+                    item_ = QtWidgets.QTreeWidgetItem([c_marker.name()])
+                    if parent_item is None:
+                        marker_view.addTopLevelItem(item_)
+                    else:
+                        parent_item.addChild(item_)
+
+                    _parent_id = int(c_marker["ragdollId"])
+                    walk_hierarchy(_parent_id, item_)
+
+            walk_hierarchy(0)
 
         else:
             # flat list
 
             items = []
             for marker in markers:
-                item = QtWidgets.QTreeWidgetItem(marker.name())
+                item = QtWidgets.QTreeWidgetItem([marker.name()])
                 items.append(item)
-            marker_view.insertTopLevelItems(0, items)
+            marker_view.addTopLevelItems(items)
 
         if current:
-            marker_view.setCurrentItem()
+            text = current.name()
+            found = marker_view.findItems(text, QtCore.Qt.MatchExactly)
+            if found:
+                marker_view.setCurrentItem(found[0])
 
     def _list_targets(self, marker):
         target_view = self._views["targets"]

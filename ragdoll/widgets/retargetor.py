@@ -5,7 +5,7 @@ from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px
-from .. import dump
+from .. import dump, commands
 
 # Unused, for type hint in IDEs
 __ = cmdx
@@ -100,6 +100,7 @@ class MayaOutliner(QtWidgets.QDialog):
         outliner_filter = MayaOutlinerEventFilter(self)
         outliner_name = cmds.outlinerEditor(
             mainListConnection=self._get_sel_connection("mainList"),
+            selectionConnection=self._get_sel_connection("seleList"),
             showShapes=False,
             showNamespace=True,  # todo: toggle this
             showAttributes=False,
@@ -149,6 +150,16 @@ class MayaOutliner(QtWidgets.QDialog):
         sele = self._get_sel_connection("mainList")
         cmds.selectionConnection(sele, edit=True, clear=True)
 
+    def active_items(self):
+        name = self._outliner_name
+        sele = cmds.outlinerEditor(name, query=True, selectionConnection=True)
+        return cmds.selectionConnection(sele, query=True, object=True)
+
+    def items(self):
+        name = self._outliner_name
+        sele = cmds.outlinerEditor(name, query=True, mainListConnection=True)
+        return cmds.selectionConnection(sele, query=True, object=True)
+
     def set_items(self, nodes):
         sele = self._get_sel_connection("mainList")
         cmds.selectionConnection(sele, edit=True, clear=True)
@@ -156,8 +167,9 @@ class MayaOutliner(QtWidgets.QDialog):
             cmds.selectionConnection(sele, edit=True, select=node)
 
     def set_global_selection(self, link):
+        name = self._outliner_name
         sele = "modelList" if link else self._get_sel_connection("seleList")
-        cmds.outlinerEditor(self._control, edit=True, selectionConnection=sele)
+        cmds.outlinerEditor(name, edit=True, selectionConnection=sele)
 
     def show_namespace(self, show):
         pass  # todo: toggle namespace
@@ -327,10 +339,10 @@ class RetargetWindow(QtWidgets.QDialog):
         pass
 
     def _on_target_append_clicked(self):
-        pass
+        self._append_targets()
 
     def _on_target_remove_clicked(self):
-        pass
+        self._remove_targets()
 
     def _setup_script_job(self, marker):
         self._teardown_script_job()
@@ -490,3 +502,25 @@ class RetargetWindow(QtWidgets.QDialog):
                 node_paths.append(p_input.shortest_path())
 
         target_view.set_items(node_paths)
+
+    def _append_targets(self):
+        marker = self.current_marker()
+        opts = {"append": True}
+        for transform in cmdx.ls(sl=True, type="transform"):
+            commands.retarget_marker(marker, transform, opts)
+
+    def _remove_targets(self):
+        target_view = self._views["targets"]
+        to_removed = target_view.active_items()
+        targets = [
+            cmdx.encode(path)
+            for path in target_view.items()
+            if path not in to_removed
+        ]
+
+        marker = self.current_marker()
+        commands.untarget_marker(marker)
+
+        opts = {"append": True}
+        for transform in targets:
+            commands.retarget_marker(marker, transform, opts)

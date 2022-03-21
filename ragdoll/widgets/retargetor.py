@@ -110,7 +110,7 @@ class MayaOutliner(QtWidgets.QDialog):
             showSetMembers=False,
             autoExpand=True,
             showDagOnly=True,
-            ignoreDagHierarchy=False,
+            ignoreDagHierarchy=True,
             ignoreHiddenAttribute=True,
             ignoreOutlinerColor=False,
             autoSelectNewObjects=False,

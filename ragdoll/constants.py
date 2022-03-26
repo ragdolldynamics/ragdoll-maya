@@ -98,6 +98,10 @@ DecompositionOff = 0
 DecompositionIslands = 1
 DecompositionAutomatic = 2
 
+AnimationLocation = 0
+SimulationLocation = 1
+ConstrainedLocation = 2
+
 Auto = None
 
 # cacheMedia enum indices

@@ -788,7 +788,7 @@ def install_menu():
         item("distanceConstraint",
              create_distance_constraint, label="Distance")
         item("pinConstraint",
-             create_pin_constraint, label="Pin")
+             create_pin_constraint, create_pin_constraint_options, label="Pin")
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -1801,6 +1801,10 @@ def create_fixed_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_pin_constraint(selection=None, **opts):
+    opts = dict({
+        "location": _opt("pinLocation", opts),
+    })
+
     selection = selection or cmdx.sl()
 
     cons = []
@@ -1814,7 +1818,7 @@ def create_pin_constraint(selection=None, **opts):
                 "%s wasn't a marker" % selection[0]
             )
 
-        con = commands.create_pin_constraint(a)
+        con = commands.create_pin_constraint(a, opts)
         cons += [con.parent().path()]
 
     cmds.select(cons)
@@ -3267,6 +3271,10 @@ def snap_markers_options(*args):
 
 def retarget_marker_options(*args):
     return _Window("retargetMarker", retarget_marker)
+
+
+def create_pin_constraint_options(*args):
+    return _Window("pinConstraint", create_pin_constraint)
 
 
 def toggle_channel_box_attributes_options(*args):

@@ -1052,6 +1052,15 @@
         "help": "Use the volume and density of the shape to determine its mass."
     },
 
+    "pinLocation": {
+        "name": "pinLocation",
+        "label": "Pin Location",
+        "type": "Enum",
+        "default": 0,
+        "items": ["Animation", "Simulation", "Constrained"],
+        "help": "Where should I create this pin constraint?<br>- <b>Animation</b> Wherever your animation control is currently at.<br>- <b>Simulation</b> Wherever the simulation is currently at<br>- <b>Constrained</b> Follow the animation."
+    },
+
 
     "#": "---------------------",
     "#": " Manipulator options ",

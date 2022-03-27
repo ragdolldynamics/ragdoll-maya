@@ -52,7 +52,7 @@ def create(typ, mod, name, parent=None):
 
         # Avoid possible crashes due to poor geometry
         mod.set_attr(node["inputGeometryQuantisedCount"], 65535)
-        mod.set_attr(node["inputGeometryCheckZeroAreaTriangles"], False)
+        mod.set_attr(node["inputGeometryCheckZeroAreaTriangles"], True)
 
         # Prefer the simpler visualisation
         mod.set_attr(node["fieldCentroids"], constants.ComCentroid)

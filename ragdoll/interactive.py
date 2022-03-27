@@ -407,13 +407,13 @@ def _on_noncommercial_export(clientData=None):
     """Called on attempted export from non-commercial version"""
 
     msg = (
-        "Export using a <b>Complete</b> or <b>Non-commercial</b> licence "
-        "is limited to 10 markers."
+        "Export is a Ragdoll Unlimited feature, and is limited to a maximum of"
+        "10 markers using a <b>Complete</b> and <b>Non-commercial</b> licence."
     )
 
     def deferred():
         ui.notify(
-            "Non-commercial export", msg, persistent=True, location="menu"
+            "Unlimited export", msg, persistent=True, location="menu"
         )
 
     cmds.evalDeferred(deferred)

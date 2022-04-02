@@ -1,3 +1,0 @@
-[mkdocs.plugins]
-mkdocs-redirects = mkdocs_redirects.plugin:RedirectPlugin
-

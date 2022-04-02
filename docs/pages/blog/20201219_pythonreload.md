@@ -1,1 +1,0 @@
-Talk about how you iterate in Maya, reloading all modules by namespace and what to look out for. Especially undo. And always having an uninstall.

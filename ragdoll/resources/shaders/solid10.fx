@@ -6,7 +6,6 @@
 
 
 cbuffer UpdatePerFrame : register(b0) {
-    vec3 gLightDir;
     mat4 viewPrjT : ViewProjectionTranspose;
     mat4 viewPrj : ViewProjection;
 };
@@ -63,6 +62,7 @@ ToScreen ShaderPixel(ToPixel IN) {
     float brightness = 1.0;
     float ambient = 0.0;
     int shininess = 2;
+    vec3 gLightDir = vec3(0.07, -0.26, 1.0);
 
     // Diffuse
     vec3 lightColor = vec3(1, 1, 1);

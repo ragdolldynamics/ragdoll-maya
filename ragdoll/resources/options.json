@@ -1176,7 +1176,7 @@
     "manipulatorFitToViewOverride": {
         "name": "manipulatorFitToViewOverride",
         "type": "Boolean",
-        "default": false,
+        "default": true,
         "help": "Experimental fit-to-view during interactions with the Manipulator."
     },
     "manipulatorMayaSelect": {

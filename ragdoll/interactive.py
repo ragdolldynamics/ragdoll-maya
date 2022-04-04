@@ -1284,7 +1284,10 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    selection = solvers_from_selection(selection)
+    selection = markers_from_selection(selection)
+
+    if not selection:
+        selection = solvers_from_selection(selection)
 
     if not selection:
         selection = cmdx.ls(type="rdSolver")

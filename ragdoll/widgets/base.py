@@ -69,3 +69,27 @@ class FramelessDialog(QtWidgets.QDialog):
             self.move(self.pos() + _delta_pos)
         self._last_pos = _current_pose
         super(FramelessDialog, self).mouseMoveEvent(event)
+
+
+class BaseItemModel(QtGui.QStandardItemModel):
+    Headers = []
+
+    def __init__(self, *args, **kwargs):
+        super(BaseItemModel, self).__init__(*args, **kwargs)
+        self.setColumnCount(len(self.Headers))
+
+    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+        if role == QtCore.Qt.DisplayRole and section < len(self.Headers):
+            return self.Headers[section]
+        return super(BaseItemModel, self).headerData(
+            section, orientation, role)
+
+    def reset(self):
+        """Remove all rows and set row count to zero
+        This doesn't clear header.
+        """
+        self.removeRows(0, self.rowCount())
+        self.setRowCount(0)
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

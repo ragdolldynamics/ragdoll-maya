@@ -45,6 +45,7 @@ from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
 from .widgets import solver as solver_widgets
+from .widgets import retargetor as retargetor_widgets
 
 from . import (
     commands,
@@ -3273,7 +3274,14 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    return _Window("retargetMarker", retarget_marker)
+    win = retargetor_widgets.RetargetWindow2(
+        parent=ui.MayaWindow(),
+    )
+    # On Windows, windows typically spawn in the
+    # center of the screen. On Linux? Flip a coin.
+    ui.center_window(win)
+    win.show()
+    return win
 
 
 def create_pin_constraint_options(*args):

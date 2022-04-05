@@ -3274,7 +3274,7 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    win = retargetor_widgets.RetargetWindow2(
+    win = retargetor_widgets.RetargetWindow(
         parent=ui.MayaWindow(),
     )
     # On Windows, windows typically spawn in the

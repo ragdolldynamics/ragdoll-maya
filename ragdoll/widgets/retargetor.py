@@ -24,6 +24,13 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname)).replace("\\", "/")
 
 
+def _tint_color(pixmap, color):
+    painter = QtGui.QPainter(pixmap)
+    painter.setCompositionMode(painter.CompositionMode_SourceIn)
+    painter.fillRect(pixmap.rect(), color)
+    painter.end()
+
+
 def _get_all_solver_size(registry):
     solvers = list(registry.view("SolverComponent"))
     solver_size = dict.fromkeys(solvers, 0)
@@ -63,12 +70,12 @@ class MarkerTreeModel(base.BaseItemModel):
         self._target_by_marker = dict()  # type: dict[cmdx.Node: set[cmdx.Node]]
         self._marker_by_solver = dict()  # type: dict[cmdx.Node: list[cmdx.Node]]
         self._dump = None
-        self._icons = {
-            "rdSolver": QtGui.QIcon(_resource("icons", "solver.png")),
-            "rdMarker_0": QtGui.QIcon(_resource("icons", "box.png")),
-            "rdMarker_1": QtGui.QIcon(_resource("icons", "sphere.png")),
-            "rdMarker_2": QtGui.QIcon(_resource("icons", "rigid.png")),
-            "rdMarker_4": QtGui.QIcon(_resource("icons", "mesh.png")),
+        self._pixmap_list = {
+            "rdSolver": QtGui.QPixmap(_resource("icons", "solver.png")),
+            "rdMarker_0": QtGui.QPixmap(_resource("icons", "box.png")),
+            "rdMarker_1": QtGui.QPixmap(_resource("icons", "sphere.png")),
+            "rdMarker_2": QtGui.QPixmap(_resource("icons", "rigid.png")),
+            "rdMarker_4": QtGui.QPixmap(_resource("icons", "mesh.png")),
         }
 
     def flags(self, index):
@@ -133,7 +140,7 @@ class MarkerTreeModel(base.BaseItemModel):
             # solver item
             solver_item = QtGui.QStandardItem()
             solver_item.setText("[%d] %s" % (solver_size, solver_name))
-            solver_item.setIcon(self._icons["rdSolver"])
+            solver_item.setIcon(self._pixmap_list["rdSolver"])
             solver_item.setData(solver, self.NodeRole)
             solver_item.setData(_natural_ind, self.NaturalSortingRole)
             self.appendRow(solver_item)
@@ -200,12 +207,16 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def _mk_row(self, marker_node, depth, target_node):
         name = marker_node.name()
-        icon = self._icons[
+        pixmap = self._pixmap_list[
             "rdMarker_%d" % int(marker_node["shapeType"])
         ]
+        pixmap = QtGui.QPixmap(pixmap)
+        color = QtGui.QColor.fromRgbF(*marker_node["color"])
+        _tint_color(pixmap, color)
+
         name_item = QtGui.QStandardItem()
         name_item.setText(name)
-        name_item.setIcon(icon)
+        name_item.setIcon(pixmap)
         name_item.setData(marker_node, self.NodeRole)
         name_item.setData(depth, self.DepthRole)
         name_item.setData(name, self.NameSortingRole)

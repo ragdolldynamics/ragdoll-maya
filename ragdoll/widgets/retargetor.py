@@ -70,44 +70,12 @@ class MarkerTreeModel(base.BaseItemModel):
             "rdMarker_2": QtGui.QIcon(_resource("icons", "rigid.png")),
             "rdMarker_4": QtGui.QIcon(_resource("icons", "mesh.png")),
         }
-        # self.__text_matching = False
 
     def flags(self, index):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.column() == 1:
             return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
-
-    # def findItems(self, text, flags=QtCore.Qt.MatchExactly, column=0):
-    #     self.__text_matching = True
-    #     result = super(MarkerTreeModel, self).findItems(text, flags, column)
-    #     self.__text_matching = False
-    #     return result
-    #
-    # def data(self, index, role=QtCore.Qt.DisplayRole):
-    #     # type: (QtCore.QModelIndex, int) -> typing.Any
-    #     if not index.isValid():
-    #         return
-    #
-    #     if index.parent().isValid() \
-    #             and index.column() == 0 \
-    #             and role == QtCore.Qt.DisplayRole \
-    #             and not self.__text_matching:
-    #         marker_node = index.data(self.NodeRole)
-    #         target_count = len(self._nodes[marker_node])
-    #         if target_count > 1:
-    #             return "[%d] %s" % (target_count, marker_node.name())
-    #
-    #     if role == QtCore.Qt.BackgroundRole:
-    #         if index.column() != 0:
-    #             index = self.index(index.row(), 0, index.parent())
-    #         natural_order = index.data(self.NaturalSortingRole)
-    #         if natural_order % 2:
-    #             return QtGui.QColor("red")
-    #         else:
-    #             return QtGui.QColor("blue")
-    #
-    #     return super(MarkerTreeModel, self).data(index, role)
 
     def setData(self, index, value, role=QtCore.Qt.DisplayRole):
         # type: (QtCore.QModelIndex, typing.Any, int) -> bool

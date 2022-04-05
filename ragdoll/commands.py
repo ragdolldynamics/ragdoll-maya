@@ -889,6 +889,10 @@ def create_pin_constraint(child, opts=None):
     """Create a new pin constraint for `child`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
 
+    opts = dict({
+        "location": constants.AnimationLocation,
+    }, **(opts or {}))
+
     solver = _find_solver(child)
     assert solver and solver.isA("rdSolver"), (
         "%s was not part of a solver" % child
@@ -896,13 +900,19 @@ def create_pin_constraint(child, opts=None):
 
     source_transform = child["src"].input(type=cmdx.kDagNode)
     source_name = source_transform.name(namespace=False)
+    source_tm = source_transform.transform(cmdx.sWorld)
 
-    if cmds.ragdollLicence(isNonCommercial=True, query=True):
-        # A nont commercial licence cannot read
-        # outputMatrix beyond 100 frames
-        source_tm = source_transform.transform(cmdx.sWorld)
-    else:
-        source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
+    if opts["location"] == constants.SimulationLocation:
+        if cmds.ragdollLicence(isNonCommercial=True, query=True):
+            # A nont commercial licence cannot read
+            # outputMatrix beyond 100 frames
+            log.info(
+                "Cannot create pin at simulation "
+                "with a non-commercial licence"
+            )
+            source_tm = source_transform.transform(cmdx.sWorld)
+        else:
+            source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
 
     name = internal.unique_name("%s_rPin" % source_name)
     shape_name = internal.shape_name(name)
@@ -927,6 +937,17 @@ def create_pin_constraint(child, opts=None):
 
         _take_ownership(mod, con, transform)
         _add_constraint(mod, con, solver)
+
+        mod.do_it()
+
+        if opts["location"] == constants.ConstrainedLocation:
+            con = cmds.parentConstraint(source_transform.path(),
+                                        transform.path(),
+                                        maintainOffset=False)
+
+            # Make way for pin constraint shape in Channel Box
+            con = cmdx.encode(con[0])
+            mod.set_attr(con["isHistoricallyInteresting"], False)
 
     return con
 
@@ -967,7 +988,7 @@ def reset_shape(marker):
         mod.set_attr(marker["shapeOffset"], geo.offset)
 
 
-def reset_constraint_frames(mod, marker, **opts):
+def reset_constraint_frames(mod, marker, opts=None):
     """Reset constraint frames
 
     Options:
@@ -975,9 +996,9 @@ def reset_constraint_frames(mod, marker, **opts):
 
     """
 
-    opts = dict(opts, **{
+    opts = dict({
         "symmetrical": True,
-    })
+    }, **(opts or {}))
 
     assert marker and isinstance(marker, cmdx.Node), (
         "%s was not a cmdx instance" % marker

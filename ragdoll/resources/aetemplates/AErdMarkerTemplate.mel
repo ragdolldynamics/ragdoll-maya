@@ -112,7 +112,8 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "fieldSeed";
             editorTemplate -addControl "fieldCentroids";
             editorTemplate -addControl "limitAutoOrient";
-            editorTemplate -addControl "useMeshIslands";
+            editorTemplate -label "Geometry Quantised Count" -addControl "inputGeometryQuantisedCount";
+            editorTemplate -label "Check Zero Area Triangles" -addControl "inputGeometryCheckZeroAreaTriangles";
 
             editorTemplate -addControl "offsetMatrix";
             editorTemplate -beginLayout "Constraint Frames" -collapse true;

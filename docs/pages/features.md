@@ -1,5 +1,0 @@
-- No pre-roll needed
-- No rigging needed
-- Rewind & Resume
-- Frameskip Protection
-- Cycle Protection

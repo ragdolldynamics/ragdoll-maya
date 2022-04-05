@@ -801,6 +801,7 @@
         "summary": "Softly constrain the position and orientation of a marker in worldspace",
         "description": "Create a new pin constraint between the selected marker and the world.",
         "options": [
+            "pinLocation"
         ]
     },
 

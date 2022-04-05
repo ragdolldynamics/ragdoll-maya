@@ -130,6 +130,24 @@ Stepped = 5
 Linear = 2
 Smooth = 4
 
+# Animation blend nodes
+# Because type checking against MFn.kBlendNodeBase doesn't work :(
+AnimBlendTypes = (
+    om.MFn.kBlendNodeAdditiveRotation,
+    om.MFn.kBlendNodeAdditiveScale,
+    om.MFn.kBlendNodeBoolean,
+    om.MFn.kBlendNodeDouble,
+    om.MFn.kBlendNodeDoubleAngle,
+    om.MFn.kBlendNodeDoubleLinear,
+    om.MFn.kBlendNodeEnum,
+    om.MFn.kBlendNodeFloat,
+    om.MFn.kBlendNodeFloatAngle,
+    om.MFn.kBlendNodeFloatLinear,
+    om.MFn.kBlendNodeInt16,
+    om.MFn.kBlendNodeInt32,
+    om.MFn.kBlendNodeTime,
+)
+
 history = dict()
 
 
@@ -2797,6 +2815,13 @@ class Plug(object):
             >>> cam["fClone"].read()
             5.6
 
+            # Can clone enum attributes
+            >>> cam["myEnum"] = Enum(fields=["a", "b", "c"])
+            >>> clone = cam["myEnum"].clone("cloneEnum")
+            >>> cam.addAttr(clone)
+            >>> fields = cam["cloneEnum"].fields()
+            >>> assert fields == ((0, "a"), (1, "b"), (2, "c")), fields
+
         """
 
         assert isinstance(self, Plug)
@@ -2844,22 +2869,7 @@ class Plug(object):
         )
 
         if isinstance(fn, om.MFnEnumAttribute):
-            kwargs["fields"] = []
-
-            for index in range(fn.getMax() + 1):
-                try:
-                    field = fn.fieldName(index)
-
-                except RuntimeError:
-                    # Indices may not be consecutive, e.g.
-                    # 0 = Off
-                    # 2 = Kinematic
-                    # 3 = Dynamic
-                    # (missing 1!)
-                    continue
-
-                else:
-                    kwargs["fields"].append((index, field))
+            kwargs["fields"] = self.fields()
 
         else:
             if hasattr(fn, "getMin") and fn.hasMin():
@@ -2885,6 +2895,10 @@ class Plug(object):
         return self._mplug.isArray
 
     @property
+    def isElement(self):
+        return self._mplug.isElement
+
+    @property
     def arrayIndices(self):
         if not self._mplug.isArray:
             raise TypeError("{} is not an array".format(self.path()))
@@ -2895,6 +2909,100 @@ class Plug(object):
     @property
     def isCompound(self):
         return self._mplug.isCompound
+
+    @property
+    def isChild(self):
+        return self._mplug.isChild
+
+    @property
+    def parent(self):
+        """Return the parent of this plug
+
+        Examples:
+            >>> node = createNode("transform", name="mynode")
+            >>> node["tz"].parent.plug() == node["translate"].plug()
+            True
+            >>> node["myArray"] = Double(array=True)
+            >>> node["myArray"][0].parent.plug() == node["myArray"].plug()
+            True
+            >>> node["visibility"].parent
+            Traceback (most recent call last):
+            ...
+            TypeError: |mynode.visibility is not a child or element
+
+        """
+        cls = self.__class__
+
+        if self._mplug.isElement:
+            return cls(self._node, self._mplug.array(), self._unit)
+
+        elif self._mplug.isChild:
+            return cls(self._node, self._mplug.parent(), self._unit)
+
+        else:
+            raise TypeError(
+                "%s is not a child or element" % self.path()
+            )
+
+    array = parent
+
+    def index(self):
+        """Return the index of this plug
+
+        Examples:
+            >>> node = createNode("transform", name="mynode")
+            >>> node["tz"].index()
+            2
+            >>> node["myArray"] = Double(array=True)
+            >>> node["myArray"].extend([2.0, 3.0])
+            >>> node["myArray"][1].index()
+            1
+            >>> node["visibility"].index()
+            Traceback (most recent call last):
+            ...
+            TypeError: |mynode.visibility is not a child or element
+
+        """
+        if self._mplug.isElement:
+            return self._mplug.logicalIndex()
+
+        elif self._mplug.isChild:
+            for index, plug in enumerate(self.parent):
+                if plug._mplug == self._mplug:
+                    return index
+
+        else:
+            raise TypeError(
+                "%s is not a child or element" % self.path()
+            )
+
+    def fields(self):
+        """Return fields of an Enum attribute, if any"""
+
+        fn = self.fn()
+
+        assert isinstance(fn, om.MFnEnumAttribute), (
+            "%s was not an enum attribute" % self.path()
+        )
+
+        fields = []
+
+        for index in range(fn.getMax() + 1):
+            try:
+                field = fn.fieldName(index)
+
+            except RuntimeError:
+                # Indices may not be consecutive, e.g.
+                # 0 = Off
+                # 2 = Kinematic
+                # 3 = Dynamic
+                # (missing 1!)
+                continue
+
+            else:
+                fields.append((index, field))
+
+        return tuple(fields)
 
     def nextAvailableIndex(self, startIndex=0):
         """Find the next unconnected element in an array plug
@@ -3172,6 +3280,88 @@ class Plug(object):
             other = other.connection(destination=False, plug=True)
 
         return False
+
+    def findAnimatedPlug(self):
+        """Return the plug currently controlling the animation for this plug
+
+        Sometimes a plug isn't directly connected to an animCurve, for example
+        if the plug is constrained or in an animation layer. This method tracks
+        down where we should apply any new animation.
+
+        Example:
+            >>> _new()
+            >>> node = createNode("transform")
+            >>> node["tx"].findAnimatedPlug().path() == node["tx"].path()
+            True
+
+            # Constraint
+            >>> node["tx"] = {0:1} # Dummy keys so a pairBlend is created
+            >>> parent = createNode("transform")
+            >>> _ = cmds.parentConstraint(str(parent), str(node))
+            >>> blend = ls(type="pairBlend")[0]
+            >>> animPlug = node["tx"].findAnimatedPlug().path()
+            >>> animPlug == blend["inTranslateX1"].path()
+            True
+
+            # Animation layers
+            >>> layer = encode(cmds.animLayer(at=node["tx"].path()))
+            >>> animPlug = node["tx"].findAnimatedPlug().path()
+            >>> animPlug == blend["inTranslateX1"].path()
+            True
+            >>> cmds.animLayer(str(layer), e=True, preferred=True)
+            >>> animBlend = ls(type="animBlendNodeBase")[0]
+            >>> animPlug = node["tx"].findAnimatedPlug().path()
+            >>> animPlug == animBlend["inputB"].path()
+            True
+
+            # Animation layer then constraint
+            >>> _new()
+            >>> node = createNode("transform")
+            >>> layer = encode(cmds.animLayer(at=node["tx"].path()))
+            >>> parent = createNode("transform")
+            >>> _ = cmds.parentConstraint(str(parent), str(node))
+            >>> animBlend = ls(type="animBlendNodeBase")[0]
+            >>> animPlug = node["tx"].findAnimatedPlug().path()
+            >>> animPlug == animBlend["inputA"].path()
+            True
+            >>> cmds.animLayer(str(layer), e=True, preferred=True)
+            >>> animPlug = node["tx"].findAnimatedPlug().path()
+            >>> animPlug == animBlend["inputB"].path()
+            True
+
+        """
+
+        plug = None
+        con = self.input(type=AnimBlendTypes + (MFn.kPairBlend,), plug=True)
+
+        while con is not None:
+            node = con.node()
+
+            if node.isA("pairBlend"):
+                plug = node[con.name().replace("out", "in") + "1"]
+
+            else:
+                # If we find a preferred anim layer the plug we want is inputB
+                layer = node.input(type="animLayer")
+                if layer and layer["preferred"] and not layer["lock"]:
+                    plug = node["inputB"]
+                    plug = plug[self.index()] if plug.isCompound else plug
+                    break
+
+                # Otherwise we want inputA
+                plug = node["inputA"]
+                plug = plug[self.index()] if plug.isCompound else plug
+
+            # Search for more pair blends or anim blends
+            con = plug.input(
+                type=AnimBlendTypes + (MFn.kPairBlend,),
+                plug=True
+            )
+
+        # If no animation layers or pair blends then plug is self
+        plug = plug if plug is not None else self
+
+        return plug
 
     def lock(self):
         """Convenience function for plug.locked = True
@@ -3767,14 +3957,15 @@ class Plug(object):
             """
 
             times, values = list(map(UiUnit(), values.keys())), values.values()
-            typ = _find_curve_type(self)
-            anim = self.input(type=typ)
+            plug = self.findAnimatedPlug()
+            typ = _find_curve_type(plug)
+            anim = plug.input(type=typ)
 
             if not anim:
                 anim = createNode(typ)
-                anim["output"] >> self
+                anim["output"] >> plug
 
-            anim.keys(times, values, tangents=Linear)
+            anim.keys(times, values, tangents=tangents)
 
     def write(self, value):
         if isinstance(value, dict) and __maya_version__ > 2015:
@@ -4019,6 +4210,7 @@ class Plug(object):
         array_indices = arrayIndices
         type_class = typeClass
         next_available_index = nextAvailableIndex
+        find_animated_plug = findAnimatedPlug
 
 
 class TransformationMatrix(om.MTransformationMatrix):
@@ -4892,6 +5084,9 @@ def _python_to_plug(value, plug):
 
     # Native Maya types
 
+    elif isinstance(value, om.MObject):
+        plug._mplug.setMObject(value)
+
     elif isinstance(value, om1.MObject):
         node = _encode1(plug._node.path())
         shapeFn = om1.MFnDagNode(node)
@@ -5018,12 +5213,19 @@ def _python_to_mod(value, plug, mod):
         >>> int(node["ty"].read())
         10
 
+        # Support for animation keys
+        >>> mod.set_attr(node["ty"], {1: 0.0, 5: 2.0, 10: 0.0})
+        >>> mod.doIt()
+        >>> int(node["ty"].read(time=time(5)))
+        2
+
     """
 
     assert isinstance(plug, Plug), "plug must be of type cmdx.Plug"
 
     if isinstance(value, dict) and __maya_version__ > 2015:
-        times, values = map(UiUnit(), value.keys()), value.values()
+        times, values = list(map(time, value.keys())), value.values()
+        plug = plug.findAnimatedPlug()
         curve_typ = _find_curve_type(plug)
         curve = plug.input(type=curve_typ)
 
@@ -5282,6 +5484,7 @@ sin = math.sin
 cos = math.cos
 tan = math.tan
 pi = math.pi
+sqrt = math.sqrt
 
 
 def time(frame):
@@ -6750,7 +6953,7 @@ def getAttr(attr, type=None, time=None):
     return attr.read(time=time)
 
 
-def setAttr(attr, value, type=None):
+def setAttr(attr, value, type=None, undoable=False):
     """Write `value` to `attr`
 
     Arguments:
@@ -6764,12 +6967,19 @@ def setAttr(attr, value, type=None):
 
     """
 
+    if type == "matrix":
+        value = Matrix4(value)
+
     if isinstance(attr, str):
         node, attr = attr.rsplit(".", 1)
         node = encode(node)
         attr = node[attr]
 
-    attr.write(value)
+    if undoable:
+        with DGModifier() as mod:
+            mod.setAttr(attr, value)
+    else:
+        attr.write(value)
 
 
 def addAttr(node,

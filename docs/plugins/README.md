@@ -1,3 +1,0 @@
-Mkdocs uses `pkg_resources` for a plug-in system. Dumb. It means you need your plug-in to be a pip package and for it to be installed using pip. Pip will then go ahead and make this garbage `.dist-info` folder with garbage information that mkdocs then uses to figure out what plug-ins are available and what to call them. Rather than just using the name of the package itself and looking at `PYTHONPATH` like a normal person. Have you got any idea of how convoluted the process was to figure out this out? Hah!
-
-In any case, we use this plug-in to preprocess the markdown, prior to it becoming HTML, to take into account the Ragdoll Python package and expand various macros, like `{{ menu.all }}`.

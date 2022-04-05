@@ -407,13 +407,13 @@ def _on_noncommercial_export(clientData=None):
     """Called on attempted export from non-commercial version"""
 
     msg = (
-        "Export using a <b>Complete</b> or <b>Non-commercial</b> licence "
-        "is limited to 10 markers."
+        "Export is a Ragdoll Unlimited feature, and is limited to a maximum of"
+        "10 markers using a <b>Complete</b> and <b>Non-commercial</b> licence."
     )
 
     def deferred():
         ui.notify(
-            "Non-commercial export", msg, persistent=True, location="menu"
+            "Unlimited export", msg, persistent=True, location="menu"
         )
 
     cmds.evalDeferred(deferred)
@@ -788,7 +788,7 @@ def install_menu():
         item("distanceConstraint",
              create_distance_constraint, label="Distance")
         item("pinConstraint",
-             create_pin_constraint, label="Pin")
+             create_pin_constraint, create_pin_constraint_options, label="Pin")
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -1284,7 +1284,10 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    selection = solvers_from_selection(selection)
+    selection = markers_from_selection(selection)
+
+    if not selection:
+        selection = solvers_from_selection(selection)
 
     if not selection:
         selection = cmdx.ls(type="rdSolver")
@@ -1801,6 +1804,10 @@ def create_fixed_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_pin_constraint(selection=None, **opts):
+    opts = dict({
+        "location": _opt("pinLocation", opts),
+    })
+
     selection = selection or cmdx.sl()
 
     cons = []
@@ -1814,7 +1821,7 @@ def create_pin_constraint(selection=None, **opts):
                 "%s wasn't a marker" % selection[0]
             )
 
-        con = commands.create_pin_constraint(a)
+        con = commands.create_pin_constraint(a, opts)
         cons += [con.parent().path()]
 
     cmds.select(cons)
@@ -3267,6 +3274,10 @@ def snap_markers_options(*args):
 
 def retarget_marker_options(*args):
     return _Window("retargetMarker", retarget_marker)
+
+
+def create_pin_constraint_options(*args):
+    return _Window("pinConstraint", create_pin_constraint)
 
 
 def toggle_channel_box_attributes_options(*args):

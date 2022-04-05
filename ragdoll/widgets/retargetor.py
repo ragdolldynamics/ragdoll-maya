@@ -288,7 +288,22 @@ class MarkerTreeModel(base.BaseItemModel):
         pass
 
 
-class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
+class ReadOnlyEditorDelegate(QtWidgets.QStyledItemDelegate):
+
+    def updateEditorGeometry(self, editor, option, index):
+        """
+        Args:
+            editor (QtWidgets.QWidget):
+            option (QtWidgets.QStyleOptionViewItem):
+            index (QtCore.QModelIndex):
+        """
+        editor.setReadOnly(True)  # yes, should be an instance of QLineEdit
+        super(ReadOnlyEditorDelegate, self).updateEditorGeometry(
+            editor, option, index
+        )
+
+
+class MarkerIndentDelegate(ReadOnlyEditorDelegate):
 
     def __init__(self, parent):
         super(MarkerIndentDelegate, self).__init__(parent=parent)
@@ -299,14 +314,9 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         self._enabled = value
 
     def updateEditorGeometry(self, editor, option, index):
-        """
-        Args:
-            editor (QtWidgets.QWidget):
-            option (QtWidgets.QStyleOptionViewItem):
-            index (QtCore.QModelIndex):
-        """
-        editor.setReadOnly(True)  # yes, should be an instance of QLineEdit
-
+        super(MarkerIndentDelegate, self).updateEditorGeometry(
+            editor, option, index
+        )
         if self._enabled and index.column() == 0:
             depth = index.data(MarkerTreeModel.DepthRole)
             if depth:
@@ -321,9 +331,6 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
                 offset = self._indent * depth
                 geom.adjust(offset, 0, 0, 0)
                 editor.setGeometry(geom)
-                return
-        super(MarkerIndentDelegate, self
-              ).updateEditorGeometry(editor, option, index)
 
     def paint(self, painter, option, index):
         if self._enabled and index.column() == 0:
@@ -414,8 +421,10 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header = view.header()
         header.setSectionResizeMode(0, header.ResizeToContents)
 
+        readonly_delegate = ReadOnlyEditorDelegate(self)
         indent_delegate = MarkerIndentDelegate(self)
         view.setItemDelegateForColumn(0, indent_delegate)
+        view.setItemDelegateForColumn(1, readonly_delegate)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

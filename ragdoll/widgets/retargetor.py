@@ -73,6 +73,8 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def flags(self, index):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        if index.parent().isValid():
+            base_flags |= QtCore.Qt.ItemIsEditable
         if index.column() == 1:
             return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
@@ -81,6 +83,8 @@ class MarkerTreeModel(base.BaseItemModel):
         # type: (QtCore.QModelIndex, typing.Any, int) -> bool
         if not index.isValid():
             return False
+        if role == QtCore.Qt.EditRole:
+            return True
         if role == QtCore.Qt.CheckStateRole:
             marker_index = self.index(index.row(), 0, index.parent())
             marker_node = marker_index.data(self.NodeRole)

@@ -650,10 +650,16 @@ QAbstractItemView:focus {{
 }}
 
 QTreeView::item {{
-    padding: {padding};
-    padding-left: {padding_left};
-    padding-right: {padding_right};
     border: 0px;
+    padding: {padding};
+    padding-right: {padding_right}px;
+    padding-left: {padding_left}px;  /* more space for icon and indicator */
+}}
+QTreeView::icon {{
+    right: {icon_right}px;
+}}
+QTreeView::indicator {{
+    right: {indicator_right}px;
 }}
 
 /* note: transparent background color is really hard to look good */
@@ -697,12 +703,6 @@ QTreeView::branch:open::has-children::has-siblings:hover {{
     image: url({branch_down_on});
 }}
 
-QTreeView::item:!first {{
-    padding-left: {item_padding_left}px;
-}}
-QTreeView::indicator {{
-    right: {indicator_right}px;
-}}
 QTreeView::indicator:unchecked {{
     image: url({indicator_unchecked});
 }}
@@ -712,8 +712,10 @@ QTreeView::indicator:checked {{
 
 """.format(
     padding="%dpx" % px(3),
-    padding_left="%dpx" % px(1),
-    padding_right="%dpx" % px(10),
+    padding_right=px(10),
+    padding_left=px(8),
+    icon_right=px(2),
+    indicator_right=px(6),
     primary="#9be7ff",
     secondary="#64b5f6",
     on_primary="#000000",
@@ -724,8 +726,6 @@ QTreeView::indicator:checked {{
     branch_down_on=_resource("ui", "caret-down-fill-on.svg"),
     branch_right=_resource("ui", "caret-right-fill.svg"),
     branch_right_on=_resource("ui", "caret-right-fill-on.svg"),
-    item_padding_left=px(12),
-    indicator_right=px(10),
     indicator_checked=_resource("ui", "square-check.svg"),
     indicator_unchecked=_resource("ui", "square.svg"),
 )

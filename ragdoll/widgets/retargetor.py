@@ -287,6 +287,33 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
     def set_enabled(self, value):
         self._enabled = value
 
+    def updateEditorGeometry(self, editor, option, index):
+        """
+        Args:
+            editor (QtWidgets.QWidget):
+            option (QtWidgets.QStyleOptionViewItem):
+            index (QtCore.QModelIndex):
+        """
+        editor.setReadOnly(True)  # yes, should be an instance of QLineEdit
+
+        if self._enabled and index.column() == 0:
+            depth = index.data(MarkerTreeModel.DepthRole)
+            if depth:
+                self.initStyleOption(option, index)
+                style = option.widget.style()
+                geom = style.subElementRect(
+                    QtWidgets.QStyle.SE_ItemViewItemText,
+                    option,
+                    option.widget
+                )
+
+                offset = self._indent * depth
+                geom.adjust(offset, 0, 0, 0)
+                editor.setGeometry(geom)
+                return
+        super(MarkerIndentDelegate, self
+              ).updateEditorGeometry(editor, option, index)
+
     def paint(self, painter, option, index):
         if self._enabled and index.column() == 0:
             depth = index.data(MarkerTreeModel.DepthRole)

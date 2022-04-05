@@ -212,7 +212,7 @@ class MarkerTreeModel(base.BaseItemModel):
         ]
         pixmap = QtGui.QPixmap(pixmap)
         color = QtGui.QColor.fromRgbF(*marker_node["color"])
-        _tint_color(pixmap, color)
+        _tint_color(pixmap, color.lighter())
 
         name_item = QtGui.QStandardItem()
         name_item.setText(name)
@@ -758,8 +758,8 @@ QTreeView::indicator:checked {{
     padding_left=px(8),
     icon_right=px(2),
     indicator_right=px(6),
-    primary="#9be7ff",
-    secondary="#64b5f6",
+    primary="#6CA6CC",
+    secondary="#5285A6",
     on_primary="#000000",
     on_secondary="#000000",
     background="#2B2B2B",

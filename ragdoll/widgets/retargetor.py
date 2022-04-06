@@ -119,9 +119,7 @@ class MarkerTreeModel(base.BaseItemModel):
         column = not index.column() if self.flipped else index.column()
         key = ["marker", "dest"][column]
 
-        if role == QtCore.Qt.DisplayRole \
-                or role == QtCore.Qt.EditRole \
-                or role == self.NameSortingRole:
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
             if key == "marker":
                 return conn.marker.name()
             if key == "dest":
@@ -150,6 +148,12 @@ class MarkerTreeModel(base.BaseItemModel):
                 return conn.level
             if key == "dest":
                 return
+
+        if role == self.NameSortingRole:  # node path affects alt row coloring
+            if key == "marker":
+                return conn.marker.name()
+            if key == "dest":
+                return "" if conn.dest is None else conn.dest.name()
 
         if role == self.NaturalSortingRole:
             if key == "marker":
@@ -198,8 +202,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
             path_list = []
             for _c in _s.conn_list:
-                path = _c.marker.shortest_path() if key == "marker" else \
-                    "" if not _c.dest else _c.dest.shortest_path()
+                # node path affects alt row coloring
+                path = _c.marker.name() if key == "marker" else \
+                    "" if not _c.dest else _c.dest.name()
                 if path not in path_list:
                     path_list.append(path)
 
@@ -474,7 +479,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
             proxy = self.model()
             # column is always 0.
             node = proxy.data(index, MarkerTreeModel.NodeRole)
-            path = node.shortest_path() if node else ""
+            path = node.name() if node else ""
             try:
                 ordered_index = self._current_order.index(path)
             except ValueError:

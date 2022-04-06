@@ -25,13 +25,6 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname)).replace("\\", "/")
 
 
-def _tint_color(pixmap, color):
-    painter = QtGui.QPainter(pixmap)
-    painter.setCompositionMode(painter.CompositionMode_SourceIn)
-    painter.fillRect(pixmap.rect(), color)
-    painter.end()
-
-
 def _get_all_solver_size(registry):
     solvers = list(registry.view("SolverComponent"))
     solver_size = dict.fromkeys(solvers, 0)
@@ -62,13 +55,15 @@ class _Solver(object):
 
 
 class _Connection(object):
-    def __init__(self, marker, dest, level, natural, icon_m, icon_d, check_state):
+    def __init__(self, marker, dest, level, natural, icon_m, icon_d,
+                 dot_color, check_state):
         self.marker = marker
         self.dest = dest
         self.level = level
         self.natural = natural
         self.icon_m = icon_m
         self.icon_d = icon_d
+        self.dot_color = dot_color
         self.check_state = check_state
 
 
@@ -79,6 +74,7 @@ class MarkerTreeModel(base.BaseItemModel):
     LevelRole = QtCore.Qt.UserRole + 11
     NameSortingRole = QtCore.Qt.UserRole + 12
     NaturalSortingRole = QtCore.Qt.UserRole + 13
+    ColorDotRole = QtCore.Qt.UserRole + 14
 
     Headers = [
         "Name",
@@ -158,6 +154,12 @@ class MarkerTreeModel(base.BaseItemModel):
         if role == self.NaturalSortingRole:
             if key == "marker":
                 return conn.natural
+            if key == "dest":
+                return
+
+        if role == self.ColorDotRole:
+            if key == "marker":
+                return conn.dot_color
             if key == "dest":
                 return
 
@@ -322,12 +324,10 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def _mk_conn(self, marker, dest, level, natural, check_state=None):
         check_state = check_state or QtCore.Qt.Unchecked
-        # marker icon
+        # marker icon/color
         _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
-        _pix = QtGui.QPixmap(_pix)
-        _color = QtGui.QColor.fromRgbF(*marker["color"])
-        _tint_color(_pix, _color.lighter())
         icon_m = QtGui.QIcon(_pix)
+        dot_color = QtGui.QColor.fromRgbF(*marker["color"])
 
         # dest icon
         icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
@@ -337,6 +337,7 @@ class MarkerTreeModel(base.BaseItemModel):
             dest=dest,
             icon_m=icon_m,
             icon_d=icon_d,
+            dot_color=dot_color,
             level=level,
             natural=natural,
             check_state=check_state if dest else None,
@@ -415,35 +416,56 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         super(MarkerIndentDelegate, self).__init__(parent=parent)
         self._enabled = False
         self._indent = 28
+        self._dot_size = 20
 
     def set_enabled(self, value):
         self._enabled = value
 
-    def paint(self, painter, option, index):
+    def _compute(self, index):
+        dot_color = index.data(MarkerTreeModel.ColorDotRole)
+        level = 0
         if self._enabled and index.column() == 0:
-            level = index.data(MarkerTreeModel.LevelRole)
-            if level:
-                offset = self._indent * level
-                # paint the gap after offset
-                _width = option.rect.width()
-                _rect = QtCore.QRect(option.rect)
-                _rect.adjust(-offset, 0, -(_width - offset), 0)
-                style_proxy = option.widget.style().proxy()
-                style_proxy.drawPrimitive(
-                    QtWidgets.QStyle.PE_PanelItemViewItem,
-                    option,
-                    painter,
-                    option.widget
-                )
-                # offset item
-                option.rect.adjust(offset, 0, 0, 0)
+            level = index.data(MarkerTreeModel.LevelRole) or level
+        offset = self._indent * level + (self._dot_size if dot_color else 0)
+        return offset, dot_color
+
+    def paint(self, painter, option, index):
+        offset, dot_color = self._compute(index)
+        if offset:
+            # paint the gap after offset
+            _width = option.rect.width()
+            _rect = QtCore.QRect(option.rect)
+            _rect.adjust(-offset, 0, -(_width - offset), 0)
+            style_proxy = option.widget.style().proxy()
+            style_proxy.drawPrimitive(
+                QtWidgets.QStyle.PE_PanelItemViewItem,
+                option,
+                painter,
+                option.widget
+            )
+            # offset item
+            option.rect.adjust(offset, 0, 0, 0)
+
         super(MarkerIndentDelegate, self).paint(painter, option, index)
+        if dot_color:
+            pos_x = option.rect.x() - 18
+            pos_y = option.rect.center().y() - 9
+            border = 2
+            inner = self._dot_size - border * 2
+            painter.save()
+            painter.setRenderHint(painter.Antialiasing)
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(QtGui.QColor("#404040"))
+            painter.drawEllipse(pos_x, pos_y, self._dot_size, self._dot_size)
+            painter.setBrush(dot_color)
+            painter.drawEllipse(pos_x + border, pos_y + border, inner, inner)
+            painter.restore()
 
     def sizeHint(self, option, index):
         size = super(MarkerIndentDelegate, self).sizeHint(option, index)
-        if self._enabled and index.column() == 0:
-            level = index.data(MarkerTreeModel.LevelRole) or 0
-            size.setWidth(size.width() + (self._indent * level))
+        offset, _ = self._compute(index)
+        if offset:
+            size.setWidth(size.width() + offset)
         return size
 
 
@@ -522,7 +544,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(0, header.ResizeToContents)
 
         indent_delegate = MarkerIndentDelegate(self)
-        view.setItemDelegateForColumn(0, indent_delegate)
+        view.setItemDelegate(indent_delegate)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

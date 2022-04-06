@@ -567,6 +567,10 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._delegate = indent_delegate
 
     @property
+    def view(self):
+        return self._view
+
+    @property
     def proxy(self):
         return self._proxy
 
@@ -575,7 +579,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         return self._model
 
     def refresh(self):
-        # todo: collect current selected items
         self._model.refresh()
         self._view.expandToDepth(1)
 
@@ -732,6 +735,12 @@ class RetargetWindow(QtWidgets.QMainWindow):
             "SortHierarchy": QtWidgets.QPushButton(),
         }
 
+        timers = {
+            "OnSearched": QtCore.QTimer(self),
+        }
+
+        timers["OnSearched"].setSingleShot(True)
+
         widgets["SearchBar"].setClearButtonEnabled(True)
         widgets["Cleanup"].setObjectName("CleanupButton")
 
@@ -785,11 +794,13 @@ class RetargetWindow(QtWidgets.QMainWindow):
         widgets["SortHierarchy"].toggled.connect(self.on_sort_marker_by_hierarchy)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
-        widgets["SearchBar"].textChanged.connect(self.on_searched)
+        widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
         widgets["Cleanup"].clicked.connect(self.on_cleanup_clicked)
+        timers["OnSearched"].timeout.connect(self.on_searched)
 
         self._panels = panels
         self._widgets = widgets
+        self._timers = timers
 
         self.setCentralWidget(panels["Central"])
         self.setStyleSheet(_treeview_style_sheet + _sidebar_style_sheet)
@@ -839,9 +850,13 @@ class RetargetWindow(QtWidgets.QMainWindow):
             self._widgets["SearchBar"].setPlaceholderText("Find markers..")
             self._widgets["MarkerView"].flip(False)
 
-    def on_searched(self, text):
-        proxy = self._widgets["MarkerView"].proxy
-        proxy.setFilterRegExp(text)
+    def on_searched_defer(self):
+        self._timers["OnSearched"].start(200)
+
+    def on_searched(self):
+        text = self._widgets["SearchBar"].text()
+        self._widgets["MarkerView"].proxy.setFilterRegExp(text)
+        self._widgets["MarkerView"].view.expandToDepth(1)
 
     def enterEvent(self, event):
         super(RetargetWindow, self).enterEvent(event)

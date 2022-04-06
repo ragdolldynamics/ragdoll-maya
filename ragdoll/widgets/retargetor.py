@@ -53,14 +53,23 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
     return transform.shortest_path() if has_same_size else transform.name()
 
 
-_Solver = namedtuple(
-    "_Solver",
-    ["solver", "size", "ui_name", "conn_list"]
-)
-_Connection = namedtuple(
-    "_Connection",
-    ["marker", "dest", "level", "natural", "icon_m", "icon_d", "check_state"]
-)
+class _Solver(object):
+    def __init__(self, solver, size, ui_name, conn_list):
+        self.solver = solver
+        self.size = size
+        self.ui_name = ui_name
+        self.conn_list = conn_list
+
+
+class _Connection(object):
+    def __init__(self, marker, dest, level, natural, icon_m, icon_d, check_state):
+        self.marker = marker
+        self.dest = dest
+        self.level = level
+        self.natural = natural
+        self.icon_m = icon_m
+        self.icon_d = icon_d
+        self.check_state = check_state
 
 
 class MarkerTreeModel(base.BaseItemModel):
@@ -284,76 +293,72 @@ class MarkerTreeModel(base.BaseItemModel):
                 )
                 self._internal.append(the_solver)
 
-            # marker icon
-            _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
-            _pix = QtGui.QPixmap(_pix)
-            _color = QtGui.QColor.fromRgbF(*marker["color"])
-            _tint_color(_pix, _color.lighter())
-            icon_m = QtGui.QIcon(_pix)
-
-            # dest icon
-            icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
-
-            conn = _Connection(
-                marker=marker,
-                dest=dest,
-                icon_m=icon_m,
-                icon_d=icon_d,
-                level=level,
-                natural=_i,
-                check_state=QtCore.Qt.Checked,
-            )
+            conn = self._mk_conn(marker, dest, level, _i)
             the_solver.conn_list.append(conn)
 
-    def append_dest(self, marker_node, target_node):
-        target_set = self._target_by_marker[marker_node]
-        # Marker node must already been added into this model, so KeyError
-        # shouldn't raise.
-        # If we ever implement "target removal" feature, make sure marker
-        # still be kept in a row with empty target column.
-        marker_items = self.findItems(
-            marker_node.name(),
-            QtCore.Qt.MatchExactly | QtCore.Qt.MatchRecursive
+    def _mk_conn(self, marker, dest, level, natural):
+        # marker icon
+        _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
+        _pix = QtGui.QPixmap(_pix)
+        _color = QtGui.QColor.fromRgbF(*marker["color"])
+        _tint_color(_pix, _color.lighter())
+        icon_m = QtGui.QIcon(_pix)
+
+        # dest icon
+        icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
+
+        conn = _Connection(
+            marker=marker,
+            dest=dest,
+            icon_m=icon_m,
+            icon_d=icon_d,
+            level=level,
+            natural=natural,
+            check_state=QtCore.Qt.Checked if dest else None,
         )
-        # Must have at least one marker item, even if it doesn't have any
-        # target would have paired with an empty target column
-        assert marker_items
+        return conn
 
-        if target_node in target_set:
-            # Ensure target is checked
-            for marker_item in marker_items:
-                index = marker_item.index().siblingAtColumn(1)
-                if index.data(self.NodeRole) == target_node:
-                    self.setData(
-                        index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole
-                    )
-                    break
-        else:
-            if len(target_set):
-                # copy depth, naturalOrder from the same marker in other row
-                marker_sibling = marker_items[-1]  # type: QtGui.QStandardItem
-                level = marker_sibling.data(self.LevelRole)
-                natural = marker_sibling.data(self.NaturalSortingRole)
+    def _check_conn_by_row(self, solver_row, conn_row):
+        solver_index = self.index(solver_row, 0)
+        conn_index = self.index(conn_row, 1, solver_index)
+        self.setData(conn_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
 
-                marker_item, target_item = self._mk_row(
-                    marker_node, level, target_node
-                )
-                marker_item.setData(natural, self.NaturalSortingRole)
-                solver_item = marker_sibling.parent()
-                solver_item.insertRow(
-                    marker_sibling.row(), [marker_item, target_item]
-                )
-            else:
-                target_item = self._mk_target_item(target_node)
-                marker_item = marker_items[0]  # type: QtGui.QStandardItem
-                marker_item.appendColumn([target_item])
+    def append_dest(self, marker, dest):
+        marker_matched = False
+        index_matched = None
+        ref = None
+        for x, _s in enumerate(self._internal):
+            for y, _c in enumerate(_s.conn_list):
+                if _c.marker != marker:
+                    continue
+                marker_matched = True
+                index_matched = y
+                ref = _c
 
-            # Ensure new added target is checked
-            self.setData(
-                target_item.index(),
-                QtCore.Qt.Checked,
-                QtCore.Qt.CheckStateRole
-            )
+                if _c.dest is None:
+                    # plug dest into connection
+                    _c.dest = dest
+                    _c.icon_d = QtGui.QIcon(":/%s" % dest.type())
+                    self._check_conn_by_row(x, y)
+                    return
+
+                elif _c.dest == dest:
+                    # already in model, ensure checked
+                    self._check_conn_by_row(x, y)
+                    return
+
+            if marker_matched:
+                # new connection
+                # get level, natural from other connection to make a new one
+                new_conn = self._mk_conn(marker, dest, ref.level, ref.natural)
+                _s.conn_list.insert(index_matched, new_conn)
+                solver_item = self.item(x, 0)
+                solver_item.setRowCount(solver_item.rowCount() + 1)
+                self._check_conn_by_row(x, index_matched)
+                return
+
+        # should not happen.
+        raise Exception("No matched marker found in model.")
 
     def remove_unchecked(self):
         pass

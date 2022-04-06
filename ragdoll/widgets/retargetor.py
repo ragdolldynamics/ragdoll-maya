@@ -386,7 +386,22 @@ class MarkerTreeModel(base.BaseItemModel):
         raise Exception("No matched marker found in model.")
 
     def remove_unchecked(self):
-        pass
+        for x, _s in enumerate(self._internal):
+            solver_item = self.item(x, 0)
+            new_conn_list = [
+                _c for _c in _s.conn_list
+                if _c.check_state == QtCore.Qt.Checked
+            ]
+            for _c in _s.conn_list:
+                if _c.check_state != QtCore.Qt.Checked:
+                    if not any(n.marker == _c.marker for n in new_conn_list):
+                        _c.dest = None
+                        _c.icon_d = None
+                        _c.check_state = None
+                        new_conn_list.append(_c)
+
+            _s.conn_list = new_conn_list
+            solver_item.setRowCount(len(_s.conn_list))
 
 
 class ReadOnlyEditorDelegate(QtWidgets.QStyledItemDelegate):
@@ -786,6 +801,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
     def on_cleanup_clicked(self):
         self._widgets["MarkerView"].model.remove_unchecked()
+        self._widgets["MarkerView"].proxy.invalidate()
 
     def on_sorting_toggled(self, _):
         sender = self.sender()

@@ -87,8 +87,8 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def __init__(self, *args, **kwargs):
         super(MarkerTreeModel, self).__init__(*args, **kwargs)
+        self.flipped = False
         self._dump = None
-        self._flipped = False
         self._internal = []  # type: list[_Solver]
         self._pixmap_list = {
             "rdSolver": QtGui.QPixmap(_resource("icons", "solver.png")),
@@ -102,8 +102,8 @@ class MarkerTreeModel(base.BaseItemModel):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.parent().isValid():
             base_flags |= QtCore.Qt.ItemIsEditable
-        if index.column() == 1:
-            return base_flags | QtCore.Qt.ItemIsUserCheckable
+            if index.column() == (0 if self.flipped else 1):
+                return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -117,7 +117,7 @@ class MarkerTreeModel(base.BaseItemModel):
         solver_repr = self._internal[solver_index]
         conn = solver_repr.conn_list[index.row()]  # type: _Connection
 
-        column = not index.column() if self._flipped else index.column()
+        column = not index.column() if self.flipped else index.column()
         key = ["marker", "dest"][column]
 
         if role == QtCore.Qt.DisplayRole \
@@ -168,7 +168,7 @@ class MarkerTreeModel(base.BaseItemModel):
             solver_repr = self._internal[solver_index]
             conn = solver_repr.conn_list[index.row()]  # type: _Connection
 
-            column = not index.column() if self._flipped else index.column()
+            column = not index.column() if self.flipped else index.column()
             key = ["marker", "dest"][column]
 
             if key == "marker":
@@ -188,10 +188,6 @@ class MarkerTreeModel(base.BaseItemModel):
     def sync(self):
         self._dump = json.loads(cmds.ragdollDump())
         self._dump.pop("info")  # for comparing on `enterEvent`
-
-    def flip(self, state):
-        self._flipped = state
-        # self.modelReset.emit()
 
     def refresh(self):
         self.reset()
@@ -322,9 +318,10 @@ class MarkerTreeModel(base.BaseItemModel):
         return conn
 
     def _check_conn_by_row(self, solver_row, conn_row):
+        dest_col = 0 if self.flipped else 1
         solver_index = self.index(solver_row, 0)
-        conn_index = self.index(conn_row, 1, solver_index)
-        self.setData(conn_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
+        dest_index = self.index(conn_row, dest_col, solver_index)
+        self.setData(dest_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
 
     def append_dest(self, marker, dest):
         marker_matched = False
@@ -580,14 +577,14 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             cmds.select(selection)
 
         def on_manipulate():
-            _select_node(0)
+            _select_node(1 if self._model.flipped else 0)
             cmds.setToolTo("ShowManips")
 
         def on_select_marker():
-            _select_node(0)
+            _select_node(1 if self._model.flipped else 0)
 
         def on_select_dest():
-            _select_node(1)
+            _select_node(0 if self._model.flipped else 1)
 
         def on_append_dest():
             valid_dest_list = [
@@ -595,10 +592,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 for node in cmdx.selection()
                 if node.isA(cmdx.kDagNode)
             ]
+            marker_col = 1 if self._model.flipped else 0
 
             for i in self._view.selectedIndexes():
                 i = self._proxy.mapToSource(i)
-                if not i.parent().isValid() or i.column() != 0:
+                if not i.parent().isValid() or i.column() != marker_col:
                     continue
                 marker_node = i.data(MarkerTreeModel.NodeRole)
                 for dest_node in valid_dest_list:
@@ -629,7 +627,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._model.sync()
 
     def flip(self, state):
-        self._model.flip(state)
+        self._model.flipped = state
         self._proxy.invalidate()
 
     def set_sort_by_name(self, ascending):

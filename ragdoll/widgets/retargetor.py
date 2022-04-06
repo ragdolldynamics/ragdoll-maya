@@ -598,13 +598,30 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             ]
             marker_col = 1 if self._model.flipped else 0
 
+            parsed_indexes = []
             for i in self._view.selectedIndexes():
                 i = self._proxy.mapToSource(i)
                 if not i.parent().isValid() or i.column() != marker_col:
                     continue
                 marker_node = i.data(MarkerTreeModel.NodeRole)
                 for dest_node in valid_dest_list:
-                    self._model.append_dest(marker_node, dest_node)
+                    _index = self._model.append_dest(marker_node, dest_node)
+                    if _index:
+                        parsed_indexes.append(_index)
+
+            self._proxy.invalidate()
+            # select all processed
+            self._view.clearSelection()
+            sele_model = self._view.selectionModel()
+            for _index in parsed_indexes:
+                dest_index = self._proxy.mapFromSource(_index)
+                marker_index = self._proxy.index(
+                    dest_index.row(),
+                    marker_col,
+                    dest_index.parent()
+                )
+                sele_model.select(marker_index, sele_model.Select)
+                sele_model.select(dest_index, sele_model.Select)
 
         manipulate.triggered.connect(on_manipulate)
         select_marker.triggered.connect(on_select_marker)

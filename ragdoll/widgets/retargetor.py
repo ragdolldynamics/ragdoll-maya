@@ -1,6 +1,7 @@
 import os
 import json
 import typing
+from collections import namedtuple
 from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
@@ -52,11 +53,21 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
     return transform.shortest_path() if has_same_size else transform.name()
 
 
+_Solver = namedtuple(
+    "_Solver",
+    ["solver", "size", "ui_name", "conn_list"]
+)
+_Connection = namedtuple(
+    "_Connection",
+    ["marker", "dest", "level", "natural", "icon_m", "icon_d", "check_state"]
+)
+
+
 class MarkerTreeModel(base.BaseItemModel):
     target_toggled = QtCore.Signal(cmdx.Node, cmdx.Node, bool)
 
     NodeRole = QtCore.Qt.UserRole + 10
-    DepthRole = QtCore.Qt.UserRole + 11
+    LevelRole = QtCore.Qt.UserRole + 11
     NameSortingRole = QtCore.Qt.UserRole + 12
     NaturalSortingRole = QtCore.Qt.UserRole + 13
 
@@ -67,9 +78,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def __init__(self, *args, **kwargs):
         super(MarkerTreeModel, self).__init__(*args, **kwargs)
-        self._target_by_marker = dict()  # type: dict[cmdx.Node: set[cmdx.Node]]
-        self._marker_by_solver = dict()  # type: dict[cmdx.Node: list[cmdx.Node]]
         self._dump = None
+        self._flipped = False
+        self._internal = []  # type: list[_Solver]
         self._pixmap_list = {
             "rdSolver": QtGui.QPixmap(_resource("icons", "solver.png")),
             "rdMarker_0": QtGui.QPixmap(_resource("icons", "box.png")),
@@ -86,68 +97,129 @@ class MarkerTreeModel(base.BaseItemModel):
             return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-        # type: (QtCore.QModelIndex, typing.Any, int) -> bool
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        # type: (QtCore.QModelIndex, int) -> typing.Any
         if not index.isValid():
             return False
-        if role == QtCore.Qt.EditRole:
-            return True
+        if not index.parent().isValid():
+            return super(MarkerTreeModel, self).data(index, role)
+
+        solver_index = index.parent().row()
+        solver_repr = self._internal[solver_index]
+        conn = solver_repr.conn_list[index.row()]  # type: _Connection
+
+        column = not index.column() if self._flipped else index.column()
+        key = ["marker", "dest"][column]
+
+        if role == QtCore.Qt.DisplayRole \
+                or role == QtCore.Qt.EditRole \
+                or role == self.NameSortingRole:
+            if key == "marker":
+                return conn.marker.name()
+            if key == "dest":
+                return "" if conn.dest is None else conn.dest.name()
+
+        if role == QtCore.Qt.DecorationRole:
+            if key == "marker":
+                return conn.icon_m
+            if key == "dest":
+                return conn.icon_d
+
         if role == QtCore.Qt.CheckStateRole:
-            marker_index = self.index(index.row(), 0, index.parent())
-            marker_node = marker_index.data(self.NodeRole)
-            target_node = index.data(self.NodeRole)
-            self.target_toggled.emit(marker_node, target_node, bool(value))
+            if key == "marker":
+                return
+            if key == "dest":
+                return conn.check_state
 
-        return super(MarkerTreeModel, self).setData(index, value, role)
+        if role == self.NodeRole:
+            if key == "marker":
+                return conn.marker
+            if key == "dest":
+                return conn.dest
 
-    def all_rd_node_names(self, sort=False):
-        for solver, markers in self._marker_by_solver.items():
-            yield solver.shortest_path()
-            markers = [m.name() for m in markers]
-            if sort:
-                markers = sorted(markers)
-            for marker in markers:
-                yield marker
+        if role == self.LevelRole:
+            if key == "marker":
+                return conn.level
+            if key == "dest":
+                return
+
+        if role == self.NaturalSortingRole:
+            if key == "marker":
+                return conn.natural
+            if key == "dest":
+                return
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        # type: (QtCore.QModelIndex, typing.Any, int) -> bool
+        if not index.isValid() or not index.parent().isValid():
+            return False
+
+        if role == QtCore.Qt.CheckStateRole:
+            solver_index = index.parent().row()
+            solver_repr = self._internal[solver_index]
+            conn = solver_repr.conn_list[index.row()]  # type: _Connection
+
+            column = not index.column() if self._flipped else index.column()
+            key = ["marker", "dest"][column]
+
+            if key == "marker":
+                return False
+
+            if key == "dest":
+                conn.check_state = value
+                self.target_toggled.emit(conn.marker, conn.dest, bool(value))
+                return True
+
+        return False
 
     @property
     def dump(self):
         return self._dump
 
+    def flip(self, state):
+        self._flipped = state
+        # self.modelReset.emit()
+
     def refresh(self):
         self.reset()
-        self._target_by_marker.clear()
-        self._marker_by_solver.clear()
-        self._dump = json.loads(cmds.ragdollDump())
-        self._dump.pop("info")
+        self._build_internal_model()
 
-        reg = dump.Registry(self._dump)
-        solver_sizes = _get_all_solver_size(reg)
-        # todo: what will happen if marker exceeds the non-commercial limit ?
+        for solver_repr in self._internal:
+            solver_item = self._mk_solver_item(solver_repr)
+            self.appendRow(solver_item)
+            solver_item.setColumnCount(len(self.Headers))
+            solver_item.setRowCount(len(solver_repr.conn_list))
 
-        _natural_ind = 0
+    def _mk_solver_item(self, solver_repr):
+        item = QtGui.QStandardItem()
+        item.setText("[%d] %s" % (solver_repr.size, solver_repr.ui_name))
+        item.setIcon(self._pixmap_list["rdSolver"])
+        item.setData(solver_repr.solver, self.NodeRole)
+        return item
+
+    def _iter_ragdoll_content(self, registry):
+        """Hierarchically iterate solver, marker, target
+
+        Args:
+            registry (dump.Registry): a parsed ragdoll dump object
+
+        Returns:
+            An iterator yields tuple of (solver, level, marker, destination).
+            The solver and marker are cmdx.Node type, level is int, the
+            destination is cmdx.Node or None if marker has no destination set.
+
+        """
+        _r = registry  # for short
         for solver in cmdx.ls(type="rdSolver"):
             solver_id = int(solver["ragdollId"])
-            solver_name = _solver_ui_name_by_sizes(solver_sizes, solver)
-            solver_size = solver_sizes[int(solver["ragdollId"])]
 
             markers = cmdx.ls([
-                reg.get(entity, "NameComponent")["value"]  # marker name
-                for entity in reg.view()
-                if reg.has(entity, "MarkerUIComponent")
-                and reg.get(entity, "SceneComponent")["entity"] == solver_id
+                _r.get(entity, "NameComponent")["value"]  # marker name
+                for entity in _r.view()
+                if _r.has(entity, "MarkerUIComponent")
+                and _r.get(entity, "SceneComponent")["entity"] == solver_id
             ])
 
-            # solver item
-            solver_item = QtGui.QStandardItem()
-            solver_item.setText("[%d] %s" % (solver_size, solver_name))
-            solver_item.setIcon(self._pixmap_list["rdSolver"])
-            solver_item.setData(solver, self.NodeRole)
-            solver_item.setData(_natural_ind, self.NaturalSortingRole)
-            self.appendRow(solver_item)
-            _natural_ind += 1
-
-            # marker-target pairs
-            #
             marker_by_id = {
                 int(mk["ragdollId"]): mk
                 for mk in markers
@@ -155,85 +227,83 @@ class MarkerTreeModel(base.BaseItemModel):
 
             def child_count(d):
                 return sum(
-                    reg.get(e, "RigidComponent")["parentRigid"] == d
+                    _r.get(e, "RigidComponent")["parentRigid"] == d
                     for e in marker_by_id.keys()
                 )
 
             def iter_children(parent_id):
                 for entity_ in marker_by_id.keys():
-                    rigid = reg.get(entity_, "RigidComponent")
+                    rigid = _r.get(entity_, "RigidComponent")
                     if rigid["parentRigid"] == parent_id:
                         yield marker_by_id[entity_]
 
-            def walk_hierarchy(parent_id, _depth=0):
+            def walk_hierarchy(parent_id, _level=0):
                 _sibling_count = child_count(parent_id)
-                for marker_ in iter_children(parent_id):
-                    yield marker_, _depth
+                for _marker in iter_children(parent_id):
+                    yield _marker, _level
 
-                    _ragdoll_id = int(marker_["ragdollId"])
+                    _ragdoll_id = int(_marker["ragdollId"])
                     _child_count = child_count(_ragdoll_id)
-                    _depth_next = _depth
+                    _next_level = _level
                     if not (_sibling_count <= 1 and _child_count <= 1):
-                        _depth_next += 1
+                        _next_level += 1
 
-                    for m, d in walk_hierarchy(_ragdoll_id, _depth_next):
-                        yield m, d
+                    for mk, lvl in walk_hierarchy(_ragdoll_id, _next_level):
+                        yield mk, lvl
 
-            self._marker_by_solver[solver] = list()
+            for marker_node, level in walk_hierarchy(0):
+                input_plugs = list(
+                    plug for plug in marker_node["destinationTransforms"]
+                    if plug.input() is not None
+                )
+                if input_plugs:
+                    for plug in input_plugs:
+                        destination_node = plug.input()
+                        yield solver, level, marker_node, destination_node
+                else:
+                    yield solver, level, marker_node, None
 
-            for marker, depth in walk_hierarchy(0):
-                for row_columns in self._mk_rows(marker, depth):
-                    name_item = row_columns[0]
-                    name_item.setData(_natural_ind, self.NaturalSortingRole)
-                    solver_item.appendRow(row_columns)
+    def _build_internal_model(self):
+        self._internal.clear()
+        self._dump = json.loads(cmds.ragdollDump())
+        self._dump.pop("info")  # for comparing on `enterEvent`
+        reg = dump.Registry(self._dump)
 
-                _natural_ind += 1
-                self._marker_by_solver[solver].append(marker)
+        solver_sizes = _get_all_solver_size(reg)
+        # todo: what will happen if marker exceeds the non-commercial limit ?
 
-    def _mk_rows(self, marker_node, depth):
-        self._target_by_marker[marker_node] = set()
+        the_solver = None
+        rd_content_iter = self._iter_ragdoll_content(reg)
+        for _i, (solver, level, marker, dest) in enumerate(rd_content_iter):
+            if the_solver is None or solver is not the_solver.solver:
+                the_solver = _Solver(
+                    solver=solver,
+                    size=solver_sizes[int(solver["ragdollId"])],
+                    ui_name=_solver_ui_name_by_sizes(solver_sizes, solver),
+                    conn_list=[],
+                )
+                self._internal.append(the_solver)
 
-        input_plugs = list(
-            plug for plug in marker_node["destinationTransforms"]
-            if plug.input() is not None
-        )
-        if input_plugs:
-            for plug in input_plugs:
-                p_input = plug.input()
-                self._target_by_marker[marker_node].add(p_input)
-                yield self._mk_row(marker_node, depth, p_input)
-        else:
-            yield self._mk_row(marker_node, depth, None)
+            # marker icon
+            _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
+            _pix = QtGui.QPixmap(_pix)
+            _color = QtGui.QColor.fromRgbF(*marker["color"])
+            _tint_color(_pix, _color.lighter())
+            icon_m = QtGui.QIcon(_pix)
 
-    def _mk_row(self, marker_node, depth, target_node):
-        name = marker_node.name()
-        pixmap = self._pixmap_list[
-            "rdMarker_%d" % int(marker_node["shapeType"])
-        ]
-        pixmap = QtGui.QPixmap(pixmap)
-        color = QtGui.QColor.fromRgbF(*marker_node["color"])
-        _tint_color(pixmap, color.lighter())
+            # dest icon
+            icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
 
-        name_item = QtGui.QStandardItem()
-        name_item.setText(name)
-        name_item.setIcon(pixmap)
-        name_item.setData(marker_node, self.NodeRole)
-        name_item.setData(depth, self.DepthRole)
-        name_item.setData(name, self.NameSortingRole)
-        if target_node is None:
-            return name_item,
-        else:
-            target_item = self._mk_target_item(target_node)
-            return name_item, target_item
-
-    def _mk_target_item(self, target_node):
-        target_item = QtGui.QStandardItem()
-        target_item.setText(target_node.name())
-        target_item.setIcon(QtGui.QIcon(":/%s" % target_node.type()))
-        target_item.setData(target_node, self.NodeRole)
-        target_item.setCheckable(True)
-        target_item.setCheckState(QtCore.Qt.Checked)
-        return target_item
+            conn = _Connection(
+                marker=marker,
+                dest=dest,
+                icon_m=icon_m,
+                icon_d=icon_d,
+                level=level,
+                natural=_i,
+                check_state=QtCore.Qt.Checked,
+            )
+            the_solver.conn_list.append(conn)
 
     def append_target(self, marker_node, target_node):
         target_set = self._target_by_marker[marker_node]
@@ -262,10 +332,11 @@ class MarkerTreeModel(base.BaseItemModel):
             if len(target_set):
                 # copy depth, naturalOrder from the same marker in other row
                 marker_sibling = marker_items[-1]  # type: QtGui.QStandardItem
-                depth = marker_sibling.data(self.DepthRole)
+                level = marker_sibling.data(self.LevelRole)
                 natural = marker_sibling.data(self.NaturalSortingRole)
+
                 marker_item, target_item = self._mk_row(
-                    marker_node, depth, target_node
+                    marker_node, level, target_node
                 )
                 marker_item.setData(natural, self.NaturalSortingRole)
                 solver_item = marker_sibling.parent()
@@ -318,8 +389,8 @@ class MarkerIndentDelegate(ReadOnlyEditorDelegate):
             editor, option, index
         )
         if self._enabled and index.column() == 0:
-            depth = index.data(MarkerTreeModel.DepthRole)
-            if depth:
+            level = index.data(MarkerTreeModel.LevelRole)
+            if level:
                 self.initStyleOption(option, index)
                 style = option.widget.style()
                 geom = style.subElementRect(
@@ -328,15 +399,15 @@ class MarkerIndentDelegate(ReadOnlyEditorDelegate):
                     option.widget
                 )
 
-                offset = self._indent * depth
+                offset = self._indent * level
                 geom.adjust(offset, 0, 0, 0)
                 editor.setGeometry(geom)
 
     def paint(self, painter, option, index):
         if self._enabled and index.column() == 0:
-            depth = index.data(MarkerTreeModel.DepthRole)
-            if depth:
-                offset = self._indent * depth
+            level = index.data(MarkerTreeModel.LevelRole)
+            if level:
+                offset = self._indent * level
                 # paint the gap after offset
                 _width = option.rect.width()
                 _rect = QtCore.QRect(option.rect)
@@ -355,8 +426,8 @@ class MarkerIndentDelegate(ReadOnlyEditorDelegate):
     def sizeHint(self, option, index):
         size = super(MarkerIndentDelegate, self).sizeHint(option, index)
         if self._enabled and index.column() == 0:
-            depth = index.data(MarkerTreeModel.DepthRole) or 0
-            size.setWidth(size.width() + (self._indent * depth))
+            level = index.data(MarkerTreeModel.LevelRole) or 0
+            size.setWidth(size.width() + (self._indent * level))
         return size
 
 
@@ -380,35 +451,36 @@ class MarkerTreeView(QtWidgets.QTreeView):
         self._current_sorted = []
 
     def drawRow(self, painter, options, index):
-        # type: (QtGui.QPainter, QtWidgets.QStyleOptionViewItem, QtCore.QModelIndex) -> None
+        """Draw alternative row color base on connection pair node name
+        Args:
+            painter (QtGui.QPainter):
+            options (QtWidgets.QStyleOptionViewItem):
+            index (QtCore.QModelIndex):
+        Returns:
+            None
+        """
         if self._current_sorted:
+            model = self.model()
             if index.column() != 0:
-                _index = self.model().index(index.row(), 0, index.parent())
-                node = self.model().data(_index, MarkerTreeModel.NodeRole)
+                _index = model.index(index.row(), 0, index.parent())
+                node = model.data(_index, MarkerTreeModel.NodeRole)
             else:
-                node = self.model().data(index, MarkerTreeModel.NodeRole)
+                node = model.data(index, MarkerTreeModel.NodeRole)
 
-            sorted_index = self._current_sorted.index(node.shortest_path())
-            if sorted_index % 2:
-                options.features = options.features | options.Alternate
+            try:
+                sorted_index = self._current_sorted.index(node.shortest_path())
+            except ValueError:
+                pass
+            else:
+                if sorted_index % 2:
+                    options.features = options.features | options.Alternate
 
         super(MarkerTreeView, self).drawRow(painter, options, index)
 
-    def set_sort_by_name(self, ascending):
-        proxy = self.model()  # type: QtCore.QSortFilterProxyModel
-        model = proxy.sourceModel()  # type: MarkerTreeModel
-        self._current_sorted = list(model.all_rd_node_names(sort=True))
-        if ascending:
-            self.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        else:
-            self._current_sorted.reverse()
-            self.sortByColumn(0, QtCore.Qt.DescendingOrder)
-
-    def set_sort_by_hierarchy(self):
-        proxy = self.model()  # type: QtCore.QSortFilterProxyModel
-        model = proxy.sourceModel()  # type: MarkerTreeModel
-        self._current_sorted = list(model.all_rd_node_names(sort=False))
-        self.sortByColumn(0, QtCore.Qt.AscendingOrder)
+    def flip(self, perspective):
+        # todo: fix this
+        # self._current_sorted
+        pass
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
@@ -546,15 +618,22 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             for transform in targets:
                 commands.retarget_marker(marker_node, transform, opts)
 
+    def flip(self, state):
+        self._model.flip(state)
+        self._proxy.invalidate()
+
     def set_sort_by_name(self, ascending):
         self._delegate.set_enabled(False)
         self._proxy.setSortRole(MarkerTreeModel.NameSortingRole)
-        self._view.set_sort_by_name(ascending)
+        if ascending:
+            self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        else:
+            self._view.sortByColumn(0, QtCore.Qt.DescendingOrder)
 
     def set_sort_by_hierarchy(self):
         self._delegate.set_enabled(True)
         self._proxy.setSortRole(MarkerTreeModel.NaturalSortingRole)
-        self._view.set_sort_by_hierarchy()
+        self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
 
 class RetargetWindow(QtWidgets.QMainWindow):
@@ -682,10 +761,10 @@ class RetargetWindow(QtWidgets.QMainWindow):
     def on_search_type_toggled(self, state):
         if state:
             self._widgets["SearchBar"].setPlaceholderText("Search targets..")
-            pass  # todo: search on targets, also change first column
+            self._widgets["MarkerView"].flip(True)
         else:
             self._widgets["SearchBar"].setPlaceholderText("Search markers..")
-            pass  # todo: search on markers, also change first column
+            self._widgets["MarkerView"].flip(False)
 
     def on_searched(self, text):
         proxy = self._widgets["MarkerView"].proxy

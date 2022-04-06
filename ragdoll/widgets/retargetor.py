@@ -86,7 +86,7 @@ class MarkerTreeModel(base.BaseItemModel):
             return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
 
-    def setData(self, index, value, role=QtCore.Qt.DisplayRole):
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
         # type: (QtCore.QModelIndex, typing.Any, int) -> bool
         if not index.isValid():
             return False

@@ -344,6 +344,7 @@ class MarkerTreeModel(base.BaseItemModel):
         solver_index = self.index(solver_row, 0)
         dest_index = self.index(conn_row, dest_col, solver_index)
         if conn.check_state != QtCore.Qt.Checked:
+            # will trigger `MarkerTreeWidget.on_destination_toggled`
             self.setData(dest_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
         return dest_index
 
@@ -688,6 +689,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 commands.retarget_marker(marker_node, transform, opts)
 
         self._model.sync()
+        # trigger Maya viewport update
+        cmds.dgdirty(marker_node.shortest_path())
 
     def flip(self, state):
         self._model.flipped = state

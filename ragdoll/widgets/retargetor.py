@@ -189,6 +189,27 @@ class MarkerTreeModel(base.BaseItemModel):
         self._dump = json.loads(cmds.ragdollDump())
         self._dump.pop("info")  # for comparing on `enterEvent`
 
+    def ordered_first_column(self, sort, reverse):
+        column = 1 if self.flipped else 0
+        key = ["marker", "dest"][column]
+
+        ordered = []
+        for _s in self._internal:
+            ordered.append(_s.solver.shortest_path())
+
+            path_list = []
+            for _c in _s.conn_list:
+                path = _c.marker.shortest_path() if key == "marker" else \
+                    "" if not _c.dest else _c.dest.shortest_path()
+                if path not in path_list:
+                    path_list.append(path)
+
+            if sort:
+                path_list.sort(key=lambda n: n.lower(), reverse=reverse)
+            ordered += path_list
+
+        return ordered
+
     def refresh(self):
         self.reset()
         self._build_internal_model()
@@ -457,7 +478,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
         self.setCursor(_maya_outliner_cursor())
-        self._current_sorted = []
+        self._current_order = []
 
     def drawRow(self, painter, options, index):
         """Draw alternative row color base on connection pair node name
@@ -468,28 +489,26 @@ class MarkerTreeView(QtWidgets.QTreeView):
         Returns:
             None
         """
-        if self._current_sorted:
-            model = self.model()
-            if index.column() != 0:
-                _index = model.index(index.row(), 0, index.parent())
-                node = model.data(_index, MarkerTreeModel.NodeRole)
-            else:
-                node = model.data(index, MarkerTreeModel.NodeRole)
-
+        if self._current_order:
+            proxy = self.model()
+            # column is always 0.
+            node = proxy.data(index, MarkerTreeModel.NodeRole)
             try:
-                sorted_index = self._current_sorted.index(node.shortest_path())
+                ordered_index = self._current_order.index(node.shortest_path())
             except ValueError:
                 pass
             else:
-                if sorted_index % 2:
+                if ordered_index % 2:
                     options.features = options.features | options.Alternate
 
         super(MarkerTreeView, self).drawRow(painter, options, index)
 
-    def flip(self, perspective):
-        # todo: fix this
-        # self._current_sorted
-        pass
+    def update_order(self):
+        proxy = self.model()
+        model = proxy.sourceModel()
+        sort = proxy.sortRole() == MarkerTreeModel.NameSortingRole
+        reverse = proxy.sortOrder() == QtCore.Qt.DescendingOrder
+        self._current_order = model.ordered_first_column(sort, reverse)
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
@@ -653,6 +672,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
     def flip(self, state):
         self._model.flipped = state
+        self._view.update_order()
         self._proxy.invalidate()
 
     def set_sort_by_name(self, ascending):
@@ -662,11 +682,13 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
         else:
             self._view.sortByColumn(0, QtCore.Qt.DescendingOrder)
+        self._view.update_order()
 
     def set_sort_by_hierarchy(self):
         self._delegate.set_enabled(True)
         self._proxy.setSortRole(MarkerTreeModel.NaturalSortingRole)
         self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        self._view.update_order()
 
 
 class RetargetWindow(QtWidgets.QMainWindow):
@@ -713,6 +735,8 @@ class RetargetWindow(QtWidgets.QMainWindow):
         widgets["SortNameAZ"].setChecked(True)
         # filtering with case sensitive enabled by default
         widgets["SearchCase"].setChecked(True)
+        # marker oriented by default
+        widgets["SearchBar"].setPlaceholderText("Find markers..")
 
         layout = QtWidgets.QVBoxLayout(panels["SideBar"])
         layout.setContentsMargins(4, 2, 4, 0)
@@ -756,7 +780,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self.setStyleSheet(_treeview_style_sheet + _sidebar_style_sheet)
         self.setMinimumSize(QtCore.QSize(600, 500))
 
-        self.on_search_type_toggled(False)
+        # init
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 

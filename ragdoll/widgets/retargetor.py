@@ -508,8 +508,9 @@ class MarkerTreeView(QtWidgets.QTreeView):
             proxy = self.model()
             # column is always 0.
             node = proxy.data(index, MarkerTreeModel.NodeRole)
+            path = node.shortest_path() if node else ""
             try:
-                ordered_index = self._current_order.index(node.shortest_path())
+                ordered_index = self._current_order.index(path)
             except ValueError:
                 pass
             else:

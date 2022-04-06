@@ -523,7 +523,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(view)
 
-        view.customContextMenuRequested.connect(self.on_right_click)
+        view.doubleClicked.connect(self.on_double_clicked)
+        view.customContextMenuRequested.connect(self.on_right_clicked)
         model.destination_toggled.connect(self.on_destination_toggled)
 
         self._view = view
@@ -547,7 +548,12 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._model.refresh()
         self._view.expandToDepth(1)
 
-    def on_right_click(self, position):
+    def on_double_clicked(self, index):
+        node = self._proxy.data(index, MarkerTreeModel.NodeRole)
+        if node is not None:
+            cmds.select(node.shortest_path(), replace=True)
+
+    def on_right_clicked(self, position):
         index = self._view.indexAt(position)
 
         if not index.isValid():

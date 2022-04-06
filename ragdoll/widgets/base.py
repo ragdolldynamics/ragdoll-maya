@@ -1,5 +1,39 @@
+
+import shiboken2
 from PySide2 import QtCore, QtWidgets, QtGui
 from . import px
+
+try:
+    long  # noqa
+except NameError:
+    # Python 3 compatibility
+    long = int
+
+
+def qt_wrap_instance(ptr, base=None):
+    assert isinstance(ptr, long), "Argument 'ptr' must be of type <long>"
+    assert (base is None) or issubclass(base, QtCore.QObject), (
+        "Argument 'base' must be of type <QObject>")
+
+    func = shiboken2.wrapInstance
+
+    if base is None:
+        q_object = func(long(ptr), QtCore.QObject)
+        meta_object = q_object.metaObject()
+
+        while True:
+            class_name = meta_object.className()
+            try:
+                base = getattr(QtWidgets, class_name)
+            except AttributeError:
+                try:
+                    base = getattr(QtCore, class_name)
+                except AttributeError:
+                    meta_object = meta_object.superClass()
+                    continue
+            break
+
+    return func(long(ptr), base)
 
 
 class FramelessDialog(QtWidgets.QDialog):

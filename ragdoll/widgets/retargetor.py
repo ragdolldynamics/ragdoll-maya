@@ -360,10 +360,23 @@ class MarkerIndentDelegate(ReadOnlyEditorDelegate):
         return size
 
 
+def _maya_outliner_cursor():
+    # Take Maya Outliner cursor (or any other Maya widget that has context
+    # menu, e.g. Shelf) to indicate the view has context menu.
+    #   note: I tried to find/export cursor bitmap but no success.
+    outliner_name = cmds.outlinerEditor()
+    ptr = OpenMayaUI.MQtUtil.findControl(outliner_name)
+    outliner = base.qt_wrap_instance(long(ptr), QtWidgets.QWidget)
+    cursor = QtGui.QCursor(outliner.cursor())
+    cmds.deleteUI(outliner_name, editor=True)
+    return cursor
+
+
 class MarkerTreeView(QtWidgets.QTreeView):
 
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
+        self.setCursor(_maya_outliner_cursor())
         self._current_sorted = []
 
     def drawRow(self, painter, options, index):

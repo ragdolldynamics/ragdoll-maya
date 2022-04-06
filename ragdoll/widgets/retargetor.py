@@ -64,7 +64,7 @@ _Connection = namedtuple(
 
 
 class MarkerTreeModel(base.BaseItemModel):
-    target_toggled = QtCore.Signal(cmdx.Node, cmdx.Node, bool)
+    destination_toggled = QtCore.Signal(cmdx.Node, cmdx.Node, bool)
 
     NodeRole = QtCore.Qt.UserRole + 10
     LevelRole = QtCore.Qt.UserRole + 11
@@ -73,7 +73,7 @@ class MarkerTreeModel(base.BaseItemModel):
 
     Headers = [
         "Name",
-        "Target",
+        "Destination",
     ]
 
     def __init__(self, *args, **kwargs):
@@ -167,7 +167,7 @@ class MarkerTreeModel(base.BaseItemModel):
 
             if key == "dest":
                 conn.check_state = value
-                self.target_toggled.emit(conn.marker, conn.dest, bool(value))
+                self.destination_toggled.emit(conn.marker, conn.dest, bool(value))
                 return True
 
         return False
@@ -198,7 +198,7 @@ class MarkerTreeModel(base.BaseItemModel):
         return item
 
     def _iter_ragdoll_content(self, registry):
-        """Hierarchically iterate solver, marker, target
+        """Hierarchically iterate solver, marker, destination
 
         Args:
             registry (dump.Registry): a parsed ragdoll dump object
@@ -305,7 +305,7 @@ class MarkerTreeModel(base.BaseItemModel):
             )
             the_solver.conn_list.append(conn)
 
-    def append_target(self, marker_node, target_node):
+    def append_dest(self, marker_node, target_node):
         target_set = self._target_by_marker[marker_node]
         # Marker node must already been added into this model, so KeyError
         # shouldn't raise.
@@ -516,7 +516,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.addWidget(view)
 
         view.customContextMenuRequested.connect(self.on_right_click)
-        model.target_toggled.connect(self.on_target_toggled)
+        model.destination_toggled.connect(self.on_destination_toggled)
 
         self._view = view
         self._proxy = proxy
@@ -547,15 +547,15 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         manipulate = QtWidgets.QAction("Manipulate", menu)
         select_marker = QtWidgets.QAction("Select Marker", menu)
-        select_target = QtWidgets.QAction("Select Target", menu)
-        append_target = QtWidgets.QAction("Add Target From Selection", menu)
+        select_dest = QtWidgets.QAction("Select Destination", menu)
+        append_dest = QtWidgets.QAction("Add Destination From Selection", menu)
 
         menu.addAction(manipulate)
         menu.addSeparator()
         menu.addAction(select_marker)
-        menu.addAction(select_target)
+        menu.addAction(select_dest)
         menu.addSeparator()
-        menu.addAction(append_target)
+        menu.addAction(append_dest)
 
         def _select_node(column):
             selection = []
@@ -578,11 +578,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         def on_select_marker():
             _select_node(0)
 
-        def on_select_target():
+        def on_select_dest():
             _select_node(1)
 
-        def on_append_target():
-            valid_target_list = [
+        def on_append_dest():
+            valid_dest_list = [
                 node
                 for node in cmdx.selection()
                 if node.isA(cmdx.kDagNode)
@@ -593,29 +593,29 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 if not i.parent().isValid() or i.column() != 0:
                     continue
                 marker_node = i.data(MarkerTreeModel.NodeRole)
-                for target_node in valid_target_list:
-                    self._model.append_target(marker_node, target_node)
+                for dest_node in valid_dest_list:
+                    self._model.append_dest(marker_node, dest_node)
 
         manipulate.triggered.connect(on_manipulate)
         select_marker.triggered.connect(on_select_marker)
-        select_target.triggered.connect(on_select_target)
-        append_target.triggered.connect(on_append_target)
+        select_dest.triggered.connect(on_select_dest)
+        append_dest.triggered.connect(on_append_dest)
 
         menu.move(QtGui.QCursor.pos())
         menu.show()
 
-    def on_target_toggled(self, marker_node, target_node, checked):
+    def on_destination_toggled(self, marker_node, dest_node, checked):
         if checked:
             opts = {"append": True}
-            commands.retarget_marker(marker_node, target_node, opts)
+            commands.retarget_marker(marker_node, dest_node, opts)
         else:
-            targets = [
+            dest_list = [
                 plug.input() for plug in marker_node["destinationTransforms"]
-                if plug.input() is not None and plug.input() != target_node
+                if plug.input() is not None and plug.input() != dest_node
             ]
             commands.untarget_marker(marker_node)
             opts = {"append": True}
-            for transform in targets:
+            for transform in dest_list:
                 commands.retarget_marker(marker_node, transform, opts)
 
     def flip(self, state):
@@ -760,10 +760,10 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
     def on_search_type_toggled(self, state):
         if state:
-            self._widgets["SearchBar"].setPlaceholderText("Search targets..")
+            self._widgets["SearchBar"].setPlaceholderText("Find destinations..")
             self._widgets["MarkerView"].flip(True)
         else:
-            self._widgets["SearchBar"].setPlaceholderText("Search markers..")
+            self._widgets["SearchBar"].setPlaceholderText("Find markers..")
             self._widgets["MarkerView"].flip(False)
 
     def on_searched(self, text):

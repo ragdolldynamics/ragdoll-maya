@@ -101,7 +101,6 @@ class MarkerTreeModel(base.BaseItemModel):
     def flags(self, index):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.parent().isValid():
-            base_flags |= QtCore.Qt.ItemIsEditable
             if index.column() == (0 if self.flipped else 1):
                 return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
@@ -405,22 +404,7 @@ class MarkerTreeModel(base.BaseItemModel):
             solver_item.setRowCount(len(_s.conn_list))
 
 
-class ReadOnlyEditorDelegate(QtWidgets.QStyledItemDelegate):
-
-    def updateEditorGeometry(self, editor, option, index):
-        """
-        Args:
-            editor (QtWidgets.QWidget):
-            option (QtWidgets.QStyleOptionViewItem):
-            index (QtCore.QModelIndex):
-        """
-        editor.setReadOnly(True)  # yes, should be an instance of QLineEdit
-        super(ReadOnlyEditorDelegate, self).updateEditorGeometry(
-            editor, option, index
-        )
-
-
-class MarkerIndentDelegate(ReadOnlyEditorDelegate):
+class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
 
     def __init__(self, parent):
         super(MarkerIndentDelegate, self).__init__(parent=parent)
@@ -429,25 +413,6 @@ class MarkerIndentDelegate(ReadOnlyEditorDelegate):
 
     def set_enabled(self, value):
         self._enabled = value
-
-    def updateEditorGeometry(self, editor, option, index):
-        super(MarkerIndentDelegate, self).updateEditorGeometry(
-            editor, option, index
-        )
-        if self._enabled and index.column() == 0:
-            level = index.data(MarkerTreeModel.LevelRole)
-            if level:
-                self.initStyleOption(option, index)
-                style = option.widget.style()
-                geom = style.subElementRect(
-                    QtWidgets.QStyle.SE_ItemViewItemText,
-                    option,
-                    option.widget
-                )
-
-                offset = self._indent * level
-                geom.adjust(offset, 0, 0, 0)
-                editor.setGeometry(geom)
 
     def paint(self, painter, option, index):
         if self._enabled and index.column() == 0:
@@ -551,10 +516,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header = view.header()
         header.setSectionResizeMode(0, header.ResizeToContents)
 
-        readonly_delegate = ReadOnlyEditorDelegate(self)
         indent_delegate = MarkerIndentDelegate(self)
         view.setItemDelegateForColumn(0, indent_delegate)
-        view.setItemDelegateForColumn(1, readonly_delegate)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

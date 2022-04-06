@@ -327,7 +327,7 @@ class MarkerTreeModel(base.BaseItemModel):
         # marker icon/color
         _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
         icon_m = QtGui.QIcon(_pix)
-        dot_color = QtGui.QColor.fromRgbF(*marker["color"])
+        dot_color = QtGui.QColor.fromRgbF(*marker["color"]).lighter()
 
         # dest icon
         icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None

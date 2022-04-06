@@ -185,6 +185,10 @@ class MarkerTreeModel(base.BaseItemModel):
     def dump(self):
         return self._dump
 
+    def sync(self):
+        self._dump = json.loads(cmds.ragdollDump())
+        self._dump.pop("info")  # for comparing on `enterEvent`
+
     def flip(self, state):
         self._flipped = state
         # self.modelReset.emit()
@@ -274,8 +278,7 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def _build_internal_model(self):
         self._internal.clear()
-        self._dump = json.loads(cmds.ragdollDump())
-        self._dump.pop("info")  # for comparing on `enterEvent`
+        self.sync()
         reg = dump.Registry(self._dump)
 
         solver_sizes = _get_all_solver_size(reg)
@@ -622,6 +625,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             opts = {"append": True}
             for transform in dest_list:
                 commands.retarget_marker(marker_node, transform, opts)
+
+        self._model.sync()
 
     def flip(self, state):
         self._model.flip(state)

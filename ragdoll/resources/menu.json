@@ -568,6 +568,7 @@
             "scale",
             "sceneScale",
             "cacheMedia",
+            "maxFrames",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",

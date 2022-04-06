@@ -823,9 +823,13 @@ class RetargetWindow(QtWidgets.QMainWindow):
     def on_search_type_toggled(self, state):
         if state:
             self._widgets["SearchBar"].setPlaceholderText("Find destinations..")
+            self._widgets["SortHierarchy"].setEnabled(False)
             self._widgets["MarkerView"].flip(True)
+            if self._widgets["SortHierarchy"].isChecked():
+                self._widgets["SortNameAZ"].setChecked(True)
         else:
             self._widgets["SearchBar"].setPlaceholderText("Find markers..")
+            self._widgets["SortHierarchy"].setEnabled(True)
             self._widgets["MarkerView"].flip(False)
 
     def on_searched_defer(self):

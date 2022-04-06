@@ -292,10 +292,11 @@ class MarkerTreeModel(base.BaseItemModel):
                 )
                 self._internal.append(the_solver)
 
-            conn = self._mk_conn(marker, dest, level, _i)
+            conn = self._mk_conn(marker, dest, level, _i, QtCore.Qt.Checked)
             the_solver.conn_list.append(conn)
 
-    def _mk_conn(self, marker, dest, level, natural):
+    def _mk_conn(self, marker, dest, level, natural, check_state=None):
+        check_state = check_state or QtCore.Qt.Unchecked
         # marker icon
         _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
         _pix = QtGui.QPixmap(_pix)
@@ -313,15 +314,17 @@ class MarkerTreeModel(base.BaseItemModel):
             icon_d=icon_d,
             level=level,
             natural=natural,
-            check_state=QtCore.Qt.Checked if dest else None,
+            check_state=check_state if dest else None,
         )
         return conn
 
-    def _check_conn_by_row(self, solver_row, conn_row):
+    def _check_conn_by_row(self, conn, solver_row, conn_row):
         dest_col = 0 if self.flipped else 1
         solver_index = self.index(solver_row, 0)
         dest_index = self.index(conn_row, dest_col, solver_index)
-        self.setData(dest_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
+        if conn.check_state != QtCore.Qt.Checked:
+            self.setData(dest_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
+        return dest_index
 
     def append_dest(self, marker, dest):
         marker_matched = False
@@ -339,23 +342,24 @@ class MarkerTreeModel(base.BaseItemModel):
                     # plug dest into connection
                     _c.dest = dest
                     _c.icon_d = QtGui.QIcon(":/%s" % dest.type())
-                    self._check_conn_by_row(x, y)
-                    return
+                    return self._check_conn_by_row(_c, x, y)
 
                 elif _c.dest == dest:
                     # already in model, ensure checked
-                    self._check_conn_by_row(x, y)
-                    return
+                    if _c.check_state != QtCore.Qt.Checked:
+                        return self._check_conn_by_row(_c, x, y)
+                    else:
+                        return
 
             if marker_matched:
                 # new connection
                 # get level, natural from other connection to make a new one
                 new_conn = self._mk_conn(marker, dest, ref.level, ref.natural)
                 _s.conn_list.insert(index_matched, new_conn)
+
                 solver_item = self.item(x, 0)
                 solver_item.setRowCount(solver_item.rowCount() + 1)
-                self._check_conn_by_row(x, index_matched)
-                return
+                return self._check_conn_by_row(new_conn, x, index_matched)
 
         # should not happen.
         raise Exception("No matched marker found in model.")

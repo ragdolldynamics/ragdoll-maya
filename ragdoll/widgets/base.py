@@ -10,6 +10,16 @@ except NameError:
     long = int
 
 
+def is_filtering_recursible():
+    """Does Qt binding support recursive filtering for QSortFilterProxyModel?
+
+    (NOTE) Recursive filtering was introduced in Qt 5.10.
+
+    """
+    return hasattr(QtCore.QSortFilterProxyModel,
+                   "setRecursiveFilteringEnabled")
+
+
 def qt_wrap_instance(ptr, base=None):
     assert isinstance(ptr, long), "Argument 'ptr' must be of type <long>"
     assert (base is None) or issubclass(base, QtCore.QObject), (

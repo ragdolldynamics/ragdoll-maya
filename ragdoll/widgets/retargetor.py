@@ -477,6 +477,29 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         return size
 
 
+class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
+
+    if base.is_filtering_recursible():
+        pass
+    else:
+        # Patch future function
+        setRecursiveFilteringEnabled = (lambda *args: None)
+
+        def filterAcceptsRow(self, source_row, source_parent):
+            """
+            Args:
+                source_row (int):
+                source_parent (QtCore.QModelIndex):
+            Returns:
+                bool
+            """
+            if source_parent.isValid():
+                return super(SortFilterProxyModel, self).filterAcceptsRow(
+                    source_row, source_parent)
+            else:
+                return True  # always accept solver item
+
+
 def _maya_outliner_cursor():
     # Take Maya Outliner cursor (or any other Maya widget that has context
     # menu, e.g. Shelf) to indicate the view has context menu.
@@ -535,7 +558,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         view = MarkerTreeView()
         model = MarkerTreeModel()
-        proxy = QtCore.QSortFilterProxyModel()
+        proxy = SortFilterProxyModel()
         proxy.setSourceModel(model)
         proxy.setSortCaseSensitivity(QtCore.Qt.CaseInsensitive)
         proxy.setRecursiveFilteringEnabled(True)

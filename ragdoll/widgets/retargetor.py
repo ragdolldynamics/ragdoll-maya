@@ -1,6 +1,5 @@
 import os
 import json
-import typing
 from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
@@ -98,7 +97,13 @@ class MarkerTreeModel(base.BaseItemModel):
         return base_flags
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        # type: (QtCore.QModelIndex, int) -> typing.Any
+        """
+        Args:
+            index (QtCore.QModelIndex):
+            role (int):
+        Returns:
+            typing.Any
+        """
         if not index.isValid():
             return False
         if not index.parent().isValid():
@@ -160,7 +165,14 @@ class MarkerTreeModel(base.BaseItemModel):
                 return
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
-        # type: (QtCore.QModelIndex, typing.Any, int) -> bool
+        """
+        Args:
+            index (QtCore.QModelIndex):
+            value (typing.Any):
+            role (int):
+        Returns:
+            bool
+        """
         if not index.isValid() or not index.parent().isValid():
             return False
 
@@ -296,7 +308,7 @@ class MarkerTreeModel(base.BaseItemModel):
                     yield solver, level, marker_node, None
 
     def _build_internal_model(self):
-        self._internal.clear()
+        del self._internal[:]
         self.sync()
         reg = dump.Registry(self._dump)
 

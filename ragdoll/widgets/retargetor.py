@@ -1,15 +1,11 @@
 import os
 import json
 import typing
-from collections import namedtuple
 from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
 from .. import dump, commands
-
-# Unused, for type hint in IDEs
-__ = typing
 
 try:
     long  # noqa

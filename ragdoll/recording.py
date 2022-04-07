@@ -949,6 +949,7 @@ def _find_markers(solver, markers=None):
 
     # Unique, preserving order
     markers = list(internal.unique_everseen(markers))
+    markers = list(filter(None, markers))
 
     return markers
 

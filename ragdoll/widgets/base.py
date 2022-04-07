@@ -46,6 +46,52 @@ def qt_wrap_instance(ptr, base=None):
     return func(long(ptr), base)
 
 
+class ToggleButton(QtWidgets.QPushButton):
+    """A QPushButton subclass that allows to change icon on check state
+
+    This is for Qt version that prior to 5.15 (like Maya<=2020), where
+    "icon" property isn't yet exists in QPushButton stylesheet.
+
+    With Qt version 5.15+, you can simply do so with following stylesheet
+    setup:
+        ```
+        QPushButton:checked {
+            icon: url(":/checked.svg");
+        }
+        QPushButton:!checked {
+            icon: url(":/unchecked.svg");
+        }
+        ```
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ToggleButton, self).__init__(*args, **kwargs)
+        self._checked_icon = None
+        self._unchecked_icon = None
+        self.setCheckable(True)
+        self.toggled.connect(self._on_toggled)
+
+    def setIcon(self, icon):
+        super(ToggleButton, self).setIcon(icon)
+        self._unchecked_icon = icon
+
+    def set_unchecked_icon(self, icon):
+        self.setIcon(icon)
+
+    def set_checked_icon(self, icon):
+        assert isinstance(icon, QtGui.QIcon), "icon must be QtGui.QIcon"
+        self._checked_icon = icon
+
+    def _on_toggled(self, state):
+        if not self._checked_icon:
+            return
+        if state:
+            super(ToggleButton, self).setIcon(self._checked_icon)
+        else:
+            super(ToggleButton, self).setIcon(self._unchecked_icon)
+
+
 class FramelessDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):

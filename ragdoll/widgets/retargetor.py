@@ -757,13 +757,13 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
         widgets = {
             "SearchBar": QtWidgets.QLineEdit(),
-            "SearchType": QtWidgets.QPushButton(),
-            "SearchCase": QtWidgets.QPushButton(),
+            "SearchType": base.ToggleButton(),
+            "SearchCase": base.ToggleButton(),
             "MarkerView": MarkerTreeWidget(),
             "Cleanup": QtWidgets.QPushButton(),
-            "SortNameAZ": QtWidgets.QPushButton(),
-            "SortNameZA": QtWidgets.QPushButton(),
-            "SortHierarchy": QtWidgets.QPushButton(),
+            "SortNameAZ": base.ToggleButton(),
+            "SortNameZA": base.ToggleButton(),
+            "SortHierarchy": base.ToggleButton(),
         }
 
         timers = {
@@ -771,27 +771,41 @@ class RetargetWindow(QtWidgets.QMainWindow):
         }
 
         timers["OnSearched"].setSingleShot(True)
-
-        widgets["SearchBar"].setClearButtonEnabled(True)
-        widgets["Cleanup"].setObjectName("CleanupButton")
-
-        def set_toggle(w):
-            widgets[w].setObjectName(w + "Button")
-            widgets[w].setCheckable(True)
-
         panels["SideBar"].setObjectName("ButtonGroup")
+        widgets["SearchBar"].setClearButtonEnabled(True)
+        widgets["Cleanup"].setIcon(QtGui.QIcon(_resource("ui", "stars.svg")))
 
-        set_toggle("SearchType")
-        set_toggle("SearchCase")
-        set_toggle("SortNameAZ")
-        set_toggle("SortNameZA")
-        set_toggle("SortHierarchy")
+        def set_toggle(w, unchecked, checked):
+            widgets[w].set_unchecked_icon(QtGui.QIcon(unchecked))
+            widgets[w].set_checked_icon(QtGui.QIcon(checked))
+
+        set_toggle("SearchType",
+                   unchecked=_resource("icons", "parent.png"),
+                   checked=_resource("icons", "children.png"))
+        set_toggle("SearchCase",
+                   unchecked=_resource("ui", "alpha-case-opac.svg"),
+                   checked=_resource("ui", "alpha-case.svg"))
+        set_toggle("SortNameAZ",
+                   unchecked=_resource("ui", "sort-alpha-down-opac.svg"),
+                   checked=_resource("ui", "sort-alpha-down.svg"))
+        set_toggle("SortNameZA",
+                   unchecked=_resource("ui", "sort-alpha-down-alt-opac.svg"),
+                   checked=_resource("ui", "sort-alpha-down-alt.svg"))
+        set_toggle("SortHierarchy",
+                   unchecked=_resource("ui", "list-nested-opac.svg"),
+                   checked=_resource("ui", "list-nested.svg"))
+
         # sort marker by name A -> Z as default
         widgets["SortNameAZ"].setChecked(True)
         # filtering with case sensitive enabled by default
         widgets["SearchCase"].setChecked(True)
         # marker oriented by default
         widgets["SearchBar"].setPlaceholderText("Find markers..")
+
+        sorting_btn_group = QtWidgets.QButtonGroup(self)
+        sorting_btn_group.addButton(widgets["SortNameAZ"])
+        sorting_btn_group.addButton(widgets["SortNameZA"])
+        sorting_btn_group.addButton(widgets["SortHierarchy"])
 
         layout = QtWidgets.QVBoxLayout(panels["SideBar"])
         layout.setContentsMargins(4, 2, 4, 0)
@@ -817,9 +831,6 @@ class RetargetWindow(QtWidgets.QMainWindow):
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
-        widgets["SortNameAZ"].toggled.connect(self.on_sorting_toggled)
-        widgets["SortNameZA"].toggled.connect(self.on_sorting_toggled)
-        widgets["SortHierarchy"].toggled.connect(self.on_sorting_toggled)
         widgets["SortNameAZ"].toggled.connect(self.on_sort_marker_by_name_az)
         widgets["SortNameZA"].toggled.connect(self.on_sort_marker_by_name_za)
         widgets["SortHierarchy"].toggled.connect(self.on_sort_marker_by_hierarchy)
@@ -845,26 +856,17 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self._widgets["MarkerView"].model.remove_unchecked()
         self._widgets["MarkerView"].proxy.invalidate()
 
-    def on_sorting_toggled(self, _):
-        sender = self.sender()
-        buttons = [
-            self._widgets["SortNameAZ"],
-            self._widgets["SortNameZA"],
-            self._widgets["SortHierarchy"],
-        ]
-        for btn in buttons:
-            btn.blockSignals(True)
-            btn.setChecked(btn == sender)
-            btn.blockSignals(False)
+    def on_sort_marker_by_name_az(self, checked):
+        if checked:
+            self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
-    def on_sort_marker_by_name_az(self, _):
-        self._widgets["MarkerView"].set_sort_by_name(ascending=True)
+    def on_sort_marker_by_name_za(self, checked):
+        if checked:
+            self._widgets["MarkerView"].set_sort_by_name(ascending=False)
 
-    def on_sort_marker_by_name_za(self, _):
-        self._widgets["MarkerView"].set_sort_by_name(ascending=False)
-
-    def on_sort_marker_by_hierarchy(self, _):
-        self._widgets["MarkerView"].set_sort_by_hierarchy()
+    def on_sort_marker_by_hierarchy(self, checked):
+        if checked:
+            self._widgets["MarkerView"].set_sort_by_hierarchy()
 
     def on_search_case_toggled(self, state):
         proxy = self._widgets["MarkerView"].proxy
@@ -1017,56 +1019,7 @@ QPushButton:!pressed:hover:!checked {{
     background: rgba(255,255,255,20);
 }}
 
-#CleanupButton {{
-    icon: url({cleanup});
-}}
-
-#SearchTypeButton:checked {{
-    icon: url({search_type_on});
-}}
-#SearchTypeButton:!checked {{
-    icon: url({search_type_off});
-}}
-
-#SearchCaseButton:checked {{
-    icon: url({search_case_on});
-}}
-#SearchCaseButton:!checked {{
-    icon: url({search_case_off});
-}}
-
-#SortNameAZButton:checked {{
-    icon: url({sort_name_az_on});
-}}
-#SortNameAZButton:!checked {{
-    icon: url({sort_name_az_off});
-}}
-
-#SortNameZAButton:checked {{
-    icon: url({sort_name_za_on});
-}}
-#SortNameZAButton:!checked {{
-    icon: url({sort_name_za_off});
-}}
-
-#SortHierarchyButton:checked {{
-    icon: url({sort_hierarchy_on});
-}}
-#SortHierarchyButton:!checked {{
-    icon: url({sort_hierarchy_off});
-}}
 """.format(
     radius=px(2),
     size=px(22),
-    cleanup=_resource("ui", "stars.svg"),
-    search_type_on=_resource("icons", "children.png"),
-    search_type_off=_resource("icons", "parent.png"),
-    search_case_on=_resource("ui", "alpha-case.svg"),
-    search_case_off=_resource("ui", "alpha-case-opac.svg"),
-    sort_name_az_on=_resource("ui", "sort-alpha-down.svg"),
-    sort_name_az_off=_resource("ui", "sort-alpha-down-opac.svg"),
-    sort_name_za_on=_resource("ui", "sort-alpha-down-alt.svg"),
-    sort_name_za_off=_resource("ui", "sort-alpha-down-alt-opac.svg"),
-    sort_hierarchy_on=_resource("ui", "list-nested.svg"),
-    sort_hierarchy_off=_resource("ui", "list-nested-opac.svg"),
 )

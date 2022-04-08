@@ -58,9 +58,9 @@ global proc AErdSolverTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Display" -collapse true;
             editorTemplate -addControl "displayType";
+            editorTemplate -addControl "drawLimits";
             editorTemplate -addControl "drawShapes";
             editorTemplate -addControl "drawConstraints";
-            editorTemplate -addControl "drawLimits";
             editorTemplate -addControl "drawDrives";
             editorTemplate -addControl "drawHierarchy";
             editorTemplate -addControl "drawGroups";

@@ -375,7 +375,7 @@ class MarkerTreeModel(base.BaseItemModel):
         ref = None
         for x, _s in enumerate(self._internal):
             for y, _c in enumerate(_s.conn_list):
-                if _c.marker != marker:
+                if _c.marker != marker.hex:
                     continue
                 marker_matched = True
                 index_matched = y

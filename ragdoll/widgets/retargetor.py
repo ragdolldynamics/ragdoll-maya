@@ -43,12 +43,12 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
 
 class _Solver(object):
     def __init__(self, solver, size, ui_name, conn_list):
-        assert isinstance(solver, long), "Must be hashCode"
+        assert isinstance(solver, str), "Must be hex(str)"
         # It seems to be that, in Maya 2018, PySide2 is not able to
         # handle/passing cmdx.Node object as item data in model.
         # Maya crashes instantly if you do so.
-        # Hence here we can only keep the hash code of the Node so
-        # the Qt model won't panic.
+        # Hence here we can only keep the hash code (hex string) of
+        # the Node so the Qt model won't panic.
         self.solver = solver
         self.size = size
         self.ui_name = ui_name
@@ -58,8 +58,8 @@ class _Solver(object):
 class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
                  dot_color, check_state):
-        assert isinstance(marker, long), "Must be hashCode"
-        assert isinstance(dest, long) or dest is None, "Must be hashCode or None"
+        assert isinstance(marker, str), "Must be hex(str)"
+        assert isinstance(dest, str) or dest is None, "Must be hex(str) or None"
         self.marker = marker
         self.dest = dest
         self.level = level
@@ -71,7 +71,7 @@ class _Connection(object):
 
 
 class MarkerTreeModel(base.BaseItemModel):
-    destination_toggled = QtCore.Signal(long, long, bool)  #
+    destination_toggled = QtCore.Signal(str, str, bool)
 
     NodeRole = QtCore.Qt.UserRole + 10
     LevelRole = QtCore.Qt.UserRole + 11
@@ -126,9 +126,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
             if key == "marker":
-                return cmdx.fromHash(conn.marker).name()
+                return cmdx.fromHex(conn.marker).name()
             if key == "dest":
-                return cmdx.fromHash(conn.dest).name() if conn.dest else ""
+                return cmdx.fromHex(conn.dest).name() if conn.dest else ""
 
         if role == QtCore.Qt.DecorationRole:
             if key == "marker":
@@ -156,9 +156,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
         if role == self.NameSortingRole:  # node path affects alt row coloring
             if key == "marker":
-                return cmdx.fromHash(conn.marker).name()
+                return cmdx.fromHex(conn.marker).name()
             if key == "dest":
-                return cmdx.fromHash(conn.dest).name() if conn.dest else ""
+                return cmdx.fromHex(conn.dest).name() if conn.dest else ""
 
         if role == self.NaturalSortingRole:
             if key == "marker":
@@ -216,13 +216,13 @@ class MarkerTreeModel(base.BaseItemModel):
 
         ordered = []
         for _s in self._internal:
-            ordered.append(cmdx.fromHash(_s.solver).shortest_path())
+            ordered.append(cmdx.fromHex(_s.solver).shortest_path())
 
             path_list = []
             for _c in _s.conn_list:
                 # node path affects alt row coloring
-                path = cmdx.fromHash(_c.marker).name() if key == "marker" else \
-                    cmdx.fromHash(_c.dest).name() if _c.dest else ""
+                path = cmdx.fromHex(_c.marker).name() if key == "marker" else \
+                    cmdx.fromHex(_c.dest).name() if _c.dest else ""
                 if path not in path_list:
                     path_list.append(path)
 
@@ -326,9 +326,9 @@ class MarkerTreeModel(base.BaseItemModel):
         the_solver = None
         rd_content_iter = self._iter_ragdoll_content(reg)
         for _i, (solver, level, marker, dest) in enumerate(rd_content_iter):
-            if the_solver is None or solver.hashCode != the_solver.solver:
+            if the_solver is None or solver.hex != the_solver.solver:
                 the_solver = _Solver(
-                    solver=solver.hashCode,
+                    solver=solver.hex,
                     size=solver_sizes[int(solver["ragdollId"])],
                     ui_name=_solver_ui_name_by_sizes(solver_sizes, solver),
                     conn_list=[],
@@ -349,8 +349,8 @@ class MarkerTreeModel(base.BaseItemModel):
         icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
 
         conn = _Connection(
-            marker=marker.hashCode,
-            dest=dest.hashCode if dest else None,
+            marker=marker.hex,
+            dest=dest.hex if dest else None,
             icon_m=icon_m,
             icon_d=icon_d,
             dot_color=dot_color,
@@ -383,11 +383,11 @@ class MarkerTreeModel(base.BaseItemModel):
 
                 if _c.dest is None:
                     # plug dest into connection
-                    _c.dest = dest.hashCode
+                    _c.dest = dest.hex
                     _c.icon_d = QtGui.QIcon(":/%s" % dest.type())
                     return self._check_conn_by_row(_c, x, y)
 
-                elif _c.dest == dest.hashCode:
+                elif _c.dest == dest.hex:
                     # already in model, ensure checked
                     if _c.check_state != QtCore.Qt.Checked:
                         return self._check_conn_by_row(_c, x, y)
@@ -540,7 +540,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
             proxy = self.model()
             # column is always 0.
             node = proxy.data(index, MarkerTreeModel.NodeRole)
-            path = cmdx.fromHash(node).name() if node else ""
+            path = cmdx.fromHex(node).name() if node else ""
             try:
                 ordered_index = self._current_order.index(path)
             except ValueError:
@@ -617,7 +617,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def on_double_clicked(self, index):
         node = self._proxy.data(index, MarkerTreeModel.NodeRole)
         if node is not None:
-            node = cmdx.fromHash(node)
+            node = cmdx.fromHex(node)
             cmds.select(node.shortest_path(), replace=True)
 
     def on_right_clicked(self, position):
@@ -652,7 +652,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 )
                 node = _index.data(MarkerTreeModel.NodeRole)
                 if node:
-                    node = cmdx.fromHash(node)
+                    node = cmdx.fromHex(node)
                     selection.append(node.shortest_path())
             cmds.select(selection)
 
@@ -679,7 +679,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 i = self._proxy.mapToSource(i)
                 if not i.parent().isValid() or i.column() != marker_col:
                     continue
-                marker_node = cmdx.fromHash(i.data(MarkerTreeModel.NodeRole))
+                marker_node = cmdx.fromHex(i.data(MarkerTreeModel.NodeRole))
                 selected_markers.append(marker_node)
 
             parsed_indexes = []
@@ -712,8 +712,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu.show()
 
     def on_destination_toggled(self, marker_node, dest_node, checked):
-        marker_node = cmdx.fromHash(marker_node)
-        dest_node = cmdx.fromHash(dest_node)
+        marker_node = cmdx.fromHex(marker_node)
+        dest_node = cmdx.fromHex(dest_node)
 
         if checked:
             opts = {"append": True}

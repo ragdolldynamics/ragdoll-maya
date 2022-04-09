@@ -774,9 +774,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
             "SearchCase": base.ToggleButton(),
             "MarkerView": MarkerTreeWidget(),
             "Cleanup": QtWidgets.QPushButton(),
-            "SortNameAZ": base.ToggleButton(),
-            "SortNameZA": base.ToggleButton(),
-            "SortHierarchy": base.ToggleButton(),
+            "Sorting": base.StateRotateButton(),
         }
 
         timers = {
@@ -784,7 +782,6 @@ class RetargetWindow(QtWidgets.QMainWindow):
         }
 
         timers["OnSearched"].setSingleShot(True)
-        panels["SideBar"].setObjectName("ButtonGroup")
         widgets["SearchBar"].setClearButtonEnabled(True)
         widgets["Cleanup"].setIcon(QtGui.QIcon(_resource("ui", "stars.svg")))
 
@@ -798,34 +795,26 @@ class RetargetWindow(QtWidgets.QMainWindow):
         set_toggle("SearchCase",
                    unchecked=_resource("ui", "alpha-case-opac.svg"),
                    checked=_resource("ui", "alpha-case.svg"))
-        set_toggle("SortNameAZ",
-                   unchecked=_resource("ui", "sort-alpha-down-opac.svg"),
-                   checked=_resource("ui", "sort-alpha-down.svg"))
-        set_toggle("SortNameZA",
-                   unchecked=_resource("ui", "sort-alpha-down-alt-opac.svg"),
-                   checked=_resource("ui", "sort-alpha-down-alt.svg"))
-        set_toggle("SortHierarchy",
-                   unchecked=_resource("ui", "list-nested-opac.svg"),
-                   checked=_resource("ui", "list-nested.svg"))
 
         # sort marker by name A -> Z as default
-        widgets["SortNameAZ"].setChecked(True)
+        widgets["Sorting"].add_state(
+            "name_az", QtGui.QIcon(_resource("ui", "sort-alpha-down.svg"))
+        )
+        widgets["Sorting"].add_state(
+            "name_za", QtGui.QIcon(_resource("ui", "sort-alpha-down-alt.svg"))
+        )
+        widgets["Sorting"].add_state(
+            "hierarchy", QtGui.QIcon(_resource("ui", "list-nested.svg"))
+        )
         # filtering with case sensitive enabled by default
         widgets["SearchCase"].setChecked(True)
         # marker oriented by default
         widgets["SearchBar"].setPlaceholderText("Find markers..")
 
-        sorting_btn_group = QtWidgets.QButtonGroup(self)
-        sorting_btn_group.addButton(widgets["SortNameAZ"])
-        sorting_btn_group.addButton(widgets["SortNameZA"])
-        sorting_btn_group.addButton(widgets["SortHierarchy"])
-
         layout = QtWidgets.QVBoxLayout(panels["SideBar"])
         layout.setContentsMargins(4, 2, 4, 0)
         layout.setSpacing(4)
-        layout.addWidget(widgets["SortNameAZ"])
-        layout.addWidget(widgets["SortNameZA"])
-        layout.addWidget(widgets["SortHierarchy"])
+        layout.addWidget(widgets["Sorting"])
         layout.addStretch(1)
         layout.addWidget(widgets["Cleanup"])
 
@@ -844,9 +833,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
-        widgets["SortNameAZ"].toggled.connect(self.on_sort_marker_by_name_az)
-        widgets["SortNameZA"].toggled.connect(self.on_sort_marker_by_name_za)
-        widgets["SortHierarchy"].toggled.connect(self.on_sort_marker_by_hierarchy)
+        widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
         widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
@@ -869,16 +856,12 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self._widgets["MarkerView"].model.remove_unchecked()
         self._widgets["MarkerView"].proxy.invalidate()
 
-    def on_sort_marker_by_name_az(self, checked):
-        if checked:
+    def on_sorting_clicked(self, state):
+        if state == "name_az":
             self._widgets["MarkerView"].set_sort_by_name(ascending=True)
-
-    def on_sort_marker_by_name_za(self, checked):
-        if checked:
+        elif state == "name_za":
             self._widgets["MarkerView"].set_sort_by_name(ascending=False)
-
-    def on_sort_marker_by_hierarchy(self, checked):
-        if checked:
+        else:
             self._widgets["MarkerView"].set_sort_by_hierarchy()
 
     def on_search_case_toggled(self, state):
@@ -891,13 +874,13 @@ class RetargetWindow(QtWidgets.QMainWindow):
     def on_search_type_toggled(self, state):
         if state:
             self._widgets["SearchBar"].setPlaceholderText("Find destinations..")
-            self._widgets["SortHierarchy"].setEnabled(False)
+            self._widgets["Sorting"].block("hierarchy")
+            if self._widgets["Sorting"].state() == "hierarchy":
+                self._widgets["Sorting"].set_state("name_az")
             self._widgets["MarkerView"].flip(True)
-            if self._widgets["SortHierarchy"].isChecked():
-                self._widgets["SortNameAZ"].setChecked(True)
         else:
             self._widgets["SearchBar"].setPlaceholderText("Find markers..")
-            self._widgets["SortHierarchy"].setEnabled(True)
+            self._widgets["Sorting"].unblock("hierarchy")
             self._widgets["MarkerView"].flip(False)
 
     def on_searched_defer(self):
@@ -1026,10 +1009,6 @@ QPushButton:!pressed:hover,
 QPushButton:!pressed:hover:checked,
 QPushButton:!pressed:hover:!checked {{
     background: rgba(255,255,255,60);
-}}
-
-#ButtonGroup QPushButton:!pressed:!hover:checked {{
-    background: rgba(255,255,255,20);
 }}
 
 """.format(

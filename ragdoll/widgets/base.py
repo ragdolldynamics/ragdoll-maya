@@ -92,6 +92,101 @@ class ToggleButton(QtWidgets.QPushButton):
             super(ToggleButton, self).setIcon(self._unchecked_icon)
 
 
+class StateRotateButton(QtWidgets.QPushButton):
+    """A QPushButton subclass that rotates on a list of linked state
+    """
+    stateChanged = QtCore.Signal(str)
+
+    def __init__(self, *args, **kwargs):
+        super(StateRotateButton, self).__init__(*args, **kwargs)
+        self._states = list()
+        self._block = set()
+        self._current = None
+        self.setCheckable(True)
+
+    def add_state(self, name, icon, text=None):
+        """Register new state
+
+        New added state will be linked with last added state.
+        For example:
+            foo -> bar -> foo (a circular chain with two states)
+            foo -> bar -> new -> foo (new state inserted into the last)
+
+        Args:
+            name: state name
+            icon: button icon
+            text: button text, if given
+
+        Returns:
+            None
+        """
+        if not name:
+            raise Exception("State name cannot be empty.")
+        if any(s["name"] == name for s in self._states):
+            raise Exception("Already have same named state %r." % name)
+
+        after = self._states[-1] if self._states else None
+
+        state = {
+            "name": name,
+            "icon": icon,
+            "text": text or "",
+            "next": None,
+        }
+        self._states.append(state)
+
+        if after is None:
+            state["next"] = state
+            self._current = state  # first state, init
+        else:
+            state["next"] = after["next"]
+            after["next"] = state
+
+    def set_state(self, name):
+        """Set current state by name"""
+        for state in self._states:
+            if state["name"] == name:
+                self._current = state
+                break
+        else:
+            raise Exception("No matched state found.")
+        self.checkStateSet()
+
+    def state(self):
+        """Get current state name"""
+        if self._current is None:
+            raise Exception("Not initialized.")
+        return self._current["name"]
+
+    def block(self, name):
+        """Block a state, blocked state will be skipped to it's next"""
+        self._block.add(name)
+
+    def unblock(self, name):
+        """Unblock a state"""
+        self._block.remove(name)
+
+    def nextCheckState(self):
+        self._current = self._current["next"]
+        if self._current["name"] in self._block:
+            self.nextCheckState()
+        else:
+            self.checkStateSet()
+
+    def checkStateSet(self):
+        state = self._current
+        self.setText(state["text"])
+        self.setIcon(state["icon"])
+        self.stateChanged.emit(state["name"])
+
+    def showEvent(self, event):
+        super(StateRotateButton, self).showEvent(event)
+        # init text and icon without emitting signal
+        self.blockSignals(True)
+        self.checkStateSet()
+        self.blockSignals(False)
+
+
 class FramelessDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):

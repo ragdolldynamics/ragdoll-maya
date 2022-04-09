@@ -41,6 +41,11 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
     return transform.shortest_path() if has_same_size else transform.name()
 
 
+def _hex_exists(node_hex):
+    node = cmdx.fromHex(node_hex)
+    return node and node.exists
+
+
 class _Solver(object):
     def __init__(self, solver, size, ui_name, conn_list):
         assert isinstance(solver, str), "Must be hex(str)"
@@ -320,7 +325,9 @@ class MarkerTreeModel(base.BaseItemModel):
         if keep_unchecked:
             for _s in self._internal:
                 for _c in _s.conn_list:
-                    if _c.dest and _c.check_state == QtCore.Qt.Unchecked:
+                    if _c.dest \
+                            and _c.check_state == QtCore.Qt.Unchecked \
+                            and _hex_exists(_c.dest):
                         unchecked.append((_s.solver, _c.marker, _c.dest))
 
         # reset
@@ -439,6 +446,15 @@ class MarkerTreeModel(base.BaseItemModel):
 
         # should not happen.
         raise Exception("No matched marker found in model.")
+
+    def any_missing_dest(self):
+        for _s in self._internal:
+            for _c in _s.conn_list:
+                if _c.dest \
+                        and _c.check_state == QtCore.Qt.Unchecked \
+                        and not _hex_exists(_c.dest):
+                    return True
+        return False
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
@@ -907,11 +923,12 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
     def enterEvent(self, event):
         super(RetargetWindow, self).enterEvent(event)
+        view = self._widgets["MarkerView"]
+
         current_dump = json.loads(cmds.ragdollDump())
         current_dump.pop("info")  # we don't compare with timestamp
-
-        if self._widgets["MarkerView"].model.dump != current_dump:
-            self._widgets["MarkerView"].refresh(keep_unchecked=True)
+        if view.model.dump != current_dump or view.model.any_missing_dest():
+            view.refresh(keep_unchecked=True)
 
 
 _treeview_style_sheet = """

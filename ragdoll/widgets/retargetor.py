@@ -612,7 +612,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         view.setAllColumnsShowFocus(True)
         view.setTextElideMode(QtCore.Qt.ElideLeft)
-        view.setSelectionMode(view.ExtendedSelection)
+        view.setSelectionMode(view.SingleSelection)
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         view.setHeaderHidden(True)
 
@@ -626,7 +626,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(view)
 
-        view.doubleClicked.connect(self.on_double_clicked)
+        view.clicked.connect(self.on_view_clicked)
         view.customContextMenuRequested.connect(self.on_right_clicked)
         model.destination_toggled.connect(self.on_destination_toggled)
 
@@ -651,7 +651,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._model.refresh(keep_unchecked)
         self._view.expandToDepth(1)
 
-    def on_double_clicked(self, index):
+    def on_view_clicked(self, index):
         node = self._proxy.data(index, MarkerTreeModel.NodeRole)
         if node is not None:
             node = cmdx.fromHex(node)

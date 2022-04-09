@@ -46,6 +46,12 @@ def _hex_exists(node_hex):
     return node and node.exists
 
 
+def _maya_node_icon(node):
+    if node.isA(cmdx.kDagNode):
+        node = node.shape() or node
+    return QtGui.QIcon(":/%s" % node.type())
+
+
 class _Solver(object):
     def __init__(self, solver, size, ui_name, conn_list):
         assert isinstance(solver, str), "Must be hex(str)"
@@ -368,7 +374,7 @@ class MarkerTreeModel(base.BaseItemModel):
             if found.dest is None:
                 _d = cmdx.fromHex(d_hex)
                 found.dest = _d.hex
-                found.icon_d = QtGui.QIcon(":/%s" % _d.type())
+                found.icon_d = _maya_node_icon(_d)
                 found.check_state = QtCore.Qt.Unchecked
             else:
                 _m = cmdx.fromHex(m_hex)
@@ -386,7 +392,7 @@ class MarkerTreeModel(base.BaseItemModel):
         dot_color = QtGui.QColor.fromRgbF(*marker["color"]).lighter()
 
         # dest icon
-        icon_d = QtGui.QIcon(":/%s" % dest.type()) if dest else None
+        icon_d = _maya_node_icon(dest) if dest else None
 
         conn = _Connection(
             marker=marker.hex,
@@ -424,7 +430,7 @@ class MarkerTreeModel(base.BaseItemModel):
                 if _c.dest is None:
                     # plug dest into connection
                     _c.dest = dest.hex
-                    _c.icon_d = QtGui.QIcon(":/%s" % dest.type())
+                    _c.icon_d = _maya_node_icon(dest)
                     return self._check_conn_by_row(_c, x, y)
 
                 elif _c.dest == dest.hex:

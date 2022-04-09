@@ -232,9 +232,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
         return ordered
 
-    def refresh(self):
+    def refresh(self, keep_unchecked=False):
         self.reset()
-        self._build_internal_model()
+        self._build_internal_model(keep_unchecked)
 
         for solver_repr in self._internal:
             solver_item = self._mk_solver_item(solver_repr)
@@ -315,7 +315,15 @@ class MarkerTreeModel(base.BaseItemModel):
                 else:
                     yield solver, level, marker_node, None
 
-    def _build_internal_model(self):
+    def _build_internal_model(self, keep_unchecked):
+        unchecked = list()
+        if keep_unchecked:
+            for _s in self._internal:
+                for _c in _s.conn_list:
+                    if _c.dest and _c.check_state == QtCore.Qt.Unchecked:
+                        unchecked.append((_s.solver, _c.marker, _c.dest))
+
+        # reset
         del self._internal[:]
         self.sync()
         reg = dump.Registry(self._dump)
@@ -337,6 +345,31 @@ class MarkerTreeModel(base.BaseItemModel):
 
             conn = self._mk_conn(marker, dest, level, _i, QtCore.Qt.Checked)
             the_solver.conn_list.append(conn)
+
+        # add back unchecked
+        for (s_hex, m_hex, d_hex) in unchecked:
+            _s = next((_ for _ in self._internal if _.solver == s_hex), None)
+            if not _s:
+                continue
+            conn_iter = (_c for _c in _s.conn_list if _c.marker == m_hex)
+            found = next(conn_iter, None)
+            if not found:
+                continue
+            if found.dest == d_hex or any(_c.dest == d_hex for _c in conn_iter):
+                continue
+
+            if found.dest is None:
+                _d = cmdx.fromHex(d_hex)
+                found.dest = _d.hex
+                found.icon_d = QtGui.QIcon(":/%s" % _d.type())
+                found.check_state = QtCore.Qt.Unchecked
+            else:
+                _m = cmdx.fromHex(m_hex)
+                _d = cmdx.fromHex(d_hex)
+                _l = found.level
+                _i = found.natural
+                conn = self._mk_conn(_m, _d, _l, _i, QtCore.Qt.Unchecked)
+                the_solver.conn_list.append(conn)
 
     def _mk_conn(self, marker, dest, level, natural, check_state=None):
         check_state = check_state or QtCore.Qt.Unchecked
@@ -406,24 +439,6 @@ class MarkerTreeModel(base.BaseItemModel):
 
         # should not happen.
         raise Exception("No matched marker found in model.")
-
-    def remove_unchecked(self):
-        for x, _s in enumerate(self._internal):
-            solver_item = self.item(x, 0)
-            new_conn_list = [
-                _c for _c in _s.conn_list
-                if _c.check_state == QtCore.Qt.Checked
-            ]
-            for _c in _s.conn_list:
-                if _c.check_state != QtCore.Qt.Checked:
-                    if not any(n.marker == _c.marker for n in new_conn_list):
-                        _c.dest = None
-                        _c.icon_d = None
-                        _c.check_state = None
-                        new_conn_list.append(_c)
-
-            _s.conn_list = new_conn_list
-            solver_item.setRowCount(len(_s.conn_list))
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
@@ -610,8 +625,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def model(self):
         return self._model
 
-    def refresh(self):
-        self._model.refresh()
+    def refresh(self, keep_unchecked=False):
+        self._model.refresh(keep_unchecked)
         self._view.expandToDepth(1)
 
     def on_double_clicked(self, index):
@@ -773,7 +788,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
             "SearchType": base.ToggleButton(),
             "SearchCase": base.ToggleButton(),
             "MarkerView": MarkerTreeWidget(),
-            "Cleanup": QtWidgets.QPushButton(),
+            "Refresh": QtWidgets.QPushButton(),
             "Sorting": base.StateRotateButton(),
         }
 
@@ -783,7 +798,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
         timers["OnSearched"].setSingleShot(True)
         widgets["SearchBar"].setClearButtonEnabled(True)
-        widgets["Cleanup"].setIcon(QtGui.QIcon(_resource("ui", "stars.svg")))
+        widgets["Refresh"].setIcon(QtGui.QIcon(_resource("icons", "reset.png")))
 
         def set_toggle(w, unchecked, checked):
             widgets[w].set_unchecked_icon(QtGui.QIcon(unchecked))
@@ -816,7 +831,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         layout.setSpacing(4)
         layout.addWidget(widgets["Sorting"])
         layout.addStretch(1)
-        layout.addWidget(widgets["Cleanup"])
+        layout.addWidget(widgets["Refresh"])
 
         layout = QtWidgets.QHBoxLayout(panels["TopBar"])
         layout.setContentsMargins(6, 10, 12, 4)
@@ -837,7 +852,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
         widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
-        widgets["Cleanup"].clicked.connect(self.on_cleanup_clicked)
+        widgets["Refresh"].clicked.connect(self.on_refresh_clicked)
         timers["OnSearched"].timeout.connect(self.on_searched)
 
         self._panels = panels
@@ -852,9 +867,8 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
-    def on_cleanup_clicked(self):
-        self._widgets["MarkerView"].model.remove_unchecked()
-        self._widgets["MarkerView"].proxy.invalidate()
+    def on_refresh_clicked(self):
+        self._widgets["MarkerView"].refresh()
 
     def on_sorting_clicked(self, state):
         if state == "name_az":
@@ -897,7 +911,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         current_dump.pop("info")  # we don't compare with timestamp
 
         if self._widgets["MarkerView"].model.dump != current_dump:
-            self._widgets["MarkerView"].refresh()
+            self._widgets["MarkerView"].refresh(keep_unchecked=True)
 
 
 _treeview_style_sheet = """

@@ -887,6 +887,7 @@ def install_menu():
 
         item("parentMarker", select_parent_marker, label="Marker Parent")
         item("childMarkers", select_child_markers, label="Marker Children")
+        item("selectGroupMembers", select_group_members, label="Group Members")
 
     with submenu("System", icon="system.png"):
         divider("Scene")
@@ -2998,10 +2999,6 @@ def select_type(typ):
     return select
 
 
-def select_rigids(selection=None, **opts):
-    return select_type("rdRigid")(selection, **opts)
-
-
 def select_markers(selection=None, **opts):
     return select_type("rdMarker")(selection, **opts)
 
@@ -3014,16 +3011,21 @@ def select_solvers(selection=None, **opts):
     return select_type("rdSolver")(selection, **opts)
 
 
-def select_constraints(selection=None, **opts):
-    return select_type("rdConstraint")(selection, **opts)
+def select_group_members(selection=None, **opts):
+    groups = _filtered_selection("rdGroup", selection)
 
+    members = set()
+    for group in groups:
+        for el in group["inputStart"]:
+            member = el.input()
 
-def select_controls(selection=None, **opts):
-    return select_type("rdControl")(selection, **opts)
+            if member is None:
+                continue
 
+            members.add(member)
 
-def select_scenes(selection=None, **opts):
-    return select_type("rdScene")(selection, **opts)
+    cmds.select(list(map(str, members)))
+    return kSuccess
 
 
 #

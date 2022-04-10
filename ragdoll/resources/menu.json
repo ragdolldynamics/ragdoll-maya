@@ -1001,6 +1001,15 @@
         ]
     },
 
+    "selectGroupMembers": {
+        "label": "Select Group Members",
+        "icon": "suit.png",
+        "summary": "Select members of selected groups",
+        "description": "Select all members of the currently selected groups.",
+        "options": [
+        ]
+    },
+
     "selectSolvers": {
         "label": "Select Solvers",
         "icon": "solver.png",

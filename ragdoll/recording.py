@@ -396,14 +396,10 @@ class _Recorder(object):
         if _range is None:
             _range = range(self._solver_start_frame, self._end_frame + 1)
 
-        min_time, max_time = cmdx.min_time(), cmdx.max_time()
         initial_time = cmdx.current_time()
 
-        # Keep internal buffer lively
+        # Ensure time is restored
         try:
-            cmdx.min_time(_range[0])
-            cmdx.max_time(_range[1])
-
             total = self._end_frame - self._solver_start_frame
             for frame in _range:
                 if self._opts["experimental"]:
@@ -433,9 +429,6 @@ class _Recorder(object):
                 yield percentage
 
         finally:
-            # Restore things
-            cmdx.min_time(min_time)
-            cmdx.max_time(max_time)
             cmdx.current_time(initial_time)
 
     @internal.with_timing

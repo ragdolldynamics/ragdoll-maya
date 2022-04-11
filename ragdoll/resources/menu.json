@@ -720,7 +720,8 @@
         "summary": "Assign environment to this polygonal mesh.",
         "description": "Import this polygonal mesh as-is, without any post-processing, to collide against each individual polygon (more precisely, against each triangle).",
         "options": [
-            "markersAssignSolver"
+            "markersAssignSolver",
+            "visualiseEnvironment"
         ]
     },
 

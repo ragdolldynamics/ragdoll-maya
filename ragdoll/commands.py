@@ -264,7 +264,7 @@ def assign_marker(transform, solver, group=None, opts=None):
     return assign_markers([transform], solver, opts)[0]
 
 
-def assign_environment(mesh, solver):
+def assign_environment(mesh, solver, opts=None):
     """Use the triangles of `mesh` for static collision detection
 
     Arguments:
@@ -278,6 +278,10 @@ def assign_environment(mesh, solver):
         "%s was not a rdSolver type" % solver
     )
 
+    opts = dict({
+        "visualise": False,
+    }, **(opts or {}))
+
     with cmdx.DGModifier() as mod:
         name = mesh.parent().name(namespace=False)
         name = "rEnvironment_%s" % name
@@ -288,6 +292,42 @@ def assign_environment(mesh, solver):
         index = solver["inputStart"].next_available_index()
         mod.connect(env["startState"], solver["inputStart"][index])
         mod.connect(env["currentState"], solver["inputCurrent"][index])
+
+    if opts["visualise"]:
+        with cmdx.DagModifier() as mod:
+            mesh_parent = mesh.parent()
+            solver_parent = solver.parent()
+
+            name = mesh.name()
+            name = "r" + name[0].upper() + (name[1:] if len(name) > 1 else "")
+            vis = mod.create_node("mesh", name=mesh.name(), parent=mesh_parent)
+
+            mod.set_attr(vis["overrideEnabled"], True)
+            mod.set_attr(vis["overrideDisplayType"], 2)  # Non-selectable
+
+            with cmdx.DGModifier() as dgmod:
+                mult = dgmod.create_node("multMatrix")
+                transform = dgmod.create_node("transformGeometry")
+
+            mod.set_attr(mult["isHistoricallyInteresting"], 0)
+            mod.set_attr(transform["isHistoricallyInteresting"], 0)
+            mod.set_attr(vis["isHistoricallyInteresting"], 0)
+
+            mod.connect(mesh_parent["worldMatrix"][0], mult["matrixIn"][0])
+            mod.connect(solver_parent["worldMatrix"][0], mult["matrixIn"][1])
+            mod.connect(mesh_parent["wim"][0], mult["matrixIn"][2])
+            mod.connect(mult["matrixSum"], transform["transform"])
+            mod.connect(mesh["outMesh"], transform["inputGeometry"])
+            mod.connect(transform["outputGeometry"], vis["inMesh"])
+
+            # Assign the same shader
+            shading_group = mesh["instObjGroups"][0].output()
+            shading_group.add(vis)
+
+            # # Delete these when solver is deleted
+            _take_ownership(mod, env, vis)
+            _take_ownership(mod, env, mult)
+            _take_ownership(mod, env, transform)
 
     return env
 

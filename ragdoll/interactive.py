@@ -1476,6 +1476,7 @@ def assign_and_connect(selection=None, **opts):
 def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
+        "visualise": _opt("visualiseEnvironment", opts),
     })
 
     _update_solver_options()
@@ -1495,7 +1496,9 @@ def assign_environment(selection=None, **opts):
                 "Select a polygon mesh to use for an environment."
             )
 
-        commands.assign_environment(mesh, solver)
+        commands.assign_environment(mesh, solver, opts={
+            "visualise": opts["visualise"]
+        })
 
     return kSuccess
 

@@ -1492,7 +1492,8 @@ def assign_environment(selection=None, **opts):
 
         if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
-                "Select a polygon mesh to use for an environment"
+                "Bad Selection",
+                "Select a polygon mesh to use for an environment."
             )
 
         commands.assign_environment(mesh, solver)

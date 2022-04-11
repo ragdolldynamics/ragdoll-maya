@@ -1,12 +1,9 @@
+
 import os
-import json
-
-from maya import cmds
-
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
+from .. import internal
 from . import base, px
-from .. import dump
 
 # Unused, for type hint in IDEs
 __ = cmdx
@@ -19,12 +16,11 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname))
 
 
-def _get_all_solver_size(registry):
-    solvers = list(registry.view("SolverComponent"))
-    solver_size = dict.fromkeys(solvers, 0)
-    for entity in registry.view():
-        scene_comp = registry.get(entity, "SceneComponent")
-        solver_size[scene_comp["entity"]] += 1
+def _get_all_solver_size(solvers):
+    solver_size = dict()
+    for solver in solvers:
+        solver_id = int(solver["ragdollId"])
+        solver_size[solver_id] = internal.compute_solver_size(solver)
     return solver_size
 
 
@@ -208,9 +204,7 @@ class SolverSelectorDialog(base.FramelessDialog):
         """
         super(SolverSelectorDialog, self).__init__(parent=parent)
 
-        registry = dump.Registry(json.loads(cmds.ragdollDump()))
-        solver_sizes = _get_all_solver_size(registry)
-        # todo: check ragdollDump schema version ?
+        solver_sizes = _get_all_solver_size(solvers)
 
         body = QtWidgets.QWidget()
         title = QtWidgets.QLabel("Pick Solver")

@@ -1359,7 +1359,6 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1430,7 +1429,6 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "refit": opts["refit"],
         })
 
     except RuntimeError as e:
@@ -1494,7 +1492,8 @@ def assign_environment(selection=None, **opts):
 
         if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
-                "Select a polygon mesh to use for an environment"
+                "Bad Selection",
+                "Select a polygon mesh to use for an environment."
             )
 
         commands.assign_environment(mesh, solver)

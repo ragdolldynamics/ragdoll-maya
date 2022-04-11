@@ -1359,7 +1359,6 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1430,7 +1429,6 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "refit": opts["refit"],
         })
 
     except RuntimeError as e:

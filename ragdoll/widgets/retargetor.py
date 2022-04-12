@@ -5,7 +5,7 @@ from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import commands, internal
+from .. import commands, internal, ui
 
 try:
     long  # noqa
@@ -837,16 +837,12 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._view.update_order()
 
 
-class RetargetWindow(QtWidgets.QMainWindow):
+class RetargetWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(RetargetWindow, self).__init__(parent=parent)
-        self.setWindowTitle("Marker Retargeting")
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setMouseTracking(True)  # For helptext
+        super(RetargetWidget, self).__init__(parent=parent)
 
         panels = {
-            "Central": QtWidgets.QWidget(),
             "TopBar": QtWidgets.QWidget(),
             "SideBar": QtWidgets.QWidget(),
             "Markers": QtWidgets.QWidget(),
@@ -913,7 +909,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         layout.addWidget(panels["SideBar"])
         layout.addWidget(widgets["MarkerView"])
 
-        layout = QtWidgets.QVBoxLayout(panels["Central"])
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
@@ -928,11 +924,9 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self._widgets = widgets
         self._timers = timers
 
-        self.setCentralWidget(panels["Central"])
         self.setStyleSheet(_treeview_style_sheet + _sidebar_style_sheet)
-        self.setMinimumSize(QtCore.QSize(600, 500))
 
-        # init
+    def init(self):
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
@@ -975,7 +969,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
         self._widgets["MarkerView"].view.expandToDepth(1)
 
     def enterEvent(self, event):
-        super(RetargetWindow, self).enterEvent(event)
+        super(RetargetWidget, self).enterEvent(event)
         view = self._widgets["MarkerView"]
         scene = _Scene()
         if view.model.scene != scene or view.model.any_unchecked_missing():
@@ -983,7 +977,7 @@ class RetargetWindow(QtWidgets.QMainWindow):
 
 
 _treeview_style_sheet = """
-QAbstractItemView {{
+RetargetWidget QAbstractItemView {{
     show-decoration-selected: 1;  /* highlight decoration (branch) */
     border: none;
     selection-color: {on_primary};
@@ -991,68 +985,68 @@ QAbstractItemView {{
     background-color: {background};
     alternate-background-color: {background_alt};
 }}
-QAbstractItemView:focus {{
+RetargetWidget QAbstractItemView:focus {{
     border: none;
 }}
 
-QTreeView::item {{
+RetargetWidget QTreeView::item {{
     border: 0px;
     padding: {padding};
     padding-right: {padding_right}px;
     padding-left: {padding_left}px;  /* more space for icon and indicator */
 }}
-QTreeView::icon {{
+RetargetWidget QTreeView::icon {{
     right: {icon_right}px;
 }}
-QTreeView::indicator {{
+RetargetWidget QTreeView::indicator {{
     right: {indicator_right}px;
 }}
 
 /* note: transparent background color is really hard to look good */
 
-QTreeView::branch:selected,
-QAbstractItemView::item:selected:active,
-QAbstractItemView::item:selected:!focus {{
+RetargetWidget QTreeView::branch:selected,
+RetargetWidget QAbstractItemView::item:selected:active,
+RetargetWidget QAbstractItemView::item:selected:!focus {{
     color: {on_secondary};
     background-color: {secondary};
 }}
 
-QTreeView::branch:hover,
-QAbstractItemView::item:hover,
-QAbstractItemView::item:hover:selected {{
+RetargetWidget QTreeView::branch:hover,
+RetargetWidget QAbstractItemView::item:hover,
+RetargetWidget QAbstractItemView::item:hover:selected {{
     color: {on_primary};
     background-color: {primary};
 }}
 
-QTreeView::branch::has-children::!has-siblings:closed {{
+RetargetWidget QTreeView::branch::has-children::!has-siblings:closed {{
     image: url({branch_right});
 }}
-QTreeView::branch:closed::has-children::has-siblings {{
+RetargetWidget QTreeView::branch:closed::has-children::has-siblings {{
     image: url({branch_right});
 }}
-QTreeView::branch:open::has-children::!has-siblings {{
+RetargetWidget QTreeView::branch:open::has-children::!has-siblings {{
     image: url({branch_down});
 }}
-QTreeView::branch:open::has-children::has-siblings {{
+RetargetWidget QTreeView::branch:open::has-children::has-siblings {{
     image: url({branch_down});
 }}
-QTreeView::branch::has-children::!has-siblings:closed:hover {{
+RetargetWidget QTreeView::branch::has-children::!has-siblings:closed:hover {{
     image: url({branch_right_on});
 }}
-QTreeView::branch:closed::has-children::has-siblings:hover {{
+RetargetWidget QTreeView::branch:closed::has-children::has-siblings:hover {{
     image: url({branch_right_on});
 }}
-QTreeView::branch:open::has-children::!has-siblings:hover {{
+RetargetWidget QTreeView::branch:open::has-children::!has-siblings:hover {{
     image: url({branch_down_on});
 }}
-QTreeView::branch:open::has-children::has-siblings:hover {{
+RetargetWidget QTreeView::branch:open::has-children::has-siblings:hover {{
     image: url({branch_down_on});
 }}
 
-QTreeView::indicator:unchecked {{
+RetargetWidget QTreeView::indicator:unchecked {{
     image: url({indicator_unchecked});
 }}
-QTreeView::indicator:checked {{
+RetargetWidget QTreeView::indicator:checked {{
     image: url({indicator_checked});
 }}
 
@@ -1077,19 +1071,19 @@ QTreeView::indicator:checked {{
 )
 
 _sidebar_style_sheet = """
-QPushButton {{
+RetargetWidget QPushButton {{
     background: transparent;
     border: none;
     border-radius: {radius}px;
     width: {size}px;
     height: {size}px;
 }}
-QPushButton:pressed {{
+RetargetWidget QPushButton:pressed {{
     background: rgba(50,50,50,100);
 }}
-QPushButton:!pressed:hover,
-QPushButton:!pressed:hover:checked,
-QPushButton:!pressed:hover:!checked {{
+RetargetWidget QPushButton:!pressed:hover,
+RetargetWidget QPushButton:!pressed:hover:checked,
+RetargetWidget QPushButton:!pressed:hover:!checked {{
     background: rgba(255,255,255,60);
 }}
 
@@ -1097,3 +1091,74 @@ QPushButton:!pressed:hover:!checked {{
     radius=px(2),
     size=px(22),
 )
+
+
+class RetargetWindow(ui.Options):
+
+    def __init__(self, *args, **kwargs):
+        super(RetargetWindow, self).__init__(*args, **kwargs)
+
+        widgets = {
+            "Retarget": RetargetWidget(),
+            "Tabs": QtWidgets.QTabBar(),
+            "TabBar": QtWidgets.QWidget(),
+        }
+
+        widgets["Tabs"].addTab("Options")
+        widgets["Tabs"].addTab("Overview")
+        widgets["TabBar"].setStyleSheet("background-color: #373737")
+
+        layout = QtWidgets.QHBoxLayout(widgets["TabBar"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["Tabs"])
+        layout.addStretch(1)
+
+        # Integrate with other options
+        layout = self._panels["Central"].layout()  # type: QtWidgets.QVBoxLayout
+        layout.insertWidget(0, widgets["TabBar"])
+        layout.insertSpacing(0, 8)
+
+        self._panels["Body"].addWidget(widgets["Retarget"])
+        self.OverviewPage = 3
+
+        widgets["Tabs"].currentChanged.connect(self.on_overview)
+
+        self._widgets.update(widgets)
+        self._init = False
+
+    def on_overview(self, _):
+        if self._panels["Body"].currentIndex() != self.OverviewPage:
+            if not self._init:
+                self._widgets["Retarget"].init()
+            self.transition(to=self.overview_state)
+        else:
+            self.transition(to=self.options_state)
+
+    def on_back(self):
+        if self._widgets["Tabs"].currentIndex():
+            self.transition(to=self.overview_state)
+        else:
+            self.transition(to=self.options_state)
+
+    def overview_state(self):
+        self._panels["Body"].setCurrentIndex(self.OverviewPage)
+        self._widgets["PlayerButton"].setChecked(False)
+        self._widgets["Player"].stop()
+        self._panels["Buttons"].hide()
+        self._panels["Footer"].show()
+        self._panels["Timeline"].hide()
+        self._widgets["TabBar"].show()
+        self.menuBar().show()
+        self._keys["Escape"].setEnabled(False)
+
+    def options_state(self):
+        super(RetargetWindow, self).options_state()
+        self._widgets["TabBar"].show()
+
+    def play_state(self):
+        super(RetargetWindow, self).play_state()
+        self._widgets["TabBar"].hide()
+
+    def help_state(self):
+        super(RetargetWindow, self).help_state()
+        self._widgets["TabBar"].hide()

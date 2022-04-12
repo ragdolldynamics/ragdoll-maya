@@ -3294,14 +3294,9 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    win = retargetor_widgets.RetargetWindow(
-        parent=ui.MayaWindow(),
-    )
-    # On Windows, windows typically spawn in the
-    # center of the screen. On Linux? Flip a coin.
-    ui.center_window(win)
-    win.show()
-    return win
+    return _Window("retargetMarker",
+                   retarget_marker,
+                   cls=retargetor_widgets.RetargetWindow)
 
 
 def create_pin_constraint_options(*args):

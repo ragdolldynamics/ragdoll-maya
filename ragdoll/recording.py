@@ -396,45 +396,40 @@ class _Recorder(object):
         if _range is None:
             _range = range(self._solver_start_frame, self._end_frame + 1)
 
-        min_time, max_time = cmdx.min_time(), cmdx.max_time()
         initial_time = cmdx.current_time()
 
-        # Keep internal buffer lively
-        cmdx.min_time(_range[0])
-        cmdx.max_time(_range[1])
+        # Ensure time is restored
+        try:
+            total = self._end_frame - self._solver_start_frame
+            for frame in _range:
+                if self._opts["experimental"]:
+                    # This does run faster, but at what cost?
+                    cmds.setAttr("time1.outTime", int(frame))
+                else:
+                    cmdx.current_time(cmdx.time(frame))
 
-        total = self._end_frame - self._solver_start_frame
-        for frame in _range:
-            if self._opts["experimental"]:
-                # This does run faster, but at what cost?
-                cmds.setAttr("time1.outTime", int(frame))
-            else:
-                cmdx.current_time(cmdx.time(frame))
+                if frame == self._solver_start_frame:
+                    # Initialise solver
+                    self._solver["startState"].read()
+                else:
+                    # Step simulation
+                    self._solver["currentState"].read()
 
-            if frame == self._solver_start_frame:
-                # Initialise solver
-                self._solver["startState"].read()
-            else:
-                # Step simulation
-                self._solver["currentState"].read()
+                # Record results
+                for marker in self._markers:
+                    self._cache[marker][frame] = {
+                        "recordTranslation": marker["retr"].read(),
+                        "recordRotation": marker["rero"].read(),
+                        "outputMatrix": marker["ouma"].as_matrix(),
+                        "kinematic": marker["_kinematic"].read(),
+                    }
 
-            # Record results
-            for marker in self._markers:
-                self._cache[marker][frame] = {
-                    "recordTranslation": marker["retr"].read(),
-                    "recordRotation": marker["rero"].read(),
-                    "outputMatrix": marker["ouma"].as_matrix(),
-                    "kinematic": marker["_kinematic"].read(),
-                }
+                progress = frame - self._solver_start_frame
+                percentage = 100.0 * progress / total
+                yield percentage
 
-            progress = frame - self._solver_start_frame
-            percentage = 100.0 * progress / total
-            yield percentage
-
-        # Restore things
-        cmdx.min_time(min_time)
-        cmdx.max_time(max_time)
-        cmdx.current_time(initial_time)
+        finally:
+            cmdx.current_time(initial_time)
 
     @internal.with_timing
     def _cache_to_curves(self, marker_to_dagnode, _range=None):
@@ -949,6 +944,7 @@ def _find_markers(solver, markers=None):
 
     # Unique, preserving order
     markers = list(internal.unique_everseen(markers))
+    markers = list(filter(None, markers))
 
     return markers
 

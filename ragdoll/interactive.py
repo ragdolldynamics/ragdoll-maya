@@ -408,8 +408,10 @@ def _on_noncommercial_export(clientData=None):
     """Called on attempted export from non-commercial version"""
 
     msg = (
-        "Export is a Ragdoll Unlimited feature, and is limited to a maximum of"
-        "10 markers using a <b>Complete</b> and <b>Non-commercial</b> licence."
+        "Export is a Ragdoll Unlimited feature, "
+        "and is limited to a maximum<br>"
+        "of 10 markers with a <b>Complete</b> "
+        "and <b>Non-commercial</b> licence."
     )
 
     def deferred():
@@ -886,6 +888,7 @@ def install_menu():
 
         item("parentMarker", select_parent_marker, label="Marker Parent")
         item("childMarkers", select_child_markers, label="Marker Children")
+        item("selectGroupMembers", select_group_members, label="Group Members")
 
     with submenu("System", icon="system.png"):
         divider("Scene")
@@ -1288,10 +1291,9 @@ def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
 
     if not selection:
-        selection = solvers_from_selection(selection)
-
-    if not selection:
-        selection = cmdx.ls(type="rdSolver")
+        selection = promote_linked_solvers(
+            solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
+        )
 
     if len(selection) < 1:
         raise i__.UserWarning(
@@ -1357,7 +1359,6 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1428,7 +1429,6 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "refit": opts["refit"],
         })
 
     except RuntimeError as e:
@@ -1492,7 +1492,8 @@ def assign_environment(selection=None, **opts):
 
         if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
-                "Select a polygon mesh to use for an environment"
+                "Bad Selection",
+                "Select a polygon mesh to use for an environment."
             )
 
         commands.assign_environment(mesh, solver)
@@ -1598,6 +1599,24 @@ def solvers_from_selection(selection=None):
                         solvers.add(other)
 
     return tuple(solvers)
+
+
+def promote_linked_solvers(solvers):
+    promoted = set()
+
+    for solver in solvers:
+        linked = solver["startState"].output(type="rdSolver")
+        while linked:
+            also_linked = linked["startState"].output(type="rdSolver")
+            if also_linked:
+                linked = also_linked
+            else:
+                promoted.add(linked)
+                break
+        else:
+            promoted.add(solver)
+
+    return tuple(promoted)
 
 
 @with_exception_handling
@@ -2997,10 +3016,6 @@ def select_type(typ):
     return select
 
 
-def select_rigids(selection=None, **opts):
-    return select_type("rdRigid")(selection, **opts)
-
-
 def select_markers(selection=None, **opts):
     return select_type("rdMarker")(selection, **opts)
 
@@ -3013,16 +3028,21 @@ def select_solvers(selection=None, **opts):
     return select_type("rdSolver")(selection, **opts)
 
 
-def select_constraints(selection=None, **opts):
-    return select_type("rdConstraint")(selection, **opts)
+def select_group_members(selection=None, **opts):
+    groups = _filtered_selection("rdGroup", selection)
 
+    members = set()
+    for group in groups:
+        for el in group["inputStart"]:
+            member = el.input()
 
-def select_controls(selection=None, **opts):
-    return select_type("rdControl")(selection, **opts)
+            if member is None:
+                continue
 
+            members.add(member)
 
-def select_scenes(selection=None, **opts):
-    return select_type("rdScene")(selection, **opts)
+    cmds.select(list(map(str, members)))
+    return kSuccess
 
 
 #

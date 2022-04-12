@@ -568,6 +568,7 @@
             "scale",
             "sceneScale",
             "cacheMedia",
+            "maxFrames",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",
@@ -996,6 +997,15 @@
         "icon": "suit.png",
         "summary": "Select all groups in the scene.",
         "description": "Select all groups in the scene.",
+        "options": [
+        ]
+    },
+
+    "selectGroupMembers": {
+        "label": "Select Group Members",
+        "icon": "suit.png",
+        "summary": "Select members of selected groups",
+        "description": "Select all members of the currently selected groups.",
         "options": [
         ]
     },

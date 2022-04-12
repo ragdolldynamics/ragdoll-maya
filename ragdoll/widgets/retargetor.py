@@ -131,7 +131,7 @@ class _Scene(object):
                     "id": int(marker["ragdollId"]),
                     "parent": int(marker["parentMarker"]),
                     "shape": int(marker["shapeType"]),
-                    "color": tuple(marker["color"]),
+                    "color": tuple(marker["color"].asVector()),
                     "hash": marker.hex,
                 }
                 for marker in chain(*self.solvers.values())

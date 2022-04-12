@@ -1,10 +1,11 @@
+
 import os
-import json
+from itertools import chain
 from maya import cmds, OpenMayaUI
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import dump, commands
+from .. import commands, internal
 
 try:
     long  # noqa
@@ -20,12 +21,11 @@ def _resource(*fname):
     return os.path.normpath(os.path.join(resdir, *fname)).replace("\\", "/")
 
 
-def _get_all_solver_size(registry):
-    solvers = list(registry.view("SolverComponent"))
-    solver_size = dict.fromkeys(solvers, 0)
-    for entity in registry.view():
-        scene_comp = registry.get(entity, "SceneComponent")
-        solver_size[scene_comp["entity"]] += 1
+def _get_all_solver_size(solvers):
+    solver_size = dict()
+    for solver in solvers:
+        solver_id = int(solver["ragdollId"])
+        solver_size[solver_id] = internal.compute_solver_size(solver)
     return solver_size
 
 
@@ -81,6 +81,122 @@ class _Connection(object):
         self.check_state = check_state
 
 
+class _Scene(object):
+
+    def __init__(self):
+        self._solvers = None
+        self._markers = None
+        self._destinations = None
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            raise TypeError("Cannot compare with type %r" % type(other))
+        return self.solvers == other.solvers \
+            and self.markers == other.markers \
+            and self.destinations == other.destinations
+
+    def _iter_markers(self, solver):
+        for entity in [el.input() for el in solver["inputStart"]]:
+            if entity is None:
+                continue
+
+            if entity.isA("rdMarker"):
+                yield entity
+
+            elif entity.isA("rdGroup"):
+                for other in [el.input() for el in entity["inputStart"]]:
+                    if other is not None:
+                        yield other
+
+            elif entity.isA("rdSolver"):
+                for e in self._iter_markers(entity):
+                    yield e
+
+    @property
+    def solvers(self):
+        if self._solvers is None:
+            self._solvers = {
+                solver: set(self._iter_markers(solver))
+                for solver in cmdx.ls(type="rdSolver")
+                if solver["startState"].connection() is None
+                # unlinked solvers, a.k.a. primary solvers
+            }
+        return self._solvers
+
+    @property
+    def markers(self):
+        if self._markers is None:
+            self._markers = {
+                marker: {
+                    "id": int(marker["ragdollId"]),
+                    "parent": int(marker["parentMarker"]),
+                    "shape": int(marker["shapeType"]),
+                    "color": tuple(marker["color"]),
+                    "hash": marker.hex,
+                }
+                for marker in chain(*self.solvers.values())
+            }
+        return self._markers
+
+    @property
+    def destinations(self):
+        if self._destinations is None:
+            self._destinations = {
+                marker: set(
+                    dest for dest in filter(None, (
+                        p.input() for p in marker["destinationTransforms"]
+                    ))
+                )
+                for marker in self._markers.keys()
+            }
+        return self._destinations
+
+    def add_dest(self, marker, dest):
+        self._destinations[marker].add(dest)
+
+    def del_dest(self, marker, dest):
+        self._destinations[marker].remove(dest)
+
+    def iter_connection(self):
+        """Hierarchically iterate solver, marker, destination
+
+        Returns:
+            An iterator yields tuple of (solver, level, marker, destination).
+            The solver and marker are cmdx.Node type, level is int, the
+            destination is cmdx.Node or None if marker has no destination set.
+
+        """
+
+        def child_count(d):
+            return sum(m["parent"] == d for m in self.markers.values())
+
+        def walk_hierarchy(_markers, parent_id, _level=0):
+            _sibling_count = child_count(parent_id)
+
+            for _marker in _markers:
+                if self.markers[_marker]["parent"] != parent_id:
+                    continue
+                yield _marker, _level
+
+                _rd_id = int(_marker["ragdollId"])
+                _child_count = child_count(_rd_id)
+                _next_level = _level
+                if not (_sibling_count <= 1 and _child_count <= 1):
+                    _next_level += 1
+
+                for mk, lvl in walk_hierarchy(_markers, _rd_id, _next_level):
+                    yield mk, lvl
+
+        for solver, markers in self.solvers.items():
+            for marker_node, level in walk_hierarchy(markers, -1):
+                destinations = self.destinations[marker_node]
+                if destinations:
+                    for dest_node in destinations:
+                        yield solver, level, marker_node, dest_node
+                else:
+                    yield solver, level, marker_node, None
+
+
 class MarkerTreeModel(base.BaseItemModel):
     destination_toggled = QtCore.Signal(str, str, bool)
 
@@ -98,7 +214,7 @@ class MarkerTreeModel(base.BaseItemModel):
     def __init__(self, *args, **kwargs):
         super(MarkerTreeModel, self).__init__(*args, **kwargs)
         self.flipped = False
-        self._dump = None
+        self._scene = None
         self._internal = []  # type: list[_Solver]
         self._pixmap_list = {
             "rdSolver": QtGui.QPixmap(_resource("icons", "solver.png")),
@@ -214,12 +330,8 @@ class MarkerTreeModel(base.BaseItemModel):
         return False
 
     @property
-    def dump(self):
-        return self._dump
-
-    def sync(self):
-        self._dump = json.loads(cmds.ragdollDump())
-        self._dump.pop("info")  # for comparing on `enterEvent`
+    def scene(self):
+        return self._scene
 
     def ordered_first_column(self, sort, reverse):
         column = 1 if self.flipped else 0
@@ -243,9 +355,10 @@ class MarkerTreeModel(base.BaseItemModel):
 
         return ordered
 
-    def refresh(self, keep_unchecked=False):
+    def refresh(self, scene=None, keep_unchecked=False):
+        scene = scene or _Scene()
         self.reset()
-        self._build_internal_model(keep_unchecked)
+        self._build_internal_model(scene, keep_unchecked)
 
         for solver_repr in self._internal:
             solver_item = self._mk_solver_item(solver_repr)
@@ -260,93 +373,30 @@ class MarkerTreeModel(base.BaseItemModel):
         item.setData(solver_repr.solver, self.NodeRole)
         return item
 
-    def _iter_ragdoll_content(self, registry):
-        """Hierarchically iterate solver, marker, destination
+    def _iter_unchecked_connection(self):
+        for _s in self._internal:
+            for _c in _s.conn_list:
+                if _c.dest \
+                        and _c.check_state == QtCore.Qt.Unchecked \
+                        and _hex_exists(_c.dest):
+                    yield _s.solver, _c.marker, _c.dest
 
-        Args:
-            registry (dump.Registry): a parsed ragdoll dump object
-
-        Returns:
-            An iterator yields tuple of (solver, level, marker, destination).
-            The solver and marker are cmdx.Node type, level is int, the
-            destination is cmdx.Node or None if marker has no destination set.
-
-        """
-        _r = registry  # for short
-        for solver in cmdx.ls(type="rdSolver"):
-            solver_id = int(solver["ragdollId"])
-
-            markers = cmdx.ls([
-                _r.get(entity, "NameComponent")["value"]  # marker name
-                for entity in _r.view()
-                if _r.has(entity, "MarkerUIComponent")
-                and _r.get(entity, "SceneComponent")["entity"] == solver_id
-            ])
-
-            marker_by_id = {
-                int(mk["ragdollId"]): mk
-                for mk in markers
-            }
-
-            def child_count(d):
-                return sum(
-                    _r.get(e, "RigidComponent")["parentRigid"] == d
-                    for e in marker_by_id.keys()
-                )
-
-            def iter_children(parent_id):
-                for entity_ in marker_by_id.keys():
-                    rigid = _r.get(entity_, "RigidComponent")
-                    if rigid["parentRigid"] == parent_id:
-                        yield marker_by_id[entity_]
-
-            def walk_hierarchy(parent_id, _level=0):
-                _sibling_count = child_count(parent_id)
-                for _marker in iter_children(parent_id):
-                    yield _marker, _level
-
-                    _ragdoll_id = int(_marker["ragdollId"])
-                    _child_count = child_count(_ragdoll_id)
-                    _next_level = _level
-                    if not (_sibling_count <= 1 and _child_count <= 1):
-                        _next_level += 1
-
-                    for mk, lvl in walk_hierarchy(_ragdoll_id, _next_level):
-                        yield mk, lvl
-
-            for marker_node, level in walk_hierarchy(0):
-                input_plugs = list(
-                    plug for plug in marker_node["destinationTransforms"]
-                    if plug.input() is not None
-                )
-                if input_plugs:
-                    for plug in input_plugs:
-                        destination_node = plug.input()
-                        yield solver, level, marker_node, destination_node
-                else:
-                    yield solver, level, marker_node, None
-
-    def _build_internal_model(self, keep_unchecked):
+    def _build_internal_model(self, scene, keep_unchecked):
         unchecked = list()
         if keep_unchecked:
-            for _s in self._internal:
-                for _c in _s.conn_list:
-                    if _c.dest \
-                            and _c.check_state == QtCore.Qt.Unchecked \
-                            and _hex_exists(_c.dest):
-                        unchecked.append((_s.solver, _c.marker, _c.dest))
+            for _solver, _marker, _dest in self._iter_unchecked_connection():
+                unchecked.append((_solver, _marker, _dest))
 
         # reset
         del self._internal[:]
-        self.sync()
-        reg = dump.Registry(self._dump)
+        self._scene = scene
 
-        solver_sizes = _get_all_solver_size(reg)
+        solver_sizes = _get_all_solver_size(scene.solvers)
         # todo: what will happen if marker exceeds the non-commercial limit ?
 
         the_solver = None
-        rd_content_iter = self._iter_ragdoll_content(reg)
-        for _i, (solver, level, marker, dest) in enumerate(rd_content_iter):
+        connection_iter = scene.iter_connection()
+        for _i, (solver, level, marker, dest) in enumerate(connection_iter):
             if the_solver is None or solver.hex != the_solver.solver:
                 the_solver = _Solver(
                     solver=solver.hex,
@@ -453,14 +503,8 @@ class MarkerTreeModel(base.BaseItemModel):
         # should not happen.
         raise Exception("No matched marker found in model.")
 
-    def any_missing_dest(self):
-        for _s in self._internal:
-            for _c in _s.conn_list:
-                if _c.dest \
-                        and _c.check_state == QtCore.Qt.Unchecked \
-                        and not _hex_exists(_c.dest):
-                    return True
-        return False
+    def any_unchecked_missing(self):
+        return any(self._iter_unchecked_connection())
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
@@ -647,8 +691,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def model(self):
         return self._model
 
-    def refresh(self, keep_unchecked=False):
-        self._model.refresh(keep_unchecked)
+    def refresh(self, scene=None, keep_unchecked=False):
+        self._model.refresh(scene, keep_unchecked)
         self._view.expandToDepth(1)
 
     def on_view_clicked(self, index):
@@ -755,17 +799,20 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         if checked:
             opts = {"append": True}
             commands.retarget_marker(marker_node, dest_node, opts)
+            self._model.scene.add_dest(marker_node, dest_node)
+
         else:
             dest_list = [
                 plug.input() for plug in marker_node["destinationTransforms"]
                 if plug.input() is not None and plug.input() != dest_node
             ]
             commands.untarget_marker(marker_node)
+            self._model.scene.del_dest(marker_node, dest_node)
+
             opts = {"append": True}
             for transform in dest_list:
                 commands.retarget_marker(marker_node, transform, opts)
 
-        self._model.sync()
         # trigger Maya viewport update
         cmds.dgdirty(marker_node.shortest_path())
 
@@ -930,11 +977,9 @@ class RetargetWindow(QtWidgets.QMainWindow):
     def enterEvent(self, event):
         super(RetargetWindow, self).enterEvent(event)
         view = self._widgets["MarkerView"]
-
-        current_dump = json.loads(cmds.ragdollDump())
-        current_dump.pop("info")  # we don't compare with timestamp
-        if view.model.dump != current_dump or view.model.any_missing_dest():
-            view.refresh(keep_unchecked=True)
+        scene = _Scene()
+        if view.model.scene != scene or view.model.any_unchecked_missing():
+            view.refresh(scene, keep_unchecked=True)
 
 
 _treeview_style_sheet = """

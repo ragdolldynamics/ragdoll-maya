@@ -661,22 +661,25 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             # Clicked outside any item
             return
 
+        is_solver = not index.parent().isValid()
+
         # check if marker's default target connected
         show_default_target_action = False
         marker_col = 1 if self._model.flipped else 0
-        if index.column() == marker_col:
-            marker = cmdx.fromHex(index.data(MarkerTreeModel.NodeRole))
-        else:
-            _ = self._proxy.index(index.row(), marker_col, index.parent())
-            marker = cmdx.fromHex(_.data(MarkerTreeModel.NodeRole))
-        if marker and marker.exists:
-            src = marker["sourceTransform"].input()
-            if src:
-                for plug in marker["destinationTransforms"]:
-                    if plug.input() == src:
-                        break
-                else:
-                    show_default_target_action = True
+        if not is_solver:
+            if index.column() == marker_col:
+                marker = cmdx.fromHex(index.data(MarkerTreeModel.NodeRole))
+            else:
+                _ = self._proxy.index(index.row(), marker_col, index.parent())
+                marker = cmdx.fromHex(_.data(MarkerTreeModel.NodeRole))
+            if marker and marker.exists:
+                src = marker["sourceTransform"].input()
+                if src:
+                    for plug in marker["destinationTransforms"]:
+                        if plug.input() == src:
+                            break
+                    else:
+                        show_default_target_action = True
 
         menu = QtWidgets.QMenu(self)
 
@@ -697,10 +700,12 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         )
 
         menu.addAction(append_dest)
-        if show_default_target_action:
-            menu.addAction(add_default)
+        menu.addAction(add_default)
         menu.addSeparator()
         menu.addAction(manipulate)
+
+        append_dest.setEnabled(not is_solver)
+        add_default.setEnabled(show_default_target_action)
 
         def _select_node(column):
             selection = []

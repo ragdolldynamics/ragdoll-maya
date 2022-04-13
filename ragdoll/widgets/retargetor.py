@@ -710,8 +710,16 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         menu = QtWidgets.QMenu(self)
 
-        manipulate = QtWidgets.QAction("Manipulate", menu)
-        append_dest = QtWidgets.QAction("Add Destination From Selection", menu)
+        manipulate = QtWidgets.QAction(
+            QtGui.QIcon(_resource("icons", "manipulator.png")),
+            "Manipulate",
+            menu
+        )
+        append_dest = QtWidgets.QAction(
+            QtGui.QIcon(_resource("icons", "add.png")),
+            "Add Target From Selection",
+            menu
+        )
 
         menu.addAction(manipulate)
         menu.addSeparator()

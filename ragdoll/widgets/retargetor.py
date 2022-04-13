@@ -711,14 +711,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu = QtWidgets.QMenu(self)
 
         manipulate = QtWidgets.QAction("Manipulate", menu)
-        select_marker = QtWidgets.QAction("Select Marker", menu)
-        select_dest = QtWidgets.QAction("Select Destination", menu)
         append_dest = QtWidgets.QAction("Add Destination From Selection", menu)
 
         menu.addAction(manipulate)
-        menu.addSeparator()
-        menu.addAction(select_marker)
-        menu.addAction(select_dest)
         menu.addSeparator()
         menu.addAction(append_dest)
 
@@ -740,12 +735,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         def on_manipulate():
             _select_node(1 if self._model.flipped else 0)
             cmds.setToolTo("ShowManips")
-
-        def on_select_marker():
-            _select_node(1 if self._model.flipped else 0)
-
-        def on_select_dest():
-            _select_node(0 if self._model.flipped else 1)
 
         def on_append_dest():
             valid_dest_list = [
@@ -785,8 +774,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 sele_model.select(dest_index, sele_model.Select)
 
         manipulate.triggered.connect(on_manipulate)
-        select_marker.triggered.connect(on_select_marker)
-        select_dest.triggered.connect(on_select_dest)
         append_dest.triggered.connect(on_append_dest)
 
         menu.move(QtGui.QCursor.pos())

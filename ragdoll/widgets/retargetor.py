@@ -570,7 +570,7 @@ def _maya_outliner_cursor():
     # Take Maya Outliner cursor (or any other Maya widget that has context
     # menu, e.g. Shelf) to indicate the view has context menu.
     #   note: I tried to find/export cursor bitmap but no success.
-    outliner_name = cmds.outlinerEditor(parent="MayaWindow")
+    outliner_name = cmds.outlinerEditor()
     ptr = OpenMayaUI.MQtUtil.findControl(outliner_name)
     outliner = base.qt_wrap_instance(long(ptr), QtWidgets.QWidget)
     cursor = QtGui.QCursor(outliner.cursor())

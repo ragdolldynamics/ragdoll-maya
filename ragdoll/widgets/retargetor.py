@@ -333,28 +333,6 @@ class MarkerTreeModel(base.BaseItemModel):
     def scene(self):
         return self._scene
 
-    def ordered_first_column(self, sort, reverse):
-        column = 1 if self.flipped else 0
-        key = ["marker", "dest"][column]
-
-        ordered = []
-        for _s in self._internal:
-            ordered.append(cmdx.fromHex(_s.solver).shortest_path())
-
-            path_list = []
-            for _c in _s.conn_list:
-                # node path affects alt row coloring
-                path = cmdx.fromHex(_c.marker).name() if key == "marker" else \
-                    cmdx.fromHex(_c.dest).name() if _c.dest else ""
-                if path not in path_list:
-                    path_list.append(path)
-
-            if sort:
-                path_list.sort(key=lambda n: n.lower(), reverse=reverse)
-            ordered += path_list
-
-        return ordered
-
     def refresh(self, scene=None, keep_unchecked=False):
         scene = scene or _Scene()
         self.reset()
@@ -606,38 +584,6 @@ class MarkerTreeView(QtWidgets.QTreeView):
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
         self.setCursor(_maya_outliner_cursor())
-        self._current_order = []
-
-    def drawRow(self, painter, options, index):
-        """Draw alternative row color base on connection pair node name
-        Args:
-            painter (QtGui.QPainter):
-            options (QtWidgets.QStyleOptionViewItem):
-            index (QtCore.QModelIndex):
-        Returns:
-            None
-        """
-        if self._current_order:
-            proxy = self.model()
-            # column is always 0.
-            node = proxy.data(index, MarkerTreeModel.NodeRole)
-            path = cmdx.fromHex(node).name() if node else ""
-            try:
-                ordered_index = self._current_order.index(path)
-            except ValueError:
-                pass
-            else:
-                if ordered_index % 2:
-                    options.features = options.features | options.Alternate
-
-        super(MarkerTreeView, self).drawRow(painter, options, index)
-
-    def update_order(self):
-        proxy = self.model()
-        model = proxy.sourceModel()
-        sort = proxy.sortRole() == MarkerTreeModel.NameSortingRole
-        reverse = proxy.sortOrder() == QtCore.Qt.DescendingOrder
-        self._current_order = model.ordered_first_column(sort, reverse)
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
@@ -813,8 +759,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
     def flip(self, state):
         self._model.flipped = state
-        self._view.update_order()
         self._proxy.invalidate()
+
+    def set_filter(self, text):
+        self._proxy.setFilterRegExp(text)
+        self._view.expandToDepth(1)
 
     def set_sort_by_name(self, ascending):
         self._delegate.set_enabled(False)
@@ -823,13 +772,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
         else:
             self._view.sortByColumn(0, QtCore.Qt.DescendingOrder)
-        self._view.update_order()
 
     def set_sort_by_hierarchy(self):
         self._delegate.set_enabled(True)
         self._proxy.setSortRole(MarkerTreeModel.NaturalSortingRole)
         self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        self._view.update_order()
 
 
 class RetargetWidget(QtWidgets.QWidget):
@@ -960,8 +907,7 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def on_searched(self):
         text = self._widgets["SearchBar"].text()
-        self._widgets["MarkerView"].proxy.setFilterRegExp(text)
-        self._widgets["MarkerView"].view.expandToDepth(1)
+        self._widgets["MarkerView"].set_filter(text)
 
     def enterEvent(self, event):
         super(RetargetWidget, self).enterEvent(event)

@@ -721,9 +721,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             menu
         )
 
-        menu.addAction(manipulate)
-        menu.addSeparator()
         menu.addAction(append_dest)
+        menu.addSeparator()
+        menu.addAction(manipulate)
 
         def _select_node(column):
             selection = []

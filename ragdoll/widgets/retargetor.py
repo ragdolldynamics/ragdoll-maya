@@ -370,7 +370,6 @@ class MarkerTreeModel(base.BaseItemModel):
         self._scene = scene
 
         solver_sizes = _get_all_solver_size(scene.solvers)
-        # todo: what will happen if marker exceeds the non-commercial limit ?
 
         the_solver = None
         connection_iter = scene.iter_connection()

@@ -653,6 +653,23 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             # Clicked outside any item
             return
 
+        # check if marker's default target connected
+        show_default_target_action = False
+        marker_col = 1 if self._model.flipped else 0
+        if index.column() == marker_col:
+            marker = cmdx.fromHex(index.data(MarkerTreeModel.NodeRole))
+        else:
+            _ = self._proxy.index(index.row(), marker_col, index.parent())
+            marker = cmdx.fromHex(_.data(MarkerTreeModel.NodeRole))
+        if marker and marker.exists:
+            src = marker["sourceTransform"].input()
+            if src:
+                for plug in marker["destinationTransforms"]:
+                    if plug.input() == src:
+                        break
+                else:
+                    show_default_target_action = True
+
         menu = QtWidgets.QMenu(self)
 
         manipulate = QtWidgets.QAction(
@@ -661,12 +678,19 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             menu
         )
         append_dest = QtWidgets.QAction(
-            QtGui.QIcon(_resource("icons", "add.png")),
+            QtGui.QIcon(_resource("icons", "retarget.png")),
             "Add Target From Selection",
+            menu
+        )
+        add_default = QtWidgets.QAction(
+            QtGui.QIcon(_resource("icons", "add.png")),
+            "Add Default Target",
             menu
         )
 
         menu.addAction(append_dest)
+        if show_default_target_action:
+            menu.addAction(add_default)
         menu.addSeparator()
         menu.addAction(manipulate)
 
@@ -685,9 +709,28 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                     selection.append(node.shortest_path())
             cmds.select(selection)
 
+        def _select_indexes(parsed_indexes):
+            self._view.clearSelection()
+            sele_model = self._view.selectionModel()
+            for _index in parsed_indexes:
+                dest_index = self._proxy.mapFromSource(_index)
+                marker_index = self._proxy.index(
+                    dest_index.row(),
+                    marker_col,
+                    dest_index.parent()
+                )
+                sele_model.select(marker_index, sele_model.Select)
+                sele_model.select(dest_index, sele_model.Select)
+
         def on_manipulate():
-            _select_node(1 if self._model.flipped else 0)
+            _select_node(marker_col)
             cmds.setToolTo("ShowManips")
+
+        def on_add_default():
+            dest_node = marker["sourceTransform"].input()
+            _index = self._model.append_dest(marker, dest_node)
+            # select all processed
+            _select_indexes([_index])
 
         def on_append_dest():
             valid_dest_list = [
@@ -695,7 +738,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 for node in cmdx.selection()
                 if node.isA(cmdx.kDagNode)
             ]
-            marker_col = 1 if self._model.flipped else 0
 
             selected_markers = []
             for i in self._view.selectedIndexes():
@@ -711,22 +753,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                     _index = self._model.append_dest(marker_node, dest_node)
                     if _index:
                         parsed_indexes.append(_index)
-
-            self._proxy.invalidate()
             # select all processed
-            self._view.clearSelection()
-            sele_model = self._view.selectionModel()
-            for _index in parsed_indexes:
-                dest_index = self._proxy.mapFromSource(_index)
-                marker_index = self._proxy.index(
-                    dest_index.row(),
-                    marker_col,
-                    dest_index.parent()
-                )
-                sele_model.select(marker_index, sele_model.Select)
-                sele_model.select(dest_index, sele_model.Select)
+            _select_indexes(parsed_indexes)
 
         manipulate.triggered.connect(on_manipulate)
+        add_default.triggered.connect(on_add_default)
         append_dest.triggered.connect(on_append_dest)
 
         menu.move(QtGui.QCursor.pos())

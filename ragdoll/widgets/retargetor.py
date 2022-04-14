@@ -226,6 +226,8 @@ class MarkerTreeModel(base.BaseItemModel):
             "rdMarker_2": QtGui.QPixmap(_resource("icons", "rigid.png")),
             "rdMarker_4": QtGui.QPixmap(_resource("icons", "mesh.png")),
         }
+        self._empty_dst_color = QtGui.QColor("#6C6C6C")
+        self._empty_dst_icon = QtGui.QIcon(_resource("icons", "empty.png"))
 
     def flags(self, index):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
@@ -258,19 +260,23 @@ class MarkerTreeModel(base.BaseItemModel):
             if key == "marker":
                 return cmdx.fromHex(conn.marker).name()
             if key == "dest":
-                return cmdx.fromHex(conn.dest).name() if conn.dest else ""
+                return cmdx.fromHex(conn.dest).name() if conn.dest else "Empty"
+
+        if role == QtCore.Qt.ForegroundRole:
+            if key == "dest" and not conn.dest:
+                return self._empty_dst_color
 
         if role == QtCore.Qt.DecorationRole:
             if key == "marker":
                 return conn.icon_m
             if key == "dest":
-                return conn.icon_d
+                return conn.icon_d or self._empty_dst_icon
 
         if role == QtCore.Qt.CheckStateRole:
             if key == "marker":
                 return
             if key == "dest":
-                return conn.check_state
+                return conn.check_state or QtCore.Qt.Unchecked
 
         if role == self.NodeRole:
             if key == "marker":
@@ -325,7 +331,7 @@ class MarkerTreeModel(base.BaseItemModel):
             if key == "marker":
                 return False
 
-            if key == "dest":
+            if key == "dest" and conn.check_state is not None:
                 conn.check_state = value
                 self.destination_toggled.emit(conn.marker, conn.dest, bool(value))
                 return True

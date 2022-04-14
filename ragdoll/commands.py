@@ -983,7 +983,7 @@ def create_pin_constraint(child, opts=None):
         if opts["location"] == constants.ConstrainedLocation:
             con = cmds.parentConstraint(source_transform.path(),
                                         transform.path(),
-                                        maintainOffset=False)
+                                        maintainOffset=True)
 
             # Make way for pin constraint shape in Channel Box
             con = cmdx.encode(con[0])

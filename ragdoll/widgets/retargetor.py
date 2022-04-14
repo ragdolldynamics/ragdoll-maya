@@ -971,8 +971,9 @@ _treeview_style_sheet = """
 RetargetWidget QAbstractItemView {{
     show-decoration-selected: 1;  /* highlight decoration (branch) */
     border: none;
-    selection-color: {on_primary};
-    selection-background-color: {primary};
+    selection-color: {on_hovered};
+    selection-background-color: {hovered};
+    color: {on_primary};
     background-color: {background};
     alternate-background-color: {background_alt};
 }}
@@ -998,14 +999,14 @@ RetargetWidget QTreeView::indicator {{
 RetargetWidget QTreeView::branch:selected,
 RetargetWidget QAbstractItemView::item:selected:active,
 RetargetWidget QAbstractItemView::item:selected:!focus {{
-    color: {on_secondary};
-    background-color: {secondary};
+    color: {on_selected};
+    background-color: {selected};
 }}
 
 RetargetWidget QTreeView::branch:hover:!selected,
 RetargetWidget QAbstractItemView::item:hover {{
-    color: {on_primary};
-    background-color: {primary};
+    color: {on_hovered};
+    background-color: {hovered};
 }}
 
 RetargetWidget QTreeView::branch::has-children::!has-siblings:closed {{
@@ -1046,10 +1047,11 @@ RetargetWidget QTreeView::indicator:checked {{
     padding_left=px(8),
     icon_right=px(2),
     indicator_right=px(6),
-    primary="#515D6A",
-    secondary="#5285A6",
-    on_primary="#FFFFFF",
-    on_secondary="#000000",
+    hovered="#515D6A",
+    selected="#5285A6",
+    on_primary="#C8C8C8",
+    on_hovered="#FFFFFF",
+    on_selected="#FFFFFF",
     background="#2B2B2B",
     background_alt="#323232",
     branch_down=_resource("ui", "caret-down-fill.svg"),

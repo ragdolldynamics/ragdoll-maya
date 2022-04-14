@@ -1113,12 +1113,13 @@ class RetargetWindow(ui.Options):
         widgets["Tabs"].currentChanged.connect(self.on_overview)
 
         self._widgets.update(widgets)
-        self._init = False
+        self._inited = False
 
     def on_overview(self, _):
         if self._panels["Body"].currentIndex() != self.OverviewPage:
-            if not self._init:
+            if not self._inited:
                 self._widgets["Retarget"].init()
+                self._inited = True
             self.transition(to=self.overview_state)
         else:
             self.transition(to=self.options_state)

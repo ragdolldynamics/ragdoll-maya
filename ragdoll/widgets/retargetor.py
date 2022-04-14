@@ -773,6 +773,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                         parsed_indexes.append(_index)
             # select all processed
             _select_indexes(parsed_indexes)
+            # update sort/filter
+            self._proxy.invalidate()
 
         manipulate.triggered.connect(on_manipulate)
         add_default.triggered.connect(on_add_default)

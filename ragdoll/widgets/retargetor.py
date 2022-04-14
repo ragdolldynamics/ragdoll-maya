@@ -1002,9 +1002,8 @@ RetargetWidget QAbstractItemView::item:selected:!focus {{
     background-color: {secondary};
 }}
 
-RetargetWidget QTreeView::branch:hover,
-RetargetWidget QAbstractItemView::item:hover,
-RetargetWidget QAbstractItemView::item:hover:selected {{
+RetargetWidget QTreeView::branch:hover:!selected,
+RetargetWidget QAbstractItemView::item:hover {{
     color: {on_primary};
     background-color: {primary};
 }}

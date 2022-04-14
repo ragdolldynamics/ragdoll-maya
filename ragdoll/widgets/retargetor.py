@@ -95,6 +95,9 @@ class _Scene(object):
             and self.markers == other.markers \
             and self.destinations == other.destinations
 
+    def __ne__(self, other):  # for '!=' in py2
+        return not self.__eq__(other)
+
     def _iter_markers(self, solver):
         for entity in [el.input() for el in solver["inputStart"]]:
             if entity is None:
@@ -354,16 +357,15 @@ class MarkerTreeModel(base.BaseItemModel):
     def _iter_unchecked_connection(self):
         for _s in self._internal:
             for _c in _s.conn_list:
-                if _c.dest \
-                        and _c.check_state == QtCore.Qt.Unchecked \
-                        and _hex_exists(_c.dest):
+                if _c.check_state == QtCore.Qt.Unchecked:
                     yield _s.solver, _c.marker, _c.dest
 
     def _build_internal_model(self, scene, keep_unchecked):
         unchecked = list()
         if keep_unchecked:
             for _solver, _marker, _dest in self._iter_unchecked_connection():
-                unchecked.append((_solver, _marker, _dest))
+                if _dest and _hex_exists(_dest):
+                    unchecked.append((_solver, _marker, _dest))
 
         # reset
         del self._internal[:]
@@ -481,7 +483,10 @@ class MarkerTreeModel(base.BaseItemModel):
         raise Exception("No matched marker found in model.")
 
     def any_unchecked_missing(self):
-        return any(self._iter_unchecked_connection())
+        return any(
+            not _dest or not _hex_exists(_dest)
+            for _, _, _dest in self._iter_unchecked_connection()
+        )
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):

@@ -1119,9 +1119,9 @@ class RetargetWindow(ui.Options):
             if not self._inited:
                 self._widgets["Retarget"].init()
                 self._inited = True
-            self.transition(to=self.overview_state)
+            self.overview_state()
         else:
-            self.transition(to=self.options_state)
+            self.options_state()
 
     def on_back(self):
         if self._widgets["Tabs"].currentIndex():

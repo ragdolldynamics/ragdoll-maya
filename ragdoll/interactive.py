@@ -2249,14 +2249,7 @@ def unparent_marker(selection=None, **opts):
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
     selection = selection or cmdx.sl()
-    markers = []
-
-    for marker in selection:
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if marker and marker.type() == "rdMarker":
-            markers += [marker]
+    markers = markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(

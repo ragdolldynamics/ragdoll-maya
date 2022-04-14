@@ -577,23 +577,13 @@ class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
                 return True  # always accept solver item
 
 
-def _maya_outliner_cursor():
-    # Take Maya Outliner cursor (or any other Maya widget that has context
-    # menu, e.g. Shelf) to indicate the view has context menu.
-    #   note: I tried to find/export cursor bitmap but no success.
-    outliner_name = cmds.outlinerEditor()
-    ptr = OpenMayaUI.MQtUtil.findControl(outliner_name)
-    outliner = base.qt_wrap_instance(long(ptr), QtWidgets.QWidget)
-    cursor = QtGui.QCursor(outliner.cursor())
-    cmds.deleteUI(outliner_name, editor=True)
-    return cursor
-
-
 class MarkerTreeView(QtWidgets.QTreeView):
 
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
-        self.setCursor(_maya_outliner_cursor())
+        cursor_icon = QtGui.QPixmap(_resource("ui", "cursor_menu.png"))
+        menu_cursor = QtGui.QCursor(cursor_icon, 0, 0)  # hot spot (0, 0)
+        self.setCursor(menu_cursor)
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):

@@ -1670,7 +1670,8 @@ def group_markers(selection=None, **opts):
             "Select one or more markers to group."
         )
 
-    commands.group_markers(markers)
+    group = commands.group_markers(markers)
+    cmds.select(str(group.parent()))
 
     return True
 

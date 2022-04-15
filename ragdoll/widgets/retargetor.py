@@ -972,7 +972,7 @@ class RetargetWidget(QtWidgets.QWidget):
         self._widgets = widgets
         self._timers = timers
 
-        self.setStyleSheet(_treeview_style_sheet + _sidebar_style_sheet)
+        self.setStyleSheet(_scaled_stylesheet(stylesheet))
 
     def init(self):
         self._widgets["MarkerView"].refresh()
@@ -1023,122 +1023,44 @@ class RetargetWidget(QtWidgets.QWidget):
             view.refresh(scene, keep_unchecked=True)
 
 
-_treeview_style_sheet = """
-RetargetWidget QAbstractItemView {{
-    show-decoration-selected: 1;  /* highlight decoration (branch) */
-    border: none;
-    selection-color: {on_hovered};
-    selection-background-color: {hovered};
-    color: {on_primary};
-    background-color: {background};
-    alternate-background-color: {background_alt};
-}}
-RetargetWidget QAbstractItemView:focus {{
-    border: none;
-}}
+with open(_resource("ui", "style_retargetor.css")) as f:
+    stylesheet = f.read()
 
-RetargetWidget QTreeView::item {{
-    border: 0px;
-    padding: {padding};
-    padding-right: {padding_right}px;
-    padding-left: {padding_left}px;  /* more space for icon and indicator */
-}}
-RetargetWidget QTreeView::icon {{
-    right: {icon_right}px;
-}}
-RetargetWidget QTreeView::indicator {{
-    right: {indicator_right}px;
-}}
 
-/* note: transparent background color is really hard to look good */
+def _scaled_stylesheet(style):
+    """Replace any mention of <num>px with scaled version
 
-RetargetWidget QTreeView::branch:selected,
-RetargetWidget QAbstractItemView::item:selected:active,
-RetargetWidget QAbstractItemView::item:selected:!focus {{
-    color: {on_selected};
-    background-color: {selected};
-}}
+    This way, you can still use px without worrying about what
+    it will look like at HDPI resolution.
 
-RetargetWidget QTreeView::branch:hover:!selected,
-RetargetWidget QAbstractItemView::item:hover {{
-    color: {on_hovered};
-    background-color: {hovered};
-}}
+    """
 
-RetargetWidget QTreeView::branch::has-children::!has-siblings:closed {{
-    image: url({branch_right});
-}}
-RetargetWidget QTreeView::branch:closed::has-children::has-siblings {{
-    image: url({branch_right});
-}}
-RetargetWidget QTreeView::branch:open::has-children::!has-siblings {{
-    image: url({branch_down});
-}}
-RetargetWidget QTreeView::branch:open::has-children::has-siblings {{
-    image: url({branch_down});
-}}
-RetargetWidget QTreeView::branch::has-children::!has-siblings:closed:hover {{
-    image: url({branch_right_on});
-}}
-RetargetWidget QTreeView::branch:closed::has-children::has-siblings:hover {{
-    image: url({branch_right_on});
-}}
-RetargetWidget QTreeView::branch:open::has-children::!has-siblings:hover {{
-    image: url({branch_down_on});
-}}
-RetargetWidget QTreeView::branch:open::has-children::has-siblings:hover {{
-    image: url({branch_down_on});
-}}
-
-RetargetWidget QTreeView::indicator:unchecked {{
-    image: url({indicator_unchecked});
-}}
-RetargetWidget QTreeView::indicator:checked {{
-    image: url({indicator_checked});
-}}
-
-""".format(
-    padding="%dpx" % px(3),
-    padding_right=px(10),
-    padding_left=px(8),
-    icon_right=px(2),
-    indicator_right=px(6),
-    hovered="#515D6A",
-    selected="#5285A6",
-    on_primary="#C8C8C8",
-    on_hovered="#FFFFFF",
-    on_selected="#FFFFFF",
-    background="#2B2B2B",
-    background_alt="#323232",
-    branch_down=_resource("ui", "caret-down-fill.svg"),
-    branch_down_on=_resource("ui", "caret-down-fill-on.svg"),
-    branch_right=_resource("ui", "caret-right-fill.svg"),
-    branch_right_on=_resource("ui", "caret-right-fill-on.svg"),
-    indicator_checked=_resource("ui", "square-check.svg"),
-    indicator_unchecked=_resource("ui", "square.svg"),
-)
-
-_sidebar_style_sheet = """
-RetargetWidget QPushButton {{
-    background: transparent;
-    border: none;
-    border-radius: {radius}px;
-    width: {size}px;
-    height: {size}px;
-}}
-RetargetWidget QPushButton:pressed {{
-    background: rgba(50,50,50,100);
-}}
-RetargetWidget QPushButton:!pressed:hover,
-RetargetWidget QPushButton:!pressed:hover:checked,
-RetargetWidget QPushButton:!pressed:hover:!checked {{
-    background: rgba(255,255,255,60);
-}}
-
-""".format(
-    radius=px(2),
-    size=px(22),
-)
+    output = []
+    for line in style.splitlines():
+        line = line.rstrip()
+        if line.endswith("px;"):
+            key, value = line.rsplit(" ", 1)
+            value = px(int(value[:-3]))
+            line = "%s %dpx;" % (key, value)
+        output += [line]
+    result = "\n".join(output)
+    result = result % dict(
+        res=_resource().replace("\\", "/"),
+        hovered="#515D6A",
+        selected="#5285A6",
+        on_primary="#C8C8C8",
+        on_hovered="#FFFFFF",
+        on_selected="#FFFFFF",
+        background="#2B2B2B",
+        background_alt="#323232",
+        branch_down=_resource("ui", "caret-down-fill.svg"),
+        branch_down_on=_resource("ui", "caret-down-fill-on.svg"),
+        branch_right=_resource("ui", "caret-right-fill.svg"),
+        branch_right_on=_resource("ui", "caret-right-fill-on.svg"),
+        indicator_checked=_resource("ui", "square-check.svg"),
+        indicator_unchecked=_resource("ui", "square.svg"),
+    )
+    return result
 
 
 class RetargetWindow(ui.Options):

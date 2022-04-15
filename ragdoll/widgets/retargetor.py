@@ -466,6 +466,8 @@ class MarkerTreeModel(base.BaseItemModel):
                     # plug dest into connection
                     _c.dest = dest.hex
                     _c.icon_d = _maya_node_icon(dest)
+                    if _c.check_state is None:
+                        _c.check_state = QtCore.Qt.Unchecked
                     return self._check_conn_by_row(_c, x, y)
 
                 elif _c.dest == dest.hex:

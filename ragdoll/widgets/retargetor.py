@@ -2,6 +2,7 @@
 import os
 from itertools import chain
 from maya import cmds, OpenMayaUI
+from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
@@ -12,6 +13,8 @@ try:
 except NameError:
     # Python 3 compatibility
     long = int
+
+_kAnimCurve = int(om.MFn.kAnimCurve)
 
 
 def _resource(*fname):
@@ -52,6 +55,37 @@ def _maya_node_icon(node):
     return QtGui.QIcon(":/%s" % node.type())
 
 
+def _is_bad_retarget(marker, dest):
+    """Checking common bad recording setup
+
+    * Locked Translate and Rotate Channels
+    * Constrained Translate/Rotate channels  (included in next rule ???)
+    * Any connection to Translate/Rotate channels that isn't an animation curve
+    * Locked Rotate, but unlocked Translate, with a Translate Motion = Locked, meaning no translation
+    * Driven by IK
+
+    Args:
+        marker:
+        dest:
+
+    Returns:
+
+    """
+    if all(dest[a].locked
+           for a in {"tx", "ty", "tz", "rx", "ry", "rz"}):
+        return True
+
+    if any(not dest[a].input().isA(_kAnimCurve)
+           for a in {"tx", "ty", "tz", "rx", "ry", "rz"}
+           if dest[a].input()):
+        return True
+
+    if marker["linearMotion"] == 0 \
+            and all(dest[a].locked for a in {"rx", "ry", "rz"}) \
+            and all(not dest[a].locked for a in {"tx", "ty", "tz"}):
+        return True
+
+
 class _Solver(object):
     def __init__(self, solver, size, ui_name, conn_list):
         assert isinstance(solver, str), "Must be hex(str)"
@@ -68,7 +102,7 @@ class _Solver(object):
 
 class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
-                 dot_color, check_state):
+                 dot_color, check_state, is_bad):
         assert isinstance(marker, str), "Must be hex(str)"
         assert isinstance(dest, str) or dest is None, "Must be hex(str) or None"
         self.marker = marker
@@ -79,6 +113,7 @@ class _Connection(object):
         self.icon_d = icon_d
         self.dot_color = dot_color
         self.check_state = check_state
+        self.is_bad = is_bad
 
 
 class _Scene(object):
@@ -87,13 +122,15 @@ class _Scene(object):
         self._solvers = None
         self._markers = None
         self._destinations = None
+        self._bad_retarget = None
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             raise TypeError("Cannot compare with type %r" % type(other))
         return self.solvers == other.solvers \
             and self.markers == other.markers \
-            and self.destinations == other.destinations
+            and self.destinations == other.destinations \
+            and self.bad_retarget == other.bad_retarget
 
     def __ne__(self, other):  # for '!=' in py2
         return not self.__eq__(other)
@@ -154,11 +191,25 @@ class _Scene(object):
             }
         return self._destinations
 
+    @property
+    def bad_retarget(self):
+        if self._bad_retarget is None:
+            self._bad_retarget = {
+                marker.hex: {
+                    dest.hex: _is_bad_retarget(marker, dest)
+                    for dest in destinations
+                }
+                for marker, destinations in self._destinations.items()
+            }
+        return self._bad_retarget
+
     def add_dest(self, marker, dest):
         self._destinations[marker].add(dest)
+        self._bad_retarget[marker.hex][dest.hex] = _is_bad_retarget(marker, dest)
 
     def del_dest(self, marker, dest):
         self._destinations[marker].remove(dest)
+        self._bad_retarget[marker.hex].pop(dest.hex)
 
     def iter_connection(self):
         """Hierarchically iterate solver, marker, destination
@@ -263,6 +314,8 @@ class MarkerTreeModel(base.BaseItemModel):
                 return cmdx.fromHex(conn.dest).name() if conn.dest else "Empty"
 
         if role == QtCore.Qt.ForegroundRole:
+            if conn.is_bad:
+                return QtGui.QColor("yellow")
             if key == "dest" and not conn.dest:
                 return self._empty_dst_color
 
@@ -334,6 +387,7 @@ class MarkerTreeModel(base.BaseItemModel):
             if key == "dest" and conn.check_state is not None:
                 conn.check_state = value
                 self.destination_toggled.emit(conn.marker, conn.dest, bool(value))
+                conn.is_bad = self._scene.bad_retarget[conn.marker].get(conn.dest)
                 return True
 
         return False
@@ -421,6 +475,9 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def _mk_conn(self, marker, dest, level, natural, check_state=None):
         check_state = check_state or QtCore.Qt.Unchecked
+        check_state = check_state if dest else None
+        dest_hex = dest.hex if dest else None
+
         # marker icon/color
         _pix = self._pixmap_list["rdMarker_%d" % int(marker["shapeType"])]
         icon_m = QtGui.QIcon(_pix)
@@ -431,13 +488,14 @@ class MarkerTreeModel(base.BaseItemModel):
 
         conn = _Connection(
             marker=marker.hex,
-            dest=dest.hex if dest else None,
+            dest=dest_hex,
             icon_m=icon_m,
             icon_d=icon_d,
             dot_color=dot_color,
             level=level,
             natural=natural,
-            check_state=check_state if dest else None,
+            check_state=check_state,
+            is_bad=self._scene.bad_retarget[marker.hex].get(dest_hex),
         )
         return conn
 

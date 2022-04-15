@@ -530,6 +530,16 @@ def _on_manipulator_exited(clientData=None):
         _uninstall_fit_to_view()
 
 
+def _on_plan_complete(clientData=None):
+    """User has exited the manipulator, restore viewport HUD"""
+
+    def deferred():
+        cmdx.current_time(cmdx.current_time())
+
+    cmds.evalDeferred(deferred)
+    log.info("Plan Complete")
+
+
 def install_callbacks():
     __.callbacks.append(
         om.MSceneMessage.addCallback(
@@ -594,6 +604,11 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollManipulatorExited", _on_manipulator_exited)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollPlanComplete", _on_plan_complete)
     )
 
 

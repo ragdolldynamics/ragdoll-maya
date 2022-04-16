@@ -110,9 +110,6 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
-    # Update known solvers
-    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
-
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded

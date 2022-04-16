@@ -52,10 +52,6 @@ def upgrade_all():
     current_version = int("".join(version_str.split(".")[:3]))
 
     nodetype_to_upgrade = (
-        ("rdScene", scene),
-        ("rdRigid", rigid),
-        ("rdRigidMultiplier", rigid_multiplier),
-        ("rdConstraintMultiplier", constraint_multiplier),
         ("rdMarker", marker),
         ("rdGroup", group),
         ("rdSolver", solver),
@@ -115,18 +111,6 @@ def needs_upgrade():
 
 
 def has_upgrade(node, from_version):
-    if node.type() == "rdScene":
-        return from_version < 20210313
-
-    if node.type() == "rdRigid":
-        return from_version < 20210308
-
-    if node.type() == "rdRigidMultiplier":
-        return from_version < 20210411
-
-    if node.type() == "rdConstraintMultiplier":
-        return from_version < 20210411
-
     if node.type() == "rdSolver":
         return from_version < 20211112
 
@@ -138,78 +122,6 @@ def has_upgrade(node, from_version):
 
     if node.type() == "rdCanvas":
         return from_version < 20211129
-
-
-def scene(node, from_version, to_version):
-    if from_version <= 0:
-        # Saved with a development version
-        return
-
-    upgraded = False
-
-    if from_version < 20201015:
-        _scene_00000000_20201015(node)
-        upgraded = True
-
-    if from_version < 20210228:
-        _scene_20201016_20210228(node)
-        upgraded = True
-
-    if from_version < 20210313:
-        _scene_20201015_20210313(node)
-        upgraded = True
-
-    return upgraded
-
-
-def rigid(node, from_version, to_version):
-    if from_version <= 0:
-        # Saved with a development version
-        return
-
-    upgraded = False
-
-    if from_version < 20201015:
-        _rigid_00000000_20201015(node)
-        upgraded = True
-
-    elif from_version < 20201016:
-        _rigid_20201015_20201016(node)
-        upgraded = True
-
-    if from_version < 20210228:
-        _rigid_20201016_20210228(node)
-        upgraded = True
-
-    if from_version < 20210308:
-        _rigid_20210228_20210308(node)
-        upgraded = True
-
-    if from_version < 20210423:
-        _rigid_20210423_20210427(node)
-        upgraded = True
-
-    return upgraded
-
-
-def rigid_multiplier(node, from_version, to_version):
-    upgraded = False
-
-    if from_version < 20210411:
-        _rigid_multiplier_20210308_20210411(node)
-        upgraded = True
-
-    return upgraded
-
-
-def constraint_multiplier(node, from_version, to_version):
-    upgraded = False
-
-    if from_version < 20210411:
-        _constraint_multiplier_20210308_20210411(node)
-        upgraded = True
-
-    return upgraded
 
 
 def marker(node, from_version, to_version):
@@ -265,137 +177,6 @@ def canvas(node, from_version, to_version):
 Individual upgrade paths
 
 """
-
-
-@try_it
-def _scene_00000000_20201015(node):
-    """TGS was introduced, let's maintain backwards compatibility though"""
-    log.info("Upgrading %s to 2020.10.15" % node)
-    node["solverType"] = constants.PGSSolverType
-
-
-@try_it
-def _scene_20201015_20210313(node):
-    """Support for Z-up got added"""
-    log.info("Upgrading %s to 2021.03.13" % node)
-
-    up = cmdx.up_axis()
-
-    with cmdx.DagModifier() as mod:
-        if up.y:
-            mod.set_nice_name(node["gravityY"], "Gravity")
-            mod.set_keyable(node["gravityY"])
-        else:
-            mod.set_nice_name(node["gravityZ"], "Gravity")
-            mod.set_keyable(node["gravityZ"])
-
-
-@try_it
-def _rigid_00000000_20201015(node):
-    """Introduced the .restMatrix"""
-    log.info("Upgrading %s to 2020.10.15" % node)
-
-    if "restMatrix" in node and node["restMatrix"].editable:
-        rest = node["inputMatrix"].asMatrix()
-        cmds.setAttr(node["restMatrix"].path(), tuple(rest), type="matrix")
-
-
-@try_it
-def _rigid_20201015_20201016(node):
-    """Introduced .color"""
-    log.info("Upgrading %s to 2020.10.16" % node)
-    node["color"] = internal.random_color()
-
-
-@try_it
-def _scene_20201016_20210228(scene):
-    """Array indices are automatically removed since 02-28
-
-    There remains support for unconnected indices with references to
-    non-existent entities, but not for long.
-
-    """
-
-    log.info("Upgrading %s to 2021.02.28" % scene)
-
-    array_attributes = [
-        "inputActive",
-        "inputActiveStart",
-        "inputConstraint",
-        "inputConstraintStart",
-        "inputLink",
-        "inputLinkStart",
-        "inputSlice",
-        "inputSliceStart",
-    ]
-
-    with cmdx.DGModifier() as mod:
-        for attr in array_attributes:
-            for element in scene[attr]:
-                if element.connected:
-                    continue
-
-                mod._modifier.removeMultiInstance(element._mplug, True)
-
-
-@try_it
-def _rigid_20201016_20210228(rigid):
-    """Introduced .cachedRestMatrix"""
-    log.info("Upgrading %s to 2021.02.28" % rigid)
-
-    with cmdx.DagModifier() as mod:
-        rest = rigid["restMatrix"].asMatrix()
-        mod.set_attr(rigid["cachedRestMatrix"], rest)
-
-        if not rigid["restMatrix"].connected:
-            parent = rigid.parent()
-            mod.connect(parent["worldMatrix"][0],
-                        rigid["restMatrix"])
-
-
-@try_it
-def _rigid_20210228_20210308(rigid):
-    """Introduced .startTime"""
-    log.info("Upgrading %s to 2021.03.08" % rigid)
-
-    scene = rigid["nextState"].connection(type="rdScene")
-
-    with cmdx.DagModifier() as mod:
-        mod.connect(scene["startTime"], rigid["startTime"])
-
-
-@try_it
-def _rigid_20210423_20210427(rigid):
-    """Introduced .startTime"""
-    log.info("Upgrading %s to 2021.04.27" % rigid)
-
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(rigid["creationMatrix"],
-                     rigid["cachedRestMatrix"].as_matrix())
-
-
-@try_it
-def _constraint_multiplier_20210308_20210411(mult):
-    log.info("Upgrading %s to 2021.04.11" % mult)
-
-    with cmdx.DagModifier() as mod:
-        others = mult["message"].connections(type="rdConstraint",
-                                             source=False,
-                                             plugs=True)
-        for index, other in enumerate(others):
-            mod.connect(mult["ragdollId"], other)
-
-
-@try_it
-def _rigid_multiplier_20210308_20210411(mult):
-    log.info("Upgrading %s to 2021.04.11" % mult)
-
-    with cmdx.DagModifier() as mod:
-        others = mult["message"].connections(type="rdRigid",
-                                             source=False,
-                                             plugs=True)
-        for index, other in enumerate(others):
-            mod.connect(mult["ragdollId"], other)
 
 
 @try_it

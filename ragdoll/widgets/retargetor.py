@@ -619,6 +619,31 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             painter.drawEllipse(pos_x + border, pos_y + border, inner, inner)
             painter.restore()
 
+        if index.column() == 2 and index.parent().isValid():
+            # channels
+            _size = 26
+            cell_colors = dict()  # should be coming from index data
+            cell_gap = border = 2
+            cell_w = 10
+            cell_h = 6
+            _base_x = option.rect.x() + 40
+            _base_y = option.rect.center().y() - 10
+            painter.save()
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(QtGui.QColor("#2B2B2B"))
+            painter.drawRect(QtCore.QRect(_base_x, _base_y, _size, _size))
+            _base_x += border
+            _base_y += border
+            for at in ("t", "r"):
+                _y = _base_y
+                for ax in ("x", "y", "z"):
+                    color = cell_colors.get(at + ax, "#404040")
+                    painter.setBrush(QtGui.QColor(color))
+                    painter.drawRect(QtCore.QRect(_base_x, _y, cell_w, cell_h))
+                    _y += cell_h + cell_gap
+                _base_x += cell_w + cell_gap
+            painter.restore()
+
     def sizeHint(self, option, index):
         size = super(MarkerIndentDelegate, self).sizeHint(option, index)
         offset, _ = self._compute(index)
@@ -704,7 +729,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(dest_col, header.Stretch)
         header.setSectionResizeMode(2, header.Fixed)
         header.setStretchLastSection(False)
-        header.resizeSection(2, 80)
+        header.resizeSection(2, 84)
 
     @property
     def view(self):

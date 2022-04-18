@@ -282,6 +282,7 @@ class MarkerTreeModel(base.BaseItemModel):
     Headers = [
         "Name",
         "Destination",
+        "Connect",
     ]
 
     def __init__(self, *args, **kwargs):
@@ -302,7 +303,7 @@ class MarkerTreeModel(base.BaseItemModel):
     def flags(self, index):
         base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if index.parent().isValid():
-            if index.column() == (0 if self.flipped else 1):
+            if index.column() == 2:
                 return base_flags | QtCore.Qt.ItemIsUserCheckable
         return base_flags
 
@@ -323,7 +324,13 @@ class MarkerTreeModel(base.BaseItemModel):
         solver_repr = self._internal[solver_index]
         conn = solver_repr.conn_list[index.row()]  # type: _Connection
 
-        column = not index.column() if self.flipped else index.column()
+        column = index.column()
+        if column == 2:
+            if role == QtCore.Qt.CheckStateRole:
+                return conn.check_state or QtCore.Qt.Unchecked
+            return
+
+        column = not column if self.flipped else column
         key = ["marker", "dest"][column]
 
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
@@ -343,12 +350,6 @@ class MarkerTreeModel(base.BaseItemModel):
                 return conn.icon_m
             if key == "dest":
                 return conn.icon_d or self._empty_dst_icon
-
-        if role == QtCore.Qt.CheckStateRole:
-            if key == "marker":
-                return
-            if key == "dest":
-                return conn.check_state or QtCore.Qt.Unchecked
 
         if role == self.NodeRole:
             if key == "marker":
@@ -392,18 +393,12 @@ class MarkerTreeModel(base.BaseItemModel):
         if not index.isValid() or not index.parent().isValid():
             return False
 
-        if role == QtCore.Qt.CheckStateRole:
+        if index.column() == 2 and role == QtCore.Qt.CheckStateRole:
             solver_index = index.parent().row()
             solver_repr = self._internal[solver_index]
             conn = solver_repr.conn_list[index.row()]  # type: _Connection
 
-            column = not index.column() if self.flipped else index.column()
-            key = ["marker", "dest"][column]
-
-            if key == "marker":
-                return False
-
-            if key == "dest" and conn.check_state is not None:
+            if conn.check_state is not None:
                 marker = cmdx.fromHex(conn.marker)
                 dest = cmdx.fromHex(conn.dest)
                 self._scene.set_destination(marker, dest, connect=bool(value))
@@ -686,6 +681,10 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         header = view.header()
         header.setSectionResizeMode(0, header.ResizeToContents)
+        header.setSectionResizeMode(1, header.Stretch)
+        header.setSectionResizeMode(2, header.Fixed)
+        header.setStretchLastSection(False)
+        header.resizeSection(2, 80)
 
         indent_delegate = MarkerIndentDelegate(self)
         view.setItemDelegate(indent_delegate)

@@ -723,8 +723,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             return
 
         is_solver = not index.parent().isValid()
+        marker = None
 
-        # check if marker's default target connected
+        # get selected marker and, check if it's default target connected
         show_default_target_action = False
         marker_col = 1 if self._model.flipped else 0
         if not is_solver:
@@ -733,6 +734,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             else:
                 _ = self._proxy.index(index.row(), marker_col, index.parent())
                 marker = cmdx.fromHex(_.data(MarkerTreeModel.NodeRole))
+
             if marker and marker.exists:
                 src = marker["sourceTransform"].input()
                 if src:
@@ -741,6 +743,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                             break
                     else:
                         show_default_target_action = True
+            else:
+                marker = None
 
         menu = QtWidgets.QMenu(self)
 
@@ -765,7 +769,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu.addSeparator()
         menu.addAction(manipulate)
 
-        append_dest.setEnabled(not is_solver)
+        append_dest.setEnabled(bool(not is_solver and marker))
         add_default.setEnabled(show_default_target_action)
 
         def _select_node(column):
@@ -807,26 +811,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             _select_indexes([_index])
 
         def on_append_dest():
-            valid_dest_list = [
-                node
-                for node in cmdx.selection()
-                if node.isA(cmdx.kDagNode)
-            ]
-
-            selected_markers = []
-            for i in self._view.selectedIndexes():
-                i = self._proxy.mapToSource(i)
-                if not i.parent().isValid() or i.column() != marker_col:
-                    continue
-                marker_node = cmdx.fromHex(i.data(MarkerTreeModel.NodeRole))
-                selected_markers.append(marker_node)
-
             parsed_indexes = []
-            for marker_node in selected_markers:
-                for dest_node in valid_dest_list:
-                    _index = self._model.append_dest(marker_node, dest_node)
-                    if _index:
-                        parsed_indexes.append(_index)
+            for dest in (n for n in cmdx.selection() if n.isA(cmdx.kDagNode)):
+                _index = self._model.append_dest(marker, dest)
+                if _index:
+                    parsed_indexes.append(_index)
             # select all processed
             _select_indexes(parsed_indexes)
             # update sort/filter

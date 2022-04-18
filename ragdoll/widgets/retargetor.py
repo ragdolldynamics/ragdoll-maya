@@ -530,10 +530,7 @@ class MarkerTreeModel(base.BaseItemModel):
 
                 elif _c.dest == dest.hex:
                     # already in model, ensure checked
-                    if _c.check_state != QtCore.Qt.Checked:
-                        return self._check_conn_by_row(_c, x, y)
-                    else:
-                        return
+                    return self._check_conn_by_row(_c, x, y)
 
             if marker_matched:
                 # new connection

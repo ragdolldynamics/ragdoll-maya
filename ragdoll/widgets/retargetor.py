@@ -807,14 +807,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             self._view.clearSelection()
             sele_model = self._view.selectionModel()
             for _index in parsed_indexes:
-                dest_index = self._proxy.mapFromSource(_index)
-                marker_index = self._proxy.index(
-                    dest_index.row(),
-                    marker_col,
-                    dest_index.parent()
-                )
-                sele_model.select(marker_index, sele_model.Select)
-                sele_model.select(dest_index, sele_model.Select)
+                ind = self._proxy.mapFromSource(_index)
+                sele_model.select(ind, sele_model.Select | sele_model.Rows)
 
         def on_manipulate():
             _select_node(marker_col)

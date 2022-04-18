@@ -723,6 +723,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._view.expandToDepth(1)
 
     def on_view_clicked(self, index):
+        if not index.parent().isValid():
+            index = self._proxy.index(index.row(), 0)
         node = self._proxy.data(index, MarkerTreeModel.NodeRole)
         if node is not None:
             node = cmdx.fromHex(node)
@@ -808,7 +810,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 sele_model.select(ind, sele_model.Select | sele_model.Rows)
 
         def on_manipulate():
-            _select_node(marker_col)
+            _select_node(0 if is_solver else marker_col)
             cmds.setToolTo("ShowManips")
 
         def on_add_default():

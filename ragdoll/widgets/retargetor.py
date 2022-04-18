@@ -679,13 +679,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         view.setHeaderHidden(True)
 
-        header = view.header()
-        header.setSectionResizeMode(0, header.ResizeToContents)
-        header.setSectionResizeMode(1, header.Stretch)
-        header.setSectionResizeMode(2, header.Fixed)
-        header.setStretchLastSection(False)
-        header.resizeSection(2, 80)
-
         indent_delegate = MarkerIndentDelegate(self)
         view.setItemDelegate(indent_delegate)
 
@@ -700,6 +693,18 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._proxy = proxy
         self._model = model
         self._delegate = indent_delegate
+
+        self.setup_header(False)
+
+    def setup_header(self, flip):
+        header = self._view.header()
+        marker_col = int(flip)
+        dest_col = int(not flip)
+        header.setSectionResizeMode(marker_col, header.ResizeToContents)
+        header.setSectionResizeMode(dest_col, header.Stretch)
+        header.setSectionResizeMode(2, header.Fixed)
+        header.setStretchLastSection(False)
+        header.resizeSection(2, 80)
 
     @property
     def view(self):
@@ -839,6 +844,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu.show()
 
     def flip(self, state):
+        self.setup_header(state)
         self._model.flipped = state
         self._proxy.invalidate()
 

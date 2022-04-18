@@ -211,6 +211,27 @@ class _Scene(object):
         self._destinations[marker].remove(dest)
         self._bad_retarget[marker.hex].pop(dest.hex)
 
+    def set_destination(self, marker, dest, connect):
+        if connect:
+            opts = {"append": True}
+            commands.retarget_marker(marker, dest, opts)
+            self.add_dest(marker, dest)
+
+        else:
+            dest_list = [
+                plug.input() for plug in marker["destinationTransforms"]
+                if plug.input() is not None and plug.input() != dest
+            ]
+            commands.untarget_marker(marker)
+            self.del_dest(marker, dest)
+
+            opts = {"append": True}
+            for transform in dest_list:
+                commands.retarget_marker(marker, transform, opts)
+
+        # trigger Maya viewport update
+        cmds.dgdirty(marker.shortest_path())
+
     def iter_connection(self):
         """Hierarchically iterate solver, marker, destination
 
@@ -252,8 +273,6 @@ class _Scene(object):
 
 
 class MarkerTreeModel(base.BaseItemModel):
-    destination_toggled = QtCore.Signal(str, str, bool)
-
     NodeRole = QtCore.Qt.UserRole + 10
     LevelRole = QtCore.Qt.UserRole + 11
     NameSortingRole = QtCore.Qt.UserRole + 12
@@ -385,8 +404,10 @@ class MarkerTreeModel(base.BaseItemModel):
                 return False
 
             if key == "dest" and conn.check_state is not None:
+                marker = cmdx.fromHex(conn.marker)
+                dest = cmdx.fromHex(conn.dest)
+                self._scene.set_destination(marker, dest, connect=bool(value))
                 conn.check_state = value
-                self.destination_toggled.emit(conn.marker, conn.dest, bool(value))
                 conn.is_bad = self._scene.bad_retarget[conn.marker].get(conn.dest)
                 return True
 
@@ -675,7 +696,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         view.clicked.connect(self.on_view_clicked)
         view.customContextMenuRequested.connect(self.on_right_clicked)
-        model.destination_toggled.connect(self.on_destination_toggled)
 
         self._view = view
         self._proxy = proxy
@@ -824,30 +844,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         menu.move(QtGui.QCursor.pos())
         menu.show()
-
-    def on_destination_toggled(self, marker_node, dest_node, checked):
-        marker_node = cmdx.fromHex(marker_node)
-        dest_node = cmdx.fromHex(dest_node)
-
-        if checked:
-            opts = {"append": True}
-            commands.retarget_marker(marker_node, dest_node, opts)
-            self._model.scene.add_dest(marker_node, dest_node)
-
-        else:
-            dest_list = [
-                plug.input() for plug in marker_node["destinationTransforms"]
-                if plug.input() is not None and plug.input() != dest_node
-            ]
-            commands.untarget_marker(marker_node)
-            self._model.scene.del_dest(marker_node, dest_node)
-
-            opts = {"append": True}
-            for transform in dest_list:
-                commands.retarget_marker(marker_node, transform, opts)
-
-        # trigger Maya viewport update
-        cmds.dgdirty(marker_node.shortest_path())
 
     def flip(self, state):
         self._model.flipped = state

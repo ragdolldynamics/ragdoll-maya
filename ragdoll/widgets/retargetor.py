@@ -723,14 +723,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._view.expandToDepth(1)
 
     def on_view_clicked(self, index):
-        dest_col = 0 if self._model.flipped else 1
-        if index.column() == dest_col:
-            # avoid selecting when you just wanted to tick the checkbox
-            rect = self._view.visualRect(index)
-            rect.setRight(rect.left() + px(20))  # checkbox rect
-            if rect.contains(self._view.mapFromGlobal(QtGui.QCursor.pos())):
-                return
-
         node = self._proxy.data(index, MarkerTreeModel.NodeRole)
         if node is not None:
             node = cmdx.fromHex(node)

@@ -101,25 +101,28 @@ def _destination_status(node):
     status = dict()
     status["IK"] = _is_part_of_IK(node) if node.type() == "joint" else False
 
-    for ch in {"tx", "ty", "tz", "rx", "ry", "rz"}:
-        if status["IK"]:
-            status[ch] = _IKDriven
-            continue  # non of the rest matter..
+    for at in {"t", "r"}:
+        for ax in {"x", "y", "z"}:
+            ch = at + ax
 
-        if node[ch].locked:
-            status[ch] = _ChLocked
-        elif node[ch].connected:
-            i = node[ch].input()
-            if i.isA(_kAnimCurve):
-                status[ch] = _ChHasKey
-            elif i.isA(_kConstraint):
-                status[ch] = _ChConstrained
-            elif i.isA(_kPairBlend):
-                status[ch] = _ChPairBlended
+            if status["IK"]:
+                status[ch] = _IKDriven
+                continue  # non of the rest matter..
+
+            if node[ch].locked:
+                status[ch] = _ChLocked
+            elif node[ch].connected or node[at].connected:
+                i = node[ch].input() or node[at].input()
+                if i.isA(_kAnimCurve):
+                    status[ch] = _ChHasKey
+                elif i.isA(_kConstraint):
+                    status[ch] = _ChConstrained
+                elif i.isA(_kPairBlend):
+                    status[ch] = _ChPairBlended
+                else:
+                    status[ch] = _ChHasConnection
             else:
-                status[ch] = _ChHasConnection
-        else:
-            status[ch] = _ChClear
+                status[ch] = _ChClear
 
     return status
 

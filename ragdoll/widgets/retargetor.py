@@ -91,9 +91,9 @@ _kPairBlend = int(om.MFn.kPairBlend)
 _ChClear = "#404040"
 _ChHasKey = "#DD727A"
 _ChLocked = "#5C6874"
-_ChConstrained = "#A3CBF0"
-_ChPairBlended = "#ACF1AC"
-_ChHasConnection = "#F1F1A5"
+_ChConstrained = "#94B9FF"
+_ChPairBlended = "#9AE345"
+_ChHasConnection = "#F1D832"
 _IKDriven = "#C800C8"
 
 

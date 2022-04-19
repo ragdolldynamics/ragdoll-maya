@@ -1002,7 +1002,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
 
 class RetargetWidget(QtWidgets.QWidget):
-    retarget_warned = QtCore.Signal(str)
+    prompted = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(RetargetWidget, self).__init__(parent=parent)
@@ -1014,11 +1014,11 @@ class RetargetWidget(QtWidgets.QWidget):
 
         widgets = {
             "SearchBar": QtWidgets.QLineEdit(),
-            "SearchType": base.ToggleButton(),
-            "SearchCase": base.ToggleButton(),
+            "SearchType": _with_entered_exited_signals(base.ToggleButton)(),
+            "SearchCase": _with_entered_exited_signals(base.ToggleButton)(),
             "MarkerView": MarkerTreeWidget(),
-            "Refresh": QtWidgets.QPushButton(),
-            "Sorting": base.StateRotateButton(),
+            "Refresh": _with_entered_exited_signals(QtWidgets.QPushButton)(),
+            "Sorting": _with_entered_exited_signals(base.StateRotateButton)(),
         }
 
         timers = {
@@ -1076,10 +1076,29 @@ class RetargetWidget(QtWidgets.QWidget):
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
+        def add_help(button, text):
+            def on_entered():
+                self.prompted.emit(text)
+
+            def on_exited():
+                self.prompted.emit("")
+
+            button.entered.connect(on_entered)
+            button.exited.connect(on_exited)
+
+        add_help(widgets["SearchType"],
+                 "Toggle to change the marker-destination list perspective.")
+        add_help(widgets["SearchCase"],
+                 "Toggle to change searching with case sensitive or not.")
+        add_help(widgets["Sorting"],
+                 "Change marker-destination list sorting order. Note that "
+                 "hierarchy ordering doesn't work in destination perspective.")
+        add_help(widgets["Refresh"],
+                 "Refresh the marker-destination list. Note that all unchecked "
+                 "connections will be removed.")
+
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
-        widgets["MarkerView"].view.leave.connect(
-            lambda: self.retarget_warned.emit("")
-        )
+        widgets["MarkerView"].view.leave.connect(lambda: self.prompted.emit(""))
         widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
@@ -1098,8 +1117,8 @@ class RetargetWidget(QtWidgets.QWidget):
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
     def on_view_item_entered(self, index):
-        warn = index.data(MarkerTreeModel.BadRetargetRole) or ""
-        self.retarget_warned.emit(warn)
+        warn = index.data(MarkerTreeModel.BadRetargetRole) or " "
+        self.prompted.emit(warn)
 
     def on_refresh_clicked(self):
         self._widgets["MarkerView"].refresh()
@@ -1144,6 +1163,22 @@ class RetargetWidget(QtWidgets.QWidget):
         scene = _Scene()
         if view.model.scene != scene or view.model.any_unchecked_missing():
             view.refresh(scene, keep_unchecked=True)
+
+
+def _with_entered_exited_signals(cls):
+    class WidgetHoverFactory(cls):
+        entered = QtCore.Signal()
+        exited = QtCore.Signal()
+
+        def enterEvent(self, event):
+            self.entered.emit()
+            return super(WidgetHoverFactory, self).enterEvent(event)
+
+        def leaveEvent(self, event):
+            self.exited.emit()
+            return super(WidgetHoverFactory, self).leaveEvent(event)
+
+    return WidgetHoverFactory
 
 
 with open(_resource("ui", "style_retargetor.css")) as f:
@@ -1214,13 +1249,13 @@ class RetargetWindow(ui.Options):
         self._panels["Body"].addWidget(widgets["Retarget"])
         self.OverviewPage = 3
 
-        widgets["Retarget"].retarget_warned.connect(self.on_retarget_warned)
+        widgets["Retarget"].prompted.connect(self.on_retarget_prompted)
         widgets["Tabs"].currentChanged.connect(self.on_overview)
 
         self._widgets.update(widgets)
         self._inited = False
 
-    def on_retarget_warned(self, message):
+    def on_retarget_prompted(self, message):
         if message:
             self._widgets["Hint"].setText(message)
         else:

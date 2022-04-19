@@ -934,21 +934,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         append_dest.setEnabled(bool(not is_solver and marker))
         add_default.setEnabled(show_default_target_action)
 
-        def _select_node(column):
-            selection = []
-            for _index in self._view.selectedIndexes():
-                _index = self._proxy.mapToSource(_index)
-                _index = self._model.index(
-                    _index.row(),
-                    column,
-                    _index.parent()
-                )
-                node = _index.data(MarkerTreeModel.NodeRole)
-                if node:
-                    node = cmdx.fromHex(node)
-                    selection.append(node.shortest_path())
-            cmds.select(selection)
-
         def _select_indexes(parsed_indexes):
             self._view.clearSelection()
             sele_model = self._view.selectionModel()
@@ -957,8 +942,16 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 sele_model.select(ind, sele_model.Select | sele_model.Rows)
 
         def on_manipulate():
-            _select_node(0 if is_solver else marker_col)
-            cmds.setToolTo("ShowManips")
+            node = None
+            if is_solver:
+                _index = self._proxy.index(index.row(), 0)
+                node = cmdx.fromHex(_index.data(MarkerTreeModel.NodeRole))
+            elif marker:
+                node = marker
+
+            if node:
+                cmds.select(node.shortest_path())
+                cmds.setToolTo("ShowManips")
 
         def on_add_default():
             dest_node = marker["sourceTransform"].input()

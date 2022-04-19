@@ -1009,7 +1009,6 @@ class RetargetWidget(QtWidgets.QWidget):
 
         panels = {
             "TopBar": QtWidgets.QWidget(),
-            "SideBar": QtWidgets.QWidget(),
             "Markers": QtWidgets.QWidget(),
         }
 
@@ -1057,22 +1056,20 @@ class RetargetWidget(QtWidgets.QWidget):
         # marker oriented by default
         widgets["SearchBar"].setPlaceholderText("Find markers..")
 
-        layout = QtWidgets.QVBoxLayout(panels["SideBar"])
-        layout.setContentsMargins(4, 2, 4, 0)
-        layout.setSpacing(4)
-        layout.addWidget(widgets["Sorting"])
-        layout.addStretch(1)
-        layout.addWidget(widgets["Refresh"])
-
         layout = QtWidgets.QHBoxLayout(panels["TopBar"])
-        layout.setContentsMargins(6, 10, 12, 4)
+        layout.setContentsMargins(12, 10, 12, 2)
+        layout.setSpacing(6)
+        layout.addWidget(widgets["Sorting"])
         layout.addWidget(widgets["SearchType"])
         layout.addWidget(widgets["SearchBar"])
         layout.addWidget(widgets["SearchCase"])
+        _line = QtWidgets.QFrame()
+        _line.setFrameShape(_line.VLine)
+        layout.addWidget(_line)
+        layout.addWidget(widgets["Refresh"])
 
         layout = QtWidgets.QHBoxLayout(panels["Markers"])
-        layout.setContentsMargins(2, 4, 10, 10)
-        layout.addWidget(panels["SideBar"])
+        layout.setContentsMargins(10, 2, 10, 10)
         layout.addWidget(widgets["MarkerView"])
 
         layout = QtWidgets.QVBoxLayout(self)

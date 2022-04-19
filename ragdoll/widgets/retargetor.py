@@ -663,22 +663,24 @@ class MarkerTreeModel(base.BaseItemModel):
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
+    HierarchyIndent = 28
+    ColorDotSize = 20
+    ChannelIndicatorWidth = 84
 
     def __init__(self, parent):
         super(MarkerIndentDelegate, self).__init__(parent=parent)
         self._enabled = False
-        self._indent = 28
-        self._dot_size = 20
 
     def set_enabled(self, value):
         self._enabled = value
 
     def _compute(self, index):
         dot_color = index.data(MarkerTreeModel.ColorDotRole)
+        dot_size = self.ColorDotSize if dot_color else 0
         level = 0
         if self._enabled and index.column() == 0:
             level = index.data(MarkerTreeModel.LevelRole) or level
-        offset = self._indent * level + (self._dot_size if dot_color else 0)
+        offset = self.HierarchyIndent * level + dot_size
         return offset, dot_color
 
     def paint(self, painter, option, index):
@@ -700,15 +702,16 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
 
         super(MarkerIndentDelegate, self).paint(painter, option, index)
         if dot_color:
+            dot_size = self.ColorDotSize
             pos_x = option.rect.x() - 18
             pos_y = option.rect.center().y() - 9
             border = 2
-            inner = self._dot_size - border * 2
+            inner = dot_size - border * 2
             painter.save()
             painter.setRenderHint(painter.Antialiasing)
             painter.setPen(QtCore.Qt.NoPen)
             painter.setBrush(QtGui.QColor("#404040"))
-            painter.drawEllipse(pos_x, pos_y, self._dot_size, self._dot_size)
+            painter.drawEllipse(pos_x, pos_y, dot_size, dot_size)
             painter.setBrush(dot_color)
             painter.drawEllipse(pos_x + border, pos_y + border, inner, inner)
             painter.restore()
@@ -837,7 +840,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(dest_col, header.Stretch)
         header.setSectionResizeMode(2, header.Fixed)
         header.setStretchLastSection(False)
-        header.resizeSection(2, 84)
+        header.resizeSection(2, MarkerIndentDelegate.ChannelIndicatorWidth)
 
     @property
     def view(self):

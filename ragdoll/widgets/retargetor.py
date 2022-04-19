@@ -776,6 +776,7 @@ class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
 
 class MarkerTreeView(QtWidgets.QTreeView):
+    leave = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
@@ -793,6 +794,10 @@ class MarkerTreeView(QtWidgets.QTreeView):
         if index.data(MarkerTreeModel.BadRetargetRole):
             painter.fillRect(options.rect, QtGui.QColor("#5b3138"))
         super(MarkerTreeView, self).drawRow(painter, options, index)
+
+    def leaveEvent(self, event):
+        super(MarkerTreeView, self).leaveEvent(event)
+        self.leave.emit()
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
@@ -997,6 +1002,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
 
 class RetargetWidget(QtWidgets.QWidget):
+    retarget_warned = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(RetargetWidget, self).__init__(parent=parent)
@@ -1023,6 +1029,7 @@ class RetargetWidget(QtWidgets.QWidget):
         timers["OnSearched"].setSingleShot(True)
         widgets["SearchBar"].setClearButtonEnabled(True)
         widgets["Refresh"].setIcon(QtGui.QIcon(_resource("icons", "reset.png")))
+        widgets["MarkerView"].view.setMouseTracking(True)  # for retarget warn
 
         def set_toggle(w, unchecked, checked):
             widgets[w].set_unchecked_icon(QtGui.QIcon(unchecked))
@@ -1072,6 +1079,10 @@ class RetargetWidget(QtWidgets.QWidget):
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
+        widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
+        widgets["MarkerView"].view.leave.connect(
+            lambda: self.retarget_warned.emit("")
+        )
         widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
@@ -1088,6 +1099,10 @@ class RetargetWidget(QtWidgets.QWidget):
     def init(self):
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
+
+    def on_view_item_entered(self, index):
+        warn = index.data(MarkerTreeModel.BadRetargetRole) or ""
+        self.retarget_warned.emit(warn)
 
     def on_refresh_clicked(self):
         self._widgets["MarkerView"].refresh()
@@ -1202,10 +1217,17 @@ class RetargetWindow(ui.Options):
         self._panels["Body"].addWidget(widgets["Retarget"])
         self.OverviewPage = 3
 
+        widgets["Retarget"].retarget_warned.connect(self.on_retarget_warned)
         widgets["Tabs"].currentChanged.connect(self.on_overview)
 
         self._widgets.update(widgets)
         self._inited = False
+
+    def on_retarget_warned(self, message):
+        if message:
+            self._widgets["Hint"].setText(message)
+        else:
+            self.on_exited()
 
     def on_overview(self, _):
         if self._panels["Body"].currentIndex() != self.OverviewPage:

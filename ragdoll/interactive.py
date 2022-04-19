@@ -110,9 +110,6 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
-    # Update known solvers
-    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
-
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
@@ -1305,10 +1302,9 @@ def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
 
     if not selection:
-        selection = solvers_from_selection(selection)
-
-    if not selection:
-        selection = cmdx.ls(type="rdSolver")
+        selection = promote_linked_solvers(
+            solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
+        )
 
     if len(selection) < 1:
         raise i__.UserWarning(
@@ -1374,7 +1370,6 @@ def assign_marker(selection=None, **opts):
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1445,7 +1440,6 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "refit": opts["refit"],
         })
 
     except RuntimeError as e:
@@ -1494,6 +1488,7 @@ def assign_and_connect(selection=None, **opts):
 def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
+        "visualise": _opt("visualiseEnvironment", opts),
     })
 
     _update_solver_options()
@@ -1509,10 +1504,13 @@ def assign_environment(selection=None, **opts):
 
         if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
-                "Select a polygon mesh to use for an environment"
+                "Bad Selection",
+                "Select a polygon mesh to use for an environment."
             )
 
-        commands.assign_environment(mesh, solver)
+        commands.assign_environment(mesh, solver, opts={
+            "visualise": opts["visualise"]
+        })
 
     return kSuccess
 
@@ -1617,6 +1615,24 @@ def solvers_from_selection(selection=None):
     return tuple(solvers)
 
 
+def promote_linked_solvers(solvers):
+    promoted = set()
+
+    for solver in solvers:
+        linked = solver["startState"].output(type="rdSolver")
+        while linked:
+            also_linked = linked["startState"].output(type="rdSolver")
+            if also_linked:
+                linked = also_linked
+            else:
+                promoted.add(linked)
+                break
+        else:
+            promoted.add(solver)
+
+    return tuple(promoted)
+
+
 @with_exception_handling
 @i__.with_undo_chunk
 def merge_solvers(selection=None, **opts):
@@ -1666,7 +1682,8 @@ def group_markers(selection=None, **opts):
             "Select one or more markers to group."
         )
 
-    commands.group_markers(markers)
+    group = commands.group_markers(markers)
+    cmds.select(str(group.parent()))
 
     return True
 
@@ -2245,14 +2262,7 @@ def unparent_marker(selection=None, **opts):
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
     selection = selection or cmdx.sl()
-    markers = []
-
-    for marker in selection:
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if marker and marker.type() == "rdMarker":
-            markers += [marker]
+    markers = markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(

@@ -94,11 +94,18 @@ _ChLocked = "#5C6874"
 _ChConstrained = "#A3CBF0"
 _ChPairBlended = "#ACF1AC"
 _ChHasConnection = "#F1F1A5"
+_IKDriven = "#C800C8"
 
 
 def _destination_status(node):
     status = dict()
+    status["IK"] = _is_part_of_IK(node) if node.type() == "joint" else False
+
     for ch in {"tx", "ty", "tz", "rx", "ry", "rz"}:
+        if status["IK"]:
+            status[ch] = _IKDriven
+            continue  # non of the rest matter..
+
         if node[ch].locked:
             status[ch] = _ChLocked
         elif node[ch].connected:
@@ -114,16 +121,26 @@ def _destination_status(node):
         else:
             status[ch] = _ChClear
 
-    if node.type() == "joint":
-        status["IK"] = _is_part_of_IK(node)
-    else:
-        status["IK"] = False
-
     return status
 
 
-def _is_part_of_IK(joint):
-    return False
+def _is_part_of_IK(joint, max_depth=3):
+    depth = 0
+    ik_found = False
+    while depth < max_depth:
+        down = joint["scale"].output()
+        if down and down.type() == "joint":
+            depth += 1
+            joint = down
+            continue
+
+        down = joint["tx"].output()
+        if down and down.type() == "ikEffector":
+            ik_found = True
+
+        break
+
+    return ik_found
 
 
 class _Scene(object):
@@ -250,8 +267,8 @@ class _Scene(object):
                    "recording result."
 
         if s["IK"]:
-            return "Destination is being driven by IK, recording will be " \
-                   "incorrect."
+            return "Destination is a joint within IK chain, recording will " \
+                   "be incorrect."
 
         if marker["linearMotion"] == 0 \
                 and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"}) \

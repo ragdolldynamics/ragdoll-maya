@@ -468,6 +468,8 @@ class MarkerTreeModel(base.BaseItemModel):
                 self._scene.set_destination(marker, dest, connect=bool(value))
                 conn.check_state = value
                 conn.is_bad = self._scene.bad_retarget[marker_hex].get(dest_hex)
+                conn.channel = self._scene.dest_status[dest_hex] \
+                    if value else None
                 return True
 
         return False
@@ -585,8 +587,9 @@ class MarkerTreeModel(base.BaseItemModel):
         solver_index = self.index(solver_row, 0)
         dest_index = self.index(conn_row, dest_col, solver_index)
         if conn.check_state != QtCore.Qt.Checked:
-            # will trigger `MarkerTreeWidget.on_destination_toggled`
-            self.setData(dest_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
+            conn.check_state = QtCore.Qt.Checked
+            chk_index = self.index(conn_row, 2, solver_index)
+            self.setData(chk_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
         return dest_index
 
     def append_dest(self, marker, dest):
@@ -605,8 +608,6 @@ class MarkerTreeModel(base.BaseItemModel):
                     # plug dest into connection
                     _c.dest = dest.hex
                     _c.icon_d = _maya_node_icon(dest)
-                    if _c.check_state is None:
-                        _c.check_state = QtCore.Qt.Unchecked
                     return self._check_conn_by_row(_c, x, y)
 
                 elif _c.dest == dest.hex:

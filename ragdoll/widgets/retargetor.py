@@ -362,6 +362,7 @@ class MarkerTreeModel(base.BaseItemModel):
     NaturalSortingRole = QtCore.Qt.UserRole + 13
     ColorDotRole = QtCore.Qt.UserRole + 14
     DestChannelRole = QtCore.Qt.UserRole + 15
+    BadRetargetRole = QtCore.Qt.UserRole + 16
 
     Headers = [
         "Name",
@@ -407,6 +408,9 @@ class MarkerTreeModel(base.BaseItemModel):
         solver_index = index.parent().row()
         solver_repr = self._internal[solver_index]
         conn = solver_repr.conn_list[index.row()]  # type: _Connection
+
+        if role == self.BadRetargetRole:
+            return conn.is_bad
 
         column = index.column()
         if column == 2:
@@ -773,6 +777,17 @@ class MarkerTreeView(QtWidgets.QTreeView):
         cursor_icon = QtGui.QPixmap(_resource("ui", "cursor_menu.png"))
         menu_cursor = QtGui.QCursor(cursor_icon, 0, 0)  # hot spot (0, 0)
         self.setCursor(menu_cursor)
+
+    def drawRow(self, painter, options, index):
+        """
+        Args:
+            painter (QtGui.QPainter):
+            options (QtWidgets.QStyleOptionViewItem):
+            index (QtCore.QModelIndex):
+        """
+        if index.data(MarkerTreeModel.BadRetargetRole):
+            painter.fillRect(options.rect, QtGui.QColor("#884550"))
+        super(MarkerTreeView, self).drawRow(painter, options, index)
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):

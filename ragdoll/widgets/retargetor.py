@@ -777,6 +777,7 @@ class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
 class MarkerTreeView(QtWidgets.QTreeView):
     leave = QtCore.Signal()
+    menu_requested = QtCore.Signal(QtCore.QPoint)  # menu on right mouse press
 
     def __init__(self, parent=None):
         super(MarkerTreeView, self).__init__(parent=parent)
@@ -799,6 +800,12 @@ class MarkerTreeView(QtWidgets.QTreeView):
         super(MarkerTreeView, self).leaveEvent(event)
         self.leave.emit()
 
+    def mousePressEvent(self, event):
+        if event.button() is QtCore.Qt.MouseButton.RightButton:
+            self.menu_requested.emit(self.mapFromGlobal(event.globalPos()))
+        else:
+            super(MarkerTreeView, self).mousePressEvent(event)
+
 
 class MarkerTreeWidget(QtWidgets.QWidget):
 
@@ -817,7 +824,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         view.setAllColumnsShowFocus(True)
         view.setTextElideMode(QtCore.Qt.ElideLeft)
         view.setSelectionMode(view.SingleSelection)
-        view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         view.setHeaderHidden(True)
 
         indent_delegate = MarkerIndentDelegate(self)
@@ -828,7 +834,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.addWidget(view)
 
         view.clicked.connect(self.on_view_clicked)
-        view.customContextMenuRequested.connect(self.on_right_clicked)
+        view.menu_requested.connect(self.on_menu_requested)
 
         self._view = view
         self._proxy = proxy
@@ -871,7 +877,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             node = cmdx.fromHex(node)
             cmds.select(node.shortest_path(), replace=True)
 
-    def on_right_clicked(self, position):
+    def on_menu_requested(self, position):
         index = self._view.indexAt(position)
 
         if not index.isValid():

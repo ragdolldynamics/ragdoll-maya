@@ -100,6 +100,7 @@ class _Recorder(object):
             "extractAndAttach": False,
             "includeKinematic": False,
             "protectOriginalInput": True,
+            "setInitialKey": True,
             "mode": constants.RecordNiceAndSteady,
         }, **(opts or {}))
 
@@ -182,6 +183,9 @@ class _Recorder(object):
                 "Ragdoll cannot cope with these. See above."
             )
 
+        initial_time = cmdx.current_time()
+        cmdx.current_time(cmdx.time(self._solver_start_frame))
+
         self.clean()
 
         for progress in self._sim_to_cache():
@@ -202,6 +206,26 @@ class _Recorder(object):
 
         for progress in self._cache_to_curves(marker_to_joint):
             yield ("transferring", 49 + progress * 0.10)
+
+        # Channels without keyframes can still get recorded onto a layer,
+        # but when such a layer is deleted Maya will forget the original
+        # value of said channel, resulting in data loss for the animator.
+        # This protects against that, but storing the original value
+        if self._opts["setInitialKey"]:
+            destinations = self._find_destinations()
+            for dst in destinations:
+                for channel in ("tx", "ty", "tz", "rx", "ry", "rz"):
+                    attr = dst[channel]
+
+                    # If it's got an input connection,
+                    # the original value is already safe
+                    if attr.connected:
+                        continue
+
+                    if attr.editable:
+                        cmds.setKeyframe(str(dst),
+                                         attribute=channel,
+                                         insertBlend=False)
 
         # Attach uses Maya constraints. They are special, because
         # if there already is a constraint Maya will append to it,
@@ -242,6 +266,8 @@ class _Recorder(object):
             pass
 
         self.clean()
+
+        cmdx.current_time(initial_time)
 
         yield ("done", 100)
 
@@ -722,22 +748,7 @@ class _Recorder(object):
 
         # The cheeky little bakeResults changes our selection
         selection = cmds.ls(selection=True)
-        destinations = []
-
-        for dst, marker in self._dst_to_marker.items():
-            if not _is_enabled(marker):
-                continue
-
-            if not self._opts["includeKinematic"]:
-                frames = self._cache[marker].values()
-                if all(frame["kinematic"] for frame in list(frames)):
-                    continue
-
-            if not (marker["recordTranslation"].read() or
-                    marker["recordRotation"].read()):
-                continue
-
-            destinations += [str(dst)]
+        destinations = list(str(dst) for dst in self._find_destinations())
 
         if destinations:
             cmds.bakeResults(*destinations, **kwargs)
@@ -791,6 +802,26 @@ class _Recorder(object):
                 # It may have a different kind of connection, like a proxy
                 if not group["inputType"].connected:
                     mod.set_attr(group["inputType"], constants.InputKinematic)
+
+    def _find_destinations(self):
+        destinations = []
+
+        for dst, marker in self._dst_to_marker.items():
+            if not _is_enabled(marker):
+                continue
+
+            if not self._opts["includeKinematic"]:
+                frames = self._cache[marker].values()
+                if all(frame["kinematic"] for frame in list(frames)):
+                    continue
+
+            if not (marker["recordTranslation"].read() or
+                    marker["recordRotation"].read()):
+                continue
+
+            destinations += [dst]
+
+        return destinations
 
 
 def _is_keyed(plug):

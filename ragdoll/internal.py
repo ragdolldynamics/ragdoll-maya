@@ -741,3 +741,76 @@ def unique_everseen(iterable, key=None):
                 seen_add(k)
                 yield element
 
+
+def compute_solver_size(solver):
+    """Compute the size of a solver by counting it's internal entities
+
+    This is a replacement of parsing ragdollDump().
+
+    The size of a solver is computed by counting the amount of <SceneComponent>
+    that linked to the same solver. You could compute all solver sizes by
+    adding up entities you found in ragdoll registry (parsed from ragdollDump)
+    like following example:
+
+    ```python
+    solvers = list(registry.view("SolverComponent"))
+    solver_size = dict.fromkeys(solvers, 0)
+    for entity in registry.view():
+        scene_comp = registry.get(entity, "SceneComponent")
+        solver_size[scene_comp["entity"]] += 1
+    ```
+
+    However the above code wouldn't work if the end user licence is not
+    Unlimited one (10 markers export limit). Hence this function.
+
+    Args:
+        solver (cmdx.Node): A solver node
+
+    Returns:
+        (int): the size of solver
+
+    """
+    size = 1  # solver itself counts as one.
+
+    for entity in [el.input() for el in solver["inputStart"]]:
+        if entity is None:
+            continue
+
+        if entity.isA("rdMarker"):
+            size += 3  # markers has 3: Rigid, Relative and Absolute Joint
+
+        elif entity.isA("rdGroup"):
+            size += compute_solver_size(entity)
+
+        elif entity.isA("rdSolver"):
+            # a linked solver
+            size += compute_solver_size(entity)
+            size -= 1
+
+        elif entity.isA([
+            "rdEnvironment",
+            "rdPinConstraint",
+            "rdFixedConstraint",
+            "rdDistanceConstraint",
+        ]):
+            size += 1
+
+    return size
+
+
+def promote_linked_solvers(solvers):
+    promoted = set()
+
+    for solver in solvers:
+        linked = solver["startState"].output(type="rdSolver")
+        while linked:
+            also_linked = linked["startState"].output(type="rdSolver")
+            if also_linked:
+                linked = also_linked
+            else:
+                promoted.add(linked)
+                break
+        else:
+            promoted.add(solver)
+
+    return tuple(promoted)

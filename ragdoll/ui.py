@@ -1066,7 +1066,6 @@ class Options(QtWidgets.QMainWindow):
         widgets["ScrollArea"].setWidget(widgets["Options"])
         widgets["ScrollArea"].setWidgetResizable(True)
         widgets["ScrollArea"].setFrameShape(QtWidgets.QFrame.NoFrame)
-        widgets["Options"].setMinimumHeight(px(300))
         widgets["Options"].setMinimumWidth(px(300))
 
         panels["Body"].addWidget(widgets["ScrollArea"])
@@ -2038,7 +2037,6 @@ class OfflineDialog(QtWidgets.QDialog):
         self.on_response()
 
     def on_deactivate_clicked(self):
-        print("deactivation_request_to_file: %s" % self._reqfname)
         if licence.deactivation_request_to_file(self._reqfname) != 0:
             return log.warning("Failed, see Script Editor")
 

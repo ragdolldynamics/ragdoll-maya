@@ -44,7 +44,6 @@ from maya import cmds
 from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
-from .widgets import solver as solver_widgets
 
 from . import (
     commands,
@@ -55,6 +54,7 @@ from . import (
     recording,
     licence,
     telemetry,
+    widgets,
     constants as c,
     internal as i__,
     __
@@ -110,8 +110,7 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
-    # Update known solvers
-    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
+    uninstall_ui()
 
 
 def _before_scene_open(*args):
@@ -121,6 +120,7 @@ def _before_scene_open(*args):
 
 def _before_scene_new(*args):
     cmdx.uninstall()
+    uninstall_ui()
 
 
 def requires_ui(func):
@@ -468,7 +468,12 @@ def _on_recording_limit(clientData=None):
 def _fit_to_view():
     manip = json.loads(cmds.ragdollDump(manipulator=True))
     if manip["solverPath"]:
-        cmds.viewFit(manip["solverPath"], animate=True)
+        cmds.viewFit(
+            manip["solverPath"],
+
+            # Respect the users global preference
+            animate=cmds.optionVar(query="animateRoll")
+        )
 
 
 def _install_fit_to_view():
@@ -727,10 +732,6 @@ def install_menu():
             # so as to facilitate saving menu items to Shelf
             # via Ctrl + Shift + Click.
             script = "from ragdoll import interactive as ri\n"
-
-            if "legacy." in command.__module__:
-                script = "from ragdoll.legacy import interactive as ri\n"
-
             script += "ri.%s()" % command.__name__
             kwargs["command"] = script
 
@@ -834,11 +835,13 @@ def install_menu():
         item("extractFromSolver", extract_from_solver)
         item("moveToSolver", move_to_solver)
 
-    with submenu("Cache", icon="bake.png"):
+        divider()
+
         item("cacheSolver", cache_all, label="Cache")
         item("uncacheSolver", uncache, label="Uncache")
 
-    with submenu("Link", icon="link.png"):
+        divider()
+
         item("linkSolver", link_solver)
         item("unlinkSolver", unlink_solver)
 
@@ -1243,20 +1246,20 @@ def _rewind(scene):
     cmdx.currentTime(start_time)
 
 
-def _find_current_solver(solver):
+def _find_current_solver(solver, show_plugin_shapes=True):
     solver_items = options.items("markersAssignSolver")
     NewSolver = len(solver_items) - 1
     is_new = False
 
     if solver == NewSolver:
         if not validate_evaluation_mode():
-            return
+            return None, None
 
         if not validate_cached_playback():
-            return
+            return None, None
 
         if not validate_playbackspeed():
-            return
+            return None, None
 
         solver = commands.create_solver(opts={
             "frameskipMethod": options.read("frameskipMethod"),
@@ -1272,8 +1275,16 @@ def _find_current_solver(solver):
             solver = cmdx.encode(solver)
 
         except (cmdx.ExistError, IndexError):
-            solver = None
             options.write("markersAssignSolver", 0)
+            return _find_current_solver(NewSolver, show_plugin_shapes)
+
+    if _is_interactive() and show_plugin_shapes:
+        # Protect user against Plugin Shapes not being visible
+        for panel in cmds.getPanel(visiblePanels=True):
+            if not cmds.modelPanel(panel, query=True, exists=True):
+                continue
+
+            cmds.modelEditor(panel, edit=True, pluginShapes=True)
 
     return solver, is_new
 
@@ -1303,12 +1314,18 @@ def _add_to_objset(markers):
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
-
-    if not selection:
-        selection = solvers_from_selection(selection)
-
-    if not selection:
-        selection = cmdx.ls(type="rdSolver")
+    if selection:
+        solvers = i__.promote_linked_solvers(solvers_from_selection(selection))
+        if len(solvers) == 1:
+            # all markers in selection belong to a single solver, take one
+            #   to manipulate.
+            selection = selection[-1:]
+        else:
+            selection = solvers
+    else:
+        selection = i__.promote_linked_solvers(
+            solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
+        )
 
     if len(selection) < 1:
         raise i__.UserWarning(
@@ -1336,7 +1353,7 @@ def markers_manipulator(selection=None, **opts):
             cmds.select(solver_name)
             return markers_manipulator()
 
-        dialog = solver_widgets.SolverSelectorDialog(
+        dialog = widgets.SolverSelectorDialog(
             solvers=selection,
             help=helptext,
             best_guess=None,  # todo: best-guess from viewport
@@ -1370,11 +1387,11 @@ def assign_marker(selection=None, **opts):
         "group": _opt("markersAssignGroup", opts),
         "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "showPluginShapes": _opt("markersShowPluginShapes", opts),
         "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
-        "refit": _opt("markersRefit", opts),
         "advancedPoseInChannelBox": _opt(
             "markersChannelBoxAdvancedPose", opts),
 
@@ -1388,9 +1405,12 @@ def assign_marker(selection=None, **opts):
     _update_solver_options()
     _update_group_options()
 
-    solver, is_new = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(
+        opts["solver"], opts["showPluginShapes"])
 
     if not solver:
+        # This should never really happen
+        log.warning("No solver found")
         return kFailure
 
     if is_new and opts["createGround"]:
@@ -1445,7 +1465,6 @@ def assign_marker(selection=None, **opts):
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
             "density": opts["density"],
-            "refit": opts["refit"],
         })
 
     except RuntimeError as e:
@@ -1494,11 +1513,14 @@ def assign_and_connect(selection=None, **opts):
 def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
+        "visualise": _opt("visualiseEnvironment", opts),
+        "showPluginShapes": _opt("markersShowPluginShapes", opts),
     })
 
     _update_solver_options()
 
-    solver, is_new = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(
+        opts["solver"], opts["showPluginShapes"])
 
     if not solver:
         return kFailure
@@ -1509,10 +1531,13 @@ def assign_environment(selection=None, **opts):
 
         if not (mesh and mesh.isA(cmdx.kMesh)):
             raise i__.UserWarning(
-                "Select a polygon mesh to use for an environment"
+                "Bad Selection",
+                "Select a polygon mesh to use for an environment."
             )
 
-        commands.assign_environment(mesh, solver)
+        commands.assign_environment(mesh, solver, opts={
+            "visualise": opts["visualise"]
+        })
 
     return kSuccess
 
@@ -1524,8 +1549,8 @@ def markers_from_selection(selection=None):
         if selected.isA(cmdx.kDagNode):
             selected = selected["message"].output(type="rdMarker")
 
-        if selected and selected.isA("rdMarker"):
-            markers += [selected]
+        if selected and selected.isA("rdMarker") and selected not in markers:
+            markers.append(selected)
 
     return markers
 
@@ -1666,7 +1691,8 @@ def group_markers(selection=None, **opts):
             "Select one or more markers to group."
         )
 
-    commands.group_markers(markers)
+    group = commands.group_markers(markers)
+    cmds.select(str(group.parent()))
 
     return True
 
@@ -1942,6 +1968,7 @@ def record_markers(selection=None, **opts):
         "recordCustomEndTime": _opt("markersRecordCustomEndTime", opts),
         "recordKinematic": _opt("markersRecordKinematic", opts),
         "recordToLayer": _opt("markersRecordToLayer", opts),
+        "recordInitialKey": _opt("markersRecordInitialKey", opts),
         "useSelection": _opt("markersUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
@@ -2005,11 +2032,11 @@ def record_markers(selection=None, **opts):
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
 
-    if opts["autoCache"]:
-        # Leave them cached
-        with cmdx.DagModifier() as mod:
-            for solver in solvers:
-                mod.try_set_attr(solver["cache"], c.StaticCache)
+    cached = {}
+    with cmdx.DagModifier() as mod:
+        for solver in solvers:
+            cached[solver] = solver["cache"].read()
+            mod.try_set_attr(solver["cache"], c.StaticCache)
 
     total_frames = 0
     timer = i__.Timer("record")
@@ -2025,6 +2052,7 @@ def record_markers(selection=None, **opts):
                 "simplifyCurves": opts["recordSimplify"],
                 "rotationFilter": opts["recordFilter"],
                 "toLayer": opts["recordToLayer"],
+                "setInitialKey": opts["recordInitialKey"],
                 "ignoreJoints": opts["ignoreJoints"],
                 "mode": opts["mode"],
             }
@@ -2060,6 +2088,14 @@ def record_markers(selection=None, **opts):
     # The native recorded nodes aren't updated for some reason
     if _is_interactive():
         cmds.currentTime(cmds.currentTime(query=True))
+
+    # Turn off auto-cache after recording, so as to let the viewport
+    # show the cached simulation while it's baking to keyframes. And
+    # to also not re-simulate during baking, that would be a waste.
+    if not opts["autoCache"]:
+        with cmdx.DagModifier() as mod:
+            for solver in solvers:
+                mod.set_attr(solver["cache"], cached[solver])
 
     return kSuccess
 
@@ -2166,6 +2202,14 @@ def retarget_marker(selection=None, **opts):
 
     commands.retarget_marker(a, b, opts)
 
+    Window = widgets.RetargetWindow
+    if Window.instance and ui.isValid(Window.instance):
+        try:
+            Window.instance.refresh_if_outdated()
+        except Exception:
+            # This can fail, it's OK
+            pass
+
     return kSuccess
 
 
@@ -2245,14 +2289,7 @@ def unparent_marker(selection=None, **opts):
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
     selection = selection or cmdx.sl()
-    markers = []
-
-    for marker in selection:
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if marker and marker.type() == "rdMarker":
-            markers += [marker]
+    markers = markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2588,18 +2625,7 @@ def link_solver(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def unlink_solver(selection=None, **opts):
-    solvers = []
-    for solver in selection or cmdx.selection():
-        if solver.isA(cmdx.kTransform):
-            solver = solver.shape(type="rdSolver")
-
-        if not solver:
-            raise i__.UserWarning(
-                "Bad selection",
-                "%s was not a solver." % solver
-            )
-
-        solvers += [solver]
+    solvers = solvers_from_selection(selection)
 
     for solver in solvers:
         commands.unlink_solver(solver)
@@ -2607,6 +2633,7 @@ def unlink_solver(selection=None, **opts):
 
     # Trigger a draw refresh
     cmds.select(cmds.ls(selection=True))
+    cmds.refresh()
 
     return kSuccess
 
@@ -3292,7 +3319,9 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    return _Window("retargetMarker", retarget_marker)
+    return _Window("retargetMarker",
+                   retarget_marker,
+                   cls=widgets.RetargetWindow)
 
 
 def create_pin_constraint_options(*args):

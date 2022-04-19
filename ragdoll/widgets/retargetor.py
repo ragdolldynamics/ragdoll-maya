@@ -86,11 +86,13 @@ class _Connection(object):
 
 _kAnimCurve = int(om.MFn.kAnimCurve)
 _kConstraint = int(om.MFn.kConstraint)
+_kPairBlend = int(om.MFn.kPairBlend)
 # channel status color
 _ChClear = "#404040"
 _ChHasKey = "#DD727A"
 _ChLocked = "#5C6874"
 _ChConstrained = "#A3CBF0"
+_ChPairBlended = "#ACF1AC"
 _ChHasConnection = "#F1F1A5"
 
 
@@ -105,6 +107,8 @@ def _destination_status(node):
                 status[ch] = _ChHasKey
             elif i.isA(_kConstraint):
                 status[ch] = _ChConstrained
+            elif i.isA(_kPairBlend):
+                status[ch] = _ChPairBlended
             else:
                 status[ch] = _ChHasConnection
         else:
@@ -237,9 +241,9 @@ class _Scene(object):
             return "Both translate and rotate channels are all being locked, " \
                    "cannot record."
 
-        if any(s[ch] == _ChConstrained for ch in all_ch):
-            return "Some channel is being constrained, may have unexpected " \
-                   "recording result."
+        if any(s[ch] in {_ChConstrained, _ChPairBlended} for ch in all_ch):
+            return "Some channel is being constrained or blended, may have " \
+                   "unexpected recording result."
 
         if any(s[ch] == _ChHasConnection for ch in all_ch):
             return "Some channel is being connected, may have unexpected " \

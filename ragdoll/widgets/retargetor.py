@@ -717,26 +717,28 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         if cell_colors:
             # channels
             _bg_color = "#2B2B2B"
-            _size = 26
-            cell_gap = border = 2
-            cell_w = 10
-            cell_h = 6
-            _base_x = option.rect.x() + 40
-            _base_y = option.rect.center().y() - 10
+            border = 2
+            cell_gap = 1
+            cell_w = 12
+            cell_h = 5
+            _base_w = border * 2 + cell_w * 3 + cell_gap * 2
+            _base_h = border * 2 + cell_h * 2 + border
+            _base_x = option.rect.x() + 36
+            _base_y = option.rect.center().y() - int(_base_h / 2) + 1
             painter.save()
             painter.setPen(QtCore.Qt.NoPen)
             painter.setBrush(QtGui.QColor(_bg_color))
-            painter.drawRect(QtCore.QRect(_base_x, _base_y, _size, _size))
+            painter.drawRect(QtCore.QRect(_base_x, _base_y, _base_w, _base_h))
             _base_x += border
             _base_y += border
             for at in ("t", "r"):
-                _y = _base_y
+                _x = _base_x
                 for ax in ("x", "y", "z"):
                     color = cell_colors.get(at + ax, _bg_color)
                     painter.setBrush(QtGui.QColor(color))
-                    painter.drawRect(QtCore.QRect(_base_x, _y, cell_w, cell_h))
-                    _y += cell_h + cell_gap
-                _base_x += cell_w + cell_gap
+                    painter.drawRect(QtCore.QRect(_x, _base_y, cell_w, cell_h))
+                    _x += cell_w + cell_gap
+                _base_y += cell_h + border
             painter.restore()
 
     def sizeHint(self, option, index):
@@ -786,7 +788,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
             index (QtCore.QModelIndex):
         """
         if index.data(MarkerTreeModel.BadRetargetRole):
-            painter.fillRect(options.rect, QtGui.QColor("#884550"))
+            painter.fillRect(options.rect, QtGui.QColor("#5b3138"))
         super(MarkerTreeView, self).drawRow(painter, options, index)
 
 
@@ -835,7 +837,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(dest_col, header.Stretch)
         header.setSectionResizeMode(2, header.Fixed)
         header.setStretchLastSection(False)
-        header.resizeSection(2, 84)
+        header.resizeSection(2, 90)
 
     @property
     def view(self):

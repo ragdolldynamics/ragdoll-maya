@@ -14,8 +14,6 @@ except NameError:
     # Python 3 compatibility
     long = int
 
-_kAnimCurve = int(om.MFn.kAnimCurve)
-
 
 def _resource(*fname):
     dirname = os.path.dirname(__file__)
@@ -55,37 +53,6 @@ def _maya_node_icon(node):
     return QtGui.QIcon(":/%s" % node.type())
 
 
-def _is_bad_retarget(marker, dest):
-    """Checking common bad recording setup
-
-    * Locked Translate and Rotate Channels
-    * Constrained Translate/Rotate channels  (included in next rule ???)
-    * Any connection to Translate/Rotate channels that isn't an animation curve
-    * Locked Rotate, but unlocked Translate, with a Translate Motion = Locked, meaning no translation
-    * Driven by IK
-
-    Args:
-        marker:
-        dest:
-
-    Returns:
-
-    """
-    if all(dest[a].locked
-           for a in {"tx", "ty", "tz", "rx", "ry", "rz"}):
-        return True
-
-    if any(not dest[a].input().isA(_kAnimCurve)
-           for a in {"tx", "ty", "tz", "rx", "ry", "rz"}
-           if dest[a].input()):
-        return True
-
-    if marker["linearMotion"] == 0 \
-            and all(dest[a].locked for a in {"rx", "ry", "rz"}) \
-            and all(not dest[a].locked for a in {"tx", "ty", "tz"}):
-        return True
-
-
 class _Solver(object):
     def __init__(self, solver, size, ui_name, conn_list):
         assert isinstance(solver, str), "Must be hex(str)"
@@ -102,7 +69,7 @@ class _Solver(object):
 
 class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
-                 dot_color, check_state, is_bad):
+                 dot_color, check_state, channel, is_bad):
         assert isinstance(marker, str), "Must be hex(str)"
         assert isinstance(dest, str) or dest is None, "Must be hex(str) or None"
         self.marker = marker
@@ -113,7 +80,46 @@ class _Connection(object):
         self.icon_d = icon_d
         self.dot_color = dot_color
         self.check_state = check_state
+        self.channel = channel
         self.is_bad = is_bad
+
+
+_kAnimCurve = int(om.MFn.kAnimCurve)
+_kConstraint = int(om.MFn.kConstraint)
+# channel status color
+_ChClear = "#404040"
+_ChHasKey = "#DD727A"
+_ChLocked = "#5C6874"
+_ChConstrained = "#A3CBF0"
+_ChHasConnection = "#F1F1A5"
+
+
+def _destination_status(node):
+    status = dict()
+    for ch in {"tx", "ty", "tz", "rx", "ry", "rz"}:
+        if node[ch].locked:
+            status[ch] = _ChLocked
+        elif node[ch].connected:
+            i = node[ch].input()
+            if i.isA(_kAnimCurve):
+                status[ch] = _ChHasKey
+            elif i.isA(_kConstraint):
+                status[ch] = _ChConstrained
+            else:
+                status[ch] = _ChHasConnection
+        else:
+            status[ch] = _ChClear
+
+    if node.type() == "joint":
+        status["IK"] = _is_part_of_IK(node)
+    else:
+        status["IK"] = False
+
+    return status
+
+
+def _is_part_of_IK(joint):
+    return False
 
 
 class _Scene(object):
@@ -122,6 +128,7 @@ class _Scene(object):
         self._solvers = None
         self._markers = None
         self._destinations = None
+        self._dest_status = None
         self._bad_retarget = None
 
     def __eq__(self, other):
@@ -130,6 +137,7 @@ class _Scene(object):
         return self.solvers == other.solvers \
             and self.markers == other.markers \
             and self.destinations == other.destinations \
+            and self.dest_status == other.dest_status \
             and self.bad_retarget == other.bad_retarget
 
     def __ne__(self, other):  # for '!=' in py2
@@ -187,29 +195,80 @@ class _Scene(object):
                         p.input() for p in marker["destinationTransforms"]
                     ))
                 )
-                for marker in self._markers.keys()
+                for marker in self.markers.keys()
             }
         return self._destinations
+
+    @property
+    def dest_status(self):
+        if self._dest_status is None:
+            self._dest_status = {
+                dest.hex: _destination_status(dest)
+                for dest in set(chain(*self.destinations.values()))
+            }
+        return self._dest_status
 
     @property
     def bad_retarget(self):
         if self._bad_retarget is None:
             self._bad_retarget = {
                 marker.hex: {
-                    dest.hex: _is_bad_retarget(marker, dest)
+                    dest.hex: self.is_bad_retarget(marker, dest)
                     for dest in destinations
                 }
-                for marker, destinations in self._destinations.items()
+                for marker, destinations in self.destinations.items()
             }
         return self._bad_retarget
 
+    def is_bad_retarget(self, marker, dest):
+        """Checking common bad recording setup
+        * Locked translate and rotate channels.
+        * Constrained translate/rotate channels.
+        * Any connection to translate/rotate channels that isn't
+            an animation curve.
+        * Locked rotate, but unlocked translate, with a
+            Translate Motion = Locked, meaning no translation.
+        * A joint being driven by IK.
+        """
+        s = self.dest_status.get(dest.hex) or _destination_status(dest)
+        all_ch = {"tx", "ty", "tz", "rx", "ry", "rz"}
+
+        if all(s[ch] == _ChLocked for ch in all_ch):
+            return "Both translate and rotate channels are all being locked, " \
+                   "cannot record."
+
+        if any(s[ch] == _ChConstrained for ch in all_ch):
+            return "Some channel is being constrained, may have unexpected " \
+                   "recording result."
+
+        if any(s[ch] == _ChHasConnection for ch in all_ch):
+            return "Some channel is being connected, may have unexpected " \
+                   "recording result."
+
+        if s["IK"]:
+            return "Destination is being driven by IK, recording will be " \
+                   "incorrect."
+
+        if marker["linearMotion"] == 0 \
+                and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"}) \
+                and all(s[ch] != _ChLocked for ch in {"tx", "ty", "tz"}):
+            return "Marker's translate motion has been set to 'Locked' but " \
+                   "destination's rotation is locked."
+
     def add_dest(self, marker, dest):
-        self._destinations[marker].add(dest)
-        self._bad_retarget[marker.hex][dest.hex] = _is_bad_retarget(marker, dest)
+        self.destinations[marker].add(dest)
+        self.dest_status[dest.hex] = _destination_status(dest)
+        self.bad_retarget[marker.hex][dest.hex] = \
+            self.is_bad_retarget(marker, dest)
 
     def del_dest(self, marker, dest):
-        self._destinations[marker].remove(dest)
-        self._bad_retarget[marker.hex].pop(dest.hex)
+        self.destinations[marker].remove(dest)
+        self.bad_retarget[marker.hex].pop(dest.hex)
+        for ds in self.bad_retarget.values():
+            if dest.hex in ds:
+                break
+        else:
+            self.dest_status.pop(dest.hex)
 
     def set_destination(self, marker, dest, connect):
         if connect:
@@ -278,6 +337,7 @@ class MarkerTreeModel(base.BaseItemModel):
     NameSortingRole = QtCore.Qt.UserRole + 12
     NaturalSortingRole = QtCore.Qt.UserRole + 13
     ColorDotRole = QtCore.Qt.UserRole + 14
+    DestChannelRole = QtCore.Qt.UserRole + 15
 
     Headers = [
         "Name",
@@ -328,6 +388,8 @@ class MarkerTreeModel(base.BaseItemModel):
         if column == 2:
             if role == QtCore.Qt.CheckStateRole:
                 return conn.check_state or QtCore.Qt.Unchecked
+            if role == self.DestChannelRole:
+                return conn.channel
             return
 
         column = not column if self.flipped else column
@@ -340,10 +402,10 @@ class MarkerTreeModel(base.BaseItemModel):
                 return cmdx.fromHex(conn.dest).name() if conn.dest else "Empty"
 
         if role == QtCore.Qt.ForegroundRole:
-            if conn.is_bad:
-                return QtGui.QColor("yellow")
             if key == "dest" and not conn.dest:
                 return self._empty_dst_color
+            else:
+                return
 
         if role == QtCore.Qt.DecorationRole:
             if key == "marker":
@@ -397,13 +459,15 @@ class MarkerTreeModel(base.BaseItemModel):
             solver_index = index.parent().row()
             solver_repr = self._internal[solver_index]
             conn = solver_repr.conn_list[index.row()]  # type: _Connection
+            marker_hex = conn.marker
+            dest_hex = conn.dest
 
             if conn.check_state is not None:
-                marker = cmdx.fromHex(conn.marker)
-                dest = cmdx.fromHex(conn.dest)
+                marker = cmdx.fromHex(marker_hex)
+                dest = cmdx.fromHex(dest_hex)
                 self._scene.set_destination(marker, dest, connect=bool(value))
                 conn.check_state = value
-                conn.is_bad = self._scene.bad_retarget[conn.marker].get(conn.dest)
+                conn.is_bad = self._scene.bad_retarget[marker_hex].get(dest_hex)
                 return True
 
         return False
@@ -511,6 +575,7 @@ class MarkerTreeModel(base.BaseItemModel):
             level=level,
             natural=natural,
             check_state=check_state,
+            channel=self._scene.dest_status.get(dest_hex),
             is_bad=self._scene.bad_retarget[marker.hex].get(dest_hex),
         )
         return conn
@@ -619,10 +684,11 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             painter.drawEllipse(pos_x + border, pos_y + border, inner, inner)
             painter.restore()
 
-        if index.column() == 2 and index.parent().isValid():
+        cell_colors = index.data(MarkerTreeModel.DestChannelRole)
+        if cell_colors:
             # channels
+            _bg_color = "#2B2B2B"
             _size = 26
-            cell_colors = dict()  # should be coming from index data
             cell_gap = border = 2
             cell_w = 10
             cell_h = 6
@@ -630,14 +696,14 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             _base_y = option.rect.center().y() - 10
             painter.save()
             painter.setPen(QtCore.Qt.NoPen)
-            painter.setBrush(QtGui.QColor("#2B2B2B"))
+            painter.setBrush(QtGui.QColor(_bg_color))
             painter.drawRect(QtCore.QRect(_base_x, _base_y, _size, _size))
             _base_x += border
             _base_y += border
             for at in ("t", "r"):
                 _y = _base_y
                 for ax in ("x", "y", "z"):
-                    color = cell_colors.get(at + ax, "#404040")
+                    color = cell_colors.get(at + ax, _bg_color)
                     painter.setBrush(QtGui.QColor(color))
                     painter.drawRect(QtCore.QRect(_base_x, _y, cell_w, cell_h))
                     _y += cell_h + cell_gap

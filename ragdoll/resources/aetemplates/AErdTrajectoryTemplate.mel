@@ -1,0 +1,16 @@
+//AErdTrajectoryTemplate.mel
+
+global proc AErdTrajectoryTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "General" -collapse false;
+            editorTemplate -addControl "color";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+    editorTemplate -suppress "Extra Attributes";
+}

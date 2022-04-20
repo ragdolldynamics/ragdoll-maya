@@ -1179,8 +1179,12 @@ class RetargetWidget(QtWidgets.QWidget):
     def enterEvent(self, event):
         super(RetargetWidget, self).enterEvent(event)
         view = self._widgets["MarkerView"]
+        model = view.model
         scene = _Scene()
-        if view.model.scene != scene or view.model.any_unchecked_missing():
+        with internal.Timer() as t:
+            outdated = model.scene != scene or model.any_unchecked_missing()
+        log.debug("Checking for update finished in %0.2fms" % t.ms)
+        if outdated:
             view.refresh(scene, keep_unchecked=True)
 
 

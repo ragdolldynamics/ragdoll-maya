@@ -1,0 +1,23 @@
+//AErdPlanTemplate.mel
+
+global proc AErdPlanTemplate(string $nodeName) {
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "General" -collapse false;
+            editorTemplate -addControl "enabled";
+            editorTemplate -addControl "startTime";
+            editorTemplate -addControl "startTimeCustom";
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "maxOptimisationTime";
+            editorTemplate -addControl "maxOptimisationIterations";
+            editorTemplate -addControl "optimizeBaseAngularVelocity";
+            editorTemplate -addControl "optimizeBaseOrientation";
+        editorTemplate -endLayout;
+
+        // Create an "Extras" section and also add controls for any
+        // attributes we have not explicitly mentioned.
+        editorTemplate -addExtraControls;
+
+    editorTemplate -endScrollLayout;
+    editorTemplate -suppress "Extra Attributes";
+}

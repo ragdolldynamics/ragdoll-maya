@@ -510,7 +510,17 @@ class MarkerTreeModel(base.BaseItemModel):
     def scene(self):
         return self._scene
 
-    def refresh(self, scene=None, keep_unchecked=False):
+    def refresh(self, scene=None, keep_unchecked=False, index_to_map=None):
+        selected_row = None
+        if index_to_map:
+            row, parent = index_to_map.row(), index_to_map.parent()
+            col_m, col_d = int(self.flipped), int(not self.flipped)
+            selected_row = (
+                self.index(row, col_m, parent).data(self.NodeRole),
+                self.index(row, col_d, parent).data(self.NodeRole),
+                self.index(parent.row(), 0).data(self.NodeRole),
+            )
+        # start refresh
         scene = scene or _Scene()
         self.reset()
 
@@ -523,6 +533,21 @@ class MarkerTreeModel(base.BaseItemModel):
             self.appendRow(solver_item)
             solver_item.setColumnCount(len(self.Headers))
             solver_item.setRowCount(len(solver_repr.conn_list))
+        # end refresh
+        if selected_row:
+            col_m, col_d, parent = selected_row
+            if parent:
+                for i, _s in enumerate(self._internal):
+                    if _s.solver == parent:
+                        for j, conn in enumerate(_s.conn_list):
+                            if conn.marker == col_m and conn.dest == col_d:
+                                solver_index = self.index(i, 0)
+                                return self.index(j, 0, solver_index)
+                        break
+            else:
+                for i, _s in enumerate(self._internal):
+                    if _s.solver == col_m:
+                        return self.index(i, 0)
 
     def _mk_solver_item(self, solver_repr):
         item = QtGui.QStandardItem()
@@ -886,8 +911,17 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         return self._model
 
     def refresh(self, scene=None, keep_unchecked=False):
-        self._model.refresh(scene, keep_unchecked)
+        selected = self._view.selectedIndexes()
+        selected = self._proxy.mapToSource(selected[-1]) if selected else None
+
+        selected = self._model.refresh(scene, keep_unchecked, selected)
         self._view.expandToDepth(1)
+
+        if selected:
+            selected = self._proxy.mapFromSource(selected)
+            sele_model = self._view.selectionModel()
+            sele_model.select(selected, sele_model.Select | sele_model.Rows)
+            self._view.scrollTo(selected, self._view.EnsureVisible)
 
     def on_view_clicked(self, index):
         if not index.parent().isValid():
@@ -1174,7 +1208,11 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def on_searched(self):
         text = self._widgets["SearchBar"].text()
-        self._widgets["MarkerView"].set_filter(text)
+        widget = self._widgets["MarkerView"]
+        widget.set_filter(text)
+        selected = widget.view.selectedIndexes()
+        if selected:
+            widget.view.scrollTo(selected[-1], widget.view.PositionAtCenter)
 
     def enterEvent(self, event):
         super(RetargetWidget, self).enterEvent(event)

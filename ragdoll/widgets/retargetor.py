@@ -1,5 +1,6 @@
 
 import os
+import logging
 from itertools import chain
 from maya import cmds, OpenMayaUI
 from maya.api import OpenMaya as om
@@ -7,6 +8,8 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
 from .. import commands, internal, ui
+
+log = logging.getLogger("ragdoll")
 
 try:
     long  # noqa
@@ -45,12 +48,6 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
 def _hex_exists(node_hex):
     node = cmdx.fromHex(node_hex)
     return node and node.exists
-
-
-def _maya_node_icon(node):
-    if node.isA(cmdx.kDagNode):
-        node = node.shape() or node
-    return QtGui.QIcon(":/%s" % node.type())
 
 
 class _Solver(object):
@@ -324,29 +321,35 @@ class _Scene(object):
             destination is cmdx.Node or None if marker has no destination set.
 
         """
+        data = self.markers
+        children_by_id = {
+            d["id"]: [m for m, _ in data.items() if _["parent"] == d["id"]]
+            for d in chain(data.values(), [{"id": -1}])
+        }
 
-        def child_count(d):
-            return sum(m["parent"] == d for m in self.markers.values())
+        def list_children(parent_id, lvl):
+            return [(m, lvl) for m in children_by_id[parent_id]]
 
-        def walk_hierarchy(_markers, parent_id, _level=0):
-            _sibling_count = child_count(parent_id)
+        def walk_hierarchy(markers_):  # depth first
+            root_markers = [(m, 0) for m in children_by_id[-1] if m in markers_]
+            visiting_list = root_markers
+            while visiting_list:
+                visited, lvl = visiting_list[0]
 
-            for _marker in _markers:
-                if self.markers[_marker]["parent"] != parent_id:
-                    continue
-                yield _marker, _level
+                id_ = int(visited["ragdollId"])
+                pa_ = int(visited["parentMarker"])
+                _child_num = len(children_by_id[id_])
+                _sibling_num = len(children_by_id[pa_])
+                _retain_level = _sibling_num <= 1 and _child_num <= 1
 
-                _rd_id = int(_marker["ragdollId"])
-                _child_count = child_count(_rd_id)
-                _next_level = _level
-                if not (_sibling_count <= 1 and _child_count <= 1):
-                    _next_level += 1
+                next_lvl = lvl if _retain_level else (lvl + 1)
+                children = list_children(id_, next_lvl)
+                visiting_list = children + visiting_list[1:]
 
-                for mk, lvl in walk_hierarchy(_markers, _rd_id, _next_level):
-                    yield mk, lvl
+                yield visited, lvl
 
         for solver, markers in self.solvers.items():
-            for marker_node, level in walk_hierarchy(markers, -1):
+            for marker_node, level in walk_hierarchy(markers):
                 destinations = self.destinations[marker_node]
                 if destinations:
                     for dest_node in destinations:
@@ -382,6 +385,7 @@ class MarkerTreeModel(base.BaseItemModel):
             "rdMarker_2": QtGui.QPixmap(_resource("icons", "rigid.png")),
             "rdMarker_4": QtGui.QPixmap(_resource("icons", "mesh.png")),
         }
+        self._maya_node_icons = dict()
         self._empty_dst_color = QtGui.QColor("#6C6C6C")
         self._empty_dst_icon = QtGui.QIcon(_resource("icons", "empty.png"))
 
@@ -509,7 +513,10 @@ class MarkerTreeModel(base.BaseItemModel):
     def refresh(self, scene=None, keep_unchecked=False):
         scene = scene or _Scene()
         self.reset()
-        self._build_internal_model(scene, keep_unchecked)
+
+        with internal.Timer() as t:
+            self._build_internal_model(scene, keep_unchecked)
+        log.debug("Internal data model built in total %.2fms" % t.ms)
 
         for solver_repr in self._internal:
             solver_item = self._mk_solver_item(solver_repr)
@@ -543,20 +550,25 @@ class MarkerTreeModel(base.BaseItemModel):
 
         solver_sizes = _get_all_solver_size(scene.solvers)
 
-        the_solver = None
-        connection_iter = scene.iter_connection()
-        for _i, (solver, level, marker, dest) in enumerate(connection_iter):
-            if the_solver is None or solver.hex != the_solver.solver:
-                the_solver = _Solver(
-                    solver=solver.hex,
-                    size=solver_sizes[int(solver["ragdollId"])],
-                    ui_name=_solver_ui_name_by_sizes(solver_sizes, solver),
-                    conn_list=[],
-                )
-                self._internal.append(the_solver)
+        with internal.Timer() as t:
+            conns = list(scene.iter_connection())
+        log.debug("Connection iterated (%d) in %.2fms" % (len(conns), t.ms))
 
-            conn = self._mk_conn(marker, dest, level, _i, QtCore.Qt.Checked)
-            the_solver.conn_list.append(conn)
+        with internal.Timer() as t:
+            the_solver = None
+            for _i, (solver, level, marker, dest) in enumerate(conns):
+                if the_solver is None or solver.hex != the_solver.solver:
+                    the_solver = _Solver(
+                        solver=solver.hex,
+                        size=solver_sizes[int(solver["ragdollId"])],
+                        ui_name=_solver_ui_name_by_sizes(solver_sizes, solver),
+                        conn_list=[],
+                    )
+                    self._internal.append(the_solver)
+
+                conn = self._mk_conn(marker, dest, level, _i, QtCore.Qt.Checked)
+                the_solver.conn_list.append(conn)
+        log.debug("Scene iterated in %.2fms" % t.ms)
 
         # add back unchecked
         for (s_hex, m_hex, d_hex) in unchecked:
@@ -573,7 +585,7 @@ class MarkerTreeModel(base.BaseItemModel):
             if found.dest is None:
                 _d = cmdx.fromHex(d_hex)
                 found.dest = _d.hex
-                found.icon_d = _maya_node_icon(_d)
+                found.icon_d = self._maya_node_icon(_d)
                 found.check_state = QtCore.Qt.Unchecked
             else:
                 _m = cmdx.fromHex(m_hex)
@@ -594,7 +606,7 @@ class MarkerTreeModel(base.BaseItemModel):
         dot_color = QtGui.QColor.fromRgbF(*marker["color"]).lighter()
 
         # dest icon
-        icon_d = _maya_node_icon(dest) if dest else None
+        icon_d = self._maya_node_icon(dest) if dest else None
 
         conn = _Connection(
             marker=marker.hex,
@@ -609,6 +621,14 @@ class MarkerTreeModel(base.BaseItemModel):
             is_bad=self._scene.bad_retarget[marker.hex].get(dest_hex),
         )
         return conn
+
+    def _maya_node_icon(self, node):
+        if node.isA(cmdx.kDagNode):
+            node = node.shape() or node
+        typ = node.type()
+        if typ not in self._maya_node_icons:
+            self._maya_node_icons[typ] = QtGui.QIcon(":/%s" % typ)
+        return self._maya_node_icons[typ]
 
     def _check_conn_by_row(self, conn, solver_row, conn_row):
         dest_col = 0 if self.flipped else 1
@@ -635,7 +655,7 @@ class MarkerTreeModel(base.BaseItemModel):
                 if _c.dest is None:
                     # plug dest into connection
                     _c.dest = dest.hex
-                    _c.icon_d = _maya_node_icon(dest)
+                    _c.icon_d = self._maya_node_icon(dest)
                     return self._check_conn_by_row(_c, x, y)
 
                 elif _c.dest == dest.hex:

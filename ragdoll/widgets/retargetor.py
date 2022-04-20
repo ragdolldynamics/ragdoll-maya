@@ -846,10 +846,14 @@ class MarkerTreeView(QtWidgets.QTreeView):
         self.leave.emit()
 
     def mousePressEvent(self, event):
+        position = self.mapFromGlobal(event.globalPos())
         if event.button() is QtCore.Qt.MouseButton.RightButton:
-            self.menu_requested.emit(self.mapFromGlobal(event.globalPos()))
+            self.menu_requested.emit(position)
         else:
             super(MarkerTreeView, self).mousePressEvent(event)
+            index = self.indexAt(position)
+            if not index.isValid():
+                self.clearSelection()
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):

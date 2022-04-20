@@ -1282,10 +1282,13 @@ class RetargetWindow(ui.Options):
 
     def on_overview(self, _):
         if self._panels["Body"].currentIndex() != self.OverviewPage:
+            self.overview_state()
             if not self._inited:
+                # ensure tab switched
+                QtWidgets.QApplication.instance().processEvents()
+                # then run the time consuming task
                 self._widgets["Retarget"].init()
                 self._inited = True
-            self.overview_state()
         else:
             self.options_state()
 

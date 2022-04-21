@@ -807,8 +807,8 @@ def install_menu():
              create_fixed_constraint, label="Weld")
 
     with submenu("Edit", icon="kinematic.png"):
-
         divider("Hierarchy")
+
         item("reassignMarker", reassign_marker, label="Reassign")
         item("retargetMarker", retarget_marker, retarget_marker_options,
              label="Retarget")
@@ -831,13 +831,19 @@ def install_menu():
         item("extractFromSolver", extract_from_solver)
         item("moveToSolver", move_to_solver)
 
-    with submenu("Cache", icon="bake.png"):
+        divider("Cache")
+
         item("cacheSolver", cache_all, label="Cache")
         item("uncacheSolver", uncache, label="Uncache")
 
-    with submenu("Link", icon="link.png"):
+        divider("Link")
+
         item("linkSolver", link_solver)
         item("unlinkSolver", unlink_solver)
+
+    with submenu("Locomotion", icon="locomotion.png"):
+        item("assignPlan", assign_plan, assign_plan_options)
+        item("resetFoot", assign_plan, assign_plan_options)
 
     with submenu("Fields", icon="force.png"):
         item("airField", air_field)
@@ -2621,6 +2627,26 @@ def unlink_solver(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_plan(selection=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    body, feet = sel[0], sel[1:]
+    plan = commands.assign_plan(body, feet)
+
+    # Trigger a draw refresh
+    cmds.select(str(plan))
+
+    return kSuccess
+
+
 def air_field(selection=None, **opts):
     _field("airField", opts={
         "directionX": 1.0,
@@ -3217,6 +3243,9 @@ def reset_preferences(*args):
     options.reset()
     log.info("Successfully reset Ragdoll preferences")
 
+
+def assign_plan_options(*args):
+    return _Window("assignPlan", assign_plan)
 
 def replace_marker_mesh_options(*args):
     return _Window("markerReplaceMesh", replace_marker_mesh)

@@ -725,6 +725,24 @@
         ]
     },
 
+    "assignPlan": {
+        "label": "Assign Plan",
+        "icon": "plan.png",
+        "summary": "Assign a plan to selected body and feet.",
+        "description": "Create a new plan for the selected body and 1 or more feet, the plan will drive the translate and rotate channels.",
+        "options": [
+        ]
+    },
+
+    "resetFoot": {
+        "label": "Reset Foot",
+        "icon": "locomotion.png",
+        "summary": "Reset the reference position of the selected foot or feet.",
+        "description": "The reference position will be reset to wherever the feet are located at the time of running this command.",
+        "options": [
+        ]
+    },
+
     "groupMarkers": {
         "label": "Group",
         "icon": "group.png",

@@ -182,6 +182,9 @@ class _Recorder(object):
                 "Ragdoll cannot cope with these. See above."
             )
 
+        initial_time = cmdx.current_time()
+        cmdx.current_time(cmdx.time(self._solver_start_frame))
+
         self.clean()
 
         for progress in self._sim_to_cache():
@@ -242,6 +245,8 @@ class _Recorder(object):
             pass
 
         self.clean()
+
+        cmdx.current_time(initial_time)
 
         yield ("done", 100)
 

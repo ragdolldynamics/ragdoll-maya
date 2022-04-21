@@ -583,6 +583,8 @@ class Node(object):
             for item in items:
                 if isinstance(item, _Unit):
                     unit = item
+                elif isinstance(item, int):
+                    unit = item
                 elif isinstance(item, _Cached):
                     cached = True
 
@@ -3360,6 +3362,9 @@ class Plug(object):
 
         # If no animation layers or pair blends then plug is self
         plug = plug if plug is not None else self
+
+        # Preserve unit passed by user, e.g. Stepped
+        plug._unit = self._unit
 
         return plug
 
@@ -6816,6 +6821,14 @@ def maxTime(time=None):
         return oma.MAnimControl.setMaxTime(time)
 
 
+def isScrubbing():
+    return oma.MAnimControl.isScrubbing()
+
+
+def isPlaying():
+    return oma.MAnimControl.isPlaying()
+
+
 class DGContext(om.MDGContext):
     """Context for evaluating the Maya DG
 
@@ -7252,6 +7265,8 @@ if ENABLE_PEP8:
     current_time = currentTime
     min_time = minTime
     max_time = maxTime
+    is_scrubbing = isScrubbing
+    is_playing = isPlaying
     animation_start_time = animationStartTime
     animation_end_time = animationEndTime
     selected_time = selectedTime

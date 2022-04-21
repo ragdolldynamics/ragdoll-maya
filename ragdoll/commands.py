@@ -1456,6 +1456,180 @@ def delete_all_physics(dry_run=False):
     return delete_physics(all_nodes, dry_run=dry_run)
 
 
+def assign_plan(body, feet):
+    assert (
+        body and
+        isinstance(body, cmdx.Node) and
+        body.is_a(cmdx.kTransform)
+    ), "`body` was not a transform"
+
+    assert (
+        feet and
+        isinstance(feet, (tuple, list)) and
+        all(foot.is_a(cmdx.kTransform) for foot in feet)
+    ), "`feet` was not a tuple of transforms"
+
+    time = cmdx.encode("time1")
+
+    # Determine the direction and distance to offset the end target
+    body_inv_mtx = body["worldInverseMatrix"][0].as_matrix()
+    positions = []
+    for foot in feet:
+        foot_mtx = foot["worldMatrix"][0].as_matrix()
+        positions.append(cmdx.Tm((foot_mtx * body_inv_mtx)).translation())
+
+    # Assume 4 feet for now, in which case we want the character to move
+    # along the narrowest axis.
+    # .___________.
+    # |           |.
+    # |           | --->
+    # .___________.
+    #  .           .
+    #   o           o
+    #
+    longest = cmdx.Vector(0, 0, 0)
+    for position in positions:
+        longest.x = max(longest.x, abs(position.x))
+        longest.y = max(longest.y, abs(position.y))
+        longest.z = max(longest.z, abs(position.z))
+
+    if cmdx.up_axis().y > 0:
+        longest.y = 0
+    else:
+        longest.z = 0
+
+    longest_value = max(longest)
+    longest_axis = tuple(longest).index(longest_value)
+
+    # Walk 4 body lengths per default
+    end_offset = cmdx.Vector(0, 0, 0)
+    end_offset[longest_axis] = longest_value * 4
+
+    with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
+        plan_parent = mod.create_node("transform", name="rPlan")
+        rdplan = mod.createNode("rdPlan",
+                                name="rPlanShape",
+                                parent=plan_parent)
+
+        mod.connect(time["outTime"], rdplan["currentTime"])
+
+        plan_start_parent = mod.create_node("transform",
+                                            name=body.name() + "_rStart")
+        plan_end_parent = mod.create_node("transform",
+                                          name=body.name() + "_rEnd")
+
+        body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
+
+        mod.set_attr(plan_start_parent["translate"], body_tm.translation())
+        mod.set_attr(plan_start_parent["rotate"], body_tm.rotation())
+        mod.set_attr(plan_start_parent["displayHandle"], True)
+        mod.set_attr(plan_end_parent["displayHandle"], True)
+
+        body_tm.translateBy(end_offset, cmdx.sPreTransform)
+        mod.set_attr(plan_end_parent["translate"], body_tm.translation())
+        mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
+
+        mod.create_node("rdTrajectory",
+                        name=body.name() + "_rTrajShape",
+                        parent=plan_start_parent)
+        mod.create_node("rdTrajectory",
+                        name=body.name() + "_rTrajShape",
+                        parent=plan_end_parent)
+
+        mod.connect(plan_start_parent["worldMatrix"][0], rdplan["targets"][0])
+        mod.connect(plan_end_parent["worldMatrix"][0], rdplan["targets"][1])
+
+        mod.set_attr(rdplan["color"], internal.random_color())
+        mod.set_attr(rdplan["version"], internal.version())
+
+        mod.do_it()
+
+        decompose = dgmod.create_node("decomposeMatrix")
+        dgmod.connect(rdplan["outputMatrix"], decompose["inputMatrix"])
+        dgmod.connect(decompose["outputTranslateX"], body["translateX"])
+        dgmod.connect(decompose["outputTranslateY"], body["translateY"])
+        dgmod.connect(decompose["outputTranslateZ"], body["translateZ"])
+        dgmod.connect(decompose["outputRotateX"], body["rotateX"])
+        dgmod.connect(decompose["outputRotateY"], body["rotateY"])
+        dgmod.connect(decompose["outputRotateZ"], body["rotateZ"])
+        dgmod.set_attr(decompose["ihi"], 0)
+
+        left = False
+        for foot in feet:
+            rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
+
+            start_parent = mod.create_node("transform",
+                                           name=foot.name() + "_rStart",
+                                           parent=plan_start_parent)
+            end_parent = mod.create_node("transform",
+                                         name=foot.name() + "_rEnd",
+                                         parent=plan_end_parent)
+
+            tm = cmdx.Tm(
+                foot["worldMatrix"][0].as_matrix() *
+                plan_start_parent["worldInverseMatrix"][0].as_matrix()
+            )
+            mod.set_attr(start_parent["translate"], tm.translation())
+            mod.set_attr(start_parent["rotate"], tm.rotation())
+            mod.set_attr(end_parent["translate"], tm.translation())
+            mod.set_attr(end_parent["rotate"], tm.rotation())
+
+            mod.set_attr(rdfoot["nominalMatrix"], tm.as_matrix())
+
+            mod.create_node("rdTrajectory",
+                            name=start_parent.name() + "Shape",
+                            parent=start_parent)
+            mod.create_node("rdTrajectory",
+                            name=end_parent.name() + "Shape",
+                            parent=end_parent)
+
+            mod.set_attr(start_parent["displayHandle"], True)
+            mod.set_attr(end_parent["displayHandle"], True)
+
+            index = rdplan["inputStart"].next_available_index()
+            mod.connect(rdfoot["startState"], rdplan["inputStart"][index])
+            mod.connect(rdfoot["currentState"], rdplan["inputCurrent"][index])
+
+            dgmod.connect(time["outTime"], rdfoot["currentTime"])
+            dgmod.connect(start_parent["worldMatrix"][0], rdfoot["targets"][0])
+            dgmod.connect(end_parent["worldMatrix"][0], rdfoot["targets"][1])
+
+            # This will overwrite any existing animation on the handles
+            decompose = dgmod.create_node("decomposeMatrix")
+            dgmod.set_attr(decompose["ihi"], 0)
+            dgmod.connect(rdfoot["outputMatrix"], decompose["inputMatrix"])
+            dgmod.connect(decompose["outputTranslateX"], foot["translateX"])
+            dgmod.connect(decompose["outputTranslateY"], foot["translateY"])
+            dgmod.connect(decompose["outputTranslateZ"], foot["translateZ"])
+
+            dgmod.set_attr(rdfoot["color"], internal.random_color())
+            dgmod.set_attr(rdfoot["version"], internal.version())
+
+            # Make step sequence
+            offset = 0 if left else 10
+            dgmod.set_attr(rdfoot["stepSequence", cmdx.Stepped], {
+                1: False,
+                10 + offset: True,
+                20 + offset: False,
+                30 + offset: True,
+                40 + offset: False,
+                50 + offset: True,
+                70: False,
+                80: False,
+            })
+
+            # Prevent DG updates from changes to time
+            dgmod.do_it()
+            curve = rdfoot["stepSequence"].input()
+            dgmod.add_attr(rdfoot, cmdx.Time("muteTime"))
+            dgmod.do_it()
+            dgmod.connect(rdfoot["muteTime"], curve["input"])
+
+            left = not left
+
+    return rdplan
+
+
 """
 
 Internal helper functions

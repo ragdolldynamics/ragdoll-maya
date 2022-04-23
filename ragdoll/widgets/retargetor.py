@@ -388,13 +388,14 @@ class MarkerTreeModel(base.BaseItemModel):
         self._maya_node_icons = dict()
         self._empty_dst_color = QtGui.QColor("#6C6C6C")
         self._empty_dst_icon = QtGui.QIcon(_resource("icons", "empty.png"))
+        self._bad_conn_icon = QtGui.QIcon(_resource("icons", "warning.png"))
 
     def flags(self, index):
-        base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
-        if index.parent().isValid():
-            if index.column() == 2:
-                return base_flags | QtCore.Qt.ItemIsUserCheckable
-        return base_flags
+        if index.column() == 2 \
+                or (not index.parent().isValid() and index.column() == 1):
+            return QtCore.Qt.ItemIsEnabled
+        else:
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         """
@@ -418,10 +419,10 @@ class MarkerTreeModel(base.BaseItemModel):
 
         column = index.column()
         if column == 2:
-            if role == QtCore.Qt.CheckStateRole:
-                return conn.check_state or QtCore.Qt.Unchecked
             if role == self.DestChannelRole:
                 return conn.channel
+            if role == QtCore.Qt.DecorationRole and conn.is_bad:
+                return self._bad_conn_icon
             return
 
         column = not column if self.flipped else column
@@ -755,6 +756,9 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             painter.fillPath(path, QtGui.QColor("#515D6A"))
             painter.drawPath(path)
 
+        if index.column() == 2:
+            option.decorationPosition = option.Right  # warning sign
+
         if dot_color:
             offset -= self.ColorDotSize
             painter.translate(self.ColorDotSize, 0)
@@ -796,10 +800,10 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             border = 2
             cell_gap = 2
             cell_w = 11
-            cell_h = 5
+            cell_h = 4
             _base_w = border * 2 + cell_w * 2 + border
             _base_h = border * 2 + cell_h * 3 + cell_gap * 2
-            _base_x = option.rect.x() + 36
+            _base_x = option.rect.x() + 8
             _base_y = option.rect.center().y() - int(_base_h / 2) + 1
             painter.save()
             painter.setPen(QtCore.Qt.NoPen)

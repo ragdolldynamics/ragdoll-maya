@@ -878,12 +878,43 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         indent_delegate = MarkerIndentDelegate(self)
         view.setItemDelegate(indent_delegate)
 
+        action_bar = QtWidgets.QWidget()
+        action_bar.setFixedHeight(px(34))
+
+        replace_dest = QtWidgets.QPushButton(
+            QtGui.QIcon(_resource("icons", "add.png")),
+            "Add/Replace Destinations",
+        )
+        append_dest = QtWidgets.QPushButton()  # todo: change to 3 dots icon
+        append_dest_menu = QtWidgets.QMenu(self)
+        manipulate = QtWidgets.QAction(
+            QtGui.QIcon(_resource("icons", "manipulator.png")),
+            "Append",
+            append_dest_menu
+        )
+        append_dest_menu.addAction(manipulate)
+        append_dest.setMenu(append_dest_menu)
+        append_dest.setFixedWidth(px(15))
+
+        remove_dest = QtWidgets.QPushButton(
+            QtGui.QIcon(_resource("icons", "manipulator.png")),
+            "Remove",
+        )
+        layout = QtWidgets.QHBoxLayout(action_bar)
+        layout.setContentsMargins(px(5), px(5), px(5), px(5))
+        layout.setSpacing(px(1))
+        layout.addWidget(replace_dest)
+        layout.addWidget(append_dest)
+        layout.addSpacing(px(6))
+        layout.addWidget(remove_dest)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(view)
+        layout.addWidget(action_bar)
+        layout.setSpacing(px(2))
 
         view.clicked.connect(self.on_view_clicked)
-        view.menu_requested.connect(self.on_menu_requested)
 
         self._view = view
         self._proxy = proxy
@@ -921,6 +952,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         selected = self._model.refresh(scene, keep_unchecked, selected)
         self._view.expandToDepth(1)
 
+        # todo: check selection (only for first run ?)
+        self.process_maya_selection()
+
         if selected:
             selected = self._proxy.mapFromSource(selected)
             sele_model = self._view.selectionModel()
@@ -935,7 +969,37 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             node = cmdx.fromHex(node)
             cmds.select(node.shortest_path(), replace=True)
 
+    def on_selection_changed(self):
+        self.process_maya_selection()
+
+    def process_maya_selection(self):
+        selection = cmdx.ls(sl=True)
+        marker = next((n for n in selection if n.isA("rdMarker")), None)
+        dest = next((n for n in selection if n.isA(cmdx.kTransform)), None)
+        if marker and dest:
+            self.stage_connection(marker, dest)
+        elif marker and not self._model.flipped:
+            self.stage_marker(marker)
+        elif dest and self._model.flipped:
+            self.stage_marker(marker)
+        else:
+            self.clear_stage()
+
+    def stage_marker(self, marker):
+        pass
+
+    def stage_dest(self, dest):
+        pass
+
+    def stage_connection(self, marker, dest):
+        self.stage_marker(marker)
+        print(dest)
+
+    def clear_stage(self):
+        pass
+
     def on_menu_requested(self, position):
+        # todo: deprecated
         index = self._view.indexAt(position)
 
         if not index.isValid():
@@ -1058,6 +1122,23 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
 
+class SelectionScriptJob(QtCore.QObject):
+    selection_changed = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(SelectionScriptJob, self).__init__(parent=parent)
+        self.setObjectName("ragdoll:retargetor-scriptJob")
+        self.job_id = None
+
+    def init(self):
+        if self.job_id:
+            return
+        self.job_id = cmds.scriptJob(
+            event=["SelectionChanged", self.selection_changed.emit],
+            parent=self.objectName(),  # job killed on object destroyed
+        )
+
+
 class RetargetWidget(QtWidgets.QWidget):
     prompted = QtCore.Signal(str)
 
@@ -1074,7 +1155,6 @@ class RetargetWidget(QtWidgets.QWidget):
             "SearchType": _with_entered_exited_signals(base.ToggleButton)(),
             "SearchCase": _with_entered_exited_signals(base.ToggleButton)(),
             "MarkerView": MarkerTreeWidget(),
-            "Refresh": _with_entered_exited_signals(QtWidgets.QPushButton)(),
             "Sorting": _with_entered_exited_signals(base.StateRotateButton)(),
         }
 
@@ -1082,9 +1162,14 @@ class RetargetWidget(QtWidgets.QWidget):
             "OnSearched": QtCore.QTimer(self),
         }
 
+        objects = {
+            "ScriptJob": SelectionScriptJob(self),
+        }
+
+        panels["TopBar"].setObjectName("RetargetWidgetTop")
+
         timers["OnSearched"].setSingleShot(True)
         widgets["SearchBar"].setClearButtonEnabled(True)
-        widgets["Refresh"].setIcon(QtGui.QIcon(_resource("icons", "reset.png")))
         widgets["MarkerView"].view.setMouseTracking(True)  # for retarget warn
 
         def set_toggle(w, unchecked, checked):
@@ -1120,16 +1205,13 @@ class RetargetWidget(QtWidgets.QWidget):
         layout.addWidget(widgets["SearchType"])
         layout.addWidget(widgets["SearchBar"])
         layout.addWidget(widgets["SearchCase"])
-        _line = QtWidgets.QFrame()
-        _line.setFrameShape(_line.VLine)
-        layout.addWidget(_line)
-        layout.addWidget(widgets["Refresh"])
 
         layout = QtWidgets.QHBoxLayout(panels["Markers"])
-        layout.setContentsMargins(10, 2, 10, 10)
+        layout.setContentsMargins(0, 4, 0, 2)
         layout.addWidget(widgets["MarkerView"])
 
         layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 2, 0, 2)
         layout.addWidget(panels["TopBar"])
         layout.addWidget(panels["Markers"])
 
@@ -1150,9 +1232,6 @@ class RetargetWidget(QtWidgets.QWidget):
         add_help(widgets["Sorting"],
                  "Change marker-destination list sorting order. Note that "
                  "hierarchy ordering doesn't work in destination perspective.")
-        add_help(widgets["Refresh"],
-                 "Refresh the marker-destination list. Note that all unchecked "
-                 "connections will be removed.")
 
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
         widgets["MarkerView"].view.leave.connect(lambda: self.prompted.emit(""))
@@ -1160,25 +1239,26 @@ class RetargetWidget(QtWidgets.QWidget):
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
         widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
-        widgets["Refresh"].clicked.connect(self.on_refresh_clicked)
         timers["OnSearched"].timeout.connect(self.on_searched)
+        objects["ScriptJob"].selection_changed.connect(
+            widgets["MarkerView"].on_selection_changed
+        )
 
         self._panels = panels
         self._widgets = widgets
         self._timers = timers
+        self._objects = objects
 
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
 
     def init(self):
+        self._objects["ScriptJob"].init()
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
     def on_view_item_entered(self, index):
         warn = index.data(MarkerTreeModel.BadRetargetRole) or " "
         self.prompted.emit(warn)
-
-    def on_refresh_clicked(self):
-        self._widgets["MarkerView"].refresh()
 
     def on_sorting_clicked(self, state):
         if state == "name_az":

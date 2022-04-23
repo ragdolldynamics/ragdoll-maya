@@ -1,37 +1,18 @@
 
-RetargetWidget QAbstractItemView {
-    show-decoration-selected: 1;  /* highlight decoration (branch) */
+RetargetWidget QTreeView {
+    show-decoration-selected: 0;  /* highlight decoration (branch) */
     border: none;
-    selection-color: "%(on_hovered)s";
-    selection-background-color: "%(hovered)s";
     color: "%(on_primary)s";
     background-color: "%(background)s";
     alternate-background-color: "%(background_alt)s";
-}
-RetargetWidget QAbstractItemView:focus {
-    border: none;
+    outline: none; /* Disable dotted border on focus */
 }
 
 RetargetWidget QTreeView::item {
-    border: 0px;
-    padding: 3px;
     padding-right: 10px;
     padding-left: 8px;  /* more space for icon and indicator */
-}
-
-/* note: transparent background color is really hard to look good */
-
-RetargetWidget QTreeView::branch:selected,
-RetargetWidget QAbstractItemView::item:selected:active,
-RetargetWidget QAbstractItemView::item:selected:!focus {
-    color: "%(on_selected)s";
-    background-color: "%(selected)s";
-}
-
-RetargetWidget QTreeView::branch:hover:!selected,
-RetargetWidget QAbstractItemView::item:hover {
-    color: "%(on_hovered)s";
-    background-color: "%(hovered)s";
+    border: 3px solid transparent;
+    background-color: transparent;
 }
 
 RetargetWidget QTreeView::branch::has-children::!has-siblings:closed {
@@ -66,18 +47,18 @@ RetargetWidget QTreeView::indicator:checked {
     image: url("%(res)s/ui/square-check.svg");
 }
 
-RetargetWidget QPushButton {
+#RetargetWidgetTop QPushButton {
     background: transparent;
     border: none;
     border-radius: 2px;
     width: 22px;
     height: 22px;
 }
-RetargetWidget QPushButton:pressed {
+#RetargetWidgetTop QPushButton:pressed {
     background: rgba(50,50,50,100);
 }
-RetargetWidget QPushButton:!pressed:hover,
-RetargetWidget QPushButton:!pressed:hover:checked,
-RetargetWidget QPushButton:!pressed:hover:!checked {
+#RetargetWidgetTop QPushButton:!pressed:hover,
+#RetargetWidgetTop QPushButton:!pressed:hover:checked,
+#RetargetWidgetTop QPushButton:!pressed:hover:!checked {
     background: rgba(255,255,255,60);
 }

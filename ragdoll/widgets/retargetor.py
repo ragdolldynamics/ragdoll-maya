@@ -428,6 +428,12 @@ class MarkerTreeModel(base.BaseItemModel):
         key = ["marker", "dest"][column]
 
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
+            # todo: When user press DEL/Backspace while mouse in view,
+            #   current selected node in Maya gets deleted and since the
+            #   mouse is in view, no enterEvent will trigger auto refresh
+            #   hence, data corrupted.
+            #   We either block the DEL/Backspace in widget, or we trigger
+            #   update when data missing.
             if key == "marker":
                 return cmdx.fromHex(conn.marker).name()
             if key == "dest":
@@ -711,6 +717,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
     HierarchyIndent = 28
     ColorDotSize = 20
     ChannelIndicatorWidth = 84
+    SelectionBorder = 2
 
     def __init__(self, parent):
         super(MarkerIndentDelegate, self).__init__(parent=parent)
@@ -730,6 +737,28 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         offset, dot_color = self._compute(index)
+
+        if option.state & QtWidgets.QStyle.State_Selected:
+            # draw border as selection highlight
+            #   we cannot use stylesheet to achieve this due to the offset for
+            #   color-dot, could not get a clean border from original paint().
+            b = self.SelectionBorder
+            rect = QtCore.QRect(option.rect)
+            rect.adjust(b, b, -b, -b)  # shrink a bit for border
+            pen = QtGui.QPen(QtGui.QColor("#5285A6"))
+            pen.setWidth(b)
+            path = QtGui.QPainterPath()
+            path.addRoundedRect(rect, 12, 12)
+            painter.save()
+            painter.setRenderHint(painter.Antialiasing)
+            painter.setPen(pen)
+            painter.fillPath(path, QtGui.QColor("#515D6A"))
+            painter.drawPath(path)
+
+        if dot_color:
+            offset -= self.ColorDotSize
+            painter.translate(self.ColorDotSize, 0)
+
         if offset:
             # paint the gap after offset
             style_proxy = option.widget.style().proxy()
@@ -743,10 +772,12 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             option.rect.adjust(offset, 0, 0, 0)
 
         super(MarkerIndentDelegate, self).paint(painter, option, index)
+
         if dot_color:
+            painter.translate(-self.ColorDotSize, 0)
             dot_size = self.ColorDotSize
-            pos_x = option.rect.x() - 18
-            pos_y = option.rect.center().y() - 9
+            pos_x = option.rect.x() + 6
+            pos_y = option.rect.center().y() - int(dot_size / 2) + 1
             border = 2
             inner = dot_size - border * 2
             painter.save()
@@ -867,9 +898,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         proxy.setFilterCaseSensitivity(QtCore.Qt.CaseSensitive)
         view.setModel(proxy)
 
-        view.setAllColumnsShowFocus(True)
         view.setTextElideMode(QtCore.Qt.ElideLeft)
         view.setSelectionMode(view.SingleSelection)
+        view.setSelectionBehavior(view.SelectItems)
         view.setHeaderHidden(True)
 
         indent_delegate = MarkerIndentDelegate(self)
@@ -1346,11 +1377,7 @@ def _scaled_stylesheet(style):
     result = "\n".join(output)
     result = result % dict(
         res=_resource().replace("\\", "/"),
-        hovered="#515D6A",
-        selected="#5285A6",
         on_primary="#C8C8C8",
-        on_hovered="#FFFFFF",
-        on_selected="#FFFFFF",
         background="#2B2B2B",
         background_alt="#323232",
         branch_down=_resource("ui", "caret-down-fill.svg"),

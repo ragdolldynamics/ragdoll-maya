@@ -949,6 +949,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             QtGui.QIcon(_resource("icons", "manipulator.png")),
             "Remove",
         )
+        remove_dest.setFixedWidth(px(182))
+
         layout = QtWidgets.QHBoxLayout(action_bar)
         layout.setContentsMargins(px(5), px(5), px(5), px(5))
         layout.setSpacing(px(1))

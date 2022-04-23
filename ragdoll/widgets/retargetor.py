@@ -551,6 +551,7 @@ class MarkerTreeModel(base.BaseItemModel):
             solver_item.setRowCount(len(solver_repr.conn_list))
         # end refresh
         if selected_row:
+            col = index_to_map.column()
             col_m, col_d, parent = selected_row
             if parent:
                 for i, _s in enumerate(self._internal):
@@ -558,7 +559,7 @@ class MarkerTreeModel(base.BaseItemModel):
                         for j, conn in enumerate(_s.conn_list):
                             if conn.marker == col_m and conn.dest == col_d:
                                 solver_index = self.index(i, 0)
-                                return self.index(j, 0, solver_index)
+                                return self.index(j, col, solver_index)
                         break
             else:
                 for i, _s in enumerate(self._internal):
@@ -1012,7 +1013,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         if selected:
             selected = self._proxy.mapFromSource(selected)
             sele_model = self._view.selectionModel()
-            sele_model.select(selected, sele_model.Select | sele_model.Rows)
+            sele_model.select(selected, sele_model.Select)
             self._view.scrollTo(selected, self._view.EnsureVisible)
 
     def on_view_released(self, index):

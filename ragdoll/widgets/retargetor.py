@@ -867,12 +867,6 @@ class MarkerTreeView(QtWidgets.QTreeView):
     released = QtCore.Signal(QtCore.QModelIndex)
     menu_requested = QtCore.Signal(QtCore.QPoint)  # menu on right mouse press
 
-    def __init__(self, parent=None):
-        super(MarkerTreeView, self).__init__(parent=parent)
-        cursor_icon = QtGui.QPixmap(_resource("ui", "cursor_menu.png"))
-        menu_cursor = QtGui.QCursor(cursor_icon, 0, 0)  # hot spot (0, 0)
-        self.setCursor(menu_cursor)
-
     def drawRow(self, painter, options, index):
         """
         Args:

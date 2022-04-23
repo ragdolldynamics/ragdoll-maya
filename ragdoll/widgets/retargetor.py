@@ -1138,13 +1138,31 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu.show()
 
     def flip(self, state):
+        selected = [
+            self._proxy.mapToSource(i) for i in self._view.selectedIndexes()
+        ]
+
         self.setup_header(state)
         self._model.flipped = state
         self._proxy.invalidate()
 
+        if selected:
+            index = selected[-1]
+            index = self._proxy.mapFromSource(index)
+            if index.parent().isValid():
+                self._view.clearSelection()
+                index = index.siblingAtColumn(int(not index.column()))
+                sele_model = self._view.selectionModel()
+                sele_model.select(index, sele_model.Select)
+            self._view.scrollTo(index, self._view.PositionAtCenter)
+
     def set_filter(self, text):
         self._proxy.setFilterRegExp(text)
         self._view.expandToDepth(1)
+
+        selected = self._view.selectedIndexes()
+        if selected:
+            self._view.scrollTo(selected[-1], self._view.PositionAtCenter)
 
     def set_sort_by_name(self, ascending):
         self._delegate.set_enabled(False)
@@ -1154,10 +1172,18 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         else:
             self._view.sortByColumn(0, QtCore.Qt.DescendingOrder)
 
+        selected = self._view.selectedIndexes()
+        if selected:
+            self._view.scrollTo(selected[-1], self._view.PositionAtCenter)
+
     def set_sort_by_hierarchy(self):
         self._delegate.set_enabled(True)
         self._proxy.setSortRole(MarkerTreeModel.NaturalSortingRole)
         self._view.sortByColumn(0, QtCore.Qt.AscendingOrder)
+
+        selected = self._view.selectedIndexes()
+        if selected:
+            self._view.scrollTo(selected[-1], self._view.PositionAtCenter)
 
 
 class SelectionScriptJob(QtCore.QObject):
@@ -1332,9 +1358,6 @@ class RetargetWidget(QtWidgets.QWidget):
         text = self._widgets["SearchBar"].text()
         widget = self._widgets["MarkerView"]
         widget.set_filter(text)
-        selected = widget.view.selectedIndexes()
-        if selected:
-            widget.view.scrollTo(selected[-1], widget.view.PositionAtCenter)
 
     def enterEvent(self, event):
         super(RetargetWidget, self).enterEvent(event)

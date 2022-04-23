@@ -63,6 +63,10 @@ class _Solver(object):
         self.ui_name = ui_name
         self.conn_list = conn_list
 
+    @property
+    def has_bad_conn(self):
+        return any(c.is_bad for c in self.conn_list)
+
 
 class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
@@ -407,7 +411,12 @@ class MarkerTreeModel(base.BaseItemModel):
         """
         if not index.isValid():
             return False
+
         if not index.parent().isValid():
+            if role == self.BadRetargetRole:
+                solver_index = index.row()
+                solver_repr = self._internal[solver_index]
+                return solver_repr.has_bad_conn
             return super(MarkerTreeModel, self).data(index, role)
 
         solver_index = index.parent().row()
@@ -870,8 +879,11 @@ class MarkerTreeView(QtWidgets.QTreeView):
             options (QtWidgets.QStyleOptionViewItem):
             index (QtCore.QModelIndex):
         """
-        if index.data(MarkerTreeModel.BadRetargetRole):
+        is_bad = index.data(MarkerTreeModel.BadRetargetRole)
+        if is_bad and index.parent().isValid():
             painter.fillRect(options.rect, QtGui.QColor("#5b3138"))
+        elif is_bad:
+            painter.fillRect(options.rect, QtGui.QColor("#4b373a"))
         super(MarkerTreeView, self).drawRow(painter, options, index)
 
     def leaveEvent(self, event):

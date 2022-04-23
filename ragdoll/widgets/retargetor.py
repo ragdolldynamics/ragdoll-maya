@@ -732,9 +732,6 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         offset, dot_color = self._compute(index)
         if offset:
             # paint the gap after offset
-            _width = option.rect.width()
-            _rect = QtCore.QRect(option.rect)
-            _rect.adjust(-offset, 0, -(_width - offset), 0)
             style_proxy = option.widget.style().proxy()
             style_proxy.drawPrimitive(
                 QtWidgets.QStyle.PE_PanelItemViewItem,

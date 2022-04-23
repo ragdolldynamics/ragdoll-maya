@@ -850,6 +850,7 @@ class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
 class MarkerTreeView(QtWidgets.QTreeView):
     leave = QtCore.Signal()
+    released = QtCore.Signal(QtCore.QModelIndex)
     menu_requested = QtCore.Signal(QtCore.QPoint)  # menu on right mouse press
 
     def __init__(self, parent=None):
@@ -882,6 +883,15 @@ class MarkerTreeView(QtWidgets.QTreeView):
             index = self.indexAt(position)
             if not index.isValid():
                 self.clearSelection()
+
+    def mouseReleaseEvent(self, event):
+        super(MarkerTreeView, self).mouseReleaseEvent(event)
+        # we don't want to grab index from mouse released position because
+        #   mouse could have been moved away from view while index did get
+        #   selected.
+        indexes = self.selectedIndexes()
+        if indexes:
+            self.released.emit(indexes[0])
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
@@ -942,7 +952,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.addWidget(action_bar)
         layout.setSpacing(px(2))
 
-        view.clicked.connect(self.on_view_clicked)
+        view.released.connect(self.on_view_released)
 
         self._view = view
         self._proxy = proxy
@@ -989,7 +999,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             sele_model.select(selected, sele_model.Select | sele_model.Rows)
             self._view.scrollTo(selected, self._view.EnsureVisible)
 
-    def on_view_clicked(self, index):
+    def on_view_released(self, index):
         if not index.parent().isValid():
             index = self._proxy.index(index.row(), 0)
         node = self._proxy.data(index, MarkerTreeModel.NodeRole)

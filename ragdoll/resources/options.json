@@ -1345,6 +1345,13 @@
         "default": "",
         "help": "Absolute path to where icons are located."
     },
+    "locoPath": {
+        "name": "locoPath",
+        "label": "Locomotion Path",
+        "type": "String",
+        "default": "",
+        "help": "Absolute path to where locomotion."
+    },
     "manipulatorDisplayOptions": {
         "name": "manipulatorDisplayOptions",
         "label": "Display Manipulator Options",

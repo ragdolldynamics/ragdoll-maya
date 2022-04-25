@@ -70,7 +70,7 @@ class _Solver(object):
 
 class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
-                 dot_color, check_state, channel, is_bad):
+                 dot_color, channel, is_bad):
         assert isinstance(marker, str), "Must be hex(str)"
         assert isinstance(dest, str) or dest is None, "Must be hex(str) or None"
         self.marker = marker
@@ -80,7 +80,6 @@ class _Connection(object):
         self.icon_m = icon_m
         self.icon_d = icon_d
         self.dot_color = dot_color
-        self.check_state = check_state
         self.channel = channel
         self.is_bad = is_bad
 
@@ -491,37 +490,6 @@ class MarkerTreeModel(base.BaseItemModel):
             if key == "dest":
                 return
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-        """
-        Args:
-            index (QtCore.QModelIndex):
-            value (typing.Any):
-            role (int):
-        Returns:
-            bool
-        """
-        if not index.isValid() or not index.parent().isValid():
-            return False
-
-        if index.column() == 2 and role == QtCore.Qt.CheckStateRole:
-            solver_index = index.parent().row()
-            solver_repr = self._internal[solver_index]
-            conn = solver_repr.conn_list[index.row()]  # type: _Connection
-            marker_hex = conn.marker
-            dest_hex = conn.dest
-
-            if conn.check_state is not None:
-                marker = cmdx.fromHex(marker_hex)
-                dest = cmdx.fromHex(dest_hex)
-                self._scene.set_destination(marker, dest, connect=bool(value))
-                conn.check_state = value
-                conn.is_bad = self._scene.bad_retarget[marker_hex].get(dest_hex)
-                conn.channel = self._scene.dest_status[dest_hex] \
-                    if value else None
-                return True
-
-        return False
-
     @property
     def scene(self):
         return self._scene
@@ -608,7 +576,7 @@ class MarkerTreeModel(base.BaseItemModel):
                     )
                     self._internal.append(the_solver)
 
-                conn = self._mk_conn(marker, dest, level, _i, QtCore.Qt.Checked)
+                conn = self._mk_conn(marker, dest, level, _i)
                 the_solver.conn_list.append(conn)
         log.debug("Scene iterated in %.2fms" % t.ms)
 
@@ -634,12 +602,10 @@ class MarkerTreeModel(base.BaseItemModel):
                 _d = cmdx.fromHex(d_hex)
                 _l = found.level
                 _i = found.natural
-                conn = self._mk_conn(_m, _d, _l, _i, QtCore.Qt.Unchecked)
+                conn = self._mk_conn(_m, _d, _l, _i)
                 the_solver.conn_list.append(conn)
 
-    def _mk_conn(self, marker, dest, level, natural, check_state=None):
-        check_state = check_state or QtCore.Qt.Unchecked
-        check_state = check_state if dest else None
+    def _mk_conn(self, marker, dest, level, natural):
         dest_hex = dest.hex if dest else None
 
         # marker icon/color
@@ -658,7 +624,6 @@ class MarkerTreeModel(base.BaseItemModel):
             dot_color=dot_color,
             level=level,
             natural=natural,
-            check_state=check_state,
             channel=self._scene.dest_status.get(dest_hex),
             is_bad=self._scene.bad_retarget[marker.hex].get(dest_hex),
         )
@@ -673,14 +638,7 @@ class MarkerTreeModel(base.BaseItemModel):
         return self._maya_node_icons[typ]
 
     def _check_conn_by_row(self, conn, solver_row, conn_row):
-        dest_col = 0 if self.flipped else 1
-        solver_index = self.index(solver_row, 0)
-        dest_index = self.index(conn_row, dest_col, solver_index)
-        if conn.check_state != QtCore.Qt.Checked:
-            conn.check_state = QtCore.Qt.Checked
-            chk_index = self.index(conn_row, 2, solver_index)
-            self.setData(chk_index, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
-        return dest_index
+        return  # deprecated
 
     def append_dest(self, marker, dest):
         marker_matched = False

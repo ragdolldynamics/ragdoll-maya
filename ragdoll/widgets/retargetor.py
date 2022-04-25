@@ -494,7 +494,7 @@ class MarkerTreeModel(base.BaseItemModel):
     def scene(self):
         return self._scene
 
-    def refresh(self, scene=None, keep_unchecked=False, index_to_map=None):
+    def refresh(self, scene=None, index_to_map=None):
         selected_row = None
         if index_to_map:
             row, parent = index_to_map.row(), index_to_map.parent()
@@ -509,7 +509,7 @@ class MarkerTreeModel(base.BaseItemModel):
         self.reset()
 
         with internal.Timer() as t:
-            self._build_internal_model(scene, keep_unchecked)
+            self._build_internal_model(scene)
         log.debug("Internal data model built in total %.2fms" % t.ms)
 
         for solver_repr in self._internal:
@@ -541,19 +541,7 @@ class MarkerTreeModel(base.BaseItemModel):
         item.setData(solver_repr.solver, self.NodeRole)
         return item
 
-    def _iter_unchecked_connection(self):
-        for _s in self._internal:
-            for _c in _s.conn_list:
-                if _c.check_state == QtCore.Qt.Unchecked:
-                    yield _s.solver, _c.marker, _c.dest
-
-    def _build_internal_model(self, scene, keep_unchecked):
-        unchecked = list()
-        if keep_unchecked:
-            for _solver, _marker, _dest in self._iter_unchecked_connection():
-                if _dest and _hex_exists(_dest):
-                    unchecked.append((_solver, _marker, _dest))
-
+    def _build_internal_model(self, scene):
         # reset
         del self._internal[:]
         self._scene = scene
@@ -579,31 +567,6 @@ class MarkerTreeModel(base.BaseItemModel):
                 conn = self._mk_conn(marker, dest, level, _i)
                 the_solver.conn_list.append(conn)
         log.debug("Scene iterated in %.2fms" % t.ms)
-
-        # add back unchecked
-        for (s_hex, m_hex, d_hex) in unchecked:
-            _s = next((_ for _ in self._internal if _.solver == s_hex), None)
-            if not _s:
-                continue
-            conn_iter = (_c for _c in _s.conn_list if _c.marker == m_hex)
-            found = next(conn_iter, None)
-            if not found:
-                continue
-            if found.dest == d_hex or any(_c.dest == d_hex for _c in conn_iter):
-                continue
-
-            if found.dest is None:
-                _d = cmdx.fromHex(d_hex)
-                found.dest = _d.hex
-                found.icon_d = self._maya_node_icon(_d)
-                found.check_state = QtCore.Qt.Unchecked
-            else:
-                _m = cmdx.fromHex(m_hex)
-                _d = cmdx.fromHex(d_hex)
-                _l = found.level
-                _i = found.natural
-                conn = self._mk_conn(_m, _d, _l, _i)
-                the_solver.conn_list.append(conn)
 
     def _mk_conn(self, marker, dest, level, natural):
         dest_hex = dest.hex if dest else None
@@ -714,12 +677,6 @@ class MarkerTreeModel(base.BaseItemModel):
 
         # should not happen.
         raise Exception("No matched marker found in model.")
-
-    def any_unchecked_missing(self):
-        return any(
-            not _dest or not _hex_exists(_dest)
-            for _, _, _dest in self._iter_unchecked_connection()
-        )
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
@@ -1076,11 +1033,11 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             index, QtCore.QItemSelectionModel.Select
         )
 
-    def refresh(self, scene=None, keep_unchecked=False):
+    def refresh(self, scene=None):
         selected = self._view.selectedIndexes()
         selected = self._proxy.mapToSource(selected[-1]) if selected else None
 
-        selected = self._model.refresh(scene, keep_unchecked, selected)
+        selected = self._model.refresh(scene, selected)
         self._view.expandToDepth(1)
 
         # todo: check selection (only for first run ?)
@@ -1484,10 +1441,10 @@ class RetargetWidget(QtWidgets.QWidget):
         model = view.model
         scene = _Scene()
         with internal.Timer() as t:
-            outdated = model.scene != scene or model.any_unchecked_missing()
+            outdated = model.scene != scene
         log.debug("Checking for update finished in %0.2fms" % t.ms)
         if outdated:
-            view.refresh(scene, keep_unchecked=True)
+            view.refresh(scene)
 
 
 def _with_entered_exited_signals(cls):

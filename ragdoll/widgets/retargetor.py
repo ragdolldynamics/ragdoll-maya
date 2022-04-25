@@ -294,9 +294,9 @@ class _Scene(object):
         else:
             self.dest_status.pop(dest.hex)
 
-    def set_destination(self, marker, dest, connect):
+    def set_destination(self, marker, dest, connect, **kwargs):
         if connect:
-            opts = {"append": True}
+            opts = kwargs or {"append": True}
             commands.retarget_marker(marker, dest, opts)
             self.add_dest(marker, dest)
 
@@ -640,10 +640,24 @@ class MarkerTreeModel(base.BaseItemModel):
             if marker_found and _c.marker != marker_hex:
                 return
 
+    def find_destinations(self, dest_hex):
+        for i, _s in enumerate(self._internal):
+            solver_index = self.index(i, 0)
+            for j, _c in enumerate(_s.conn_list):
+                if _c.dest == dest_hex:
+                    yield self.index(j, int(not self.flipped), solver_index)
+
     def _check_conn_by_row(self, conn, solver_row, conn_row):
         return  # deprecated
 
     def append_dest(self, marker, dest):
+
+        def get_dest_index(solver_row, conn_row):
+            dest_col = 0 if self.flipped else 1
+            solver_index = self.index(solver_row, 0)
+            dest_index = self.index(conn_row, dest_col, solver_index)
+            return dest_index
+
         marker_matched = False
         index_matched = None
         ref = None
@@ -659,11 +673,11 @@ class MarkerTreeModel(base.BaseItemModel):
                     # plug dest into connection
                     _c.dest = dest.hex
                     _c.icon_d = self._maya_node_icon(dest)
-                    return self._check_conn_by_row(_c, x, y)
+                    return get_dest_index(x, y)
 
                 elif _c.dest == dest.hex:
-                    # already in model, ensure checked
-                    return self._check_conn_by_row(_c, x, y)
+                    # already in model
+                    return get_dest_index(x, y)
 
             if marker_matched:
                 # new connection
@@ -673,7 +687,7 @@ class MarkerTreeModel(base.BaseItemModel):
 
                 solver_item = self.item(x, 0)
                 solver_item.setRowCount(solver_item.rowCount() + 1)
-                return self._check_conn_by_row(new_conn, x, index_matched)
+                return get_dest_index(x, index_matched)
 
         # should not happen.
         raise Exception("No matched marker found in model.")
@@ -816,7 +830,7 @@ class SortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
 class MarkerTreeView(QtWidgets.QTreeView):
     leave = QtCore.Signal()
-    released = QtCore.Signal(QtCore.QModelIndex)
+    released = QtCore.Signal()
     menu_requested = QtCore.Signal(QtCore.QPoint)  # menu on right mouse press
 
     def drawRow(self, painter, options, index):
@@ -849,12 +863,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
 
     def mouseReleaseEvent(self, event):
         super(MarkerTreeView, self).mouseReleaseEvent(event)
-        # we don't want to grab index from mouse released position because
-        #   mouse could have been moved away from view while index did get
-        #   selected.
-        indexes = self.selectedIndexes()
-        if indexes:
-            self.released.emit(indexes[0])
+        self.released.emit()
 
 
 class DestStageButton(QtWidgets.QPushButton):
@@ -875,7 +884,7 @@ class DestStageButton(QtWidgets.QPushButton):
         node_name = QtWidgets.QLineEdit()
         node_name.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
         node_name.setReadOnly(True)
-        node_name.setPlaceholderText("Select a marker and destination..")
+        node_name.setPlaceholderText("Select one marker and one destination..")
         node_name.setStyleSheet("""
         QLineEdit {
             background: transparent;
@@ -899,6 +908,7 @@ class DestStageButton(QtWidgets.QPushButton):
 
 class RetargetButton(QtWidgets.QWidget):
     clicked = QtCore.Signal()
+    appended = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(RetargetButton, self).__init__(parent=parent)
@@ -922,20 +932,11 @@ class RetargetButton(QtWidgets.QWidget):
         layout.addWidget(dest_actions)
 
         dest_stage.clicked.connect(self.clicked)
+        append_action.triggered.connect(self.appended)
 
         self.dest_stage = dest_stage
-        self.staged_marker = None
-        self.staged_dest = None
 
-    def stage_marker(self, node):
-        self.staged_marker = node
-        if node is None:
-            self.setEnabled(False)
-        else:
-            self.setEnabled(True)
-
-    def stage_dest(self, node):
-        self.staged_dest = node
+    def display_dest(self, node):
         self.dest_stage.node_name.setText(node.shortest_path() if node else "")
         if node is None:
             self.dest_stage.node_icon.pixmap().load("")
@@ -963,7 +964,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         view.setModel(proxy)
 
         view.setTextElideMode(QtCore.Qt.ElideLeft)
-        view.setSelectionMode(view.SingleSelection)
+        view.setSelectionMode(view.ExtendedSelection)
         view.setSelectionBehavior(view.SelectItems)
         view.setHeaderHidden(True)
 
@@ -995,13 +996,18 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.setSpacing(px(2))
 
         view.released.connect(self.on_view_released)
+        retarget_btn.appended.connect(self.on_retarget_appended)
         retarget_btn.clicked.connect(self.on_retarget_clicked)
+        untarget_btn.clicked.connect(self.on_untarget_clicked)
 
         self._view = view
         self._proxy = proxy
         self._model = model
         self._delegate = indent_delegate
         self._retarget_btn = retarget_btn
+        self._untarget_btn = untarget_btn
+        self._staged_marker = None
+        self._staged_dest = None
 
         self.setup_header(False)
 
@@ -1042,72 +1048,120 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         # todo: check selection (only for first run ?)
         self.process_maya_selection()
+        self.update_actions()
 
         if selected:
             selected = self._proxy.mapFromSource(selected)
             self.select(selected)
 
-    def on_view_released(self, index):
-        if not index.parent().isValid():
-            index = self._proxy.index(index.row(), 0)
-        node = self._proxy.data(index, MarkerTreeModel.NodeRole)
-        if node is not None:
-            node = cmdx.fromHex(node)
-            cmds.select(node.shortest_path(), replace=True)
+    def on_view_released(self):
+        nodes = []
+        for index in self._view.selectedIndexes():
+            if not index.parent().isValid():
+                index = self._proxy.index(index.row(), 0)
+            node = self._proxy.data(index, MarkerTreeModel.NodeRole)
+            if node is not None and node not in nodes:
+                nodes.append(cmdx.fromHex(node))
+
+        cmds.select(nodes, replace=True)
 
     def on_selection_changed(self):
         self.process_maya_selection()
+        self.update_actions()
 
     def process_maya_selection(self):
-        selection = cmdx.ls(sl=True)
-        solver = next((n for n in selection if n.isA("rdSolver")), None)
-        marker = next((n for n in selection if n.isA("rdMarker")), None)
-        dest = next((n for n in selection if n.isA(cmdx.kTransform)), None)
+        selection = cmdx.ls(orderedSelection=True)
+        selected_solver = [n for n in selection if n.isA("rdSolver")]
+        selected_marker = [n for n in selection if n.isA("rdMarker")]
+        selected_dest = [n for n in selection if n.isA(cmdx.kTransform)]
 
-        if not marker and not dest:
-            self._retarget_btn.stage_marker(None)
-            self._retarget_btn.stage_dest(None)
+        # sync selection
 
+        new_selection = [
+            self._proxy.mapFromSource(self._model.find_solver(s.hex))
+            for s in selected_solver
+        ] + [
+            self._proxy.mapFromSource(self._model.find_marker(m.hex))
+            for m in selected_marker
+        ] + [
+            self._proxy.mapFromSource(d_)
+            for d in selected_dest
+            for d_ in self._model.find_destinations(d.hex)
+        ]
+
+        if new_selection and set(self._view.selectedIndexes()) != new_selection:
             self._view.clearSelection()
-            if solver:
-                index = self._model.find_solver(solver.hex)
-                index = self._proxy.mapFromSource(index)
-                self.select(index)
+            sele_model = self._view.selectionModel()
+            for index in new_selection:
+                sele_model.select(index, QtCore.QItemSelectionModel.Select)
+            self._view.scrollTo(new_selection[-1], self._view.EnsureVisible)
 
-        if marker:
-            self._retarget_btn.stage_marker(marker)
-
+        elif not new_selection:
             self._view.clearSelection()
-            index = self._model.find_marker(marker.hex)
-            index = self._proxy.mapFromSource(index)
-            self.select(index)
 
-        if dest:
-            self._retarget_btn.stage_dest(dest)
-            # todo: check if marker staged, and dest exists in connection
-            #   if dest exists, enable remove button
-            #   if not exists, enable retarget button
-            #   And, if marker not staged, enable remove button
-            _marker = self._retarget_btn.staged_marker
-            if _marker:
-                # re-targeting
-                marker_index = self._model.find_marker(_marker.hex)
-                self.select(self._proxy.mapFromSource(marker_index))
+    def update_actions(self):
+        selection = dict()
+        for index in self._view.selectedIndexes():
+            if index.parent().isValid():
+                node_hex = index.data(self._model.NodeRole)
+                node = cmdx.fromHex(node_hex)
+                if node and node.exists:
+                    selection[index] = node
 
-                dest_index = self._model.find_conn(dest, marker_index)
-                if dest_index:
-                    # un-targeting
-                    self.select(self._proxy.mapFromSource(dest_index))
+        selected_marker = [
+            i for i, n in selection.items() if n.isA("rdMarker")
+        ]
+        selected_dest = [
+            i for i, n in selection.items() if n.isA(cmdx.kTransform)
+        ]
+        wild_dest = [
+            n for n in cmdx.ls(sl=True, type="transform")
+            if n not in selection.values()
+        ]
 
-                else:
-                    pass
+        marker = None
+        dest = None
 
+        # un-targeting
+        if len(selected_marker) <= 1 and len(selected_dest) == 1:
+            dest_index = selected_dest[0]
+            dest = selection[dest_index]
+
+            marker_column = int(not dest_index.column())
+            marker_index = dest_index.siblingAtColumn(marker_column)
+            _marker = cmdx.fromHex(marker_index.data(self._model.NodeRole))
+
+            if selected_marker:
+                marker_index = selected_marker[0]
+                marker = selection[marker_index]
             else:
-                # un-targeting
-                pass
+                marker = _marker
 
-            # what if marker not selected, and dest exists in multiple conn ?
-            # and what if filter is on ?
+            self._untarget_btn.setEnabled(marker == _marker)
+        else:
+            self._untarget_btn.setEnabled(False)
+
+        # re-targeting
+        if len(selected_marker) == 1 and len(wild_dest) == 1 \
+                and not selected_dest:
+            marker_index = selected_marker[0]
+            marker = selection[marker_index]
+            dest = wild_dest[0]
+            self._retarget_btn.setEnabled(True)
+            self._retarget_btn.display_dest(dest)
+
+        elif len(selected_marker) == 1:
+            marker_index = selected_marker[0]
+            marker = selection[marker_index]
+            self._retarget_btn.display_dest(None)
+            self._retarget_btn.setEnabled(False)
+
+        else:
+            self._retarget_btn.display_dest(None)
+            self._retarget_btn.setEnabled(False)
+
+        self._staged_marker = marker
+        self._staged_dest = dest
 
     def on_menu_requested(self, position):
         # todo: deprecated
@@ -1210,8 +1264,25 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         menu.move(QtGui.QCursor.pos())
         menu.show()
 
+    def on_retarget_appended(self):
+        marker, dest = self._staged_marker, self._staged_dest
+        self._model.scene.set_destination(marker, dest, True, append=True)
+        _index = self._model.append_dest(marker, dest)
+        self.select(self._proxy.mapFromSource(_index))
+        # update sort/filter
+        self._proxy.invalidate()
+
     def on_retarget_clicked(self):
-        print(self._retarget_btn.staged_marker, self._retarget_btn.staged_dest)
+        marker, dest = self._staged_marker, self._staged_dest
+        self._model.scene.set_destination(marker, dest, True, append=False)
+        _index = self._model.append_dest(marker, dest)
+        self.select(self._proxy.mapFromSource(_index))
+        # update sort/filter
+        self._proxy.invalidate()
+
+    def on_untarget_clicked(self):
+        marker, dest = self._staged_marker, self._staged_dest
+        self._model.scene.set_destination(marker, dest, False)
 
     def flip(self, state):
         selected = [

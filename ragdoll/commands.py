@@ -1392,9 +1392,8 @@ def delete_physics(nodes, dry_run=False):
 
     # See whether any of the nodes are referenced, in which
     # case we don't have permission to delete those.
-    for node in ragdoll_nodes[:]:
+    for node in ragdoll_nodes:
         if node.is_referenced():
-            ragdoll_nodes.remove(node)
             raise internal.UserWarning(
                 "Cannot Delete Referenced Nodes",
                 "I can't do that.\n\n%s is referenced "
@@ -1505,6 +1504,8 @@ def assign_plan(body, feet):
     end_offset = cmdx.Vector(0, 0, 0)
     end_offset[longest_axis] = longest_value * 4
 
+    outputs = []
+
     with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
         plan_parent = mod.create_node("transform", name="rPlan")
         rdplan = mod.createNode("rdPlan",
@@ -1544,15 +1545,7 @@ def assign_plan(body, feet):
 
         mod.do_it()
 
-        decompose = dgmod.create_node("decomposeMatrix")
-        dgmod.connect(rdplan["outputMatrix"], decompose["inputMatrix"])
-        dgmod.connect(decompose["outputTranslateX"], body["translateX"])
-        dgmod.connect(decompose["outputTranslateY"], body["translateY"])
-        dgmod.connect(decompose["outputTranslateZ"], body["translateZ"])
-        dgmod.connect(decompose["outputRotateX"], body["rotateX"])
-        dgmod.connect(decompose["outputRotateY"], body["rotateY"])
-        dgmod.connect(decompose["outputRotateZ"], body["rotateZ"])
-        dgmod.set_attr(decompose["ihi"], 0)
+        outputs.append([rdplan, body])
 
         left = False
         for foot in feet:
@@ -1594,14 +1587,6 @@ def assign_plan(body, feet):
             dgmod.connect(start_parent["worldMatrix"][0], rdfoot["targets"][0])
             dgmod.connect(end_parent["worldMatrix"][0], rdfoot["targets"][1])
 
-            # This will overwrite any existing animation on the handles
-            decompose = dgmod.create_node("decomposeMatrix")
-            dgmod.set_attr(decompose["ihi"], 0)
-            dgmod.connect(rdfoot["outputMatrix"], decompose["inputMatrix"])
-            dgmod.connect(decompose["outputTranslateX"], foot["translateX"])
-            dgmod.connect(decompose["outputTranslateY"], foot["translateY"])
-            dgmod.connect(decompose["outputTranslateZ"], foot["translateZ"])
-
             dgmod.set_attr(rdfoot["color"], internal.random_color())
             dgmod.set_attr(rdfoot["version"], internal.version())
 
@@ -1626,6 +1611,31 @@ def assign_plan(body, feet):
             dgmod.connect(rdfoot["muteTime"], curve["input"])
 
             left = not left
+
+            outputs.append([rdfoot, foot])
+
+    # Generate outputs
+    locators = []
+    with cmdx.DagModifier() as mod:
+        for rdoutput, output in outputs:
+            locator = mod.create_node("transform",
+                                      name=output.name() + "_rOut",
+                                      parent=plan_parent)
+
+            mod.connect(rdoutput["outputMatrix"],
+                        locator["offsetParentMatrix"])
+            locators.append([locator, (rdoutput, output)])
+            _take_ownership(mod, rdoutput, locator)
+
+        mod.do_it()
+
+        for src, (rdoutput, output) in locators:
+            con = cmds.parentConstraint(src.path(),
+                                        output.path(),
+                                        maintainOffset=True)
+            con = cmdx.encode(con[0])
+            mod.set_attr(con["isHistoricallyInteresting"], False)
+            _take_ownership(mod, rdoutput, con)
 
     return rdplan
 

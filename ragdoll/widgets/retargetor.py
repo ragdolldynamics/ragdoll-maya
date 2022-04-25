@@ -637,6 +637,46 @@ class MarkerTreeModel(base.BaseItemModel):
             self._maya_node_icons[typ] = QtGui.QIcon(":/%s" % typ)
         return self._maya_node_icons[typ]
 
+    def find_solver(self, solver_hex):
+        for i, _s in enumerate(self._internal):
+            if _s.solver == solver_hex:
+                return self.index(i, 0)
+
+    def find_marker(self, marker_hex, solver_index=None):
+        if not solver_index:
+            solver_hex = None
+            marker_node = cmdx.fromHex(marker_hex)
+            if marker_node and marker_node.exists:
+                other = marker_node["startState"].output()
+                if other.isA("rdSolver"):
+                    solver_hex = other.hex
+                elif other.isA("rdGroup"):
+                    other = other["startState"].output(type="rdSolver")
+                    if other:
+                        solver_hex = other.hex
+            if solver_hex:
+                solver_index = self.find_solver(solver_hex)
+            else:
+                return
+
+        _s = self._internal[solver_index.row()]
+        for j, _c in enumerate(_s.conn_list):
+            if _c.marker == marker_hex:
+                return self.index(j, int(self.flipped), solver_index)
+
+    def find_conn(self, dest_hex, marker_index):
+        solver_index = marker_index.parent()
+        marker_hex = marker_index.data(self.NodeRole)
+        marker_found = False
+        _s = self._internal[solver_index.row()]
+        for j, _c in enumerate(_s.conn_list):
+            if _c.marker == marker_hex and not marker_found:
+                marker_found = True
+            if marker_found and _c.dest == dest_hex:
+                return self.index(j, int(not self.flipped), solver_index)
+            if marker_found and _c.marker != marker_hex:
+                return
+
     def _check_conn_by_row(self, conn, solver_row, conn_row):
         return  # deprecated
 
@@ -860,6 +900,97 @@ class MarkerTreeView(QtWidgets.QTreeView):
             self.released.emit(indexes[0])
 
 
+class DestStageButton(QtWidgets.QPushButton):
+
+    def __init__(self, parent=None):
+        super(DestStageButton, self).__init__(parent=parent)
+
+        _pixmap = QtGui.QPixmap(_resource("icons", "marker_group.png"))
+        _pixmap = _pixmap.scaledToWidth(px(16), QtCore.Qt.SmoothTransformation)
+        icon = QtWidgets.QLabel()
+        icon.setPixmap(_pixmap)
+
+        text = QtWidgets.QLabel("Retarget To..")
+
+        node_icon = QtWidgets.QLabel()
+        node_icon.setFixedWidth(px(16))
+        node_icon.setPixmap(QtGui.QPixmap(""))
+        node_name = QtWidgets.QLineEdit()
+        node_name.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+        node_name.setReadOnly(True)
+        node_name.setPlaceholderText("Select a marker and destination..")
+        node_name.setStyleSheet("""
+        QLineEdit {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #ACACAC;
+        }
+        """)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(px(20), 0, px(20), 0)
+        layout.addWidget(icon)
+        layout.addWidget(text)
+        layout.addSpacing(px(2))
+        layout.addWidget(node_icon)
+        layout.addWidget(node_name)
+        layout.addSpacing(px(4))
+
+        self.node_icon = node_icon
+        self.node_name = node_name
+
+
+class RetargetButton(QtWidgets.QWidget):
+    clicked = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(RetargetButton, self).__init__(parent=parent)
+
+        dest_stage = DestStageButton()
+        dest_actions = QtWidgets.QPushButton()  # todo: change to 3 dots icon
+        dest_action_menu = QtWidgets.QMenu(self)
+        append_action = QtWidgets.QAction(
+            QtGui.QIcon(_resource("icons", "children.png")),
+            "Append",
+            dest_action_menu
+        )
+        dest_action_menu.addAction(append_action)
+        dest_actions.setMenu(dest_action_menu)
+        dest_actions.setFixedWidth(px(15))
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        layout.addWidget(dest_stage)
+        layout.addWidget(dest_actions)
+
+        dest_stage.clicked.connect(self.clicked)
+
+        self.dest_stage = dest_stage
+        self.staged_marker = None
+        self.staged_dest = None
+
+    def stage_marker(self, node):
+        self.staged_marker = node
+        if node is None:
+            self.setEnabled(False)
+        else:
+            self.setEnabled(True)
+
+    def stage_dest(self, node):
+        self.staged_dest = node
+        self.dest_stage.node_name.setText(node.shortest_path() if node else "")
+        if node is None:
+            self.dest_stage.node_icon.pixmap().load("")
+        else:
+            if node.isA(cmdx.kDagNode):
+                node = node.shape() or node
+            self.dest_stage.node_icon.setPixmap(
+                QtGui.QPixmap(":/%s" % node.type())
+                .scaledToWidth(px(16), QtCore.Qt.SmoothTransformation)
+            )
+
+
 class MarkerTreeWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
@@ -885,34 +1016,20 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         action_bar = QtWidgets.QWidget()
         action_bar.setFixedHeight(px(34))
 
-        replace_dest = QtWidgets.QPushButton(
-            QtGui.QIcon(_resource("icons", "add.png")),
-            "Add/Replace Destinations",
+        retarget_btn = RetargetButton()
+        untarget_btn = QtWidgets.QPushButton(
+            QtGui.QIcon(_resource("icons", "disconnect.png")),
+            "Untarget",
         )
-        append_dest = QtWidgets.QPushButton()  # todo: change to 3 dots icon
-        append_dest_menu = QtWidgets.QMenu(self)
-        manipulate = QtWidgets.QAction(
-            QtGui.QIcon(_resource("icons", "manipulator.png")),
-            "Append",
-            append_dest_menu
-        )
-        append_dest_menu.addAction(manipulate)
-        append_dest.setMenu(append_dest_menu)
-        append_dest.setFixedWidth(px(15))
+        untarget_btn.setFixedWidth(px(182))
 
-        remove_dest = QtWidgets.QPushButton(
-            QtGui.QIcon(_resource("icons", "manipulator.png")),
-            "Remove",
-        )
-        remove_dest.setFixedWidth(px(182))
+        retarget_btn.setEnabled(False)
+        untarget_btn.setEnabled(False)
 
         layout = QtWidgets.QHBoxLayout(action_bar)
         layout.setContentsMargins(px(5), px(5), px(5), px(5))
-        layout.setSpacing(px(1))
-        layout.addWidget(replace_dest)
-        layout.addWidget(append_dest)
-        layout.addSpacing(px(6))
-        layout.addWidget(remove_dest)
+        layout.addWidget(retarget_btn)
+        layout.addWidget(untarget_btn)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -921,11 +1038,13 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.setSpacing(px(2))
 
         view.released.connect(self.on_view_released)
+        retarget_btn.clicked.connect(self.on_retarget_clicked)
 
         self._view = view
         self._proxy = proxy
         self._model = model
         self._delegate = indent_delegate
+        self._retarget_btn = retarget_btn
 
         self.setup_header(False)
 
@@ -951,6 +1070,12 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def model(self):
         return self._model
 
+    def select(self, index):
+        self._view.scrollTo(index, self._view.EnsureVisible)
+        self._view.selectionModel().select(
+            index, QtCore.QItemSelectionModel.Select
+        )
+
     def refresh(self, scene=None, keep_unchecked=False):
         selected = self._view.selectedIndexes()
         selected = self._proxy.mapToSource(selected[-1]) if selected else None
@@ -963,9 +1088,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         if selected:
             selected = self._proxy.mapFromSource(selected)
-            sele_model = self._view.selectionModel()
-            sele_model.select(selected, sele_model.Select)
-            self._view.scrollTo(selected, self._view.EnsureVisible)
+            self.select(selected)
 
     def on_view_released(self, index):
         if not index.parent().isValid():
@@ -980,29 +1103,54 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
     def process_maya_selection(self):
         selection = cmdx.ls(sl=True)
+        solver = next((n for n in selection if n.isA("rdSolver")), None)
         marker = next((n for n in selection if n.isA("rdMarker")), None)
         dest = next((n for n in selection if n.isA(cmdx.kTransform)), None)
-        if marker and dest:
-            self.stage_connection(marker, dest)
-        elif marker and not self._model.flipped:
-            self.stage_marker(marker)
-        elif dest and self._model.flipped:
-            self.stage_marker(marker)
-        else:
-            self.clear_stage()
 
-    def stage_marker(self, marker):
-        pass
+        if not marker and not dest:
+            self._retarget_btn.stage_marker(None)
+            self._retarget_btn.stage_dest(None)
 
-    def stage_dest(self, dest):
-        pass
+            self._view.clearSelection()
+            if solver:
+                index = self._model.find_solver(solver.hex)
+                index = self._proxy.mapFromSource(index)
+                self.select(index)
 
-    def stage_connection(self, marker, dest):
-        self.stage_marker(marker)
-        print(dest)
+        if marker:
+            self._retarget_btn.stage_marker(marker)
 
-    def clear_stage(self):
-        pass
+            self._view.clearSelection()
+            index = self._model.find_marker(marker.hex)
+            index = self._proxy.mapFromSource(index)
+            self.select(index)
+
+        if dest:
+            self._retarget_btn.stage_dest(dest)
+            # todo: check if marker staged, and dest exists in connection
+            #   if dest exists, enable remove button
+            #   if not exists, enable retarget button
+            #   And, if marker not staged, enable remove button
+            _marker = self._retarget_btn.staged_marker
+            if _marker:
+                # re-targeting
+                marker_index = self._model.find_marker(_marker.hex)
+                self.select(self._proxy.mapFromSource(marker_index))
+
+                dest_index = self._model.find_conn(dest, marker_index)
+                if dest_index:
+                    # un-targeting
+                    self.select(self._proxy.mapFromSource(dest_index))
+
+                else:
+                    pass
+
+            else:
+                # un-targeting
+                pass
+
+            # what if marker not selected, and dest exists in multiple conn ?
+            # and what if filter is on ?
 
     def on_menu_requested(self, position):
         # todo: deprecated
@@ -1104,6 +1252,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         menu.move(QtGui.QCursor.pos())
         menu.show()
+
+    def on_retarget_clicked(self):
+        print(self._retarget_btn.staged_marker, self._retarget_btn.staged_dest)
 
     def flip(self, state):
         selected = [

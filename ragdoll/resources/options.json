@@ -889,6 +889,14 @@
         "help": "Gain a potential performance boost at the expense of reliability of the output."
     },
 
+    "markersRecordInitialKey": {
+        "name": "markersRecordInitialKey",
+        "label": "Set Initial Key",
+        "type": "Boolean",
+        "default": false,
+        "help": "Set keyframe on the BaseLayer and start frame, to protect your animation in the event of deleting the recorded animation layer. Without this, unkeyed objects will remain in their recorded position at the frame you are currently on when deleting the layer."
+    },
+
     "markersAssignSolver": {
         "name": "markersAssignSolver",
         "label": "Solver",

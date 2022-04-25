@@ -1944,6 +1944,7 @@ def record_markers(selection=None, **opts):
         "recordCustomEndTime": _opt("markersRecordCustomEndTime", opts),
         "recordKinematic": _opt("markersRecordKinematic", opts),
         "recordToLayer": _opt("markersRecordToLayer", opts),
+        "recordInitialKey": _opt("markersRecordInitialKey", opts),
         "useSelection": _opt("markersUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
@@ -2027,6 +2028,7 @@ def record_markers(selection=None, **opts):
                 "simplifyCurves": opts["recordSimplify"],
                 "rotationFilter": opts["recordFilter"],
                 "toLayer": opts["recordToLayer"],
+                "setInitialKey": opts["recordInitialKey"],
                 "ignoreJoints": opts["ignoreJoints"],
                 "mode": opts["mode"],
             }

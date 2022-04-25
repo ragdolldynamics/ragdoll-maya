@@ -647,9 +647,6 @@ class MarkerTreeModel(base.BaseItemModel):
                 if _c.dest == dest_hex:
                     yield self.index(j, int(not self.flipped), solver_index)
 
-    def _check_conn_by_row(self, conn, solver_row, conn_row):
-        return  # deprecated
-
     def append_dest(self, marker, dest):
 
         def get_dest_index(solver_row, conn_row):
@@ -1162,107 +1159,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         self._staged_marker = marker
         self._staged_dest = dest
-
-    def on_menu_requested(self, position):
-        # todo: deprecated
-        index = self._view.indexAt(position)
-
-        if not index.isValid():
-            # Clicked outside any item
-            return
-
-        is_solver = not index.parent().isValid()
-        marker = None
-
-        # get selected marker and, check if it's default target connected
-        show_default_target_action = False
-        marker_col = 1 if self._model.flipped else 0
-        if not is_solver:
-            if index.column() == marker_col:
-                marker = cmdx.fromHex(index.data(MarkerTreeModel.NodeRole))
-            else:
-                _ = self._proxy.index(index.row(), marker_col, index.parent())
-                marker = cmdx.fromHex(_.data(MarkerTreeModel.NodeRole))
-
-            if marker and marker.exists:
-                src = marker["sourceTransform"].input()
-                if src:
-                    for plug in marker["destinationTransforms"]:
-                        if plug.input() == src:
-                            break
-                    else:
-                        show_default_target_action = True
-            else:
-                marker = None
-
-        menu = QtWidgets.QMenu(self)
-
-        manipulate = QtWidgets.QAction(
-            QtGui.QIcon(_resource("icons", "manipulator.png")),
-            "Manipulate",
-            menu
-        )
-        append_dest = QtWidgets.QAction(
-            QtGui.QIcon(_resource("icons", "retarget.png")),
-            "Add Target From Selection",
-            menu
-        )
-        add_default = QtWidgets.QAction(
-            QtGui.QIcon(_resource("icons", "add.png")),
-            "Add Default Target",
-            menu
-        )
-
-        menu.addAction(append_dest)
-        menu.addAction(add_default)
-        menu.addSeparator()
-        menu.addAction(manipulate)
-
-        append_dest.setEnabled(bool(not is_solver and marker))
-        add_default.setEnabled(show_default_target_action)
-
-        def _select_indexes(parsed_indexes):
-            self._view.clearSelection()
-            sele_model = self._view.selectionModel()
-            for _index in parsed_indexes:
-                ind = self._proxy.mapFromSource(_index)
-                sele_model.select(ind, sele_model.Select | sele_model.Rows)
-
-        def on_manipulate():
-            node = None
-            if is_solver:
-                _index = self._proxy.index(index.row(), 0)
-                node = cmdx.fromHex(_index.data(MarkerTreeModel.NodeRole))
-            elif marker:
-                node = marker
-
-            if node:
-                cmds.select(node.shortest_path())
-                cmds.setToolTo("ShowManips")
-
-        def on_add_default():
-            dest_node = marker["sourceTransform"].input()
-            _index = self._model.append_dest(marker, dest_node)
-            # select all processed
-            _select_indexes([_index])
-
-        def on_append_dest():
-            parsed_indexes = []
-            for dest in (n for n in cmdx.selection() if n.isA(cmdx.kDagNode)):
-                _index = self._model.append_dest(marker, dest)
-                if _index:
-                    parsed_indexes.append(_index)
-            # select all processed
-            _select_indexes(parsed_indexes)
-            # update sort/filter
-            self._proxy.invalidate()
-
-        manipulate.triggered.connect(on_manipulate)
-        add_default.triggered.connect(on_add_default)
-        append_dest.triggered.connect(on_append_dest)
-
-        menu.move(QtGui.QCursor.pos())
-        menu.show()
 
     def on_retarget_appended(self):
         marker, dest = self._staged_marker, self._staged_dest

@@ -750,21 +750,18 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
         offset, dot_color = self._compute(index)
 
         if option.state & QtWidgets.QStyle.State_Selected:
-            # draw border as selection highlight
+            # draw selection highlight
             #   we cannot use stylesheet to achieve this due to the offset for
             #   color-dot, could not get a clean border from original paint().
             b = self.SelectionBorder
             rect = QtCore.QRect(option.rect)
             rect.adjust(b, b, -b, -b)  # shrink a bit for border
-            pen = QtGui.QPen(QtGui.QColor("#5285A6"))
-            pen.setWidth(b)
             path = QtGui.QPainterPath()
             path.addRoundedRect(rect, 12, 12)
             painter.save()
             painter.setRenderHint(painter.Antialiasing)
-            painter.setPen(pen)
+            painter.setPen(QtCore.Qt.NoPen)
             painter.fillPath(path, QtGui.QColor("#515D6A"))
-            painter.drawPath(path)
 
         if index.column() == 2:
             option.decorationPosition = option.Right  # warning sign

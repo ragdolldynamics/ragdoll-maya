@@ -1001,6 +1001,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._untarget_btn = untarget_btn
         self._staged_marker = None
         self._staged_dest = None
+        self.__view_sele = False
 
         self.setup_header(False)
 
@@ -1048,10 +1049,13 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 nodes.append(cmdx.fromHex(node))
 
         cmds.select(nodes, replace=True)
+        self.__view_sele = True
 
     def on_selection_changed(self):
-        self.sync_maya_selection()
+        if not self.__view_sele:
+            self.sync_maya_selection()
         self.update_actions()
+        self.__view_sele = False
 
     def sync_maya_selection(self):
         selection = cmdx.ls(orderedSelection=True)
@@ -1176,14 +1180,15 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._model.flipped = state
         self._proxy.invalidate()
 
-        if selected:
-            index = selected[-1]
+        self._view.clearSelection()
+        sele_model = self._view.selectionModel()
+        index = None
+        for index in selected:
             index = self._proxy.mapFromSource(index)
             if index.parent().isValid():
-                self._view.clearSelection()
                 index = index.siblingAtColumn(int(not index.column()))
-                sele_model = self._view.selectionModel()
-                sele_model.select(index, sele_model.Select)
+            sele_model.select(index, sele_model.Select)
+        if index:
             self._view.scrollTo(index, self._view.PositionAtCenter)
 
     def set_filter(self, text):

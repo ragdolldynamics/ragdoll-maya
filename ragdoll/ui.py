@@ -1066,7 +1066,6 @@ class Options(QtWidgets.QMainWindow):
         widgets["ScrollArea"].setWidget(widgets["Options"])
         widgets["ScrollArea"].setWidgetResizable(True)
         widgets["ScrollArea"].setFrameShape(QtWidgets.QFrame.NoFrame)
-        widgets["Options"].setMinimumHeight(px(300))
         widgets["Options"].setMinimumWidth(px(300))
 
         panels["Body"].addWidget(widgets["ScrollArea"])

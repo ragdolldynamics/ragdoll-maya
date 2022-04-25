@@ -111,9 +111,6 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
-    # Update known solvers
-    __.solvers = [n.shortestPath() for n in cmdx.ls(type="rdScene")]
-
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
@@ -1477,6 +1474,7 @@ def assign_and_connect(selection=None, **opts):
 def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
+        "visualise": _opt("visualiseEnvironment", opts),
     })
 
     _update_solver_options()
@@ -1496,7 +1494,9 @@ def assign_environment(selection=None, **opts):
                 "Select a polygon mesh to use for an environment."
             )
 
-        commands.assign_environment(mesh, solver)
+        commands.assign_environment(mesh, solver, opts={
+            "visualise": opts["visualise"]
+        })
 
     return kSuccess
 
@@ -1668,7 +1668,8 @@ def group_markers(selection=None, **opts):
             "Select one or more markers to group."
         )
 
-    commands.group_markers(markers)
+    group = commands.group_markers(markers)
+    cmds.select(str(group.parent()))
 
     return True
 
@@ -2247,14 +2248,7 @@ def unparent_marker(selection=None, **opts):
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
     selection = selection or cmdx.sl()
-    markers = []
-
-    for marker in selection:
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if marker and marker.type() == "rdMarker":
-            markers += [marker]
+    markers = markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(

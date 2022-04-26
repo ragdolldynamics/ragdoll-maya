@@ -50,6 +50,15 @@ def _hex_exists(node_hex):
     return node and node.exists
 
 
+def _absorb_deleted_node(func):
+    def decorated(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except cmdx.ExistError:
+            return  # let auto refresh to update
+    return decorated
+
+
 def _repeat_this(fn):
     cmd = 'python("import {0};{0}.{1}()")'.format(fn.__module__, fn.__name__)
     cmds.repeatLast(
@@ -415,6 +424,7 @@ class MarkerTreeModel(base.BaseItemModel):
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
+    @_absorb_deleted_node
     def data(self, index, role=QtCore.Qt.DisplayRole):
         """
         Args:
@@ -452,12 +462,6 @@ class MarkerTreeModel(base.BaseItemModel):
         key = ["marker", "dest"][column]
 
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
-            # todo: When user press DEL/Backspace while mouse in view,
-            #   current selected node in Maya gets deleted and since the
-            #   mouse is in view, no enterEvent will trigger auto refresh
-            #   hence, data corrupted.
-            #   We either block the DEL/Backspace in widget, or we trigger
-            #   update when data missing.
             if key == "marker":
                 return cmdx.fromHex(conn.marker).name()
             if key == "dest":
@@ -1458,6 +1462,14 @@ class RetargetWidget(QtWidgets.QWidget):
         log.debug("Checking for update finished in %0.2fms" % t.ms)
         if outdated:
             view.refresh(scene)
+
+    def keyPressEvent(self, event):
+        if event.key() in {QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace}:
+            # Avoid deleting node in view. And if node gets deleted from
+            #   Maya, the view may look corrupted but will be refreshed
+            #   automatically on next mouse enterEvent.
+            return
+        super(RetargetWidget, self).keyPressEvent(event)
 
 
 def _with_entered_exited_signals(cls):

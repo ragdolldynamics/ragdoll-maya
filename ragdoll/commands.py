@@ -2046,9 +2046,6 @@ def _create_group(mod, name, solver):
     mod.connect(group["currentState"],
                 solver["inputCurrent"][index])
 
-    if constants.RAGDOLL_DEVELOPER:
-        mod.set_keyable(group["articulated"], True)
-
     _take_ownership(mod, group, group_parent)
 
     return group

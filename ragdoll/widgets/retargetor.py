@@ -1128,6 +1128,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 marker = selection[marker_index]
                 dest = selection[dest_index] if marker == _marker else None
             else:
+                marker = _marker
                 dest = selection[dest_index]
 
             self._untarget_btn.setEnabled(bool(dest))

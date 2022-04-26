@@ -311,32 +311,17 @@ class _Scene(object):
         _repeat_this(interactive.retarget_marker)
 
     @internal.with_undo_chunk
-    def del_connection(self, marker, dest):
-        dest_list = [
-            plug.input() for plug in marker["destinationTransforms"]
-            if plug.input() is not None and plug.input() != dest
-        ]
-        commands.untarget_marker(marker)
+    def del_connection(self, markers):
+        for marker in markers:
+            commands.untarget_marker(marker)
+            self.destinations[marker].clear()
+            self.bad_retarget[marker.hex].clear()
+            self._dest_status = None  # update this
 
-        self.destinations[marker].remove(dest)
-        self.bad_retarget[marker.hex].pop(dest.hex)
-        for ds in self.bad_retarget.values():
-            if dest.hex in ds:
-                break
-        else:
-            self.dest_status.pop(dest.hex)
-
-        opts = {"append": True}
-        for transform in dest_list:
-            commands.retarget_marker(marker, transform, opts)
-
-        # trigger Maya viewport update
-        cmds.dgdirty(marker.shortest_path())
+            # trigger Maya viewport update
+            cmds.dgdirty(marker.shortest_path())
         # register command to repeat
         _repeat_this(interactive.untarget_marker)
-        # note: the command above ^ actually untarget all destinations, but
-        #   this function only untarget selected destination. So.. there's
-        #   that.
 
     def iter_connection(self):
         """Hierarchically iterate solver, marker, destination
@@ -706,35 +691,41 @@ class MarkerTreeModel(base.BaseItemModel):
 
         return get_dest_index(row)
 
-    def del_connection(self, marker, dest):
-        self._scene.del_connection(marker, dest)
+    def del_connection(self, markers):
+        self._scene.del_connection(markers)
 
-        marker_index = next(self.find_markers(marker))
-        solver_index = marker_index.parent()
+        marker_indexes = []
+        for marker in markers:
+            marker_index = next(self.find_markers(marker))
+            solver_index = marker_index.parent()
+            marker_indexes.append(marker_index)
 
-        _r = marker_index.row()
-        _s = self._internal[solver_index.row()]
-        rm = None
-        j = 0
-        for j, _c in enumerate(_s.conn_list[_r:]):
-            if _c.marker != marker.hex:
-                j -= 1
-                break
+            _r = marker_index.row()
+            _s = self._internal[solver_index.row()]
+            remove = []
+            j = 0
+            for j, _c in enumerate(_s.conn_list[_r:]):
+                if _c.marker != marker.hex:
+                    j -= 1
+                    break
 
-            if _c.dest is None:
-                pass  # already been deleted, but should not happen
+                if _c.dest is None:
+                    pass  # already been deleted, but should not happen
 
-            elif _c.dest == dest.hex:
-                _c.dest = None
-                _c.icon_d = None
-                rm = _c
+                else:
+                    _c.dest = None
+                    _c.icon_d = None
+                    remove.append(_c)
 
-        if j == 0:
-            return
+            if j == 0:
+                continue
 
-        _s.conn_list.remove(rm)
-        solver_item = self.itemFromIndex(solver_index)
-        solver_item.setRowCount(solver_item.rowCount() - 1)
+            for _c in remove[:-1]:
+                _s.conn_list.remove(_c)
+            solver_item = self.itemFromIndex(solver_index)
+            solver_item.setRowCount(solver_item.rowCount() - j)
+
+        return marker_indexes
 
 
 class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
@@ -1048,7 +1039,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._untarget_btn = untarget_btn
         self._staged_marker = None
         self._staged_dest = None
-        self.__view_sele = False
 
         self.setup_header(False)
 
@@ -1096,13 +1086,10 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 nodes.append(cmdx.fromHex(node))
 
         cmds.select(nodes, replace=True)
-        self.__view_sele = True
 
     def on_selection_changed(self):
-        if not self.__view_sele:
-            self.sync_maya_selection()
+        self.sync_maya_selection()
         self.update_actions()
-        self.__view_sele = False
 
     def sync_maya_selection(self):
         selection = cmdx.ls(sl=True)
@@ -1160,30 +1147,19 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             i for i, n in selection.items() if n.isA(cmdx.kTransform)
         ]
 
+        # un-targeting
+        self._untarget_btn.setEnabled(False)
+        if len(selected_marker) and not selected_dest:
+            dest_column = int(not selected_marker[0].column())
+            if any(m.siblingAtColumn(dest_column).data(self._model.NodeRole)
+                   for m in selected_marker):
+                self._untarget_btn.setEnabled(True)
+
+        # re-targeting
         marker = None
         dest = None
 
-        # un-targeting
-        if len(selected_marker) <= 1 and len(selected_dest) == 1:
-            dest_index = selected_dest[0]
-            marker_column = int(not dest_index.column())
-            marker_index = dest_index.siblingAtColumn(marker_column)
-            _marker = cmdx.fromHex(marker_index.data(self._model.NodeRole))
-
-            if selected_marker:
-                marker_index = selected_marker[0]
-                marker = selection[marker_index]
-                dest = selection[dest_index] if marker == _marker else None
-            else:
-                marker = _marker
-                dest = selection[dest_index]
-
-            self._untarget_btn.setEnabled(bool(dest))
-        else:
-            self._untarget_btn.setEnabled(False)
-
-        # re-targeting
-        if not dest and len(selected_marker) == 1:
+        if len(selected_marker) == 1:
             marker_index = selected_marker[0]
             marker = selection[marker_index]
             dest_column = int(not marker_index.column())
@@ -1221,8 +1197,30 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self.update_actions()
 
     def on_untarget_clicked(self):
-        marker, dest = self._staged_marker, self._staged_dest
-        self._model.del_connection(marker, dest)
+        markers = []
+        _seen = set()
+        marker_column = int(self._model.flipped)
+        dest_column = int(not marker_column)
+        for index in self._view.selectedIndexes():
+            if index.parent().isValid() and index.column() == marker_column:
+                marker_hex = index.data(self._model.NodeRole)
+                if marker_hex in _seen:
+                    continue
+                dest_index = index.siblingAtColumn(dest_column)
+                if dest_index.data(self._model.NodeRole):
+                    _seen.add(marker_hex)
+                    node_hex = index.data(self._model.NodeRole)
+                    markers.append(cmdx.fromHex(node_hex))
+
+        marker_indexes = self._model.del_connection(markers)
+        i = None
+        self._view.clearSelection()
+        for i in marker_indexes:
+            i = self._proxy.mapFromSource(i)
+            self._view.selectionModel().select(
+                i, QtCore.QItemSelectionModel.Select
+            )
+        self._view.scrollTo(i, self._view.EnsureVisible)
         self._proxy.invalidate()  # update sort/filter
         self.update_actions()
 

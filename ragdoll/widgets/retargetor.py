@@ -575,7 +575,7 @@ class MarkerTreeModel(base.BaseItemModel):
             if _s.solver == solver.hex:
                 return self.index(i, 0)
 
-    def find_marker(self, marker, solver_index=None):
+    def find_markers(self, marker, solver_index=None):
         if not solver_index:
             solver = None
             other = marker["startState"].output()
@@ -592,9 +592,13 @@ class MarkerTreeModel(base.BaseItemModel):
                 return
 
         _s = self._internal[solver_index.row()]
+        _matched = False
         for j, _c in enumerate(_s.conn_list):
             if _c.marker == marker.hex:
-                return self.index(j, int(self.flipped), solver_index)
+                _matched = True
+                yield self.index(j, int(self.flipped), solver_index)
+            if _matched and _c.marker != marker.hex:
+                break
 
     def find_conn(self, dest, marker_index):
         solver_index = marker_index.parent()
@@ -619,7 +623,7 @@ class MarkerTreeModel(base.BaseItemModel):
     def add_connection(self, marker, dest, append=False):
         self._scene.add_connection(marker, dest, append=append)
 
-        marker_index = self.find_marker(marker)
+        marker_index = next(self.find_markers(marker))
         solver_index = marker_index.parent()
 
         def get_dest_index(conn_row):
@@ -658,7 +662,7 @@ class MarkerTreeModel(base.BaseItemModel):
     def del_connection(self, marker, dest):
         self._scene.del_connection(marker, dest)
 
-        marker_index = self.find_marker(marker)
+        marker_index = next(self.find_markers(marker))
         solver_index = marker_index.parent()
 
         _r = marker_index.row()
@@ -879,11 +883,7 @@ class DestStageButton(QtWidgets.QPushButton):
         node_name.setReadOnly(True)
         node_name.setPlaceholderText("Select one marker and one destination..")
         node_name.setStyleSheet("""
-        QLineEdit {
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid #ACACAC;
-        }
+        QLineEdit {background: transparent; border: none;}
         """)
 
         layout = QtWidgets.QHBoxLayout(self)
@@ -1058,7 +1058,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self.__view_sele = False
 
     def sync_maya_selection(self):
-        selection = cmdx.ls(orderedSelection=True)
+        selection = cmdx.ls(sl=True)
         selected_solver = [n for n in selection if n.isA("rdSolver")]
         selected_marker = [n for n in selection if n.isA("rdMarker")]
         selected_dest = [n for n in selection if n.isA(cmdx.kTransform)]
@@ -1069,8 +1069,9 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             self._proxy.mapFromSource(self._model.find_solver(s))
             for s in selected_solver
         ] + [
-            self._proxy.mapFromSource(self._model.find_marker(m))
+            self._proxy.mapFromSource(m_)
             for m in selected_marker
+            for m_ in self._model.find_markers(m)
         ] + [
             self._proxy.mapFromSource(d_)
             for d in selected_dest
@@ -1082,16 +1083,25 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             sele_model = self._view.selectionModel()
             for index in new_selection:
                 sele_model.select(index, QtCore.QItemSelectionModel.Select)
-            self._view.scrollTo(new_selection[-1], self._view.EnsureVisible)
+            # try scroll to the index is in first column (align perspective)
+            scroll_to = next(
+                (i for i in new_selection if i.column() == 0),
+                new_selection[0]
+            )
+            self._view.scrollTo(scroll_to, self._view.EnsureVisible)
 
         elif not new_selection:
             self._view.clearSelection()
 
     def update_actions(self):
         selection = dict()
+        _seen = set()
         for index in self._view.selectedIndexes():
             if index.parent().isValid():
                 node_hex = index.data(self._model.NodeRole)
+                if node_hex in _seen:
+                    continue
+                _seen.add(node_hex)
                 node = cmdx.fromHex(node_hex)
                 if node and node.exists:
                     selection[index] = node
@@ -1102,10 +1112,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         selected_dest = [
             i for i, n in selection.items() if n.isA(cmdx.kTransform)
         ]
-        wild_dest = [
-            n for n in cmdx.ls(sl=True, type="transform")
-            if n not in selection.values()
-        ]
 
         marker = None
         dest = None
@@ -1113,8 +1119,6 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         # un-targeting
         if len(selected_marker) <= 1 and len(selected_dest) == 1:
             dest_index = selected_dest[0]
-            dest = selection[dest_index]
-
             marker_column = int(not dest_index.column())
             marker_index = dest_index.siblingAtColumn(marker_column)
             _marker = cmdx.fromHex(marker_index.data(self._model.NodeRole))
@@ -1122,27 +1126,28 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             if selected_marker:
                 marker_index = selected_marker[0]
                 marker = selection[marker_index]
+                dest = selection[dest_index] if marker == _marker else None
             else:
-                marker = _marker
+                dest = selection[dest_index]
 
-            self._untarget_btn.setEnabled(marker == _marker)
+            self._untarget_btn.setEnabled(bool(dest))
         else:
             self._untarget_btn.setEnabled(False)
 
         # re-targeting
-        if len(selected_marker) == 1 and len(wild_dest) == 1 \
-                and not selected_dest:
+        if not dest and len(selected_marker) == 1:
             marker_index = selected_marker[0]
             marker = selection[marker_index]
-            dest = wild_dest[0]
-            self._retarget_btn.setEnabled(True)
-            self._retarget_btn.display_dest(dest)
+            dest_column = int(not marker_index.column())
+            dest_index = marker_index.siblingAtColumn(dest_column)
+            dest_hex = dest_index.data(self._model.NodeRole)
 
-        elif len(selected_marker) == 1:
-            marker_index = selected_marker[0]
-            marker = selection[marker_index]
-            self._retarget_btn.display_dest(None)
-            self._retarget_btn.setEnabled(False)
+            wild_dest = cmdx.ls(sl=True, type="transform")
+            if len(wild_dest) == 1 and dest_hex != wild_dest[0].hex:
+                dest = wild_dest[0]
+
+            self._retarget_btn.display_dest(dest)
+            self._retarget_btn.setEnabled(bool(dest))
 
         else:
             self._retarget_btn.display_dest(None)

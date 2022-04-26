@@ -97,6 +97,7 @@ _kConstraint = int(om.MFn.kConstraint)
 _kPairBlend = int(om.MFn.kPairBlend)
 # channel status color
 _ChClear = "#404040"
+_ChNonKeyable = "#6A6A6A"
 _ChHasKey = "#DD727A"
 _ChLocked = "#5C6874"
 _ChConstrained = "#94B9FF"
@@ -129,6 +130,8 @@ def _destination_status(node):
                     status[ch] = _ChPairBlended
                 else:
                     status[ch] = _ChHasConnection
+            elif not node[ch].keyable:
+                status[ch] = _ChNonKeyable
             else:
                 status[ch] = _ChClear
 
@@ -808,6 +811,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             _base_x = option.rect.x() + 8
             _base_y = option.rect.center().y() - int(_base_h / 2) + 1
             painter.save()
+            painter.setRenderHint(painter.Antialiasing, False)
             painter.setPen(QtCore.Qt.NoPen)
             painter.setBrush(QtGui.QColor(_bg_color))
             painter.drawRect(QtCore.QRect(_base_x, _base_y, _base_w, _base_h))
@@ -816,9 +820,16 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             for at in ("t", "r"):
                 _y = _base_y
                 for ax in ("x", "y", "z"):
-                    color = cell_colors.get(at + ax, _bg_color)
-                    painter.setBrush(QtGui.QColor(color))
-                    painter.drawRect(QtCore.QRect(_base_x, _y, cell_w, cell_h))
+                    color = cell_colors.get(at + ax)
+                    if color == _ChNonKeyable:
+                        rect = QtCore.QRect(_base_x, _y, cell_w - 1, cell_h - 1)
+                        painter.setPen(QtGui.QColor(color))
+                        painter.setBrush(QtGui.QColor(_bg_color))
+                    else:
+                        rect = QtCore.QRect(_base_x, _y, cell_w, cell_h)
+                        painter.setPen(QtCore.Qt.NoPen)
+                        painter.setBrush(QtGui.QColor(color or _bg_color))
+                    painter.drawRect(rect)
                     _y += cell_h + cell_gap
                 _base_x += cell_w + border
             painter.restore()

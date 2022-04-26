@@ -1085,8 +1085,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 sele_model.select(index, QtCore.QItemSelectionModel.Select)
             # try scroll to the index is in first column (align perspective)
             scroll_to = next(
-                (i for i in new_selection if i.column() == 0),
-                new_selection[0]
+                (i for i in reversed(new_selection) if i.column() == 0),
+                new_selection[-1]
             )
             self._view.scrollTo(scroll_to, self._view.EnsureVisible)
 
@@ -1199,10 +1199,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def set_filter(self, text):
         self._proxy.setFilterRegExp(text)
         self._view.expandToDepth(1)
-
-        selected = self._view.selectedIndexes()
-        if selected:
-            self._view.scrollTo(selected[-1], self._view.PositionAtCenter)
+        self.sync_maya_selection()
+        self.update_actions()
 
     def set_sort_by_name(self, ascending):
         self._delegate.set_enabled(False)

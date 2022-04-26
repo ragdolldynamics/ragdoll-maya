@@ -1162,12 +1162,10 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         if len(selected_marker) == 1:
             marker_index = selected_marker[0]
             marker = selection[marker_index]
-            dest_column = int(not marker_index.column())
-            dest_index = marker_index.siblingAtColumn(dest_column)
-            dest_hex = dest_index.data(self._model.NodeRole)
+            marker_dest = self._model.scene.destinations[marker]
 
             wild_dest = cmdx.ls(sl=True, type="transform")
-            if len(wild_dest) == 1 and dest_hex != wild_dest[0].hex:
+            if len(wild_dest) == 1 and wild_dest[0] not in marker_dest:
                 dest = wild_dest[0]
 
             self._retarget_btn.display_dest(dest)

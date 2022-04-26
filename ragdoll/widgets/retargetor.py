@@ -7,7 +7,7 @@ from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import commands, interactive, internal, ui, options as _opts
+from .. import commands, internal, ui, options as _opts
 
 log = logging.getLogger("ragdoll")
 
@@ -289,6 +289,8 @@ class _Scene(object):
 
     @internal.with_undo_chunk
     def add_connection(self, marker, dest, **kwargs):
+        from .. import interactive
+
         opts = {"append": True}
         opts.update(kwargs)
         commands.retarget_marker(marker, dest, opts)
@@ -312,6 +314,8 @@ class _Scene(object):
 
     @internal.with_undo_chunk
     def del_connection(self, markers):
+        from .. import interactive
+
         for marker in markers:
             commands.untarget_marker(marker)
             self.destinations[marker].clear()

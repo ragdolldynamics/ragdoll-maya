@@ -764,6 +764,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             painter.setRenderHint(painter.Antialiasing)
             painter.setPen(QtCore.Qt.NoPen)
             painter.fillPath(path, QtGui.QColor("#515D6A"))
+            painter.restore()
 
         if index.column() == 2:
             option.decorationPosition = option.Right  # warning sign

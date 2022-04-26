@@ -289,8 +289,14 @@ class _Scene(object):
 
     @internal.with_undo_chunk
     def add_connection(self, marker, dest, **kwargs):
-        opts = kwargs or {"append": True}
+        opts = {"append": True}
+        opts.update(kwargs)
         commands.retarget_marker(marker, dest, opts)
+
+        if not opts["append"]:
+            self.destinations[marker].clear()
+            self.bad_retarget[marker.hex].clear()
+            self._dest_status = None  # update this
 
         self.destinations[marker].add(dest)
         self.dest_status[dest.hex] = _destination_status(dest)
@@ -654,30 +660,50 @@ class MarkerTreeModel(base.BaseItemModel):
 
         _r = marker_index.row()
         _s = self._internal[solver_index.row()]
+        consumed = False
+        remove = []
         ref = None
-        row = 0
+        row = j = 0
         for j, _c in enumerate(_s.conn_list[_r:]):
             if _c.marker != marker.hex:
+                consumed = True
+                j -= 1
                 break
+
             ref = _c
             row = _r + j
             if _c.dest is None:
                 # plug dest into connection
                 _c.dest = dest.hex
                 _c.icon_d = self._maya_node_icon(dest)
-                return get_dest_index(row)
+                break
 
             elif _c.dest == dest.hex:
                 # already in model (but should not happen in current imp.)
-                return get_dest_index(row)
+                break
 
-        # new connection
-        # get level, natural from other connection to make a new one
-        new_conn = self._mk_conn(marker, dest, ref.level, ref.natural)
-        _s.conn_list.insert(row, new_conn)
+            elif not append:
+                # replace dest
+                remove.append(_c)
+                continue
 
-        solver_item = self.itemFromIndex(solver_index)
-        solver_item.setRowCount(solver_item.rowCount() + 1)
+        if consumed:
+            solver_item = self.itemFromIndex(solver_index)
+
+            if append:
+                # new connection
+                # get level, natural from other connection to make a new one
+                new_conn = self._mk_conn(marker, dest, ref.level, ref.natural)
+                _s.conn_list.insert(row, new_conn)
+                solver_item.setRowCount(solver_item.rowCount() + 1)
+            else:
+                ref.dest = dest.hex
+                ref.icon_d = self._maya_node_icon(dest)
+                for _c in remove[:-1]:
+                    _s.conn_list.remove(_c)
+                solver_item.setRowCount(solver_item.rowCount() - j)
+                row -= j
+
         return get_dest_index(row)
 
     def del_connection(self, marker, dest):
@@ -1181,6 +1207,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def on_retarget_appended(self):
         marker, dest = self._staged_marker, self._staged_dest
         updated = self._model.add_connection(marker, dest, append=True)
+        self._view.clearSelection()
         self.select(self._proxy.mapFromSource(updated))
         self._proxy.invalidate()  # update sort/filter
         self.update_actions()
@@ -1188,6 +1215,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
     def on_retarget_clicked(self):
         marker, dest = self._staged_marker, self._staged_dest
         updated = self._model.add_connection(marker, dest, append=False)
+        self._view.clearSelection()
         self.select(self._proxy.mapFromSource(updated))
         self._proxy.invalidate()  # update sort/filter
         self.update_actions()

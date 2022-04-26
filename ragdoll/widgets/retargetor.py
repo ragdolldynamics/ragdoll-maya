@@ -1579,8 +1579,9 @@ class RetargetWindow(ui.Options):
         self._keys["Escape"].setEnabled(False)
 
     def options_state(self):
-        # todo: update optionVar
         super(RetargetWindow, self).options_state()
+        key = "markersAppendTarget"  # update option-var
+        self.parser.find(key).write(_opts.read(key))
         self._widgets["TabBar"].show()
 
     def play_state(self):

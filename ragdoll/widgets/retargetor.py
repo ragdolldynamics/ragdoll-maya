@@ -7,7 +7,7 @@ from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import commands, interactive, options, internal, ui
+from .. import commands, interactive, internal, ui, options as _opts
 
 log = logging.getLogger("ragdoll")
 
@@ -304,7 +304,7 @@ class _Scene(object):
             self.is_bad_retarget(marker, dest)
 
         # save optionVar
-        options.write("markersAppendTarget", opts["append"])
+        _opts.write("markersAppendTarget", opts["append"])
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
         # register command to repeat

@@ -836,6 +836,9 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         size = super(MarkerIndentDelegate, self).sizeHint(option, index)
+        if not index.parent().isValid():
+            size.setWidth(20)  # avoid view get stretched by long solver name
+            return size
         offset, _ = self._compute(index)
         if offset:
             size.setWidth(size.width() + offset)

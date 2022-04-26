@@ -612,19 +612,6 @@ class MarkerTreeModel(base.BaseItemModel):
             if _matched and _c.marker != marker.hex:
                 break
 
-    def find_conn(self, dest, marker_index):
-        solver_index = marker_index.parent()
-        marker_hex = marker_index.data(self.NodeRole)
-        marker_found = False
-        _s = self._internal[solver_index.row()]
-        for j, _c in enumerate(_s.conn_list):
-            if _c.marker == marker_hex and not marker_found:
-                marker_found = True
-            if marker_found and _c.dest == dest.hex:
-                return self.index(j, int(not self.flipped), solver_index)
-            if marker_found and _c.marker != marker_hex:
-                return
-
     def find_destinations(self, dest):
         for i, _s in enumerate(self._internal):
             solver_index = self.index(i, 0)

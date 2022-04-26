@@ -955,7 +955,7 @@ class RetargetButton(QtWidgets.QWidget):
         super(RetargetButton, self).__init__(parent=parent)
 
         dest_stage = DestStageButton()
-        dest_actions = QtWidgets.QPushButton()  # todo: change to 3 dots icon
+        dest_actions = QtWidgets.QPushButton()
         dest_action_menu = QtWidgets.QMenu(self)
         append_action = QtWidgets.QAction(
             QtGui.QIcon(_resource("icons", "children.png")),

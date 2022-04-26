@@ -7,7 +7,7 @@ from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import commands, internal, ui
+from .. import commands, interactive, options, internal, ui
 
 log = logging.getLogger("ragdoll")
 
@@ -48,6 +48,14 @@ def _solver_ui_name_by_sizes(solver_sizes, solver):
 def _hex_exists(node_hex):
     node = cmdx.fromHex(node_hex)
     return node and node.exists
+
+
+def _repeat_this(fn):
+    cmd = 'python("import {0};{0}.{1}()")'.format(fn.__module__, fn.__name__)
+    cmds.repeatLast(
+        addCommand=cmd,
+        addCommandLabel=fn.__name__
+    )
 
 
 class _Solver(object):
@@ -279,6 +287,7 @@ class _Scene(object):
             return "Marker's translate motion has been set to 'Locked' but " \
                    "destination's rotation is locked."
 
+    @internal.with_undo_chunk
     def add_connection(self, marker, dest, **kwargs):
         opts = kwargs or {"append": True}
         commands.retarget_marker(marker, dest, opts)
@@ -287,9 +296,15 @@ class _Scene(object):
         self.dest_status[dest.hex] = _destination_status(dest)
         self.bad_retarget[marker.hex][dest.hex] = \
             self.is_bad_retarget(marker, dest)
+
+        # save optionVar
+        options.write("markersAppendTarget", opts["append"])
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
+        # register command to repeat
+        _repeat_this(interactive.retarget_marker)
 
+    @internal.with_undo_chunk
     def del_connection(self, marker, dest):
         dest_list = [
             plug.input() for plug in marker["destinationTransforms"]
@@ -308,8 +323,14 @@ class _Scene(object):
         opts = {"append": True}
         for transform in dest_list:
             commands.retarget_marker(marker, transform, opts)
+
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
+        # register command to repeat
+        _repeat_this(interactive.untarget_marker)
+        # note: the command above ^ actually untarget all destinations, but
+        #   this function only untarget selected destination. So.. there's
+        #   that.
 
     def iter_connection(self):
         """Hierarchically iterate solver, marker, destination
@@ -1532,6 +1553,7 @@ class RetargetWindow(ui.Options):
         self._keys["Escape"].setEnabled(False)
 
     def options_state(self):
+        # todo: update optionVar
         super(RetargetWindow, self).options_state()
         self._widgets["TabBar"].show()
 

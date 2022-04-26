@@ -2585,18 +2585,7 @@ def link_solver(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def unlink_solver(selection=None, **opts):
-    solvers = []
-    for solver in selection or cmdx.selection():
-        if solver.isA(cmdx.kTransform):
-            solver = solver.shape(type="rdSolver")
-
-        if not solver:
-            raise i__.UserWarning(
-                "Bad selection",
-                "%s was not a solver." % solver
-            )
-
-        solvers += [solver]
+    solvers = solvers_from_selection(selection)
 
     for solver in solvers:
         commands.unlink_solver(solver)
@@ -2604,6 +2593,7 @@ def unlink_solver(selection=None, **opts):
 
     # Trigger a draw refresh
     cmds.select(cmds.ls(selection=True))
+    cmds.refresh()
 
     return kSuccess
 

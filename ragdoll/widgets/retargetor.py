@@ -7,7 +7,7 @@ from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from . import px, base
-from .. import commands, internal, ui, options as _opts
+from .. import commands, internal, ui
 
 log = logging.getLogger("ragdoll")
 
@@ -317,8 +317,6 @@ class _Scene(object):
         self.bad_retarget[marker.hex][dest.hex] = \
             self.is_bad_retarget(marker, dest)
 
-        # save optionVar
-        _opts.write("markersAppendTarget", opts["append"])
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
         # register command to repeat
@@ -1611,8 +1609,6 @@ class RetargetWindow(ui.Options):
 
     def options_state(self):
         super(RetargetWindow, self).options_state()
-        key = "markersAppendTarget"  # update option-var
-        self.parser.find(key).write(_opts.read(key))
         self._widgets["TabBar"].show()
 
     def play_state(self):

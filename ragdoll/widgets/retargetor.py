@@ -724,14 +724,14 @@ class MarkerTreeModel(base.BaseItemModel):
         return marker_indexes
 
 
-class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
+class MarkerItemDelegate(QtWidgets.QStyledItemDelegate):
     HierarchyIndent = 28
     ColorDotSize = 20
     ChannelIndicatorWidth = 84
     SelectionBorder = 2
 
     def __init__(self, parent):
-        super(MarkerIndentDelegate, self).__init__(parent=parent)
+        super(MarkerItemDelegate, self).__init__(parent=parent)
         self._enabled = False
 
     def set_enabled(self, value):
@@ -783,7 +783,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             # offset item
             option.rect.adjust(offset, 0, 0, 0)
 
-        super(MarkerIndentDelegate, self).paint(painter, option, index)
+        super(MarkerItemDelegate, self).paint(painter, option, index)
 
         if dot_color:
             painter.translate(-self.ColorDotSize, 0)
@@ -838,7 +838,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
             painter.restore()
 
     def sizeHint(self, option, index):
-        size = super(MarkerIndentDelegate, self).sizeHint(option, index)
+        size = super(MarkerItemDelegate, self).sizeHint(option, index)
         if not index.parent().isValid() and self.parent().isExpanded(index):
             size.setWidth(20)  # avoid view get stretched by long solver name
             return size
@@ -1008,8 +1008,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         view.setSelectionBehavior(view.SelectItems)
         view.setHeaderHidden(True)
 
-        indent_delegate = MarkerIndentDelegate(view)
-        view.setItemDelegate(indent_delegate)
+        item_delegate = MarkerItemDelegate(view)
+        view.setItemDelegate(item_delegate)
 
         action_bar = QtWidgets.QWidget()
         action_bar.setFixedHeight(px(34))
@@ -1046,7 +1046,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._view = view
         self._proxy = proxy
         self._model = model
-        self._delegate = indent_delegate
+        self._delegate = item_delegate
         self._retarget_btn = retarget_btn
         self._untarget_btn = untarget_btn
         self._staged_marker = None
@@ -1063,7 +1063,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(dest_col, header.Stretch)
         header.setSectionResizeMode(2, header.Fixed)
         header.setStretchLastSection(False)
-        header.resizeSection(2, MarkerIndentDelegate.ChannelIndicatorWidth)
+        header.resizeSection(2, MarkerItemDelegate.ChannelIndicatorWidth)
 
     @property
     def view(self):

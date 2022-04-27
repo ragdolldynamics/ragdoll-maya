@@ -1036,6 +1036,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.setSpacing(px(2))
 
         view.selectionModel().selectionChanged.connect(self.on_selection_changed)
+        view.collapsed.connect(self.on_view_collapsed_or_expanded)
+        view.expanded.connect(self.on_view_collapsed_or_expanded)
         view.released.connect(self.on_view_released)
         retarget_btn.appended.connect(self.on_retarget_appended)
         retarget_btn.clicked.connect(self.on_retarget_clicked)
@@ -1049,6 +1051,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._untarget_btn = untarget_btn
         self._staged_marker = None
         self._staged_dest = None
+        self.__collapsed_or_expanded = False
 
         self.setup_header(False)
 
@@ -1082,11 +1085,34 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
     def refresh(self, scene=None):
         self._model.refresh(scene)
-        self._view.expandToDepth(1)
+        self.view_expand_to(1)
         self.sync_maya_selection()
         self.update_actions()
 
+    def view_expand_to(self, depth):
+        self._view.expandToDepth(depth)
+        self.__collapsed_or_expanded = False
+        # QTreeView.expandToDepth() refers to the left mouse button click so
+        # we have to unset the state here.
+
+    def on_view_collapsed_or_expanded(self):
+        if QtWidgets.QApplication.mouseButtons() & QtCore.Qt.LeftButton:
+            # Careful, left mouse button may also triggered by an event, not
+            # just by user click.
+            # https://doc.qt.io/qt-5/qt.html#MouseButton-enum
+            self.__collapsed_or_expanded = True
+
     def on_view_released(self):
+        if self.__collapsed_or_expanded:
+            # This slot updates Maya selection which then updates view's
+            # selection and scroll to those items. So, if a row is being
+            # collapsed/expanded by mouse click, this slot will undo that
+            # due to the end scrolling call (ensure-visible).
+            # To avoid that, we need to know if the mouse click was for
+            # expanding/collapsing item and unset the state for next call.
+            self.__collapsed_or_expanded = False
+            return
+
         nodes = []
         for index in self._view.selectedIndexes():
             if not index.parent().isValid():
@@ -1267,7 +1293,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
     def set_filter(self, text):
         self._proxy.setFilterRegExp(text)
-        self._view.expandToDepth(1)
+        self.view_expand_to(1)
         self.sync_maya_selection()
         self.update_actions()
 

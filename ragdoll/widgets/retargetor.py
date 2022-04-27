@@ -115,7 +115,7 @@ _ChHasConnection = "#F1D832"
 _IKDriven = "#C800C8"
 
 
-def _destination_status(node):
+def _dest_channel_status(node):
     status = dict()
     status["IK"] = _is_part_of_IK(node) if node.type() == "joint" else False
 
@@ -172,7 +172,7 @@ class _Scene(object):
         self._solvers = None
         self._markers = None
         self._destinations = None
-        self._dest_status = None
+        self._dest_channel_status = None
         self._bad_retarget = None
 
     def __eq__(self, other):
@@ -181,7 +181,7 @@ class _Scene(object):
         return self.solvers == other.solvers \
             and self.markers == other.markers \
             and self.destinations == other.destinations \
-            and self.dest_status == other.dest_status \
+            and self.dest_channel_status == other.dest_channel_status \
             and self.bad_retarget == other.bad_retarget
 
     def __ne__(self, other):  # for '!=' in py2
@@ -244,13 +244,13 @@ class _Scene(object):
         return self._destinations
 
     @property
-    def dest_status(self):
-        if self._dest_status is None:
-            self._dest_status = {
-                dest.hex: _destination_status(dest)
+    def dest_channel_status(self):
+        if self._dest_channel_status is None:
+            self._dest_channel_status = {
+                dest.hex: _dest_channel_status(dest)
                 for dest in set(chain(*self.destinations.values()))
             }
-        return self._dest_status
+        return self._dest_channel_status
 
     @property
     def bad_retarget(self):
@@ -274,7 +274,7 @@ class _Scene(object):
             Translate Motion = Locked, meaning no translation.
         * A joint being driven by IK.
         """
-        s = self.dest_status.get(dest.hex) or _destination_status(dest)
+        s = self.dest_channel_status.get(dest.hex) or _dest_channel_status(dest)
         all_ch = {"tx", "ty", "tz", "rx", "ry", "rz"}
 
         if all(s[ch] == _ChLocked for ch in all_ch):
@@ -310,10 +310,10 @@ class _Scene(object):
         if not opts["append"]:
             self.destinations[marker].clear()
             self.bad_retarget[marker.hex].clear()
-            self._dest_status = None  # update this
+            self._dest_channel_status = None  # update this
 
         self.destinations[marker].add(dest)
-        self.dest_status[dest.hex] = _destination_status(dest)
+        self.dest_channel_status[dest.hex] = _dest_channel_status(dest)
         self.bad_retarget[marker.hex][dest.hex] = \
             self.is_bad_retarget(marker, dest)
 
@@ -330,7 +330,7 @@ class _Scene(object):
             commands.untarget_marker(marker)
             self.destinations[marker].clear()
             self.bad_retarget[marker.hex].clear()
-            self._dest_status = None  # update this
+            self._dest_channel_status = None  # update this
 
             # trigger Maya viewport update
             cmds.dgdirty(marker.shortest_path())
@@ -578,7 +578,7 @@ class MarkerTreeModel(base.BaseItemModel):
             dot_color=dot_color,
             level=level,
             natural=natural,
-            channel=self._scene.dest_status.get(dest_hex),
+            channel=self._scene.dest_channel_status.get(dest_hex),
             is_bad=self._scene.bad_retarget[marker.hex].get(dest_hex),
         )
         return conn

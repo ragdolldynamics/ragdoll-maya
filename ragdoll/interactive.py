@@ -1232,13 +1232,13 @@ def _find_current_solver(solver):
 
     if solver == NewSolver:
         if not validate_evaluation_mode():
-            return
+            return None, None
 
         if not validate_cached_playback():
-            return
+            return None, None
 
         if not validate_playbackspeed():
-            return
+            return None, None
 
         solver = commands.create_solver(opts={
             "frameskipMethod": options.read("frameskipMethod"),
@@ -1256,6 +1256,13 @@ def _find_current_solver(solver):
         except (cmdx.ExistError, IndexError):
             solver = None
             options.write("markersAssignSolver", 0)
+
+    # Protect user against Plugin Shapes not being visible
+    for panel in cmds.getPanel(visiblePanels=True):
+        if not cmds.modelPanel(panel, query=True, exists=True):
+            continue
+
+        cmds.modelEditor(panel, edit=True, pluginShapes=True)
 
     return solver, is_new
 

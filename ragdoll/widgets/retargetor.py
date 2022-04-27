@@ -1453,7 +1453,9 @@ class RetargetWidget(QtWidgets.QWidget):
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
 
     def on_view_item_entered(self, index):
-        warn = index.data(MarkerTreeModel.BadRetargetRole) or " "
+        warn = " "
+        if index.column() == 2:
+            warn = index.data(MarkerTreeModel.BadRetargetRole) or warn
         self.prompted.emit(warn)
 
     def on_sorting_clicked(self, state):

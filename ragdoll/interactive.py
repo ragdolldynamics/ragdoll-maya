@@ -1507,8 +1507,8 @@ def markers_from_selection(selection=None):
         if selected.isA(cmdx.kDagNode):
             selected = selected["message"].output(type="rdMarker")
 
-        if selected and selected.isA("rdMarker"):
-            markers += [selected]
+        if selected and selected.isA("rdMarker") and selected not in markers:
+            markers.append(selected)
 
     return markers
 

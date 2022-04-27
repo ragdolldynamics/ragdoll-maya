@@ -1551,7 +1551,7 @@ class RetargetWindow(ui.Options):
         }
 
         widgets["Tabs"].addTab("Options")
-        widgets["Tabs"].addTab("Overview")
+        widgets["Tabs"].addTab("Editor")
         widgets["TabBar"].setStyleSheet("background-color: #373737")
 
         layout = QtWidgets.QHBoxLayout(widgets["TabBar"])
@@ -1565,10 +1565,10 @@ class RetargetWindow(ui.Options):
         layout.insertSpacing(0, 8)
 
         self._panels["Body"].addWidget(widgets["Retarget"])
-        self.OverviewPage = 3
+        self.EditorPage = 3
 
         widgets["Retarget"].prompted.connect(self.on_retarget_prompted)
-        widgets["Tabs"].currentChanged.connect(self.on_overview)
+        widgets["Tabs"].currentChanged.connect(self.on_editor)
 
         self._widgets.update(widgets)
         self._inited = False
@@ -1579,9 +1579,9 @@ class RetargetWindow(ui.Options):
         else:
             self.on_exited()
 
-    def on_overview(self, _):
-        if self._panels["Body"].currentIndex() != self.OverviewPage:
-            self.overview_state()
+    def on_editor(self, _):
+        if self._panels["Body"].currentIndex() != self.EditorPage:
+            self.editor_state()
             if not self._inited:
                 # ensure tab switched
                 QtWidgets.QApplication.instance().processEvents()
@@ -1593,12 +1593,12 @@ class RetargetWindow(ui.Options):
 
     def on_back(self):
         if self._widgets["Tabs"].currentIndex():
-            self.transition(to=self.overview_state)
+            self.transition(to=self.editor_state)
         else:
             self.transition(to=self.options_state)
 
-    def overview_state(self):
-        self._panels["Body"].setCurrentIndex(self.OverviewPage)
+    def editor_state(self):
+        self._panels["Body"].setCurrentIndex(self.EditorPage)
         self._widgets["PlayerButton"].setChecked(False)
         self._widgets["Player"].stop()
         self._panels["Buttons"].hide()

@@ -989,6 +989,7 @@ class RetargetButton(QtWidgets.QWidget):
 
 
 class MarkerTreeWidget(QtWidgets.QWidget):
+    prompted = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(MarkerTreeWidget, self).__init__(parent=parent)
@@ -1013,8 +1014,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         action_bar = QtWidgets.QWidget()
         action_bar.setFixedHeight(px(34))
 
-        retarget_btn = RetargetButton()
-        untarget_btn = QtWidgets.QPushButton(
+        retarget_btn = _with_entered_exited_signals(RetargetButton)()
+        untarget_btn = _with_entered_exited_signals(QtWidgets.QPushButton)(
             QtGui.QIcon(_resource("icons", "disconnect.png")),
             "Untarget",
         )
@@ -1033,6 +1034,24 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.addWidget(view)
         layout.addWidget(action_bar)
         layout.setSpacing(px(2))
+
+        def add_help(button, text):
+            def on_entered():
+                self.prompted.emit(text)
+
+            def on_exited():
+                self.prompted.emit("")
+
+            button.entered.connect(on_entered)
+            button.exited.connect(on_exited)
+
+        add_help(retarget_btn,
+                 "Select a marker and a destination node that you want to "
+                 "target to and press this button to retarget, or click the "
+                 "drop down menu beside to retarget by appending.")
+        add_help(untarget_btn,
+                 "Select one or more markers and press this button to clear "
+                 "out all of theirs destination connections.")
 
         view.selectionModel().selectionChanged.connect(self.on_selection_changed)
         view.collapsed.connect(self.on_view_collapsed_or_expanded)
@@ -1429,6 +1448,7 @@ class RetargetWidget(QtWidgets.QWidget):
                  "Change marker-destination list sorting order. Note that "
                  "hierarchy ordering doesn't work in destination perspective.")
 
+        widgets["MarkerView"].prompted.connect(self.prompted)
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
         widgets["MarkerView"].view.leave.connect(lambda: self.prompted.emit(""))
         widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)

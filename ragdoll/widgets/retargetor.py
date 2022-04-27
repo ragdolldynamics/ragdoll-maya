@@ -839,7 +839,7 @@ class MarkerIndentDelegate(QtWidgets.QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         size = super(MarkerIndentDelegate, self).sizeHint(option, index)
-        if not index.parent().isValid():
+        if not index.parent().isValid() and self.parent().isExpanded(index):
             size.setWidth(20)  # avoid view get stretched by long solver name
             return size
         offset, _ = self._compute(index)
@@ -1008,7 +1008,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         view.setSelectionBehavior(view.SelectItems)
         view.setHeaderHidden(True)
 
-        indent_delegate = MarkerIndentDelegate(self)
+        indent_delegate = MarkerIndentDelegate(view)
         view.setItemDelegate(indent_delegate)
 
         action_bar = QtWidgets.QWidget()

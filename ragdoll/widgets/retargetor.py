@@ -669,8 +669,8 @@ class MarkerTreeModel(base.BaseItemModel):
             if append:
                 # new connection
                 # get level, natural from other connection to make a new one
-                new_conn = self._mk_conn(marker, dest, ref.level, ref.natural)
-                _s.conn_list.insert(row, new_conn)
+                ref = self._mk_conn(marker, dest, ref.level, ref.natural)
+                _s.conn_list.insert(row, ref)
                 solver_item.setRowCount(solver_item.rowCount() + 1)
             else:
                 ref.dest = dest.hex
@@ -681,6 +681,8 @@ class MarkerTreeModel(base.BaseItemModel):
                 row -= j
 
         self._scene.add_connection(marker, dest, append=append)
+        ref.channel = self._scene.dest_channel_status.get(dest.hex)
+        ref.is_bad = self._scene.bad_retarget[marker.hex].get(dest.hex)
 
         return get_dest_index(row)
 
@@ -704,6 +706,8 @@ class MarkerTreeModel(base.BaseItemModel):
                 else:
                     _c.dest = None
                     _c.icon_d = None
+                    _c.channel = None
+                    _c.is_bad = None
                     remove.append(_c)
 
             if j == 0:

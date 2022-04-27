@@ -629,30 +629,25 @@ class MarkerTreeModel(base.BaseItemModel):
                     yield self.index(j, int(not self.flipped), solver_index)
 
     def add_connection(self, marker, dest, append=False):
-        self._scene.add_connection(marker, dest, append=append)
-
         marker_index = next(self.find_markers(marker))
         solver_index = marker_index.parent()
+        conn_count = len(self._scene.destinations[marker])
+
+        _s = self._internal[solver_index.row()]
+        _start = marker_index.row()
+        _end = _start + (conn_count or 1)  # we keep empty conn in view
 
         def get_dest_index(conn_row):
             dest_col = 0 if self.flipped else 1
             dest_index = self.index(conn_row, dest_col, solver_index)
             return dest_index
 
-        _r = marker_index.row()
-        _s = self._internal[solver_index.row()]
-        consumed = False
         remove = []
         ref = None
         row = j = 0
-        for j, _c in enumerate(_s.conn_list[_r:]):
-            if _c.marker != marker.hex:
-                consumed = True
-                j -= 1
-                break
-
+        for j, _c in enumerate(_s.conn_list[_start:_end]):
             ref = _c
-            row = _r + j
+            row = _start + j
             if _c.dest is None:
                 # plug dest into connection
                 _c.dest = dest.hex
@@ -668,7 +663,7 @@ class MarkerTreeModel(base.BaseItemModel):
                 remove.append(_c)
                 continue
 
-        if consumed:
+        else:
             solver_item = self.itemFromIndex(solver_index)
 
             if append:
@@ -685,29 +680,27 @@ class MarkerTreeModel(base.BaseItemModel):
                 solver_item.setRowCount(solver_item.rowCount() - j)
                 row -= j
 
+        self._scene.add_connection(marker, dest, append=append)
+
         return get_dest_index(row)
 
     def del_connection(self, markers):
-        self._scene.del_connection(markers)
-
         marker_indexes = []
         for marker in markers:
             marker_index = next(self.find_markers(marker))
             solver_index = marker_index.parent()
             marker_indexes.append(marker_index)
+            conn_count = len(self._scene.destinations[marker])
 
-            _r = marker_index.row()
             _s = self._internal[solver_index.row()]
+            _start = marker_index.row()
+            _end = _start + (conn_count or 1)  # we keep empty conn in view
+
             remove = []
             j = 0
-            for j, _c in enumerate(_s.conn_list[_r:]):
-                if _c.marker != marker.hex:
-                    j -= 1
-                    break
-
+            for j, _c in enumerate(_s.conn_list[_start:_end]):
                 if _c.dest is None:
                     pass  # already been deleted, but should not happen
-
                 else:
                     _c.dest = None
                     _c.icon_d = None
@@ -720,6 +713,8 @@ class MarkerTreeModel(base.BaseItemModel):
                 _s.conn_list.remove(_c)
             solver_item = self.itemFromIndex(solver_index)
             solver_item.setRowCount(solver_item.rowCount() - j)
+
+        self._scene.del_connection(markers)
 
         return marker_indexes
 

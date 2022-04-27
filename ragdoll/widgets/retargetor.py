@@ -929,9 +929,10 @@ class DestStageButton(QtWidgets.QPushButton):
         node_name = QtWidgets.QLineEdit()
         node_name.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
         node_name.setReadOnly(True)
-        node_name.setPlaceholderText("Select one marker and one destination..")
+        node_name.setPlaceholderText("Select one marker and one destination")
         node_name.setStyleSheet("""
         QLineEdit {background: transparent; border: none;}
+        QLineEdit:disabled {color: #DFDFDF;}
         """)
 
         layout = QtWidgets.QHBoxLayout(self)

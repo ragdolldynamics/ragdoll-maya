@@ -1003,7 +1003,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         proxy.setFilterCaseSensitivity(QtCore.Qt.CaseSensitive)
         view.setModel(proxy)
 
-        view.setTextElideMode(QtCore.Qt.ElideLeft)
+        view.setTextElideMode(QtCore.Qt.ElideMiddle)
         view.setSelectionMode(view.ExtendedSelection)
         view.setSelectionBehavior(view.SelectItems)
         view.setHeaderHidden(True)

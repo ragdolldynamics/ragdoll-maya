@@ -1036,6 +1036,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         layout.addWidget(action_bar)
         layout.setSpacing(px(2))
 
+        view.selectionModel().selectionChanged.connect(self.on_selection_changed)
         view.released.connect(self.on_view_released)
         retarget_btn.appended.connect(self.on_retarget_appended)
         retarget_btn.clicked.connect(self.on_retarget_clicked)
@@ -1097,7 +1098,20 @@ class MarkerTreeWidget(QtWidgets.QWidget):
 
         cmds.select(nodes, replace=True)
 
-    def on_selection_changed(self):
+    def on_selection_changed(self, selected, deselected):
+        if not QtWidgets.QApplication.queryKeyboardModifiers() \
+               & QtCore.Qt.ControlModifier:
+            return
+
+        deselected_nodes = set(
+            i.data(self._model.NodeRole) for i in deselected.indexes()
+        )
+        selection_model = self._view.selectionModel()
+        for index in self._view.selectedIndexes():
+            if index.data(self._model.NodeRole) in deselected_nodes:
+                selection_model.select(index, selection_model.Deselect)
+
+    def on_maya_selection_changed(self):
         self.sync_maya_selection()
         self.update_actions()
 
@@ -1399,7 +1413,7 @@ class RetargetWidget(QtWidgets.QWidget):
         widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
         timers["OnSearched"].timeout.connect(self.on_searched)
         objects["ScriptJob"].selection_changed.connect(
-            widgets["MarkerView"].on_selection_changed
+            widgets["MarkerView"].on_maya_selection_changed
         )
 
         self._panels = panels

@@ -886,7 +886,7 @@ class MarkerTreeView(QtWidgets.QTreeView):
         is_bad = index.data(MarkerTreeModel.BadRetargetRole)
         if is_bad and index.parent().isValid():
             painter.fillRect(options.rect, QtGui.QColor("#5b3138"))
-        elif is_bad:
+        elif is_bad and not self.isExpanded(index):
             painter.fillRect(options.rect, QtGui.QColor("#4b373a"))
         super(MarkerTreeView, self).drawRow(painter, options, index)
 

@@ -1337,19 +1337,18 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             self._view.scrollTo(selected[-1], self._view.PositionAtCenter)
 
 
-class SelectionScriptJob(QtCore.QObject):
-    selection_changed = QtCore.Signal()
+class MayaScriptJob(QtCore.QObject):
 
-    def __init__(self, parent=None):
-        super(SelectionScriptJob, self).__init__(parent=parent)
-        self.setObjectName("ragdoll:retargetor-scriptJob")
+    def __init__(self, name, parent=None):
+        super(MayaScriptJob, self).__init__(parent=parent)
+        self.setObjectName("ragdoll-scriptJob:%s" % name)
         self.job_id = None
 
-    def init(self):
+    def init(self, event_name, callback):
         if self.job_id:
             return
         self.job_id = cmds.scriptJob(
-            event=["SelectionChanged", self.selection_changed.emit],
+            event=[event_name, callback],
             parent=self.objectName(),  # job killed on object destroyed
         )
 
@@ -1375,15 +1374,19 @@ class RetargetWidget(QtWidgets.QWidget):
 
         timers = {
             "OnSearched": QtCore.QTimer(self),
+            "OnUndoRedo": QtCore.QTimer(self),
         }
 
         objects = {
-            "ScriptJob": SelectionScriptJob(self),
+            "MayaSelection": MayaScriptJob("retargetor.selection", parent=self),
+            "MayaUndo": MayaScriptJob("retargetor.undo", parent=self),
+            "MayaRedo": MayaScriptJob("retargetor.redo", parent=self),
         }
 
         panels["TopBar"].setObjectName("RetargetWidgetTop")
 
         timers["OnSearched"].setSingleShot(True)
+        timers["OnUndoRedo"].setSingleShot(True)
         widgets["SearchBar"].setClearButtonEnabled(True)
         widgets["MarkerView"].view.setMouseTracking(True)  # for retarget warn
 
@@ -1456,9 +1459,7 @@ class RetargetWidget(QtWidgets.QWidget):
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
         widgets["SearchBar"].textChanged.connect(self.on_searched_defer)
         timers["OnSearched"].timeout.connect(self.on_searched)
-        objects["ScriptJob"].selection_changed.connect(
-            widgets["MarkerView"].on_maya_selection_changed
-        )
+        timers["OnUndoRedo"].timeout.connect(self.refresh_if_outdated)
 
         self._panels = panels
         self._widgets = widgets
@@ -1468,9 +1469,36 @@ class RetargetWidget(QtWidgets.QWidget):
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
 
     def init(self):
-        self._objects["ScriptJob"].init()
         self._widgets["MarkerView"].refresh()
         self._widgets["MarkerView"].set_sort_by_name(ascending=True)
+        self._objects["MayaSelection"].init(
+            event_name="SelectionChanged",
+            callback=self._widgets["MarkerView"].on_maya_selection_changed,
+        )
+        self._objects["MayaUndo"].init(
+            event_name="Undo",
+            callback=self.on_undo_redo_defer,
+        )
+        self._objects["MayaRedo"].init(
+            event_name="Redo",
+            callback=self.on_undo_redo_defer,
+        )
+
+    def refresh_if_outdated(self):
+        view = self._widgets["MarkerView"]
+        model = view.model
+        scene = _Scene()
+        with internal.Timer() as t:
+            outdated = model.scene != scene
+        log.debug("Checking for update finished in %0.2fms" % t.ms)
+        if outdated:
+            view.refresh(scene)
+
+    def on_undo_redo_defer(self):
+        self._timers["OnUndoRedo"].start(200)
+
+    def on_searched_defer(self):
+        self._timers["OnSearched"].start(200)
 
     def on_view_item_entered(self, index):
         warn = " "
@@ -1505,9 +1533,6 @@ class RetargetWidget(QtWidgets.QWidget):
             self._widgets["Sorting"].unblock("hierarchy")
             self._widgets["MarkerView"].flip(False)
 
-    def on_searched_defer(self):
-        self._timers["OnSearched"].start(200)
-
     def on_searched(self):
         text = self._widgets["SearchBar"].text()
         widget = self._widgets["MarkerView"]
@@ -1515,14 +1540,7 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def enterEvent(self, event):
         super(RetargetWidget, self).enterEvent(event)
-        view = self._widgets["MarkerView"]
-        model = view.model
-        scene = _Scene()
-        with internal.Timer() as t:
-            outdated = model.scene != scene
-        log.debug("Checking for update finished in %0.2fms" % t.ms)
-        if outdated:
-            view.refresh(scene)
+        self.refresh_if_outdated()
 
     def keyPressEvent(self, event):
         if event.key() in {QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace}:

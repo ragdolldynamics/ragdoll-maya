@@ -897,6 +897,14 @@
         "help": "Set keyframe on the BaseLayer and start frame, to protect your animation in the event of deleting the recorded animation layer. Without this, unkeyed objects will remain in their recorded position at the frame you are currently on when deleting the layer."
     },
 
+    "markersShowPluginShapes": {
+        "name": "markersShowPluginShapes",
+        "label": "Show Plugin Shapes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Ensure the Maya viewport is displaying 'Plugin Shapes', which is how Ragdoll Markers are rendered."
+    },
+
     "markersAssignSolver": {
         "name": "markersAssignSolver",
         "label": "Solver",

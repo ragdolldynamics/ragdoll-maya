@@ -660,6 +660,7 @@
             "markersDensity",
             "markersSceneScale",
             "markersAutoLimit",
+            "markersShowPluginShapes",
             "markersCreateGround",
             "markersCreateObjectSet",
             "markersCreateLollipop",
@@ -685,6 +686,7 @@
             "markersDensity",
             "markersSceneScale",
             "markersAutoLimit",
+            "markersShowPluginShapes",
             "markersCreateGround",
             "markersCreateObjectSet",
             "markersCreateLollipop",
@@ -721,6 +723,7 @@
         "description": "Import this polygonal mesh as-is, without any post-processing, to collide against each individual polygon (more precisely, against each triangle).",
         "options": [
             "markersAssignSolver",
+            "markersShowPluginShapes",
             "visualiseEnvironment"
         ]
     },

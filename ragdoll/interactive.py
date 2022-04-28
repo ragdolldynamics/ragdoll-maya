@@ -1228,7 +1228,7 @@ def _rewind(scene):
     cmdx.currentTime(start_time)
 
 
-def _find_current_solver(solver):
+def _find_current_solver(solver, show_plugin_shapes=True):
     solver_items = options.items("markersAssignSolver")
     NewSolver = len(solver_items) - 1
     is_new = False
@@ -1260,7 +1260,7 @@ def _find_current_solver(solver):
             solver = None
             options.write("markersAssignSolver", 0)
 
-    if _is_interactive():
+    if _is_interactive() and show_plugin_shapes:
         # Protect user against Plugin Shapes not being visible
         for panel in cmds.getPanel(visiblePanels=True):
             if not cmds.modelPanel(panel, query=True, exists=True):
@@ -1362,6 +1362,7 @@ def assign_marker(selection=None, **opts):
         "group": _opt("markersAssignGroup", opts),
         "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
+        "showPluginShapes": _opt("markersShowPluginShapes", opts),
         "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
@@ -1379,7 +1380,8 @@ def assign_marker(selection=None, **opts):
     _update_solver_options()
     _update_group_options()
 
-    solver, is_new = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(
+        opts["solver"], opts["showPluginShapes"])
 
     if not solver:
         # This should never really happen
@@ -1491,7 +1493,8 @@ def assign_environment(selection=None, **opts):
 
     _update_solver_options()
 
-    solver, is_new = _find_current_solver(opts["solver"])
+    solver, is_new = _find_current_solver(
+        opts["solver"], opts["showPluginShapes"])
 
     if not solver:
         return kFailure

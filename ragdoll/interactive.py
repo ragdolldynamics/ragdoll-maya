@@ -45,6 +45,7 @@ from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
 from .widgets import solver as solver_widgets
+from .widgets import retargetor as retargetor_widgets
 
 from . import (
     commands,
@@ -3288,7 +3289,9 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    return _Window("retargetMarker", retarget_marker)
+    return _Window("retargetMarker",
+                   retarget_marker,
+                   cls=retargetor_widgets.RetargetWindow)
 
 
 def create_pin_constraint_options(*args):

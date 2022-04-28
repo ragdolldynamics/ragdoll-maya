@@ -1,0 +1,64 @@
+
+RetargetWidget QTreeView {
+    show-decoration-selected: 0;  /* highlight decoration (branch) */
+    border: none;
+    color: "%(on_primary)s";
+    background-color: "%(background)s";
+    alternate-background-color: "%(background_alt)s";
+    outline: none; /* Disable dotted border on focus */
+}
+
+RetargetWidget QTreeView::item {
+    padding-right: 10px;
+    padding-left: 8px;  /* more space for icon and indicator */
+    border: 3px solid transparent;
+    background-color: transparent;
+}
+
+RetargetWidget QTreeView::branch::has-children::!has-siblings:closed {
+    image: url("%(res)s/ui/caret-right-fill.svg");
+}
+RetargetWidget QTreeView::branch:closed::has-children::has-siblings {
+    image: url("%(res)s/ui/caret-right-fill.svg");
+}
+RetargetWidget QTreeView::branch:open::has-children::!has-siblings {
+    image: url("%(res)s/ui/caret-down-fill.svg");
+}
+RetargetWidget QTreeView::branch:open::has-children::has-siblings {
+    image: url("%(res)s/ui/caret-down-fill.svg");
+}
+RetargetWidget QTreeView::branch::has-children::!has-siblings:closed:hover {
+    image: url("%(res)s/ui/caret-right-fill-on.svg");
+}
+RetargetWidget QTreeView::branch:closed::has-children::has-siblings:hover {
+    image: url("%(res)s/ui/caret-right-fill-on.svg");
+}
+RetargetWidget QTreeView::branch:open::has-children::!has-siblings:hover {
+    image: url("%(res)s/ui/caret-down-fill-on.svg");
+}
+RetargetWidget QTreeView::branch:open::has-children::has-siblings:hover {
+    image: url("%(res)s/ui/caret-down-fill-on.svg");
+}
+
+RetargetWidget QTreeView::indicator:unchecked {
+    image: url("%(res)s/ui/square.svg");
+}
+RetargetWidget QTreeView::indicator:checked {
+    image: url("%(res)s/ui/square-check.svg");
+}
+
+#RetargetWidgetTop QPushButton {
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    width: 22px;
+    height: 22px;
+}
+#RetargetWidgetTop QPushButton:pressed {
+    background: rgba(50,50,50,100);
+}
+#RetargetWidgetTop QPushButton:!pressed:hover,
+#RetargetWidgetTop QPushButton:!pressed:hover:checked,
+#RetargetWidgetTop QPushButton:!pressed:hover:!checked {
+    background: rgba(255,255,255,60);
+}

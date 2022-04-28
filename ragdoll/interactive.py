@@ -1378,6 +1378,8 @@ def assign_marker(selection=None, **opts):
     solver, is_new = _find_current_solver(opts["solver"])
 
     if not solver:
+        # This should never really happen
+        log.warning("No solver found")
         return kFailure
 
     if is_new and opts["createGround"]:

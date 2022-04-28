@@ -1636,7 +1636,8 @@ class RetargetWindow(ui.Options):
         layout.addStretch(1)
 
         # Integrate with other options
-        layout = self._panels["Central"].layout()  # type: QtWidgets.QVBoxLayout
+        central = self._panels["Central"]
+        layout = central.layout()  # type: QtWidgets.QVBoxLayout
         layout.insertWidget(0, widgets["TabBar"])
         layout.insertSpacing(0, 8)
 
@@ -1648,6 +1649,9 @@ class RetargetWindow(ui.Options):
 
         self._widgets.update(widgets)
         self._inited = False
+
+    def refresh_if_outdated(self):
+        self._widgets["Retarget"].refresh_if_outdated()
 
     def on_retarget_prompted(self, message):
         if message:

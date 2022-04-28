@@ -2179,6 +2179,14 @@ def retarget_marker(selection=None, **opts):
 
     commands.retarget_marker(a, b, opts)
 
+    Window = widgets.RetargetWindow
+    if Window.instance and ui.isValid(Window.instance):
+        try:
+            Window.instance.refresh_if_outdated()
+        except Exception:
+            # This can fail, it's OK
+            pass
+
     return kSuccess
 
 

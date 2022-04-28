@@ -44,8 +44,6 @@ from maya import cmds
 from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
-from .widgets import solver as solver_widgets
-from .widgets import retargetor as retargetor_widgets
 
 from . import (
     commands,
@@ -56,6 +54,7 @@ from . import (
     recording,
     licence,
     telemetry,
+    widgets,
     constants as c,
     internal as i__,
     __
@@ -1325,7 +1324,7 @@ def markers_manipulator(selection=None, **opts):
             cmds.select(solver_name)
             return markers_manipulator()
 
-        dialog = solver_widgets.SolverSelectorDialog(
+        dialog = widgets.SolverSelectorDialog(
             solvers=selection,
             help=helptext,
             best_guess=None,  # todo: best-guess from viewport
@@ -3291,7 +3290,7 @@ def snap_markers_options(*args):
 def retarget_marker_options(*args):
     return _Window("retargetMarker",
                    retarget_marker,
-                   cls=retargetor_widgets.RetargetWindow)
+                   cls=widgets.RetargetWindow)
 
 
 def create_pin_constraint_options(*args):

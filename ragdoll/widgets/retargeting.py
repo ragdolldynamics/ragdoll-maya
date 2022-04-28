@@ -1,15 +1,17 @@
-
 import os
 import logging
 from itertools import chain
-from maya import cmds, OpenMayaUI
+
+from maya import cmds
 from maya.api import OpenMaya as om
 from PySide2 import QtCore, QtWidgets, QtGui
+
 from ..vendor import cmdx
-from . import px, base
+from . import base
 from .. import commands, internal, ui
 
 log = logging.getLogger("ragdoll")
+px = base.px
 
 try:
     long  # noqa
@@ -89,7 +91,8 @@ class _Connection(object):
     def __init__(self, marker, dest, level, natural, icon_m, icon_d,
                  dot_color, channel, is_bad):
         assert isinstance(marker, str), "Must be hex(str)"
-        assert isinstance(dest, str) or dest is None, "Must be hex(str) or None"
+        assert dest is None or isinstance(dest, str), (
+            "Must be hex(str) or None")
         self.marker = marker
         self.dest = dest
         self.level = level
@@ -274,12 +277,15 @@ class _Scene(object):
             Translate Motion = Locked, meaning no translation.
         * A joint being driven by IK.
         """
-        s = self.dest_channel_status.get(dest.hex) or _dest_channel_status(dest)
+        s = self.dest_channel_status.get(dest.hex)
+        s = s or _dest_channel_status(dest)
         all_ch = {"tx", "ty", "tz", "rx", "ry", "rz"}
 
         if all(s[ch] == _ChLocked for ch in all_ch):
-            return "Both translate and rotate channels are all being locked, " \
-                   "cannot record."
+            return (
+                "Both translate and rotate channels are all being locked, "
+                "cannot record."
+            )
 
         if any(s[ch] in {_ChConstrained, _ChPairBlended} for ch in all_ch):
             return "Some channel is being constrained or blended, may have " \
@@ -356,7 +362,11 @@ class _Scene(object):
             return [(m, lvl) for m in children_by_id[parent_id]]
 
         def walk_hierarchy(markers_):  # depth first
-            root_markers = [(m, 0) for m in children_by_id[-1] if m in markers_]
+            root_markers = [
+                (m, 0) for m in children_by_id[-1]
+                if m in markers_
+            ]
+
             visiting_list = root_markers
             while visiting_list:
                 visited, lvl = visiting_list[0]
@@ -1053,7 +1063,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                  "Select one or more markers and press this button to clear "
                  "out all of theirs destination connections.")
 
-        view.selectionModel().selectionChanged.connect(self.on_selection_changed)
+        selection_model = view.selectionModel()
+        selection_model.selectionChanged.connect(self.on_selection_changed)
         view.collapsed.connect(self.on_view_collapsed_or_expanded)
         view.expanded.connect(self.on_view_collapsed_or_expanded)
         view.released.connect(self.on_view_released)
@@ -1142,8 +1153,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         cmds.select(nodes, replace=True)
 
     def on_selection_changed(self, selected, deselected):
-        if not QtWidgets.QApplication.queryKeyboardModifiers() \
-               & QtCore.Qt.ControlModifier:
+        modifiers = QtWidgets.QApplication.queryKeyboardModifiers()
+        if not modifiers & QtCore.Qt.ControlModifier:
             return
 
         deselected_nodes = set(
@@ -1179,7 +1190,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
             for d_ in self._model.find_destinations(d)
         ]
 
-        if new_selection and set(self._view.selectedIndexes()) != new_selection:
+        selection = set(self._view.selectedIndexes())
+        if new_selection and selection != new_selection:
             self._view.clearSelection()
             sele_model = self._view.selectionModel()
             for index in new_selection:
@@ -1378,9 +1390,9 @@ class RetargetWidget(QtWidgets.QWidget):
         }
 
         objects = {
-            "MayaSelection": MayaScriptJob("retargetor.selection", parent=self),
-            "MayaUndo": MayaScriptJob("retargetor.undo", parent=self),
-            "MayaRedo": MayaScriptJob("retargetor.redo", parent=self),
+            "MayaSelection": MayaScriptJob("retargeting.selection", self),
+            "MayaUndo": MayaScriptJob("retargeting.undo", self),
+            "MayaRedo": MayaScriptJob("retargeting.redo", self),
         }
 
         panels["TopBar"].setObjectName("RetargetWidgetTop")

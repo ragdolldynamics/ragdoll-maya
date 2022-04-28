@@ -1,7 +1,9 @@
-
 import shiboken2
+
 from PySide2 import QtCore, QtWidgets, QtGui
-from . import px
+from maya.OpenMayaUI import MQtUtil
+
+px = MQtUtil.dpiScale
 
 try:
     long  # noqa

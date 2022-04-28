@@ -110,6 +110,8 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
+    uninstall_ui()
+
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
@@ -118,6 +120,7 @@ def _before_scene_open(*args):
 
 def _before_scene_new(*args):
     cmdx.uninstall()
+    uninstall_ui()
 
 
 def requires_ui(func):
@@ -1257,12 +1260,13 @@ def _find_current_solver(solver):
             solver = None
             options.write("markersAssignSolver", 0)
 
-    # Protect user against Plugin Shapes not being visible
-    for panel in cmds.getPanel(visiblePanels=True):
-        if not cmds.modelPanel(panel, query=True, exists=True):
-            continue
+    if _is_interactive():
+        # Protect user against Plugin Shapes not being visible
+        for panel in cmds.getPanel(visiblePanels=True):
+            if not cmds.modelPanel(panel, query=True, exists=True):
+                continue
 
-        cmds.modelEditor(panel, edit=True, pluginShapes=True)
+            cmds.modelEditor(panel, edit=True, pluginShapes=True)
 
     return solver, is_new
 

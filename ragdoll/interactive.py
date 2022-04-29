@@ -1257,8 +1257,8 @@ def _find_current_solver(solver, show_plugin_shapes=True):
             solver = cmdx.encode(solver)
 
         except (cmdx.ExistError, IndexError):
-            solver = None
             options.write("markersAssignSolver", 0)
+            return _find_current_solver(solver, show_plugin_shapes)
 
     if _is_interactive() and show_plugin_shapes:
         # Protect user against Plugin Shapes not being visible

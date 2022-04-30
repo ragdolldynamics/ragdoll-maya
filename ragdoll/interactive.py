@@ -1496,6 +1496,7 @@ def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
         "visualise": _opt("visualiseEnvironment", opts),
+        "showPluginShapes": _opt("markersShowPluginShapes", opts),
     })
 
     _update_solver_options()

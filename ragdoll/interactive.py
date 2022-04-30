@@ -468,7 +468,12 @@ def _on_recording_limit(clientData=None):
 def _fit_to_view():
     manip = json.loads(cmds.ragdollDump(manipulator=True))
     if manip["solverPath"]:
-        cmds.viewFit(manip["solverPath"], animate=True)
+        cmds.viewFit(
+            manip["solverPath"],
+
+            # Respect the users global preference
+            animate=cmds.optionVar(query="animateRoll")
+        )
 
 
 def _install_fit_to_view():
@@ -819,11 +824,13 @@ def install_menu():
         item("extractFromSolver", extract_from_solver)
         item("moveToSolver", move_to_solver)
 
-    with submenu("Cache", icon="bake.png"):
+        divider()
+
         item("cacheSolver", cache_all, label="Cache")
         item("uncacheSolver", uncache, label="Uncache")
 
-    with submenu("Link", icon="link.png"):
+        divider()
+
         item("linkSolver", link_solver)
         item("unlinkSolver", unlink_solver)
 

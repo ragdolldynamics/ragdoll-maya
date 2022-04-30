@@ -1415,13 +1415,13 @@ class RetargetWidget(QtWidgets.QWidget):
 
         # sort marker by name A -> Z as default
         widgets["Sorting"].add_state(
+            "hierarchy", QtGui.QIcon(_resource("ui", "list-nested.svg"))
+        )
+        widgets["Sorting"].add_state(
             "name_az", QtGui.QIcon(_resource("ui", "sort-alpha-down.svg"))
         )
         widgets["Sorting"].add_state(
             "name_za", QtGui.QIcon(_resource("ui", "sort-alpha-down-alt.svg"))
-        )
-        widgets["Sorting"].add_state(
-            "hierarchy", QtGui.QIcon(_resource("ui", "list-nested.svg"))
         )
         # filtering with case sensitive enabled by default
         widgets["SearchCase"].setChecked(True)
@@ -1455,13 +1455,9 @@ class RetargetWidget(QtWidgets.QWidget):
             button.entered.connect(on_entered)
             button.exited.connect(on_exited)
 
-        add_help(widgets["SearchType"],
-                 "Toggle to change the marker-destination list perspective.")
-        add_help(widgets["SearchCase"],
-                 "Toggle to change searching with case sensitive or not.")
-        add_help(widgets["Sorting"],
-                 "Change marker-destination list sorting order. Note that "
-                 "hierarchy ordering doesn't work in destination perspective.")
+        add_help(widgets["SearchType"], "Markers on the left, or on the right")
+        add_help(widgets["SearchCase"], "Case sensitivity")
+        add_help(widgets["Sorting"], "Sort order")
 
         widgets["MarkerView"].prompted.connect(self.prompted)
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
@@ -1482,7 +1478,7 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def init(self):
         self._widgets["MarkerView"].refresh()
-        self._widgets["MarkerView"].set_sort_by_name(ascending=True)
+        self._widgets["MarkerView"].set_sort_by_hierarchy()
         self._objects["MayaSelection"].init(
             event_name="SelectionChanged",
             callback=self._widgets["MarkerView"].on_maya_selection_changed,

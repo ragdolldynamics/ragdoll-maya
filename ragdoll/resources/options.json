@@ -859,8 +859,8 @@
         "name": "markersRecordMaintainOffset2",
         "label": "Maintain Offset",
         "type": "Enum",
-        "items": ["Off", "From Retargeting", "From Start"],
-        "default": 2,
+        "items": ["Off", "From Start"],
+        "default": 1,
         "help": "Should I keep the offset between marker and control as I record?"
     },
 

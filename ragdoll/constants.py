@@ -40,7 +40,6 @@ DisplayContacts = 8
 
 # Record
 Off = 0
-FromRetargeting = 1
 FromStart = 2
 
 # Cache
@@ -114,6 +113,7 @@ All = 2
 # Deprecated
 #
 
+FromRetargeting = 2
 InputGuide = 3
 InputOff = 3
 X = "X"

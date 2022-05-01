@@ -69,41 +69,6 @@ def _repeat_this(fn):
     )
 
 
-class _Solver(object):
-    def __init__(self, solver, size, ui_name, conn_list):
-        assert isinstance(solver, str), "Must be hex(str)"
-        # It seems to be that, in Maya 2018, PySide2 is not able to
-        # handle/passing cmdx.Node object as item data in model.
-        # Maya crashes instantly if you do so.
-        # Hence here we can only keep the hash code (hex string) of
-        # the Node so the Qt model won't panic.
-        self.solver = solver
-        self.size = size
-        self.ui_name = ui_name
-        self.conn_list = conn_list
-
-    @property
-    def has_bad_conn(self):
-        return any(c.is_bad for c in self.conn_list)
-
-
-class _Connection(object):
-    def __init__(self, marker, dest, level, natural, icon_m, icon_d,
-                 dot_color, channel, is_bad):
-        assert isinstance(marker, str), "Must be hex(str)"
-        assert dest is None or isinstance(dest, str), (
-            "Must be hex(str) or None")
-        self.marker = marker
-        self.dest = dest
-        self.level = level
-        self.natural = natural
-        self.icon_m = icon_m
-        self.icon_d = icon_d
-        self.dot_color = dot_color
-        self.channel = channel
-        self.is_bad = is_bad
-
-
 _kAnimCurve = int(om.MFn.kAnimCurve)
 _kConstraint = int(om.MFn.kConstraint)
 _kPairBlend = int(om.MFn.kPairBlend)
@@ -170,6 +135,14 @@ def _is_part_of_IK(joint, max_depth=3):
 
 
 class _Scene(object):
+    """Maya scene's marker-destination connection snapshot
+
+    A comparable object for detecting any marker-destination connection
+    changes in Maya scene. And to add/remove connections.
+
+    Note: this isn't Qt model's internal data component but the source of it.
+
+    """
 
     def __init__(self):
         self._solvers = None
@@ -181,11 +154,13 @@ class _Scene(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             raise TypeError("Cannot compare with type %r" % type(other))
-        return self.solvers == other.solvers \
-            and self.markers == other.markers \
-            and self.destinations == other.destinations \
-            and self.dest_channel_status == other.dest_channel_status \
+        return (
+            self.solvers == other.solvers
+            and self.markers == other.markers
+            and self.destinations == other.destinations
+            and self.dest_channel_status == other.dest_channel_status
             and self.bad_retarget == other.bad_retarget
+        )
 
     def __ne__(self, other):  # for '!=' in py2
         return not self.__eq__(other)
@@ -212,7 +187,9 @@ class _Scene(object):
         if self._solvers is None:
             self._solvers = {
                 solver: set(self._iter_markers(solver))
-                for solver in cmdx.ls(type="rdSolver")
+                for solver in internal.promote_linked_solvers(
+                    cmdx.ls(type="rdSolver")
+                )
                 if solver["startState"].connection() is None
                 # unlinked solvers, a.k.a. primary solvers
             }
@@ -288,22 +265,24 @@ class _Scene(object):
             )
 
         if any(s[ch] in {_ChConstrained, _ChPairBlended} for ch in all_ch):
-            return "Some channel is being constrained or blended, may have " \
-                   "unexpected recording result."
+            return ("Some channel is being constrained or blended, may have "
+                    "unexpected recording result.")
 
         if any(s[ch] == _ChHasConnection for ch in all_ch):
-            return "Some channel is being connected, may have unexpected " \
-                   "recording result."
+            return ("Some channel is being connected, may have unexpected "
+                    "recording result.")
 
         if s["IK"]:
-            return "Destination is a joint within IK chain, recording will " \
-                   "be incorrect."
+            return ("Destination is a joint within IK chain, recording will "
+                    "be incorrect.")
 
-        if marker["linearMotion"] == 0 \
-                and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"}) \
-                and all(s[ch] != _ChLocked for ch in {"tx", "ty", "tz"}):
-            return "Marker's translate motion has been set to 'Locked' but " \
-                   "destination's rotation is locked."
+        if (
+                marker["linearMotion"] == 0
+                and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"})
+                and all(s[ch] != _ChLocked for ch in {"tx", "ty", "tz"})
+        ):
+            return ("Marker's translate motion has been set to 'Locked' but "
+                    "destination's rotation is locked.")
 
     @internal.with_undo_chunk
     def add_connection(self, marker, dest, **kwargs):
@@ -320,8 +299,8 @@ class _Scene(object):
 
         self.destinations[marker].add(dest)
         self.dest_channel_status[dest.hex] = _dest_channel_status(dest)
-        self.bad_retarget[marker.hex][dest.hex] = \
-            self.is_bad_retarget(marker, dest)
+        self.bad_retarget[marker.hex][dest.hex] = self.is_bad_retarget(
+            marker, dest)
 
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
@@ -393,6 +372,45 @@ class _Scene(object):
                     yield solver, level, marker_node, None
 
 
+class _Solver(object):
+    """Solver item in data model
+    """
+    def __init__(self, solver, size, ui_name, conn_list):
+        assert isinstance(solver, str), "Must be hex(str)"
+        # It seems to be that, in Maya 2018, PySide2 is not able to
+        # handle/passing cmdx.Node object as item data in model.
+        # Maya crashes instantly if you do so.
+        # Hence here we can only keep the hash code (hex string) of
+        # the Node so the Qt model won't panic.
+        self.solver = solver
+        self.size = size
+        self.ui_name = ui_name
+        self.conn_list = conn_list
+
+    @property
+    def has_bad_conn(self):
+        return any(c.is_bad for c in self.conn_list)
+
+
+class _Connection(object):
+    """Connection item in data model
+    """
+    def __init__(self, marker, dest, level, natural, icon_m, icon_d,
+                 dot_color, channel, is_bad):
+        assert isinstance(marker, str), "Must be hex(str)"
+        assert dest is None or isinstance(dest, str), (
+            "Must be hex(str) or None")
+        self.marker = marker
+        self.dest = dest
+        self.level = level
+        self.natural = natural
+        self.icon_m = icon_m
+        self.icon_d = icon_d
+        self.dot_color = dot_color
+        self.channel = channel
+        self.is_bad = is_bad
+
+
 class MarkerTreeModel(base.BaseItemModel):
     NodeRole = QtCore.Qt.UserRole + 10
     LevelRole = QtCore.Qt.UserRole + 11
@@ -426,8 +444,10 @@ class MarkerTreeModel(base.BaseItemModel):
         self._bad_conn_icon = QtGui.QIcon(_resource("icons", "warning.png"))
 
     def flags(self, index):
-        if index.column() == 2 \
-                or (not index.parent().isValid() and index.column() == 1):
+        if (
+                index.column() == 2
+                or (not index.parent().isValid() and index.column() == 1)
+        ):
             return QtCore.Qt.ItemIsEnabled
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
@@ -608,19 +628,12 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def find_markers(self, marker, solver_index=None):
         if not solver_index:
-            solver = None
-            other = marker["startState"].output()
-            if other.isA("rdSolver"):
-                solver = other
-            elif other.isA("rdGroup"):
-                other = other["startState"].output(type="rdSolver")
-                if other:
-                    solver = other
-
-            if solver:
-                solver_index = self.find_solver(solver)
-            else:
-                return
+            solver = next(s for s, markers in self._scene.solvers.items()
+                          if marker in markers)
+            for i, _s in enumerate(self._internal):
+                if _s.solver == solver.hex:
+                    solver_index = self.index(i, 0)
+                    break
 
         _s = self._internal[solver_index.row()]
         _matched = False
@@ -723,10 +736,9 @@ class MarkerTreeModel(base.BaseItemModel):
             if j == 0:
                 continue
 
+            self.removeRows(_start, j, solver_index)
             for _c in remove[:-1]:
                 _s.conn_list.remove(_c)
-            solver_item = self.itemFromIndex(solver_index)
-            solver_item.setRowCount(solver_item.rowCount() - j)
 
         self._scene.del_connection(markers)
 
@@ -834,7 +846,8 @@ class MarkerItemDelegate(QtWidgets.QStyledItemDelegate):
                 for ax in ("x", "y", "z"):
                     color = cell_colors.get(at + ax)
                     if color == _ChNonKeyable:
-                        rect = QtCore.QRect(_base_x, _y, cell_w - 1, cell_h - 1)
+                        rect = QtCore.QRect(
+                            _base_x, _y, cell_w - 1, cell_h - 1)
                         painter.setPen(QtGui.QColor(color))
                         painter.setBrush(QtGui.QColor(_bg_color))
                     else:
@@ -1230,8 +1243,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._untarget_btn.setEnabled(False)
         if len(selected_marker) and not selected_dest:
             dest_column = int(not selected_marker[0].column())
-            if any(m.siblingAtColumn(dest_column).data(self._model.NodeRole)
-                   for m in selected_marker):
+            if any(base.sibling_at_column(m, dest_column).data(
+                    self._model.NodeRole) for m in selected_marker):
                 self._untarget_btn.setEnabled(True)
 
         # re-targeting
@@ -1283,7 +1296,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 marker_hex = index.data(self._model.NodeRole)
                 if marker_hex in _seen:
                     continue
-                dest_index = index.siblingAtColumn(dest_column)
+                dest_index = base.sibling_at_column(index, dest_column)
                 if dest_index.data(self._model.NodeRole):
                     _seen.add(marker_hex)
                     node_hex = index.data(self._model.NodeRole)
@@ -1316,7 +1329,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         for index in selected:
             index = self._proxy.mapFromSource(index)
             if index.parent().isValid():
-                index = index.siblingAtColumn(int(not index.column()))
+                index = base.sibling_at_column(index, int(not index.column()))
             sele_model.select(index, sele_model.Select)
         if index:
             self._view.scrollTo(index, self._view.PositionAtCenter)
@@ -1465,7 +1478,8 @@ class RetargetWidget(QtWidgets.QWidget):
 
         widgets["MarkerView"].prompted.connect(self.prompted)
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
-        widgets["MarkerView"].view.leave.connect(lambda: self.prompted.emit(""))
+        widgets["MarkerView"].view.leave.connect(
+            lambda: self.prompted.emit(""))
         widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
@@ -1535,7 +1549,8 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def on_search_type_toggled(self, state):
         if state:
-            self._widgets["SearchBar"].setPlaceholderText("Find destinations..")
+            self._widgets["SearchBar"].setPlaceholderText(
+                "Find destinations..")
             self._widgets["Sorting"].block("hierarchy")
             if self._widgets["Sorting"].state() == "hierarchy":
                 self._widgets["Sorting"].set_state("name_az")

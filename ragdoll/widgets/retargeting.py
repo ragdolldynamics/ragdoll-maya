@@ -718,10 +718,9 @@ class MarkerTreeModel(base.BaseItemModel):
             if j == 0:
                 continue
 
+            self.removeRows(_start, j, solver_index)
             for _c in remove[:-1]:
                 _s.conn_list.remove(_c)
-            solver_item = self.itemFromIndex(solver_index)
-            solver_item.setRowCount(solver_item.rowCount() - j)
 
         self._scene.del_connection(markers)
 

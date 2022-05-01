@@ -212,7 +212,9 @@ class _Scene(object):
         if self._solvers is None:
             self._solvers = {
                 solver: set(self._iter_markers(solver))
-                for solver in cmdx.ls(type="rdSolver")
+                for solver in internal.promote_linked_solvers(
+                    cmdx.ls(type="rdSolver")
+                )
                 if solver["startState"].connection() is None
                 # unlinked solvers, a.k.a. primary solvers
             }

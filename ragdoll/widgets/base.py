@@ -280,3 +280,11 @@ class BaseItemModel(QtGui.QStandardItemModel):
 
     def flags(self, index):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+
+def sibling_at_column(index, column):
+    """An alternative of QModelIndex.siblingAtColumn() for Qt version < 5.11
+    """
+    model = index.model()
+    parent = index.parent()
+    return model.index(index.row(), column, parent)

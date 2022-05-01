@@ -1243,8 +1243,8 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         self._untarget_btn.setEnabled(False)
         if len(selected_marker) and not selected_dest:
             dest_column = int(not selected_marker[0].column())
-            if any(m.siblingAtColumn(dest_column).data(self._model.NodeRole)
-                   for m in selected_marker):
+            if any(base.sibling_at_column(m, dest_column).data(
+                    self._model.NodeRole) for m in selected_marker):
                 self._untarget_btn.setEnabled(True)
 
         # re-targeting
@@ -1296,7 +1296,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
                 marker_hex = index.data(self._model.NodeRole)
                 if marker_hex in _seen:
                     continue
-                dest_index = index.siblingAtColumn(dest_column)
+                dest_index = base.sibling_at_column(index, dest_column)
                 if dest_index.data(self._model.NodeRole):
                     _seen.add(marker_hex)
                     node_hex = index.data(self._model.NodeRole)
@@ -1329,7 +1329,7 @@ class MarkerTreeWidget(QtWidgets.QWidget):
         for index in selected:
             index = self._proxy.mapFromSource(index)
             if index.parent().isValid():
-                index = index.siblingAtColumn(int(not index.column()))
+                index = base.sibling_at_column(index, int(not index.column()))
             sele_model.select(index, sele_model.Select)
         if index:
             self._view.scrollTo(index, self._view.PositionAtCenter)

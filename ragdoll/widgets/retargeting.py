@@ -69,41 +69,6 @@ def _repeat_this(fn):
     )
 
 
-class _Solver(object):
-    def __init__(self, solver, size, ui_name, conn_list):
-        assert isinstance(solver, str), "Must be hex(str)"
-        # It seems to be that, in Maya 2018, PySide2 is not able to
-        # handle/passing cmdx.Node object as item data in model.
-        # Maya crashes instantly if you do so.
-        # Hence here we can only keep the hash code (hex string) of
-        # the Node so the Qt model won't panic.
-        self.solver = solver
-        self.size = size
-        self.ui_name = ui_name
-        self.conn_list = conn_list
-
-    @property
-    def has_bad_conn(self):
-        return any(c.is_bad for c in self.conn_list)
-
-
-class _Connection(object):
-    def __init__(self, marker, dest, level, natural, icon_m, icon_d,
-                 dot_color, channel, is_bad):
-        assert isinstance(marker, str), "Must be hex(str)"
-        assert dest is None or isinstance(dest, str), (
-            "Must be hex(str) or None")
-        self.marker = marker
-        self.dest = dest
-        self.level = level
-        self.natural = natural
-        self.icon_m = icon_m
-        self.icon_d = icon_d
-        self.dot_color = dot_color
-        self.channel = channel
-        self.is_bad = is_bad
-
-
 _kAnimCurve = int(om.MFn.kAnimCurve)
 _kConstraint = int(om.MFn.kConstraint)
 _kPairBlend = int(om.MFn.kPairBlend)
@@ -170,6 +135,14 @@ def _is_part_of_IK(joint, max_depth=3):
 
 
 class _Scene(object):
+    """Maya scene's marker-destination connection snapshot
+
+    A comparable object for detecting any marker-destination connection
+    changes in Maya scene. And to add/remove connections.
+
+    Note: this isn't Qt model's internal data component but the source of it.
+
+    """
 
     def __init__(self):
         self._solvers = None
@@ -393,6 +366,45 @@ class _Scene(object):
                         yield solver, level, marker_node, dest_node
                 else:
                     yield solver, level, marker_node, None
+
+
+class _Solver(object):
+    """Solver item in data model
+    """
+    def __init__(self, solver, size, ui_name, conn_list):
+        assert isinstance(solver, str), "Must be hex(str)"
+        # It seems to be that, in Maya 2018, PySide2 is not able to
+        # handle/passing cmdx.Node object as item data in model.
+        # Maya crashes instantly if you do so.
+        # Hence here we can only keep the hash code (hex string) of
+        # the Node so the Qt model won't panic.
+        self.solver = solver
+        self.size = size
+        self.ui_name = ui_name
+        self.conn_list = conn_list
+
+    @property
+    def has_bad_conn(self):
+        return any(c.is_bad for c in self.conn_list)
+
+
+class _Connection(object):
+    """Connection item in data model
+    """
+    def __init__(self, marker, dest, level, natural, icon_m, icon_d,
+                 dot_color, channel, is_bad):
+        assert isinstance(marker, str), "Must be hex(str)"
+        assert dest is None or isinstance(dest, str), (
+            "Must be hex(str) or None")
+        self.marker = marker
+        self.dest = dest
+        self.level = level
+        self.natural = natural
+        self.icon_m = icon_m
+        self.icon_d = icon_d
+        self.dot_color = dot_color
+        self.channel = channel
+        self.is_bad = is_bad
 
 
 class MarkerTreeModel(base.BaseItemModel):

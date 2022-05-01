@@ -610,19 +610,12 @@ class MarkerTreeModel(base.BaseItemModel):
 
     def find_markers(self, marker, solver_index=None):
         if not solver_index:
-            solver = None
-            other = marker["startState"].output()
-            if other.isA("rdSolver"):
-                solver = other
-            elif other.isA("rdGroup"):
-                other = other["startState"].output(type="rdSolver")
-                if other:
-                    solver = other
-
-            if solver:
-                solver_index = self.find_solver(solver)
-            else:
-                return
+            solver = next(s for s, markers in self._scene.solvers.items()
+                          if marker in markers)
+            for i, _s in enumerate(self._internal):
+                if _s.solver == solver.hex:
+                    solver_index = self.index(i, 0)
+                    break
 
         _s = self._internal[solver_index.row()]
         _matched = False

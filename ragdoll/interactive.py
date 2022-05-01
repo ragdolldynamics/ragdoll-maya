@@ -1298,7 +1298,7 @@ def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
 
     if not selection:
-        selection = promote_linked_solvers(
+        selection = i__.promote_linked_solvers(
             solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
         )
 
@@ -1611,24 +1611,6 @@ def solvers_from_selection(selection=None):
                         solvers.add(other)
 
     return tuple(solvers)
-
-
-def promote_linked_solvers(solvers):
-    promoted = set()
-
-    for solver in solvers:
-        linked = solver["startState"].output(type="rdSolver")
-        while linked:
-            also_linked = linked["startState"].output(type="rdSolver")
-            if also_linked:
-                linked = also_linked
-            else:
-                promoted.add(linked)
-                break
-        else:
-            promoted.add(solver)
-
-    return tuple(promoted)
 
 
 @with_exception_handling

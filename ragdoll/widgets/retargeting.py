@@ -154,11 +154,13 @@ class _Scene(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             raise TypeError("Cannot compare with type %r" % type(other))
-        return self.solvers == other.solvers \
-            and self.markers == other.markers \
-            and self.destinations == other.destinations \
-            and self.dest_channel_status == other.dest_channel_status \
+        return (
+            self.solvers == other.solvers
+            and self.markers == other.markers
+            and self.destinations == other.destinations
+            and self.dest_channel_status == other.dest_channel_status
             and self.bad_retarget == other.bad_retarget
+        )
 
     def __ne__(self, other):  # for '!=' in py2
         return not self.__eq__(other)
@@ -263,22 +265,24 @@ class _Scene(object):
             )
 
         if any(s[ch] in {_ChConstrained, _ChPairBlended} for ch in all_ch):
-            return "Some channel is being constrained or blended, may have " \
-                   "unexpected recording result."
+            return ("Some channel is being constrained or blended, may have "
+                    "unexpected recording result.")
 
         if any(s[ch] == _ChHasConnection for ch in all_ch):
-            return "Some channel is being connected, may have unexpected " \
-                   "recording result."
+            return ("Some channel is being connected, may have unexpected "
+                    "recording result.")
 
         if s["IK"]:
-            return "Destination is a joint within IK chain, recording will " \
-                   "be incorrect."
+            return ("Destination is a joint within IK chain, recording will "
+                    "be incorrect.")
 
-        if marker["linearMotion"] == 0 \
-                and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"}) \
-                and all(s[ch] != _ChLocked for ch in {"tx", "ty", "tz"}):
-            return "Marker's translate motion has been set to 'Locked' but " \
-                   "destination's rotation is locked."
+        if (
+                marker["linearMotion"] == 0
+                and all(s[ch] == _ChLocked for ch in {"rx", "ry", "rz"})
+                and all(s[ch] != _ChLocked for ch in {"tx", "ty", "tz"})
+        ):
+            return ("Marker's translate motion has been set to 'Locked' but "
+                    "destination's rotation is locked.")
 
     @internal.with_undo_chunk
     def add_connection(self, marker, dest, **kwargs):
@@ -295,8 +299,8 @@ class _Scene(object):
 
         self.destinations[marker].add(dest)
         self.dest_channel_status[dest.hex] = _dest_channel_status(dest)
-        self.bad_retarget[marker.hex][dest.hex] = \
-            self.is_bad_retarget(marker, dest)
+        self.bad_retarget[marker.hex][dest.hex] = self.is_bad_retarget(
+            marker, dest)
 
         # trigger Maya viewport update
         cmds.dgdirty(marker.shortest_path())
@@ -440,8 +444,10 @@ class MarkerTreeModel(base.BaseItemModel):
         self._bad_conn_icon = QtGui.QIcon(_resource("icons", "warning.png"))
 
     def flags(self, index):
-        if index.column() == 2 \
-                or (not index.parent().isValid() and index.column() == 1):
+        if (
+                index.column() == 2
+                or (not index.parent().isValid() and index.column() == 1)
+        ):
             return QtCore.Qt.ItemIsEnabled
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
@@ -840,7 +846,8 @@ class MarkerItemDelegate(QtWidgets.QStyledItemDelegate):
                 for ax in ("x", "y", "z"):
                     color = cell_colors.get(at + ax)
                     if color == _ChNonKeyable:
-                        rect = QtCore.QRect(_base_x, _y, cell_w - 1, cell_h - 1)
+                        rect = QtCore.QRect(
+                            _base_x, _y, cell_w - 1, cell_h - 1)
                         painter.setPen(QtGui.QColor(color))
                         painter.setBrush(QtGui.QColor(_bg_color))
                     else:
@@ -1471,7 +1478,8 @@ class RetargetWidget(QtWidgets.QWidget):
 
         widgets["MarkerView"].prompted.connect(self.prompted)
         widgets["MarkerView"].view.entered.connect(self.on_view_item_entered)
-        widgets["MarkerView"].view.leave.connect(lambda: self.prompted.emit(""))
+        widgets["MarkerView"].view.leave.connect(
+            lambda: self.prompted.emit(""))
         widgets["Sorting"].stateChanged.connect(self.on_sorting_clicked)
         widgets["SearchCase"].toggled.connect(self.on_search_case_toggled)
         widgets["SearchType"].toggled.connect(self.on_search_type_toggled)
@@ -1541,7 +1549,8 @@ class RetargetWidget(QtWidgets.QWidget):
 
     def on_search_type_toggled(self, state):
         if state:
-            self._widgets["SearchBar"].setPlaceholderText("Find destinations..")
+            self._widgets["SearchBar"].setPlaceholderText(
+                "Find destinations..")
             self._widgets["Sorting"].block("hierarchy")
             if self._widgets["Sorting"].state() == "hierarchy":
                 self._widgets["Sorting"].set_state("name_az")

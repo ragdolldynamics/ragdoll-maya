@@ -5,6 +5,7 @@ RetargetWidget QTreeView {
     color: "%(on_primary)s";
     background-color: "%(background)s";
     alternate-background-color: "%(background_alt)s";
+    selection-background-color: transparent;
     outline: none; /* Disable dotted border on focus */
 }
 

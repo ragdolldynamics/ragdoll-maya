@@ -1296,8 +1296,15 @@ def _add_to_objset(markers):
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
-
-    if not selection:
+    if selection:
+        solvers = i__.promote_linked_solvers(solvers_from_selection(selection))
+        if len(solvers) == 1:
+            # all markers in selection belong to a single solver, take one
+            #   to manipulate.
+            selection = selection[-1:]
+        else:
+            selection = solvers
+    else:
         selection = i__.promote_linked_solvers(
             solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
         )
@@ -1520,8 +1527,8 @@ def markers_from_selection(selection=None):
         if selected.isA(cmdx.kDagNode):
             selected = selected["message"].output(type="rdMarker")
 
-        if selected and selected.isA("rdMarker"):
-            markers += [selected]
+        if selected and selected.isA("rdMarker") and selected not in markers:
+            markers.append(selected)
 
     return markers
 

@@ -628,6 +628,18 @@ class _Recorder(object):
             if not src:
                 continue
 
+            tm = cmdx.Tm(self._dst_to_offset[dst])
+
+            b_tm = dst.transformation()
+            b_rp = b_tm.rotatePivot(cmdx.sTransform)
+            b_ro = b_tm.rotationOrientation()
+
+            tm.setRotationOrientation(b_ro)  # A.k.a. rotateAxis
+            tm.translateBy(b_rp, cmdx.sPreTransform)
+
+            t = tm.translation(cmdx.sPostTransform)
+            r = tm.rotation()
+
             skip_rotate = set()
             skip_translate = set()
 
@@ -668,6 +680,11 @@ class _Recorder(object):
                 pcon = cmdx.encode(pcon[0])
                 new_constraints.append(pcon)
 
+                if self._opts["maintainOffset"] == constants.FromRetargeting:
+                    with cmdx.DagModifier() as mod:
+                        target = pcon["target"][0]
+                        mod.set_attr(target["targetOffsetTranslate"], t)
+
             if skip_rotate != {"x", "y", "z"}:
                 try:
                     ocon = cmds.orientConstraint(
@@ -693,6 +710,10 @@ class _Recorder(object):
 
                 ocon = cmdx.encode(ocon[0])
                 new_constraints.append(ocon)
+
+                if self._opts["maintainOffset"] == constants.FromRetargeting:
+                    with cmdx.DagModifier() as mod:
+                        mod.set_attr(ocon["offset"], r)
 
             # Pull to refresh
             dst["worldMatrix"][0].as_matrix()

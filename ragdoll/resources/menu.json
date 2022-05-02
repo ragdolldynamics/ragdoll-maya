@@ -829,7 +829,7 @@
             "markersRecordCustomStartTime",
             "markersRecordCustomEndTime",
             "markersRecordFilter",
-            "markersRecordMaintainOffset3",
+            "markersRecordMaintainOffset2",
             "markersRecordToLayer",
             "markersRecordAutoCache",
             "markersRecordInitialKey",
@@ -849,7 +849,7 @@
             "markersUseSelection",
             "markersIgnoreJoints",
             "markersRecordFilter",
-            "markersRecordMaintainOffset3"
+            "markersRecordMaintainOffset2"
         ]
     },
 

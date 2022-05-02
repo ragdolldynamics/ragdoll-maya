@@ -44,7 +44,6 @@ from maya import cmds
 from maya.utils import MayaGuiLogHandler
 from maya.api import OpenMaya as om
 from .vendor import cmdx, qargparse
-from .widgets import solver as solver_widgets
 
 from . import (
     commands,
@@ -55,6 +54,7 @@ from . import (
     recording,
     licence,
     telemetry,
+    widgets,
     constants as c,
     internal as i__,
     __
@@ -110,6 +110,8 @@ def _after_scene_open(*args):
     if options.read("upgradeOnSceneOpen"):
         _evaluate_need_to_upgrade()
 
+    uninstall_ui()
+
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded
@@ -118,6 +120,7 @@ def _before_scene_open(*args):
 
 def _before_scene_new(*args):
     cmdx.uninstall()
+    uninstall_ui()
 
 
 def requires_ui(func):
@@ -1232,13 +1235,13 @@ def _find_current_solver(solver):
 
     if solver == NewSolver:
         if not validate_evaluation_mode():
-            return
+            return None, None
 
         if not validate_cached_playback():
-            return
+            return None, None
 
         if not validate_playbackspeed():
-            return
+            return None, None
 
         solver = commands.create_solver(opts={
             "frameskipMethod": options.read("frameskipMethod"),
@@ -1256,6 +1259,14 @@ def _find_current_solver(solver):
         except (cmdx.ExistError, IndexError):
             solver = None
             options.write("markersAssignSolver", 0)
+
+    if _is_interactive():
+        # Protect user against Plugin Shapes not being visible
+        for panel in cmds.getPanel(visiblePanels=True):
+            if not cmds.modelPanel(panel, query=True, exists=True):
+                continue
+
+            cmds.modelEditor(panel, edit=True, pluginShapes=True)
 
     return solver, is_new
 
@@ -1286,7 +1297,7 @@ def _add_to_objset(markers):
 def markers_manipulator(selection=None, **opts):
     selection = markers_from_selection(selection)
     if selection:
-        solvers = promote_linked_solvers(solvers_from_selection(selection))
+        solvers = i__.promote_linked_solvers(solvers_from_selection(selection))
         if len(solvers) == 1:
             # all markers in selection belong to a single solver, take one
             #   to manipulate.
@@ -1294,7 +1305,7 @@ def markers_manipulator(selection=None, **opts):
         else:
             selection = solvers
     else:
-        selection = promote_linked_solvers(
+        selection = i__.promote_linked_solvers(
             solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
         )
 
@@ -1324,7 +1335,7 @@ def markers_manipulator(selection=None, **opts):
             cmds.select(solver_name)
             return markers_manipulator()
 
-        dialog = solver_widgets.SolverSelectorDialog(
+        dialog = widgets.SolverSelectorDialog(
             solvers=selection,
             help=helptext,
             best_guess=None,  # todo: best-guess from viewport
@@ -1378,6 +1389,8 @@ def assign_marker(selection=None, **opts):
     solver, is_new = _find_current_solver(opts["solver"])
 
     if not solver:
+        # This should never really happen
+        log.warning("No solver found")
         return kFailure
 
     if is_new and opts["createGround"]:
@@ -1605,24 +1618,6 @@ def solvers_from_selection(selection=None):
                         solvers.add(other)
 
     return tuple(solvers)
-
-
-def promote_linked_solvers(solvers):
-    promoted = set()
-
-    for solver in solvers:
-        linked = solver["startState"].output(type="rdSolver")
-        while linked:
-            also_linked = linked["startState"].output(type="rdSolver")
-            if also_linked:
-                linked = also_linked
-            else:
-                promoted.add(linked)
-                break
-        else:
-            promoted.add(solver)
-
-    return tuple(promoted)
 
 
 @with_exception_handling
@@ -2176,6 +2171,14 @@ def retarget_marker(selection=None, **opts):
         )
 
     commands.retarget_marker(a, b, opts)
+
+    Window = widgets.RetargetWindow
+    if Window.instance and ui.isValid(Window.instance):
+        try:
+            Window.instance.refresh_if_outdated()
+        except Exception:
+            # This can fail, it's OK
+            pass
 
     return kSuccess
 
@@ -3286,7 +3289,9 @@ def snap_markers_options(*args):
 
 
 def retarget_marker_options(*args):
-    return _Window("retargetMarker", retarget_marker)
+    return _Window("retargetMarker",
+                   retarget_marker,
+                   cls=widgets.RetargetWindow)
 
 
 def create_pin_constraint_options(*args):

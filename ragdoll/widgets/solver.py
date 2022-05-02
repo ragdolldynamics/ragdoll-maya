@@ -3,10 +3,11 @@ import os
 from PySide2 import QtCore, QtWidgets, QtGui
 from ..vendor import cmdx
 from .. import internal
-from . import base, px
+from . import base
 
 # Unused, for type hint in IDEs
 __ = cmdx
+px = base.px
 
 
 def _resource(*fname):

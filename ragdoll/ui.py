@@ -2037,7 +2037,6 @@ class OfflineDialog(QtWidgets.QDialog):
         self.on_response()
 
     def on_deactivate_clicked(self):
-        print("deactivation_request_to_file: %s" % self._reqfname)
         if licence.deactivation_request_to_file(self._reqfname) != 0:
             return log.warning("Failed, see Script Editor")
 

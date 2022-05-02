@@ -729,7 +729,6 @@ class _Recorder(object):
         selection = cmds.ls(selection=True)
         destinations = list(str(dst) for dst in self._find_destinations())
 
-        print(destinations)
         if destinations:
             cmds.bakeResults(*destinations, **kwargs)
         else:

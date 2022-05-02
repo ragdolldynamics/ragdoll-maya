@@ -1265,7 +1265,7 @@ def _find_current_solver(solver, show_plugin_shapes=True):
 
         except (cmdx.ExistError, IndexError):
             options.write("markersAssignSolver", 0)
-            return _find_current_solver(solver, show_plugin_shapes)
+            return _find_current_solver(NewSolver, show_plugin_shapes)
 
     if _is_interactive() and show_plugin_shapes:
         # Protect user against Plugin Shapes not being visible

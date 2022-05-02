@@ -864,6 +864,15 @@
         "help": "Should I keep the offset between marker and control as I record?"
     },
 
+    "markersRecordMaintainOffset3": {
+        "name": "markersRecordMaintainOffset3",
+        "label": "Maintain Offset",
+        "type": "Enum",
+        "items": ["Off", "From Start"],
+        "default": 1,
+        "help": "Should I keep the offset between marker and control as I record?"
+    },
+
     "markersRecordKinematic": {
         "name": "markersRecordKinematic",
         "label": "Include Kinematic Keys",

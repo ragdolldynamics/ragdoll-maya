@@ -717,10 +717,6 @@ def install_menu():
             # so as to facilitate saving menu items to Shelf
             # via Ctrl + Shift + Click.
             script = "from ragdoll import interactive as ri\n"
-
-            if "legacy." in command.__module__:
-                script = "from ragdoll.legacy import interactive as ri\n"
-
             script += "ri.%s()" % command.__name__
             kwargs["command"] = script
 

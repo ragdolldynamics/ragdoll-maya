@@ -63,7 +63,6 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "drawConstraints";
             editorTemplate -addControl "drawDrives";
             editorTemplate -addControl "drawHierarchy";
-            editorTemplate -addControl "drawDestinations";
             editorTemplate -addControl "drawGroups";
             editorTemplate -addControl "drawFields";
             editorTemplate -addControl "drawContacts";

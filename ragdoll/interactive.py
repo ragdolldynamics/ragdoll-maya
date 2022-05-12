@@ -2017,11 +2017,11 @@ def record_markers(selection=None, **opts):
     start_frame = int(start_time.value)
     end_frame = int(end_time.value)
 
-    if opts["autoCache"]:
-        # Leave them cached
-        with cmdx.DagModifier() as mod:
-            for solver in solvers:
-                mod.try_set_attr(solver["cache"], c.StaticCache)
+    cached = {}
+    with cmdx.DagModifier() as mod:
+        for solver in solvers:
+            cached[solver] = solver["cache"].read()
+            mod.try_set_attr(solver["cache"], c.StaticCache)
 
     total_frames = 0
     timer = i__.Timer("record")
@@ -2073,6 +2073,14 @@ def record_markers(selection=None, **opts):
     # The native recorded nodes aren't updated for some reason
     if _is_interactive():
         cmds.currentTime(cmds.currentTime(query=True))
+
+    # Turn off auto-cache after recording, so as to let the viewport
+    # show the cached simulation while it's baking to keyframes. And
+    # to also not re-simulate during baking, that would be a waste.
+    if not opts["autoCache"]:
+        with cmdx.DagModifier() as mod:
+            for solver in solvers:
+                mod.set_attr(solver["cache"], cached[solver])
 
     return kSuccess
 

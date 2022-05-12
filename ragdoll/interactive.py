@@ -2662,6 +2662,26 @@ def assign_plan(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_plan(selection=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    body, feet = sel[0], sel[1:]
+    plan = commands.assign_plan(body, feet)
+
+    # Trigger a draw refresh
+    cmds.select(str(plan))
+
+    return kSuccess
+
+
 def air_field(selection=None, **opts):
     _field("airField", opts={
         "directionX": 1.0,

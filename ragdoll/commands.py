@@ -1610,6 +1610,11 @@ def assign_plan(body, feet):
             dgmod.do_it()
             dgmod.connect(rdfoot["muteTime"], curve["input"])
 
+            for parent in (start_parent, end_parent):
+                cmds.addAttr(str(parent),
+                             ln="stepSequence",
+                             proxy=rdfoot["stepSequence"].path())
+
             left = not left
 
             outputs.append([rdfoot, foot])
@@ -1632,7 +1637,7 @@ def assign_plan(body, feet):
         for src, (rdoutput, output) in locators:
             con = cmds.parentConstraint(src.path(),
                                         output.path(),
-                                        maintainOffset=True)
+                                        maintainOffset=False)
             con = cmdx.encode(con[0])
             mod.set_attr(con["isHistoricallyInteresting"], False)
             _take_ownership(mod, rdoutput, con)

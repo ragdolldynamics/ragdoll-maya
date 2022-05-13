@@ -1507,7 +1507,8 @@ def assign_plan(body, feet):
     outputs = []
 
     with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
-        plan_parent = mod.create_node("transform", name="rPlan")
+        name = "rPlan_%s" % body.name()
+        plan_parent = mod.create_node("transform", name=name)
         rdplan = mod.createNode("rdPlan",
                                 name="rPlanShape",
                                 parent=plan_parent)
@@ -1641,6 +1642,9 @@ def assign_plan(body, feet):
             con = cmdx.encode(con[0])
             mod.set_attr(con["isHistoricallyInteresting"], False)
             _take_ownership(mod, rdoutput, con)
+
+    # Compute initial plan
+    rdplan["startState"].read()
 
     return rdplan
 

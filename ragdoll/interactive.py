@@ -112,6 +112,10 @@ def _after_scene_open(*args):
 
     uninstall_ui()
 
+    # Grant an initial state to any plan lurking about
+    for plan in cmdx.ls(type="rdPlan"):
+        plan["startState"].read()
+
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded

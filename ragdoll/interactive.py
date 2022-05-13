@@ -847,7 +847,7 @@ def install_menu():
 
     with submenu("Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
-        item("resetFoot", assign_plan, assign_plan_options)
+        item("updatePlan", update_plan, update_plan)
 
     with submenu("Fields", icon="force.png"):
         item("airField", air_field)
@@ -2644,20 +2644,20 @@ def unlink_solver(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def assign_plan(selection=None, **opts):
-    sel = selection or cmdx.selection()
+def update_plan(selection=None, **opts):
+    # sel = selection or cmdx.selection()
+
+    # if not sel:
+    sel = cmdx.ls(type="rdPlan")
 
     if len(sel) < 1:
         raise i__.UserWarning(
             "Bad selection",
-            "Select one body and 1 or more feet"
+            "Select a plan to update."
         )
 
-    body, feet = sel[0], sel[1:]
-    plan = commands.assign_plan(body, feet)
-
-    # Trigger a draw refresh
-    cmds.select(str(plan))
+    for plan in sel:
+        plan["startState"].read()
 
     return kSuccess
 

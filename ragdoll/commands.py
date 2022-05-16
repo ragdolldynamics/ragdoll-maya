@@ -792,13 +792,17 @@ def create_ground(solver, options=None):
     return marker
 
 
+def _same_solver(a, b):
+    return a["startState"].output() == b["startState"].output()
+
+
 @internal.with_undo_chunk
 def create_distance_constraint(parent, child, opts=None):
     """Create a new distance constraint between `parent` and `child`"""
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
-    assert parent["_scene"] == child["_scene"], (
-        "%s and %s not part of the same solver"
+    assert _same_solver(parent, child), (
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
@@ -851,7 +855,7 @@ def create_fixed_constraint(parent, child, opts=None):
     """Create a new fixed constraint between `parent` and `child`"""
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
-    assert parent["_scene"] == child["_scene"], (
+    assert _same_solver(parent, child), (
         "%s and %s not part of the same solver"
     )
 
@@ -886,7 +890,7 @@ def create_fixed_constraint(parent, child, opts=None):
 def create_pose_constraint(parent, child, opts=None):
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
-    assert parent["_scene"] == child["_scene"], (
+    assert _same_solver(parent, child), (
         "%s and %s not part of the same solver"
     )
 

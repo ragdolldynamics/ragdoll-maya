@@ -2649,9 +2649,10 @@ def unlink_solver(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def update_plan(selection=None, **opts):
-    # sel = selection or cmdx.selection()
+    opts = dict({
+        "forceUpdate": True,
+    }, **(opts or {}))
 
-    # if not sel:
     sel = cmdx.ls(type="rdPlan")
 
     if len(sel) < 1:
@@ -2661,6 +2662,12 @@ def update_plan(selection=None, **opts):
         )
 
     for plan in sel:
+
+        # Recompute the plan even when nothing has changed
+        # Can be necessary as it sometimes fails for no obvious reason
+        if opts["forceUpdate"]:
+            plan["enabled"] = True
+
         plan["startState"].read()
 
     return kSuccess

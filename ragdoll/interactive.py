@@ -851,6 +851,10 @@ def install_menu():
 
     with submenu("Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
+        item("resetFoot", reset_foot, reset_foot)
+
+        divider()
+
         item("updatePlan", update_plan, update_plan)
 
     with submenu("Fields", icon="force.png"):
@@ -2670,6 +2674,8 @@ def update_plan(selection=None, **opts):
 
         plan["startState"].read()
 
+    cmds.refresh()
+
     return kSuccess
 
 
@@ -2686,6 +2692,33 @@ def assign_plan(selection=None, **opts):
 
     body, feet = sel[0], sel[1:]
     plan = commands.assign_plan(body, feet)
+
+    # Trigger a draw refresh
+    cmds.select(str(plan))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_foot(selection=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    with cmdx.DagModifier() as mod:
+        for foot in cmdx.ls(type="rdFoot"):
+            plan = foot["currentState"].output(type="rdPlan")
+            if not plan:
+                continue
+
+            mtx = foot["targets"][0].as_matrix()
+            mtx *= plan["targets"][0].as_matrix().inverse()
+            mod.set_attr(foot["nominalMatrix"], mtx)
 
     # Trigger a draw refresh
     cmds.select(str(plan))

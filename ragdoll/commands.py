@@ -1514,7 +1514,7 @@ def assign_plan(body, feet):
         name = "rPlan_%s" % body.name()
         plan_parent = mod.create_node("transform", name=name)
         rdplan = mod.createNode("rdPlan",
-                                name="rPlanShape",
+                                name=name + "Shape",
                                 parent=plan_parent)
 
         mod.connect(time["outTime"], rdplan["currentTime"])
@@ -1626,16 +1626,20 @@ def assign_plan(body, feet):
 
     # Generate outputs
     locators = []
-    with cmdx.DagModifier() as mod:
+    with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
         for rdoutput, output in outputs:
             locator = mod.create_node("transform",
                                       name=output.name() + "_rOut",
                                       parent=plan_parent)
+            decompose = dgmod.create_node("decomposeMatrix")
 
-            mod.connect(rdoutput["outputMatrix"],
-                        locator["offsetParentMatrix"])
+            mod.connect(rdoutput["outputMatrix"], decompose["inputMatrix"])
+            mod.connect(decompose["outputTranslate"], locator["translate"])
+            mod.connect(decompose["outputRotate"], locator["rotate"])
+
             locators.append([locator, (rdoutput, output)])
             _take_ownership(mod, rdoutput, locator)
+            _take_ownership(mod, rdoutput, decompose)
 
         mod.do_it()
 

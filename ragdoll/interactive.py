@@ -644,28 +644,7 @@ def install_plugin():
         cmds.loadPlugin(c.RAGDOLL_PLUGIN, quiet=True)
 
     # Required for undo
-    try:
-        cmds.loadPlugin("cmdx_ragdoll", quiet=True)
-    except RuntimeError:
-        # This is added to MAYA_PLUG_IN_PATH via the Maya module,
-        # but during development there is no module.
-        vendor_path = os.path.normpath(os.path.dirname(cmdx.__file__)).lower()
-        plugin_path = os.path.normpath(os.environ["MAYA_PLUG_IN_PATH"]).lower()
-        if vendor_path not in plugin_path:
-            log.info("cmdx added to MAYA_PLUG_IN_PATH")
-            os.environ["MAYA_PLUG_IN_PATH"] = os.pathsep.join([
-                os.environ["MAYA_PLUG_IN_PATH"],
-                vendor_path
-            ])
-
-        try:
-            cmds.loadPlugin("cmdx_ragdoll", quiet=True)
-
-        except RuntimeError:
-            # Not being loaded will prompt Maya 2022 users for permission
-            # once it loads itself from the /vendor directory. This isn't
-            # ideal, but it's better than breaking all Ragdoll.
-            pass
+    cmdx.install()
 
     # Required by commands.py
     cmds.loadPlugin("matrixNodes", quiet=True)
@@ -851,11 +830,12 @@ def install_menu():
 
     with submenu("Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
+        item("assignTerrain", assign_terrain, assign_terrain)
         item("resetFoot", reset_foot, reset_foot)
 
         divider()
 
-        item("updatePlan", update_plan, update_plan)
+        item("updatePlan", update_plan, update_plan_options)
 
     with submenu("Fields", icon="force.png"):
         item("airField", air_field)
@@ -1695,7 +1675,24 @@ def extract_from_solver(selection=None, **opts):
 @with_exception_handling
 @i__.with_undo_chunk
 def group_markers(selection=None, **opts):
-    markers = markers_from_selection(selection)
+
+    # Let the user merge groups
+    groups = []
+    for group in cmdx.selection() or selection:
+        if group.is_a(cmdx.kTransform):
+            group = group.shape(type="rdGroup")
+
+        if group and group.is_a("rdGroup"):
+            groups.append(group)
+
+    markers = []
+    for group in groups:
+        for element in group["inputStart"]:
+            marker = element.input(type="rdMarker")
+            if marker:
+                markers.append(marker)
+
+    markers += markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2654,7 +2651,7 @@ def unlink_solver(selection=None, **opts):
 @with_exception_handling
 def update_plan(selection=None, **opts):
     opts = dict({
-        "forceUpdate": True,
+        "forceUpdate": _opt("planForceUpdate", opts),
     }, **(opts or {}))
 
     sel = cmdx.ls(type="rdPlan")
@@ -2695,6 +2692,40 @@ def assign_plan(selection=None, **opts):
 
     # Trigger a draw refresh
     cmds.select(str(plan))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_terrain(selection=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) != 2:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select terrain and plan"
+        )
+
+    mesh, plan = sel[0], sel[1]
+
+    if plan.is_a(cmdx.kTransform):
+        plan = plan.shape(type="rdPlan")
+
+    if mesh.is_a(cmdx.kTransform):
+        mesh = mesh.shape(type="mesh")
+
+    if not (plan and plan.is_a("rdPlan")) and (mesh and mesh.is_a("mesh")):
+        raise i__.UserWarning(
+            "Terrain must be a 'mesh'",
+            "Select the plan, followed by a mesh to use for a terrain."
+        )
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(mesh["outMesh"], plan["heightmapGeometry"])
+        mod.connect(mesh["worldMatrix"][0], plan["heightmapGeometryMatrix"])
+
+    update_plan()
 
     return kSuccess
 
@@ -3325,6 +3356,11 @@ def reset_preferences(*args):
 
 def assign_plan_options(*args):
     return _Window("assignPlan", assign_plan)
+
+
+def update_plan_options(*args):
+    return _Window("updatePlan", update_plan)
+
 
 def replace_marker_mesh_options(*args):
     return _Window("markerReplaceMesh", replace_marker_mesh)

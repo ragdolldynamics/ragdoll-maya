@@ -233,12 +233,22 @@
         ]
     },
 
+    "assignTerrain": {
+        "label": "Assign Terrain",
+        "icon": "environment.png",
+        "summary": "Assign a terrain to selected plan.",
+        "description": "Use the selected polygon mesh as terrain for the plan.",
+        "options": [
+        ]
+    },
+
     "updatePlan": {
         "label": "Update Plan",
         "icon": "reset.png",
         "summary": "Recompute locomotion for all or selected plans.",
         "description": "Compute a new locomotion.",
         "options": [
+            "planForceUpdate"
         ]
     },
 

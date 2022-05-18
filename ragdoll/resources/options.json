@@ -456,6 +456,19 @@
 
 
     "#": "----------------",
+    "#": " Planning       ",
+    "#": "----------------",
+
+    "planForceUpdate": {
+        "name": "planForceUpdate",
+        "label": "Force Update",
+        "type": "Boolean",
+        "default": false,
+        "help": "Update a plan, even when nothing has changed."
+    },
+
+
+    "#": "----------------",
     "#": " Import/Export  ",
     "#": "----------------",
 

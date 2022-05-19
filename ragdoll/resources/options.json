@@ -554,9 +554,9 @@
         "name": "importMatchBy",
         "label": "Match By",
         "type": "Enum",
-        "default": 1,
+        "default": 0,
         "items": ["Name", "Hierarchy"],
-        "help": "Find an exact match either by full hierarchy, or just the name of the node."
+        "help": "Find an exact match either by name, or the full hierarchy of the node."
     },
 
     "importCurrentSelection": {

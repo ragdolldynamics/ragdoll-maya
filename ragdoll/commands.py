@@ -1552,6 +1552,16 @@ def assign_plan(body, feet):
 
         outputs.append([rdplan, body])
 
+        body_position = body.translation(cmdx.sWorld)
+        foot_position = feet[0].translation(cmdx.sWorld)
+        limits = abs(body_position.y - foot_position.y)
+        limits *= 0.25
+
+        # TODO: Need to do a better job computing this default
+        bbox = body.bounding_box
+        extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+        mod.set_attr(body["extents"], extents)
+
         left = False
         for foot in feet:
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
@@ -1587,6 +1597,11 @@ def assign_plan(body, feet):
             index = rdplan["inputStart"].next_available_index()
             mod.connect(rdfoot["startState"], rdplan["inputStart"][index])
             mod.connect(rdfoot["currentState"], rdplan["inputCurrent"][index])
+
+            for a in ("min", "max"):
+                for b in "XYZ":
+                    attr = "%sFootDeviation%s" % (a, b)
+                    mod.set_attr(rdfoot[attr], limits)
 
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
             dgmod.connect(start_parent["worldMatrix"][0], rdfoot["targets"][0])

@@ -1472,6 +1472,8 @@ def assign_plan(body, feet):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
+    strut = "0011001100111100"
+
     time = cmdx.encode("time1")
 
     # Determine the direction and distance to offset the end target
@@ -1531,6 +1533,9 @@ def assign_plan(body, feet):
         mod.set_attr(plan_start_parent["displayHandle"], True)
         mod.set_attr(plan_end_parent["displayHandle"], True)
 
+        up = cmdx.up_axis()
+        mod.set_attr(rdplan["gravity"], up * -982)
+
         body_tm.translateBy(end_offset, cmdx.sPreTransform)
         mod.set_attr(plan_end_parent["translate"], body_tm.translation())
         mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
@@ -1554,16 +1559,20 @@ def assign_plan(body, feet):
 
         body_position = body.translation(cmdx.sWorld)
         foot_position = feet[0].translation(cmdx.sWorld)
-        limits = abs(body_position.y - foot_position.y)
-        limits *= 0.25
+
+        if up.y:
+            limits = abs(body_position.y - foot_position.y)
+        else:
+            limits = abs(body_position.z - foot_position.z)
+
+        limits *= 0.5
 
         # TODO: Need to do a better job computing this default
         bbox = body.bounding_box
         extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
-        mod.set_attr(body["extents"], extents)
+        mod.set_attr(rdplan["extents"], extents)
 
-        left = False
-        for foot in feet:
+        for offset, foot in enumerate(feet):
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
 
             start_parent = mod.create_node("transform",
@@ -1610,21 +1619,32 @@ def assign_plan(body, feet):
             dgmod.set_attr(rdfoot["color"], internal.random_color())
             dgmod.set_attr(rdfoot["version"], internal.version())
 
-            # Make step sequence
-            offset = 0 if left else 10
-            dgmod.set_attr(rdfoot["stepSequence", cmdx.Stepped], {
-                1: False,
-                10 + offset: True,
-                20 + offset: False,
-                30 + offset: True,
-                40 + offset: False,
-                50 + offset: True,
-                70: False,
-                80: False,
-            })
+            resolution = 5
+            offset *= 2
+            start_time = int(cmdx.min_time().value)
+            last_value = strut[0]
+
+            anim = {
+                start_time: False,
+                start_time + len(strut) * resolution: False
+            }
+
+            for t, value in enumerate(strut[1:]):
+                if value != last_value:
+                    t = ((t + 1) * resolution)
+                    t += offset
+
+                    if t > (len(strut) * resolution):
+                        continue
+
+                    t += start_time
+                    anim[t] = bool(int(value))
+                    last_value = value
+
+            dgmod.set_attr(rdfoot["stepSequence", cmdx.Stepped], anim)
+            dgmod.do_it()
 
             # Prevent DG updates from changes to time
-            dgmod.do_it()
             curve = rdfoot["stepSequence"].input()
             dgmod.add_attr(rdfoot, cmdx.Time("muteTime"))
             dgmod.do_it()
@@ -1634,8 +1654,6 @@ def assign_plan(body, feet):
                 cmds.addAttr(str(parent),
                              ln="stepSequence",
                              proxy=rdfoot["stepSequence"].path())
-
-            left = not left
 
             outputs.append([rdfoot, foot])
 

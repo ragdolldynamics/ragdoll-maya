@@ -21,7 +21,8 @@ def create(typ, mod, name, parent=None):
 
         # Defaults
         up = cmdx.up_axis()
-        mod.set_attr(node["positionIterations"], 4)
+        mod.set_attr(node["positionIterations"], 8)
+        mod.set_attr(node["substeps"], 8)
         mod.set_attr(node["gravity"], up * -982)
         mod.set_attr(node["spaceMultiplier"], 0.1)
         mod.set_attr(node["airDensity"], 0.1)

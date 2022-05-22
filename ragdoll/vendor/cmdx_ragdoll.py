@@ -8327,7 +8327,10 @@ class _apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
-    om.MFnPlugin(plugin, "cmdx", __version__).registerCommand(
+    # Only supports major.minor (no patch)
+    version = ".".join(__version__.rsplit(".")[:2])
+
+    om.MFnPlugin(plugin, "cmdx", version).registerCommand(
         unique_command,
         _apiUndo
     )

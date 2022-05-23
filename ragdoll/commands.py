@@ -1620,7 +1620,7 @@ def assign_plan(body, feet):
             dgmod.set_attr(rdfoot["version"], internal.version())
 
             resolution = 5
-            offset *= 2
+            offset *= 5
             start_time = int(cmdx.min_time().value)
             last_value = strut[0]
 

@@ -111,15 +111,16 @@
             "sceneScale",
             "cacheMedia",
             "maxFrames",
+            "viewportGamma",
+            "manipulatorFitToViewOverride",
+            "manipulatorMayaSelect",
+            "reloadShaders",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",
             "validateLegacyOpenGL2",
             "validateScalePivot",
-            "validatePlaybackSpeed",
-            "manipulatorFitToViewOverride",
-            "manipulatorMayaSelect",
-            "reloadShaders"
+            "validatePlaybackSpeed"
         ]
     },
     "savePreferences": {

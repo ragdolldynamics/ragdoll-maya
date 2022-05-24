@@ -116,6 +116,16 @@ def _after_scene_open(*args):
     for plan in cmdx.ls(type="rdPlan"):
         plan["startState"].read()
 
+    options.write("viewportGamma", 1.0)
+
+    # lut = cmds.colorManagementPrefs(query=True, renderingSpaceName=True)
+
+    # if lut == "sRGB gamma":
+    #     options.write("viewportGamma", 1.8)
+
+    # elif lut.startswith("ACES 1.0 SDR-video"):
+    #     options.write("viewportGamma", 1.2)
+
 
 def _before_scene_open(*args):
     # Let go of all memory, to allow Ragdoll plug-in to be unloaded

@@ -1116,11 +1116,22 @@
     "#": "----------------",
 
 
+    "viewportGamma": {
+        "name": "viewportGamma",
+        "label": "Viewport Gamma",
+        "type": "Float",
+        "default": 2.2,
+        "min": 0.5,
+        "max": 3.0,
+        "help": "Ragdoll will compensate for your viewport gamma, to make your color match 1-to-1 in the viewport."
+    },
     "maxFrames": {
         "name": "maxFrames",
-        "label": "Maximum possible frames to simulate",
+        "label": "Maximum Frames",
         "type": "Integer",
-        "default": 10000,
+        "default": 9999,
+        "min": 1,
+        "max": 9999,
         "help": "Ragdoll will allocate memory for every frame of the current Maya timeline, up to this amount. A default of 10,000 means an average of 5-10 mb of memory is allocated."
     },
     "autoInitialState": {

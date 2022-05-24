@@ -78,7 +78,7 @@ GLSLShader ShaderColor
         vec3 result = objectColor + diffuse + specular;
 
         // Gamma correction
-        result = pow(result, vec3(1.0 / gGamma));
+        if (gGamma > 0.1) result = pow(result, vec3(1.0 / gGamma));
 
         outColor = vec4(result, 1.0);
     }

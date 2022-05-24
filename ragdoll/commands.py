@@ -1472,8 +1472,7 @@ def assign_plan(body, feet):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
-    # strut = "0011001100111100"
-    # strut = "00110011001100"
+    strut = "00110011001100"
 
     time = cmdx.encode("time1")
 
@@ -1635,55 +1634,15 @@ def assign_plan(body, feet):
             dgmod.set_attr(rdfoot["version"], internal.version())
 
             # Make step sequence
-            offset = 0 if (offset % 2 == 0) else 10
-            dgmod.set_attr(rdfoot["stepSequence", cmdx.Stepped], {
-                1: False,
-                10 + offset: True,
-                20 + offset: False,
-                30 + offset: True,
-                40 + offset: False,
-                50 + offset: True,
-                70: False,
-                80: False,
-            })
+            start = offset * 5
+            end = start + len(strut)
+            sequence = (strut * 10)[start:end]
+            steps = []
+            for step in sequence:
+                for repeat in range(5):
+                    steps.append(bool(int(step)))
 
-            # resolution = 5
-            # start_time = int(cmdx.min_time().value)
-            # prev_value = strut[0]
-            # cycle = strut * 10
-
-            # anim = {
-            #     start_time: False,
-            #     # start_time + len(strut) * resolution: False
-            # }
-
-            # for t in range(len(strut)):
-            #     t += offset
-            #     value = cycle[t + offset]
-
-            #     if value == prev_value:
-            #         continue
-
-            #     t *= resolution
-            #     t += start_time
-
-            #     anim[t] = bool(int(value))
-            #     prev_value = value
-
-            # dgmod.set_attr(rdfoot["stepSequence", cmdx.Stepped], anim)
-
-            # Prevent DG updates from changes to time
-            dgmod.do_it()
-            curve = rdfoot["stepSequence"].input()
-            dgmod.add_attr(rdfoot, cmdx.Time("muteTime"))
-            dgmod.do_it()
-            dgmod.connect(rdfoot["muteTime"], curve["input"])
-
-            for parent in (start_parent, end_parent):
-                cmds.addAttr(str(parent),
-                             ln="stepSequence",
-                             proxy=rdfoot["stepSequence"].path())
-
+            mod.set_attr(rdfoot["stepSequence"], steps)
             outputs.append([rdfoot, foot])
 
     # Generate outputs

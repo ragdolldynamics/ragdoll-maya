@@ -1120,7 +1120,7 @@
         "name": "viewportGamma",
         "label": "Viewport Gamma",
         "type": "Float",
-        "default": 2.2,
+        "default": 1.0,
         "min": 0.5,
         "max": 3.0,
         "help": "Ragdoll will compensate for your viewport gamma, to make your color match 1-to-1 in the viewport."

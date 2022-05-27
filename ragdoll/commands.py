@@ -1595,9 +1595,22 @@ def assign_plan(body, feet):
 
         limits *= 0.25
 
-        # TODO: Need to do a better job computing this default
-        bbox = body.bounding_box
-        extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
+        # Figure out defaults extents from body and feet positions
+        bbox = cmdx.BoundingBox()
+        bbox.expand(body_pos)
+        for foot in feet:
+            bbox.expand(foot.translation(cmdx.sWorld))
+
+        extents = [bbox.width, bbox.height, bbox.depth]
+
+        # For 2 feet, we have no thickness!
+        if min(extents) < max(extents) / 4:
+            extents[extents.index(min(extents))] = max(extents) / 4
+
+        # For 1 foot, we have no depth!
+        if min(extents) < max(extents) / 4:
+            extents[extents.index(min(extents))] = max(extents) / 4
+
         mod.set_attr(rdplan["extents"], extents)
 
         for offset, foot in enumerate(feet):

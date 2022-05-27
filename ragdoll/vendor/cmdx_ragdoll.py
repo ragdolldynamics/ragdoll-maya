@@ -4693,6 +4693,11 @@ class Color(om.MColor):
 class BoundingBox(om.MBoundingBox):
     """Maya's MBoundingBox"""
 
+    def expand(self, position):
+        if isinstance(position, om.MVector):
+            position = Point(position)
+        return super(BoundingBox, self).expand(position)
+
     def volume(self):
         return self.width * self.height * self.depth
 

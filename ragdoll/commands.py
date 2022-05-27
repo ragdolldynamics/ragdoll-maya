@@ -1472,7 +1472,7 @@ def assign_plan(body, feet):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
-    strut = "00110011001100"
+    strut = "001100110011"
 
     time = cmdx.encode("time1")
 
@@ -1504,13 +1504,26 @@ def assign_plan(body, feet):
         longest.z = 0
 
     longest_value = max(longest)
-    longest_axis = tuple(longest).index(longest_value)
+    walking_axis = tuple(longest).index(longest_value)
+    walking_distance = (
+        feet[0].translation(cmdx.sWorld) - body.translation(cmdx.sWorld)
+    ).length() * 4
 
     # Walk 4 body lengths per default
     end_offset = cmdx.Vector(0, 0, 0)
-    end_offset[longest_axis] = longest_value * 4
+    end_offset[walking_axis] = walking_distance
+
+    if len(feet) == 2:
+        rotation = cmdx.Quaternion(
+            cmdx.Vector(1, 0, 0),
+            cmdx.Vector(0, 0, 1)
+        )
+        end_offset = end_offset.rotate_by(rotation)
 
     outputs = []
+
+    maya_range = int((cmdx.max_time() - cmdx.min_time()).value) - 9
+    maya_range = max(maya_range, 50)  # Minimum 2 seconds
 
     with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
         name = "rPlan_%s" % body.name()
@@ -1535,6 +1548,7 @@ def assign_plan(body, feet):
 
         up = cmdx.up_axis()
         mod.set_attr(rdplan["gravity"], up * -982)
+        mod.set_attr(rdplan["duration"], maya_range)
 
         space_multiplier = 1.0
 
@@ -1579,7 +1593,7 @@ def assign_plan(body, feet):
         else:
             limits = abs(body_position.z - foot_position.z)
 
-        limits *= 0.5
+        limits *= 0.25
 
         # TODO: Need to do a better job computing this default
         bbox = body.bounding_box
@@ -1596,10 +1610,16 @@ def assign_plan(body, feet):
                                          name=foot.name() + "_rEnd",
                                          parent=plan_end_parent)
 
+            foot_tm = cmdx.Tm(foot["worldMatrix"][0].as_matrix())
+            foot_pos = foot_tm.translation()
+            foot_pos.y = 0
+            foot_tm.set_translation(foot_pos)
+
             tm = cmdx.Tm(
-                foot["worldMatrix"][0].as_matrix() *
-                plan_start_parent["worldInverseMatrix"][0].as_matrix()
+                foot_tm.as_matrix() *
+                body["worldInverseMatrix"][0].as_matrix()
             )
+
             mod.set_attr(start_parent["translate"], tm.translation())
             mod.set_attr(start_parent["rotate"], tm.rotation())
             mod.set_attr(end_parent["translate"], tm.translation())
@@ -1634,13 +1654,16 @@ def assign_plan(body, feet):
             dgmod.set_attr(rdfoot["version"], internal.version())
 
             # Make step sequence
-            start = offset * 5
-            end = start + len(strut)
-            sequence = (strut * 10)[start:end]
+            start = offset * 2
+            end = maya_range / 5
+            sequence = (strut * 50)[start + 0:start + end]
             steps = []
             for step in sequence:
                 for repeat in range(5):
                     steps.append(bool(int(step)))
+
+            # Default to foot down at the end
+            steps[-5:] = [False, False, False, False, False]
 
             mod.set_attr(rdfoot["stepSequence"], steps)
             outputs.append([rdfoot, foot])
@@ -1664,10 +1687,19 @@ def assign_plan(body, feet):
 
         mod.do_it()
 
+        rdplan["startState"].read()
+        rdplan["outputMatrix"].as_matrix()
+
         for src, (rdoutput, output) in locators:
-            con = cmds.parentConstraint(src.path(),
-                                        output.path(),
-                                        maintainOffset=False)
+            if rdoutput.is_a("rdPlan"):
+                con = cmds.parentConstraint(src.path(),
+                                            output.path(),
+                                            maintainOffset=True)
+            else:
+                con = cmds.pointConstraint(src.path(),
+                                           output.path(),
+                                           maintainOffset=True)
+
             con = cmdx.encode(con[0])
             mod.set_attr(con["isHistoricallyInteresting"], False)
             _take_ownership(mod, rdoutput, con)

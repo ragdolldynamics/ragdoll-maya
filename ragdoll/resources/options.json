@@ -467,6 +467,14 @@
         "help": "Update a plan, even when nothing has changed."
     },
 
+    "planAutoUpdate": {
+        "name": "planAutoUpdate",
+        "label": "Auto Update",
+        "type": "Boolean",
+        "default": true,
+        "help": "Always keep plan up to date."
+    },
+
 
     "#": "----------------",
     "#": " Import/Export  ",

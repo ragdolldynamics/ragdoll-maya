@@ -249,7 +249,8 @@
         "summary": "Recompute locomotion for all or selected plans.",
         "description": "Compute a new locomotion.",
         "options": [
-            "planForceUpdate"
+            "planForceUpdate",
+            "planAutoUpdate"
         ]
     },
 

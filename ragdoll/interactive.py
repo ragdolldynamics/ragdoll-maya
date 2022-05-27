@@ -1544,19 +1544,6 @@ def assign_environment(selection=None, **opts):
     return kSuccess
 
 
-def markers_from_selection(selection=None):
-    markers = []
-
-    for selected in selection or cmdx.selection():
-        if selected.isA(cmdx.kDagNode):
-            selected = selected["message"].output(type="rdMarker")
-
-        if selected and selected.isA("rdMarker") and selected not in markers:
-            markers.append(selected)
-
-    return markers
-
-
 def solvers_from_selection(selection=None):
     """Find solvers from selection
 
@@ -1617,7 +1604,7 @@ def solvers_from_selection(selection=None):
         "rdGroup",
         "rdFixedConstraint",
         "rdPinConstraint",
-        "rdDistanceConstraint"
+        "rdDistanceConstraint",
     )
 
     for selected in selection:
@@ -1642,6 +1629,39 @@ def solvers_from_selection(selection=None):
                         solvers.add(other)
 
     return tuple(solvers)
+
+
+def markers_from_selection(selection=None):
+    """Find solvers from selection
+
+    Examples:
+        >>> ctrl1, _ = cmds.polyCube()
+        >>> ctrl2, _ = cmds.polyCube()
+        >>> cmds.select(ctrl1, ctrl2)
+        >>> _ = assign_marker()
+
+        # Select transform
+        >>> cmds.select(ctrl1)
+        >>> len(markers_from_selection())
+        1
+
+        # Select markers, including ground
+        >>> cmds.select(cmds.ls(type="rdMarker"))
+        >>> len(markers_from_selection())
+        3
+
+    """
+
+    markers = set()
+
+    for selected in selection or cmdx.selection():
+        if selected.isA(cmdx.kDagNode):
+            selected = selected["message"].output(type="rdMarker")
+
+        if selected and selected.isA("rdMarker"):
+            markers.add(selected)
+
+    return tuple(markers)
 
 
 @with_exception_handling

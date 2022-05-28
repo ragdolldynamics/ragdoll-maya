@@ -1668,7 +1668,7 @@ def assign_plan(body, feet):
 
             # Make step sequence
             start = offset * 2
-            end = maya_range / 5
+            end = maya_range // 5
             sequence = (strut * 50)[start + 0:start + end]
             steps = []
             for step in sequence:

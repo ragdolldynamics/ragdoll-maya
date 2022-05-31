@@ -7401,6 +7401,9 @@ def curve(parent, points, degree=1, form=kOpen, mod=None):
         "parent must be of type cmdx.DagNode"
     )
 
+    if isinstance(points, tuple):
+        points = list(points)
+
     degree = min(3, max(1, degree))
 
     if degree > 1:
@@ -7865,6 +7868,19 @@ class Long(_AbstractAttribute):
 
     def read(self, data):
         return data.inputValue(self["mobject"]).asLong()
+
+
+class Integer(_AbstractAttribute):
+    Fn = om.MFnNumericAttribute
+    Type = om.MFnNumericData.kInt
+    Default = 0
+
+    def read(self, data):
+        return data.inputValue(self["mobject"]).asLong()
+
+
+# Alias
+Int = Integer
 
 
 class Double(_AbstractAttribute):

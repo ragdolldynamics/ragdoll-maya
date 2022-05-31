@@ -12,6 +12,7 @@ STATUS_ACTIVATE = 3             # The product needs to be activated.
 STATUS_ALREADY_ACTIVATED = 26   # No action needed
 STATUS_INET = 4                 # Connection to the server failed.
 STATUS_KEY_FOR_TURBOFLOAT = 20  # Used a floating key to activate node-locked
+STATUS_IN_VM = 17               # Activating within a VM
 STATUS_INET_DELAYED = 21        # Waiting 5 hours to reconnect with server
 STATUS_INUSE = 5                # Maximum number of activations reached
 STATUS_FEATURES_CHANGED = 22    # Licence fields have changed
@@ -219,6 +220,12 @@ def activate(key):
         log.error(
             "The key provided is meant for a floating licence server, "
             "this here is for node-locked activation only."
+        )
+
+    elif status == STATUS_IN_VM:
+        log.error(
+            "This serial cannot be used in a virtual machine, you'll need "
+            "a floating licence for that."
         )
 
     elif status == STATUS_INUSE:

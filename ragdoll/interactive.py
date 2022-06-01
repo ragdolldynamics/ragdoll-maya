@@ -2752,6 +2752,7 @@ def assign_terrain(selection=None, **opts):
         )
 
     with cmdx.DagModifier() as mod:
+        mod.set_attr(plan["heightmapEnabled"], True)
         mod.connect(mesh["outMesh"], plan["heightmapGeometry"])
         mod.connect(mesh["worldMatrix"][0], plan["heightmapGeometryMatrix"])
 

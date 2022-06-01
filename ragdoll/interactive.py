@@ -1813,32 +1813,12 @@ def ungroup_markers(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_distance_constraint(selection=None, **opts):
-    selection = selection or cmdx.sl()
-
     try:
-        a, b = selection
+        a, b = markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
             "Select two markers to constrain."
-        )
-
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
-
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[0]
-        )
-
-    if not (b and b.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[1]
         )
 
     con = commands.create_distance_constraint(a, b)
@@ -1850,32 +1830,12 @@ def create_distance_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_fixed_constraint(selection=None, **opts):
-    selection = selection or cmdx.sl()
-
     try:
-        a, b = selection
+        a, b = markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
             "Select two markers to constrain."
-        )
-
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
-
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[0]
-        )
-
-    if not (b and b.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[1]
         )
 
     con = commands.create_fixed_constraint(a, b)

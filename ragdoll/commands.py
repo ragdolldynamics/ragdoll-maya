@@ -1473,15 +1473,14 @@ def assign_plan(body, feet):
     ), "`feet` was not a tuple of transforms"
 
     strut = "001100110011"
-
     time = cmdx.encode("time1")
 
     # Determine the direction and distance to offset the end target
-    body_inv_mtx = body["worldInverseMatrix"][0].as_matrix()
+    body_pos = body.translation(cmdx.sWorld)
     positions = []
     for foot in feet:
-        foot_mtx = foot["worldMatrix"][0].as_matrix()
-        positions.append(cmdx.Tm(foot_mtx * body_inv_mtx).translation())
+        foot_pos = foot.translation(cmdx.sWorld)
+        positions.append(foot_pos - body_pos)
 
     # Assume 4 feet for now, in which case we want the character to move
     # along the narrowest axis.
@@ -1492,6 +1491,7 @@ def assign_plan(body, feet):
     #  .           .
     #   o           o
     #
+    up = cmdx.up_axis()
     longest = cmdx.Vector(0, 0, 0)
     for position in positions:
         longest.x = max(longest.x, abs(position.x))
@@ -1506,7 +1506,7 @@ def assign_plan(body, feet):
     longest_value = max(longest)
     walking_axis = tuple(longest).index(longest_value)
     walking_distance = (
-        feet[0].translation(cmdx.sWorld) - body.translation(cmdx.sWorld)
+        feet[0].translation(cmdx.sWorld) - body_pos
     ).length() * 4
 
     # Walk 4 body lengths per default
@@ -1514,10 +1514,18 @@ def assign_plan(body, feet):
     end_offset[walking_axis] = walking_distance
 
     if len(feet) == 2:
-        rotation = cmdx.Quaternion(
-            cmdx.Vector(1, 0, 0),
-            cmdx.Vector(0, 0, 1)
-        )
+        if up.y:
+            rotation = cmdx.Quaternion(
+                cmdx.Vector(1, 0, 0),
+                cmdx.Vector(0, 0, 1)
+            )
+
+        else:
+            rotation = cmdx.Quaternion(
+                cmdx.Vector(1, 0, 0),
+                cmdx.Vector(0, 1, 0)
+            )
+
         end_offset = end_offset.rotate_by(rotation)
 
     outputs = []
@@ -1540,13 +1548,13 @@ def assign_plan(body, feet):
                                           name=body.name() + "_rEnd")
 
         body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
+        body_tm.setScale(cmdx.Vector(1, 1, 1))
 
         mod.set_attr(plan_start_parent["translate"], body_tm.translation())
         mod.set_attr(plan_start_parent["rotate"], body_tm.rotation())
         mod.set_attr(plan_start_parent["displayHandle"], True)
         mod.set_attr(plan_end_parent["displayHandle"], True)
 
-        up = cmdx.up_axis()
         mod.set_attr(rdplan["gravity"], up * -982)
         mod.set_attr(rdplan["duration"], maya_range)
 
@@ -1628,9 +1636,12 @@ def assign_plan(body, feet):
             foot_pos.y = 0
             foot_tm.set_translation(foot_pos)
 
+            body_tm2 = body.transform(cmdx.sWorld)
+            body_tm2.setScale(cmdx.Vector(1, 1, 1))
+
             tm = cmdx.Tm(
                 foot_tm.as_matrix() *
-                body["worldInverseMatrix"][0].as_matrix()
+                body_tm2.as_matrix().inverse()
             )
 
             mod.set_attr(start_parent["translate"], tm.translation())
@@ -1675,50 +1686,62 @@ def assign_plan(body, feet):
                 for repeat in range(5):
                     steps.append(bool(int(step)))
 
-            # Default to foot down at the end
+            # Default to foot down at the start and end
+            steps[:5] = [False, False, False, False, False]
             steps[-5:] = [False, False, False, False, False]
 
             mod.set_attr(rdfoot["stepSequence"], steps)
             outputs.append([rdfoot, foot])
 
     # Generate outputs
-    locators = []
-    with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
+    with cmdx.DGModifier(interesting=False) as dgmod:
         for rdoutput, output in outputs:
-            locator = mod.create_node("transform",
-                                      name=output.name() + "_rOut",
-                                      parent=plan_parent)
             decompose = dgmod.create_node("decomposeMatrix")
+            blend = dgmod.create_node("pairBlend")
 
-            mod.connect(rdoutput["outputMatrix"], decompose["inputMatrix"])
-            mod.connect(decompose["outputTranslate"], locator["translate"])
-            mod.connect(decompose["outputRotate"], locator["rotate"])
+            dgmod.connect(rdoutput["outputMatrix"], decompose["inputMatrix"])
+            dgmod.connect(decompose["outputTranslate"], blend["inTranslate2"])
+            dgmod.connect(decompose["outputRotate"], blend["inRotate2"])
 
-            locators.append([locator, (rdoutput, output)])
-            _take_ownership(mod, rdoutput, locator)
-            _take_ownership(mod, rdoutput, decompose)
+            for axis in "XYZ":
+                rotate_out = output["rotate" + axis]
+                translate_out = output["translate" + axis]
+
+                rotate_in = blend["inRotate%s1" % axis]
+                translate_in = blend["inTranslate%s1" % axis]
+
+                existing = rotate_out.input(plug=True)
+                if existing is None:
+                    dgmod.set_attr(rotate_in, rotate_out.read())
+                else:
+                    dgmod.connect(existing, rotate_in)
+
+                existing = translate_out.input(plug=True)
+                if existing is None:
+                    dgmod.set_attr(translate_in, translate_out.read())
+                else:
+                    dgmod.connect(existing, translate_in)
+
+                dgmod.connect(blend["outTranslate" + axis],
+                              translate_out)
+                dgmod.connect(blend["outRotate" + axis],
+                              rotate_out)
+
+            dgmod.add_attr(output, cmdx.Double(
+                "blend", default=1, keyable=True, min=0, max=1
+            ))
+
+            dgmod.do_it()
+            dgmod.connect(output["blend"], blend["weight"])
+
+            _take_ownership(dgmod, rdoutput, decompose)
+            _take_ownership(dgmod, rdoutput, blend)
 
         mod.do_it()
 
-        rdplan["startState"].read()
-        rdplan["outputMatrix"].as_matrix()
-
-        for src, (rdoutput, output) in locators:
-            if rdoutput.is_a("rdPlan"):
-                con = cmds.parentConstraint(src.path(),
-                                            output.path(),
-                                            maintainOffset=True)
-            else:
-                con = cmds.pointConstraint(src.path(),
-                                           output.path(),
-                                           maintainOffset=True)
-
-            con = cmdx.encode(con[0])
-            mod.set_attr(con["isHistoricallyInteresting"], False)
-            _take_ownership(mod, rdoutput, con)
-
     # Compute initial plan
     rdplan["startState"].read()
+    rdplan["outputMatrix"].as_matrix()
 
     return rdplan
 

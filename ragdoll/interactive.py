@@ -782,6 +782,17 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
+    divider()
+
+    with submenu("Locomotion", icon="locomotion.png"):
+        item("assignPlan", assign_plan, assign_plan_options)
+        item("assignTerrain", assign_terrain)
+        item("resetFoot", reset_foot)
+
+        divider()
+
+        item("updatePlan", update_plan, update_plan_options)
+
     divider("Transfer")
 
     item("recordMarkers", record_markers, record_markers_options)
@@ -837,15 +848,6 @@ def install_menu():
 
         item("linkSolver", link_solver)
         item("unlinkSolver", unlink_solver)
-
-    with submenu("Locomotion", icon="locomotion.png"):
-        item("assignPlan", assign_plan, assign_plan_options)
-        item("assignTerrain", assign_terrain, assign_terrain)
-        item("resetFoot", reset_foot, reset_foot)
-
-        divider()
-
-        item("updatePlan", update_plan, update_plan_options)
 
     with submenu("Fields", icon="force.png"):
         item("airField", air_field)

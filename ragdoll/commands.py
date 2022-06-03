@@ -1459,7 +1459,11 @@ def delete_all_physics(dry_run=False):
     return delete_physics(all_nodes, dry_run=dry_run)
 
 
-def assign_plan(body, feet):
+def assign_plan(body, feet, opts=None):
+    opts = dict({
+        "useTransform": False,
+    }, **(opts or {}))
+
     assert (
         body and
         isinstance(body, cmdx.Node) and
@@ -1472,15 +1476,23 @@ def assign_plan(body, feet):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
-    strut = "001100110011"
-    time = cmdx.encode("time1")
-
     # Determine the direction and distance to offset the end target
     body_pos = body.translation(cmdx.sWorld)
     positions = []
     for foot in feet:
         foot_pos = foot.translation(cmdx.sWorld)
         positions.append(foot_pos - body_pos)
+
+    # Make sure each foot is below the character
+    up = cmdx.up_axis()
+    if up.y:
+        up_index = 1
+    else:
+        up_index = 2
+
+    assert all(p[up_index] < body_pos[up_index] for p in positions), (
+        "Body is below one or more of the feet"
+    )
 
     # Assume 4 feet for now, in which case we want the character to move
     # along the narrowest axis.
@@ -1491,7 +1503,6 @@ def assign_plan(body, feet):
     #  .           .
     #   o           o
     #
-    up = cmdx.up_axis()
     longest = cmdx.Vector(0, 0, 0)
     for position in positions:
         longest.x = max(longest.x, abs(position.x))
@@ -1505,11 +1516,12 @@ def assign_plan(body, feet):
 
     longest_value = max(longest)
     walking_axis = tuple(longest).index(longest_value)
+
+    # Walk a few body lengths per default
     walking_distance = (
         feet[0].translation(cmdx.sWorld) - body_pos
-    ).length() * 4
+    ).length() * 3
 
-    # Walk 4 body lengths per default
     end_offset = cmdx.Vector(0, 0, 0)
     end_offset[walking_axis] = walking_distance
 
@@ -1533,7 +1545,10 @@ def assign_plan(body, feet):
     maya_range = int((cmdx.max_time() - cmdx.min_time()).value) - 9
     maya_range = max(maya_range, 50)  # Minimum 2 seconds
 
-    with cmdx.DagModifier() as mod, cmdx.DGModifier() as dgmod:
+    strut = "001100110011"
+    time = cmdx.encode("time1")
+
+    with cmdx.DagModifier() as mod:
         name = "rPlan_%s" % body.name()
         plan_parent = mod.create_node("transform", name=name)
         rdplan = mod.createNode("rdPlan",
@@ -1542,23 +1557,13 @@ def assign_plan(body, feet):
 
         mod.connect(time["outTime"], rdplan["currentTime"])
 
-        plan_start_parent = mod.create_node("transform",
-                                            name=body.name() + "_rStart")
-        plan_end_parent = mod.create_node("transform",
-                                          name=body.name() + "_rEnd")
-
-        body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
-        body_tm.setScale(cmdx.Vector(1, 1, 1))
-
-        mod.set_attr(plan_start_parent["translate"], body_tm.translation())
-        mod.set_attr(plan_start_parent["rotate"], body_tm.rotation())
-        mod.set_attr(plan_start_parent["displayHandle"], True)
-        mod.set_attr(plan_end_parent["displayHandle"], True)
-
         mod.set_attr(rdplan["gravity"], up * -982)
         mod.set_attr(rdplan["duration"], maya_range)
 
         space_multiplier = 1.0
+
+        body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
+        body_tm.setScale(cmdx.Vector(1, 1, 1))
 
         # Guesstimate based on body height off the ground
         # NOTE: This won't work for any character not actually on the ground
@@ -1572,19 +1577,39 @@ def assign_plan(body, feet):
 
         mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
 
-        body_tm.translateBy(end_offset, cmdx.sPreTransform)
-        mod.set_attr(plan_end_parent["translate"], body_tm.translation())
-        mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
+        if opts["useTransform"]:
+            plan_start_parent = mod.create_node("transform",
+                                                name=body.name() + "_rStart")
+            plan_end_parent = mod.create_node("transform",
+                                              name=body.name() + "_rEnd")
 
-        mod.create_node("rdTrajectory",
-                        name=body.name() + "_rTrajShape",
-                        parent=plan_start_parent)
-        mod.create_node("rdTrajectory",
-                        name=body.name() + "_rTrajShape",
-                        parent=plan_end_parent)
+            mod.set_attr(plan_start_parent["translate"], body_tm.translation())
+            mod.set_attr(plan_start_parent["rotate"], body_tm.rotation())
+            mod.set_attr(plan_start_parent["displayHandle"], True)
+            mod.set_attr(plan_end_parent["displayHandle"], True)
 
-        mod.connect(plan_start_parent["worldMatrix"][0], rdplan["targets"][0])
-        mod.connect(plan_end_parent["worldMatrix"][0], rdplan["targets"][1])
+            body_tm.translateBy(end_offset, cmdx.sPreTransform)
+            mod.set_attr(plan_end_parent["translate"], body_tm.translation())
+            mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
+
+            # Make some nice icons
+            mod.create_node("rdTrajectory",
+                            name=body.name() + "_rTrajShape",
+                            parent=plan_start_parent)
+            mod.create_node("rdTrajectory",
+                            name=body.name() + "_rTrajShape",
+                            parent=plan_end_parent)
+
+            mod.connect(plan_start_parent["worldMatrix"][0],
+                        rdplan["targets"][0])
+            mod.connect(plan_end_parent["worldMatrix"][0],
+                        rdplan["targets"][1])
+
+        else:
+            mod.set_attr(rdplan["targets"][0], body_tm.as_matrix())
+            mod.do_it()
+            body_tm.translateBy(end_offset, cmdx.sPreTransform)
+            mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
 
         mod.set_attr(rdplan["color"], internal.random_color())
         mod.set_attr(rdplan["version"], internal.version())
@@ -1621,15 +1646,9 @@ def assign_plan(body, feet):
 
         mod.set_attr(rdplan["extents"], extents)
 
+    with cmdx.DGModifier() as dgmod:
         for offset, foot in enumerate(feet):
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
-
-            start_parent = mod.create_node("transform",
-                                           name=foot.name() + "_rStart",
-                                           parent=plan_start_parent)
-            end_parent = mod.create_node("transform",
-                                         name=foot.name() + "_rEnd",
-                                         parent=plan_end_parent)
 
             foot_tm = cmdx.Tm(foot["worldMatrix"][0].as_matrix())
             foot_pos = foot_tm.translation()
@@ -1644,35 +1663,67 @@ def assign_plan(body, feet):
                 body_tm2.as_matrix().inverse()
             )
 
-            mod.set_attr(start_parent["translate"], tm.translation())
-            mod.set_attr(start_parent["rotate"], tm.rotation())
-            mod.set_attr(end_parent["translate"], tm.translation())
-            mod.set_attr(end_parent["rotate"], tm.rotation())
+            dgmod.set_attr(rdfoot["nominalMatrix"], tm.as_matrix())
 
-            mod.set_attr(rdfoot["nominalMatrix"], tm.as_matrix())
+            if opts["useTransform"]:
+                with cmdx.DagModifier() as mod2:
+                    start_parent = mod2.create_node(
+                        "transform",
+                        name=foot.name() + "_rStart",
+                        parent=plan_start_parent
+                    )
+                    end_parent = mod2.create_node(
+                        "transform",
+                        name=foot.name() + "_rEnd",
+                        parent=plan_end_parent
+                    )
 
-            mod.create_node("rdTrajectory",
-                            name=start_parent.name() + "Shape",
-                            parent=start_parent)
-            mod.create_node("rdTrajectory",
-                            name=end_parent.name() + "Shape",
-                            parent=end_parent)
+                dgmod.set_attr(start_parent["translate"], tm.translation())
+                dgmod.set_attr(start_parent["rotate"], tm.rotation())
+                dgmod.set_attr(end_parent["translate"], tm.translation())
+                dgmod.set_attr(end_parent["rotate"], tm.rotation())
 
-            mod.set_attr(start_parent["displayHandle"], True)
-            mod.set_attr(end_parent["displayHandle"], True)
+                dgmod.set_attr(start_parent["displayHandle"], True)
+                dgmod.set_attr(end_parent["displayHandle"], True)
 
-            index = rdplan["inputStart"].next_available_index()
-            mod.connect(rdfoot["startState"], rdplan["inputStart"][index])
-            mod.connect(rdfoot["currentState"], rdplan["inputCurrent"][index])
+                # Nice icons
+                dgmod.create_node("rdTrajectory",
+                                  name=start_parent.name() + "Shape",
+                                  parent=start_parent)
+                dgmod.create_node("rdTrajectory",
+                                  name=end_parent.name() + "Shape",
+                                  parent=end_parent)
+
+                dgmod.connect(start_parent["worldMatrix"][0],
+                              rdfoot["targets"][0])
+                dgmod.connect(end_parent["worldMatrix"][0],
+                              rdfoot["targets"][1])
+
+            else:
+                start_mtx = (
+                    rdplan["targets"][0].as_matrix() *
+                    foot_tm.as_matrix() *
+                    body_tm2.as_matrix_inverse()
+                )
+                end_mtx = (
+                    rdplan["targets"][1].as_matrix() *
+                    foot_tm.as_matrix() *
+                    body_tm2.as_matrix_inverse()
+                )
+
+                dgmod.set_attr(rdfoot["targets"][0], start_mtx)
+                dgmod.set_attr(rdfoot["targets"][1], end_mtx)
+
+            idx = rdplan["inputStart"].next_available_index()
+            dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
+            dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
 
             for a in ("min", "max"):
                 for b in "XYZ":
                     attr = "%sFootDeviation%s" % (a, b)
-                    mod.set_attr(rdfoot[attr], limits)
+                    dgmod.set_attr(rdfoot[attr], limits)
 
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
-            dgmod.connect(start_parent["worldMatrix"][0], rdfoot["targets"][0])
-            dgmod.connect(end_parent["worldMatrix"][0], rdfoot["targets"][1])
 
             dgmod.set_attr(rdfoot["color"], internal.random_color())
             dgmod.set_attr(rdfoot["version"], internal.version())
@@ -1690,7 +1741,7 @@ def assign_plan(body, feet):
             steps[:5] = [False, False, False, False, False]
             steps[-5:] = [False, False, False, False, False]
 
-            mod.set_attr(rdfoot["stepSequence"], steps)
+            dgmod.set_attr(rdfoot["stepSequence"], steps)
             outputs.append([rdfoot, foot])
 
     # Generate outputs
@@ -1736,8 +1787,6 @@ def assign_plan(body, feet):
 
             _take_ownership(dgmod, rdoutput, decompose)
             _take_ownership(dgmod, rdoutput, blend)
-
-        mod.do_it()
 
     # Compute initial plan
     rdplan["startState"].read()

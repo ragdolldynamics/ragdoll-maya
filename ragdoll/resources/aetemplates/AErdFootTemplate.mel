@@ -5,14 +5,14 @@ global proc AErdFootTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
-            editorTemplate -addControl "startTime";
-            editorTemplate -addControl "startTimeCustom";
             editorTemplate -addControl "color";
-            editorTemplate -addControl "maxOptimisationTime";
-            editorTemplate -addControl "maxOptimisationIterations";
-            editorTemplate -addControl "optimizeBaseAngularVelocity";
-            editorTemplate -addControl "optimizeBaseOrientation";
+            editorTemplate -addControl "maxFootDeviation";
+            editorTemplate -addControl "minFootDeviation";
+            editorTemplate -addControl "nominalMatrix";
         editorTemplate -endLayout;
+
+        editorTemplate -addControl "targets";
+        editorTemplate -addControl "stepSequence";
 
         // Create an "Extras" section and also add controls for any
         // attributes we have not explicitly mentioned.

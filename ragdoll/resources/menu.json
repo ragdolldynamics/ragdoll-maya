@@ -120,6 +120,8 @@
             "validateCachingMode",
             "validateLegacyOpenGL2",
             "validateScalePivot",
+            "validateUnlimitedLocomotion",
+            "validateNonCommercialRecord",
             "validatePlaybackSpeed"
         ]
     },
@@ -231,6 +233,8 @@
         "summary": "Assign a plan to selected body and feet.",
         "description": "Create a new plan for the selected body and 1 or more feet, the plan will drive the translate and rotate channels.",
         "options": [
+            "planPreset",
+            "planNativeTargets"
         ]
     },
 
@@ -251,6 +255,25 @@
         "options": [
             "planForceUpdate",
             "planAutoUpdate"
+        ]
+    },
+
+    "recordLocomotion": {
+        "label": "Record Locomotion",
+        "icon": "record.png",
+        "summary": "Record locomotion to keyframes.",
+        "description": "This calls on Maya's native Record Results command to store your locomotion on a new Animation Layer.",
+        "enable": false,
+        "options": [
+        ]
+    },
+
+    "deleteLocomotion": {
+        "label": "Delete Locomotion",
+        "icon": "delete.png",
+        "summary": "Delete all locomotion from the Maya scene.",
+        "description": "Remove anything related to locomotion.",
+        "options": [
         ]
     },
 
@@ -368,7 +391,7 @@
             "markersRecordToLayer",
             "markersRecordAutoCache",
             "markersRecordInitialKey",
-            "markersUseSelection",
+            "markersRecordUseSelection",
             "markersIgnoreJoints",
             "markersRecordKinematic",
             "markersRecordMode"
@@ -381,7 +404,7 @@
         "summary": "Snap animation to simulation",
         "description": "Move animation to where the simulation is right now.",
         "options": [
-            "markersUseSelection",
+            "markersSnapUseSelection",
             "markersIgnoreJoints",
             "markersRecordFilter",
             "markersRecordMaintainOffset2"

@@ -7,11 +7,26 @@ global proc AErdPlanTemplate(string $nodeName) {
             editorTemplate -addControl "enabled";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "startTimeCustom";
-            editorTemplate -addControl "color";
             editorTemplate -addControl "maxOptimisationTime";
             editorTemplate -addControl "maxOptimisationIterations";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Terrain" -collapse false;
+            editorTemplate -addControl "heightmapEnabled";
+            editorTemplate -addControl "heightmapResolution";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Display" -collapse false;
+            editorTemplate -addControl "color";
+            editorTemplate -addControl "drawTrajectories";
+            editorTemplate -addControl "drawShape";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Advanced" -collapse false;
+        editorTemplate -beginNoOptimize;
             editorTemplate -addControl "optimizeBaseAngularVelocity";
             editorTemplate -addControl "optimizeBaseOrientation";
+        editorTemplate -endNoOptimize;
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

@@ -461,7 +461,7 @@ def _on_recording_limit(clientData=None):
             call_to_action=msg,
             actions=[
                 ("Ok", lambda: True),
-                ("Buy", buy)
+                ("Pricing", buy)
             ]
         )
 
@@ -477,6 +477,49 @@ def _on_recording_limit(clientData=None):
         __.recording_timer = timer
 
     __.recording_timer.start()
+
+
+def _on_locomotion_limit(clientData=None):
+    """Called on attempted planning from not-unlimited"""
+
+    msg = (
+        "Locomotion is a feature of Ragdoll Unlimited, any other"
+        "version is limited to 100 frames of generated motion. "
+        "See Pricing for purchase options."
+    )
+
+    def deferred():
+        log.warning(msg)
+
+        def buy():
+            webbrowser.open(
+                "https://ragdolldynamics.com/pricing-commercial"
+            )
+            return False
+
+        ui.warn(
+            option="validateUnlimitedLocomotion",
+            title="Locomotion without Ragdoll Unlimited",
+            message="un_locomotion.png",
+            call_to_action=msg,
+            actions=[
+                ("Ok", lambda: True),
+                ("Pricing", buy)
+            ]
+        )
+
+    # This event is triggered many times, but we're only really
+    # interested in notifying the user about it once.
+    if not hasattr(__, "locomotion_timer"):
+        from PySide2 import QtCore
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.setInterval(1000)
+        timer.timeout.connect(deferred)
+
+        __.locomotion_timer = timer
+
+    __.locomotion_timer.start()
 
 
 def _fit_to_view():
@@ -613,6 +656,11 @@ def install_callbacks():
     __.callbacks.append(
         om.MUserEventMessage.addUserEventCallback(
             "ragdollRecordingLimitEvent", _on_recording_limit)
+    )
+
+    __.callbacks.append(
+        om.MUserEventMessage.addUserEventCallback(
+            "ragdollLocomotionLimitEvent", _on_locomotion_limit)
     )
 
     __.callbacks.append(
@@ -782,16 +830,26 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
-    divider()
+    divider("Locomotion")
 
-    with submenu("Locomotion", icon="locomotion.png"):
+    item("assignPlan", assign_plan, assign_plan_options)
+    item("updatePlan", update_plan, update_plan_options)
+
+    with submenu("More", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
         item("assignTerrain", assign_terrain)
+
+        divider("Edit")
+
         item("resetFoot", reset_foot)
+        item("recordLocomotion")
 
-        divider()
+        divider("System")
 
-        item("updatePlan", update_plan, update_plan_options)
+        item("deleteLocomotion", delete_all_locomotion,
+             label="Delete All Locomotion")
+        item("deleteLocomotion", delete_locomotion_from_selection,
+             label="Delete Locomotion from Selection")
 
     divider("Transfer")
 
@@ -2671,6 +2729,11 @@ def update_plan(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def assign_plan(selection=None, **opts):
+    opts = dict({
+        "useTransform": _opt("planNativeTargets", opts),
+        "preset": _opt("planPreset", opts),
+    }, **(opts or {}))
+
     sel = selection or cmdx.selection()
 
     if len(sel) < 1:
@@ -2680,10 +2743,10 @@ def assign_plan(selection=None, **opts):
         )
 
     body, feet = sel[0], sel[1:]
-    plan = commands.assign_plan(body, feet)
+    plan = commands.assign_plan(body, feet, opts)
 
-    # Trigger a draw refresh
-    cmds.select(str(plan))
+    # Show user the Press T notification
+    cmds.select(str(plan.parent()))
 
     return kSuccess
 
@@ -3119,6 +3182,45 @@ def delete_physics(selection=None, **opts):
         if selection:
             def delete():
                 return commands.delete_physics(selection)
+
+    result = delete()
+
+    any_node = cmds.ls()[0]
+    cmds.select(any_node)  # Trigger a change to selection
+    cmds.select(deselect=True)
+
+    if any(result.values()):
+        log.info(
+            "Deleted {deletedRagdollNodeCount} Ragdoll nodes and "
+            "{deletedOwnedNodeCount} owned nodes".format(**result)
+        )
+        return kSuccess
+
+    else:
+        return log.warning("Nothing deleted")
+
+
+def delete_all_locomotion(selection=None, **opts):
+    options.write("deleteFromSelection", False)
+    delete_locomotion(selection, **opts)
+
+
+def delete_locomotion_from_selection(selection=None, **opts):
+    options.write("deleteFromSelection", True)
+    delete_locomotion(selection, **opts)
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def delete_locomotion(selection=None, **opts):
+    delete = commands.delete_all_locomotion
+
+    if _opt("deleteFromSelection", opts):
+        selection = selection or cmdx.selection()
+
+        if selection:
+            def delete():
+                return commands.delete_locomotion(selection)
 
     result = delete()
 

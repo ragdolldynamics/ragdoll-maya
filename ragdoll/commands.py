@@ -1620,23 +1620,12 @@ def assign_plan(body, feet, opts=None):
     end_offset[walking_axis] = walking_distance
 
     if len(feet) == 2:
-        if up.y:
-            walking_axis = 0 if walking_axis == 2 else 2
-            rotation = cmdx.Quaternion(
-                cmdx.Vector(1, 0, 0),
-                cmdx.Vector(0, 0, 1)
-            )
-
-        else:
-            walking_axis = 1 if walking_axis == 2 else 1
-            rotation = cmdx.Quaternion(
-                cmdx.Vector(1, 0, 0),
-                cmdx.Vector(0, 1, 0)
-            )
+        rotation = cmdx.Quaternion(
+            cmdx.Vector(1, 0, 0),
+            cmdx.Vector(0, 0, 1) if up.y else cmdx.Vector(0, 1, 0)
+        )
 
         end_offset = end_offset.rotate_by(rotation)
-
-    print("end_offset: %s" % str(end_offset))
 
     outputs = []
 
@@ -1647,7 +1636,7 @@ def assign_plan(body, feet, opts=None):
 
     limits *= 0.25
     limits = cmdx.Vector(1, 1, 1) * limits
-    limits[walking_axis] *= 2
+    limits.z *= 2  # Relative the body, always Z
 
     duration = int((cmdx.max_time() - cmdx.min_time()).value) - 9
     duration = max(duration, 50)  # Minimum 2 seconds

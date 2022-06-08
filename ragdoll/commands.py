@@ -1392,21 +1392,11 @@ def delete_locomotion(nodes, dry_run=False):
 
     plans = plans_from_nodes(nodes)
 
-    # On passing a mesh, prefer to disable the terrain
-    # to deleting the plan itself.
-    meshes = _meshes_from_nodes(nodes)
-
     with cmdx.DagModifier() as mod:
         for plan in plans:
-            terrain = plan["inputHeightmap"].input()
-
-            if terrain and terrain in meshes:
-                mod.set_attr(plan["terrainEnabled"], False)
-
-            else:
-                mod.delete(plan)
-                mod.do_it()
-                result["deletedRagdollNodeCount"] += 1
+            mod.delete(plan)
+            mod.do_it()
+            result["deletedRagdollNodeCount"] += 1
 
     return result
 

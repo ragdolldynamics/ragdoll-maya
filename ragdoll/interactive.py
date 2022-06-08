@@ -2748,6 +2748,14 @@ def assign_plan(selection=None, **opts):
     # Show user the Press T notification
     cmds.select(str(plan.parent()))
 
+    if _is_interactive() and opts["useTransform"]:
+        # Make sure user can actually see the handles
+        for panel in cmds.getPanel(visiblePanels=True):
+            if not cmds.modelPanel(panel, query=True, exists=True):
+                continue
+
+            cmds.modelEditor(panel, edit=True, handles=True)
+
     return kSuccess
 
 

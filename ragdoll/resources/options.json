@@ -488,7 +488,7 @@
         "name": "planAutoUpdate",
         "label": "Auto Update",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Always keep plan up to date."
     },
 

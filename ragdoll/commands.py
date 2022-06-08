@@ -1368,6 +1368,18 @@ def plans_from_nodes(nodes):
     return plans
 
 
+def _meshes_from_nodes(nodes):
+    meshes = []
+    for node in nodes:
+        if node.is_a(cmdx.kTransform):
+            node = node.shape(type="mesh")
+
+        if node and node.is_a("mesh"):
+            meshes.append(node)
+
+    return meshes
+
+
 @internal.with_timing
 @internal.with_undo_chunk
 def delete_locomotion(nodes, dry_run=False):
@@ -1379,12 +1391,22 @@ def delete_locomotion(nodes, dry_run=False):
     }
 
     plans = plans_from_nodes(nodes)
-    result["deletedRagdollNodeCount"] = len(plans)
+
+    # On passing a mesh, prefer to disable the terrain
+    # to deleting the plan itself.
+    meshes = _meshes_from_nodes(nodes)
 
     with cmdx.DagModifier() as mod:
         for plan in plans:
-            mod.delete(plan)
-            mod.do_it()
+            terrain = plan["inputHeightmap"].input()
+
+            if terrain and terrain in meshes:
+                mod.set_attr(plan["terrainEnabled"], False)
+
+            else:
+                mod.delete(plan)
+                mod.do_it()
+                result["deletedRagdollNodeCount"] += 1
 
     return result
 

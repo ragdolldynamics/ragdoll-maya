@@ -1650,7 +1650,7 @@ def assign_plan(body, feet, opts=None):
 
     limits *= 0.25
     limits = cmdx.Vector(1, 1, 1) * limits
-    limits.z *= 2  # Relative the body, always Z
+    limits[walking_axis] *= 2
 
     # Make nicer values in the Channel Box, avoid needless precision
     for axis in range(3):

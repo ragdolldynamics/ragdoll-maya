@@ -1,6 +1,7 @@
 import re
 import types
 import logging
+import platform
 from collections import OrderedDict as odict
 
 # User-specified style, either write to this directly,
@@ -19,6 +20,7 @@ __version__ = "0.5.10"
 _log = logging.getLogger(__name__)
 _type = type  # used as argument
 _dpi = None
+_ismac = platform.system().lower() == "darwin"
 
 try:
     # Python 2
@@ -84,7 +86,7 @@ except ImportError:
 
 _stylesheet = """\
 QWidget {
-    font-size: 7px;
+    font-size: 8pt;
 }
 
 *[type="Button"] {
@@ -109,10 +111,6 @@ QWidget {
     background: #333;
 }
 
-QLabel {
-    font-size: 7px;
-}
-
 QLabel[type="Separator"] {
     min-height: 20px;
     text-decoration: underline;
@@ -131,6 +129,19 @@ QWidget #resetButton {
 }
 
 """
+
+
+# Mac needs special treatment
+if _ismac:
+    _stylesheet = _stylesheet + """\
+        QWidget {
+            font-size: 7px;
+        }
+
+        QLabel {
+            font-size: 7px;
+        }
+    """
 
 
 def px(value):
@@ -156,8 +167,7 @@ def px(value):
         scale = window.screen().logicalDotsPerInch() / 96.0
 
         # Mac doesn't give two cents about logical dots per inch
-        import platform
-        if platform.system().lower() == "darwin":
+        if _ismac:
             scale = 96.0 / window.screen().physicalDotsPerInch()
 
         # Store for later

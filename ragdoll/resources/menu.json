@@ -274,6 +274,7 @@
         "summary": "Delete all locomotion from the Maya scene.",
         "description": "Remove anything related to locomotion.",
         "options": [
+            "planAutoClean"
         ]
     },
 

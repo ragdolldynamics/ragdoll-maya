@@ -492,6 +492,14 @@
         "help": "Always keep plan up to date."
     },
 
+    "planAutoClean": {
+        "name": "planAutoClean",
+        "label": "Auto Clean",
+        "type": "Boolean",
+        "default": true,
+        "help": "Delete associated nodes whenever the rPlan node is deleted."
+    },
+
 
     "#": "----------------",
     "#": " Import/Export  ",

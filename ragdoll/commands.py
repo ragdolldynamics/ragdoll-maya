@@ -1581,11 +1581,13 @@ def assign_plan(body, feet, opts=None):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
+
+
     # Determine the direction and distance to offset the end target
-    body_pos = body.translation(cmdx.sWorld)
+    body_pos = _position_incl_pivot(body)
     relative_positions = []
     for foot in feet:
-        foot_pos = foot.translation(cmdx.sWorld)
+        foot_pos = _position_incl_pivot(foot)
         relative_positions.append(foot_pos - body_pos)
 
     # Make sure each foot is below the character
@@ -1596,7 +1598,7 @@ def assign_plan(body, feet, opts=None):
         up_index = 2
 
     assert all(
-        foot.translation(cmdx.sWorld)[up_index] < body_pos[up_index]
+        _position_incl_pivot(foot)[up_index] < body_pos[up_index]
         for foot in feet
     ), "Body is below one or more of the feet"
 
@@ -1625,7 +1627,7 @@ def assign_plan(body, feet, opts=None):
 
     # Walk a few body lengths per default
     walking_distance = (
-        feet[0].translation(cmdx.sWorld) - body_pos
+        _position_incl_pivot(feet[0]) - body_pos
     ).length() * 3
 
     end_offset = cmdx.Vector(0, 0, 0)
@@ -1649,6 +1651,13 @@ def assign_plan(body, feet, opts=None):
     limits *= 0.25
     limits = cmdx.Vector(1, 1, 1) * limits
     limits.z *= 2  # Relative the body, always Z
+
+    # Make nicer values in the Channel Box, avoid needless precision
+    for axis in range(3):
+        if limits[axis] > 10:
+            limits[axis] = int(limits[axis])
+        elif limits[axis] > 1:
+            limits[axis] = int(limits[axis] * 10) * 0.1
 
     duration = int((cmdx.max_time() - cmdx.min_time()).value) - 9
     duration = max(duration, 50)  # Minimum 2 seconds
@@ -1766,7 +1775,7 @@ def assign_plan(body, feet, opts=None):
         bbox = cmdx.BoundingBox()
         bbox.expand(body_pos)
         for foot in feet:
-            bbox.expand(foot.translation(cmdx.sWorld))
+            bbox.expand(_position_incl_pivot(foot))
 
         extents = [bbox.width, bbox.height, bbox.depth]
 
@@ -1849,10 +1858,7 @@ def assign_plan(body, feet, opts=None):
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
             dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
 
-            for a in ("min", "max"):
-                attr = "%sFootDeviation" % a
-                dgmod.set_attr(rdfoot[attr], limits)
-
+            dgmod.set_attr(rdfoot["linearLimit"], limits * 2)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
 
             dgmod.set_attr(rdfoot["color"], internal.random_color())

@@ -84,7 +84,7 @@ except ImportError:
 
 _stylesheet = """\
 QWidget {
-    font-size: 8pt;
+    font-size: 7px;
 }
 
 *[type="Button"] {
@@ -107,6 +107,10 @@ QWidget {
 
 *[type="ImageButton"]:pressed {
     background: #333;
+}
+
+QLabel {
+    font-size: 7px;
 }
 
 QLabel[type="Separator"] {
@@ -150,6 +154,11 @@ def px(value):
 
         # E.g. 1.5 or 2.0
         scale = window.screen().logicalDotsPerInch() / 96.0
+
+        # Mac doesn't give two cents about logical dots per inch
+        import platform
+        if platform.system().lower() == "darwin":
+            scale = 96.0 / window.screen().physicalDotsPerInch()
 
         # Store for later
         _dpi = scale

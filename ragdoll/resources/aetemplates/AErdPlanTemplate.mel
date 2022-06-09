@@ -17,6 +17,7 @@ global proc AErdPlanTemplate(string $nodeName) {
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Display" -collapse false;
+            editorTemplate -addControl "drawHud";
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawTrajectories";
             editorTemplate -addControl "drawShape";

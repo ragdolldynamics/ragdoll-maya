@@ -1709,6 +1709,13 @@ def assign_plan(body, feet, opts=None):
         mod.set_attr(rdplan["gravity"], up * -982)
         mod.set_attr(rdplan["duration"], duration)
 
+        pivot = cmdx.Vector()
+
+        if body.has_attr("rotatePivot"):
+            pivot = body["rotatePivot"].read()
+
+        mod.set_attr(rdplan["drawOffset"], pivot)
+
         space_multiplier = 1.0
 
         body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
@@ -1792,6 +1799,13 @@ def assign_plan(body, feet, opts=None):
     with cmdx.DGModifier() as dgmod:
         for index, foot in enumerate(feet):
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
+
+            pivot = cmdx.Vector()
+
+            if foot.has_attr("rotatePivot"):
+                pivot = foot["rotatePivot"].read()
+
+            mod.set_attr(rdfoot["drawOffset"], pivot)
 
             foot_tm = cmdx.Tm(foot["worldMatrix"][0].as_matrix())
             foot_pos = foot_tm.translation()

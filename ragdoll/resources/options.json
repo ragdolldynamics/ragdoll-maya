@@ -32,6 +32,15 @@
         "max": 10.0,
         "help": "Scale at which to draw viewport widgets, like constraints."
     },
+    "resolutionScaleFactor": {
+        "name": "resolutionScaleFactor",
+        "label": "Resolution Scale",
+        "type": "Float",
+        "default": 1.0,
+        "min": 0.5,
+        "max": 4.0,
+        "help": "Scale user interface elements by this amount. Retina screens would typically need a 2.0 scale, whereas a 1080p Windows laptop from 2005 would use a scale of 1.0."
+    },
     "cacheMedia": {
         "name": "cacheMedia",
         "type": "Enum",
@@ -498,6 +507,14 @@
         "type": "Boolean",
         "default": true,
         "help": "Delete associated nodes whenever the rPlan node is deleted."
+    },
+
+    "planParallelUpdate": {
+        "name": "planParallelUpdate",
+        "label": "Parallel Update",
+        "type": "Boolean",
+        "default": true,
+        "help": "Use all available cores of your system to process as many plans as possible in parallel."
     },
 
 

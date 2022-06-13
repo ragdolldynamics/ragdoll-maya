@@ -1746,7 +1746,7 @@ def assign_plan(body, feet, opts=None):
             mod.set_attr(plan_start_parent["displayHandle"], True)
             mod.set_attr(plan_end_parent["displayHandle"], True)
 
-            body_tm.translateBy(end_offset, cmdx.Transform)
+            body_tm.translateBy(end_offset, cmdx.sTransform)
             mod.set_attr(plan_end_parent["translate"], body_tm.translation())
             mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
 

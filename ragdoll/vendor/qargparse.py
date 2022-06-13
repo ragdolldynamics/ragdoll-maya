@@ -4,6 +4,10 @@ import logging
 import platform
 from collections import OrderedDict as odict
 
+# User-controlled, global resolution scale
+# Mostly for Mac which doesn't respect the Qt DPI scale
+ResolutionScale = 1.0
+
 # User-specified style, either write to this directly,
 # or copy it and pass it to QArgumentParser(style=yourStyle)
 DefaultStyle = {
@@ -131,19 +135,6 @@ QWidget #resetButton {
 """
 
 
-# Mac needs special treatment
-if _ismac:
-    _stylesheet = _stylesheet + """\
-        QWidget {
-            font-size: 7px;
-        }
-
-        QLabel {
-            font-size: 7px;
-        }
-    """
-
-
 def px(value):
     """Return a scaled value, for HDPI resolutions"""
 
@@ -166,14 +157,10 @@ def px(value):
         # E.g. 1.5 or 2.0
         scale = window.screen().logicalDotsPerInch() / 96.0
 
-        # Mac doesn't give two cents about logical dots per inch
-        if _ismac:
-            scale = 96.0 / window.screen().physicalDotsPerInch()
-
         # Store for later
         _dpi = scale
 
-    return value * _dpi
+    return value * _dpi * ResolutionScale
 
 
 def _scaled_stylesheet():

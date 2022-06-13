@@ -111,6 +111,7 @@
             "sceneScale",
             "cacheMedia",
             "maxFrames",
+            "resolutionScaleFactor",
             "viewportGamma",
             "manipulatorFitToViewOverride",
             "manipulatorMayaSelect",
@@ -254,7 +255,8 @@
         "description": "Compute a new locomotion.",
         "options": [
             "planForceUpdate",
-            "planAutoUpdate"
+            "planAutoUpdate",
+            "planParallelUpdate"
         ]
     },
 

@@ -246,6 +246,7 @@ def install():
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
 
+
     __.installed = True
 
 
@@ -3432,8 +3433,7 @@ def _Window(key, command=None, cls=None):
 def global_preferences(*args):
     def callback():
         from maya import cmds
-        ctime = cmds.currentTime(query=True)
-        cmds.evalDeferred(lambda: cmds.currentTime(ctime, update=True))
+        cmds.evalDeferred(lambda: cmds.refresh(force=True))
 
     def global_preferences():
         pass
@@ -3441,8 +3441,9 @@ def global_preferences(*args):
     window = _Window("globalPreferences", global_preferences)
 
     # Update viewport immediately whenever this changes
-    scale = window.parser.find("scale")
-    scale.changed.connect(callback)
+    for opt in ("scale", "resolutionScaleFactor"):
+        scale = window.parser.find(opt)
+        scale.changed.connect(callback)
 
     return window
 

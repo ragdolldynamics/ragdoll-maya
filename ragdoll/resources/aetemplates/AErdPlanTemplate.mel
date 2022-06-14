@@ -5,10 +5,17 @@ global proc AErdPlanTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "gravity";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "startTimeCustom";
+            editorTemplate -addControl "duration";
             editorTemplate -addControl "maxOptimisationTime";
             editorTemplate -addControl "maxOptimisationIterations";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Geometry" -collapse false;
+            editorTemplate -addControl "mass";
+            editorTemplate -addControl "extents";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Terrain" -collapse false;
@@ -25,6 +32,7 @@ global proc AErdPlanTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Advanced" -collapse false;
         editorTemplate -beginNoOptimize;
+            editorTemplate -addControl "minFeetSeparation";
             editorTemplate -addControl "optimizeBaseAngularVelocity";
             editorTemplate -addControl "optimizeBaseOrientation";
         editorTemplate -endNoOptimize;

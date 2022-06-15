@@ -116,6 +116,7 @@
             "manipulatorFitToViewOverride",
             "manipulatorMayaSelect",
             "reloadShaders",
+            "planShiftToToggle",
             "globalsValidations",
             "validateEvaluationMode",
             "validateCachingMode",

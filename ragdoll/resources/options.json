@@ -517,6 +517,14 @@
         "help": "Use all available cores of your system to process as many plans as possible in parallel."
     },
 
+    "planShiftToToggle": {
+        "name": "planShiftToToggle",
+        "label": "Shift to Toggle",
+        "type": "Boolean",
+        "default": false,
+        "help": "When holding shift and dragging over the Step Sequencer, if the step underneath the mouse cursor is filled it will be set to off and vice versa. Otherwise, Shift is used to add and Control/Command is used to remove."
+    },
+
 
     "#": "----------------",
     "#": " Import/Export  ",

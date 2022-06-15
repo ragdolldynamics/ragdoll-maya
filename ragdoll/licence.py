@@ -343,6 +343,8 @@ def data():
     return dict(
         lastStatus=self._last_status,
 
+        offlineMode=self._last_status in (STATUS_INET, STATUS_INET_DELAYED),
+
         key=cmds.ragdollLicence(serial=True, query=True),
 
         # Which edition of Ragdoll is this?

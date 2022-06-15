@@ -3355,7 +3355,77 @@ def welcome_user(*args):
         return ui.SplashScreen.instance.show()
 
     parent = ui.MayaWindow()
-    win = ui.SplashScreen(parent)
+
+    if os.getenv("RAGDOLL_LEGACY_GREETS"):
+        win = ui.SplashScreen(parent)
+    else:
+        win = widgets.WelcomeWindow(parent)
+        lic = win.licence_input_widget()
+        stw = win.licence_status_widget()
+        gsw = win.greeting_status_widget()
+
+        def on_lic_updated():
+            data = licence.data()
+            try:
+                data["ip"], data["port"] = licence._parse_environment()
+            except AttributeError:
+                data["ip"], data["port"] = None, None  # env not set
+            except ValueError as e:
+                data["ip"], data["port"] = None, None
+                log.error(e)
+
+            lic.update_data(data)
+            stw.set_product(data)
+            gsw.set_licence(data)
+            gsw.check_update(data)
+
+        def on_node_activated(key_or_fname):
+            if os.path.isfile(key_or_fname):
+                if licence.activate_from_file(key_or_fname) != 0:
+                    log.warning("Failed, see Script Editor")
+                    return
+            else:
+                status = licence.activate(key_or_fname)
+                if status != licence.STATUS_OK:
+                    return
+
+            on_lic_updated()
+
+        def on_node_deactivated():
+            licence.deactivate()
+            on_lic_updated()
+
+        def on_float_requested():
+            licence.request_lease()
+            on_lic_updated()
+
+        def on_float_dropped():
+            licence.drop_lease()
+            on_lic_updated()
+
+        def on_offline_activate_requested(key, fname):
+            if licence.activation_request_to_file(key, fname) != 0:
+                log.warning("Failed, see Script Editor")
+                return
+            lic.set_offline_request_code()
+
+        def on_offline_deactivate_requested(fname):
+            if licence.deactivation_request_to_file(fname) != 0:
+                log.warning("Failed, see Script Editor")
+                return
+            on_lic_updated()
+            lic.set_offline_request_code()
+
+        lic.updated.connect(on_lic_updated)
+        lic.node_activated.connect(on_node_activated)
+        lic.node_deactivated.connect(on_node_deactivated)
+        lic.float_requested.connect(on_float_requested)
+        lic.float_dropped.connect(on_float_dropped)
+        lic.offline_activate_requested.connect(on_offline_activate_requested)
+        lic.offline_deactivate_requested.connect(
+            on_offline_deactivate_requested
+        )
+
     win.show()
     win.activateWindow()
 

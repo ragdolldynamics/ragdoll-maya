@@ -1,0 +1,19 @@
+{
+  "assets": [
+    {
+      "name": "Manikin",
+      "video": "assets/manikin.webm",
+      "poster": "assets/manikin.png",
+      "tags": [
+        "quickstart"
+      ],
+      "scene": "assets/manikin.ma"
+    }
+  ],
+  "tags": [
+    {
+      "name": "quickstart",
+      "color": "#4c7e5b"
+    }
+  ]
+}

@@ -832,6 +832,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
+        self.setObjectName("LicencePlate")
         self.setFixedHeight(172)
 
         panels = {
@@ -844,10 +845,10 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Features": QtWidgets.QLabel(),
         }
 
-        widgets["Product"].setObjectName("Heading0")
-        widgets["Product"].setStyleSheet("background: none; color: #353535")
-        widgets["Commercial"].setStyleSheet("background: none; color: #353535")
-        widgets["Features"].setStyleSheet("background: none;")
+        panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
+        widgets["Product"].setObjectName("PlateProduct")
+        widgets["Commercial"].setObjectName("PlateCommercial")
+        widgets["Features"].setObjectName("PlateFeatures")
 
         layout = QtWidgets.QVBoxLayout(panels["Product"])
         layout.setContentsMargins(0, 0, 0, 0)
@@ -879,13 +880,30 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Non-Commercial" if non_commercial else "Commercial use"
         )
         self.setStyleSheet("""
-        font-family: Sora;
-        border-radius: 20px;
-        background-color: qlineargradient(
-                            x1:0, y1:0, x2:1, y2:1,
-                            stop:0 #c1fdc9,
-                            stop:1 #57f5a1
-                            )
+        #LicencePlate {
+            font-family: Sora;
+            border-radius: 20px;
+            background: qlineargradient(
+                        x1:0, y1:0, x2:1, y2:1,
+                        stop:0 #c1fdc9,
+                        stop:1 #57f5a1
+                        );
+        }
+        #PlateProduct {
+            font-family: Sora;
+            font-size: 24pt;
+            background: transparent;
+            color: #353535;
+        }
+        #PlateCommercial {
+            font-family: Sora;
+            background: transparent;
+            color: #353535;
+        }
+        #PlateFeatures {
+            background: transparent;
+            color: #FFFFFF;
+        }
         """)
 
     def paintEvent(self, event):
@@ -1449,10 +1467,6 @@ _main_stylesheet = """
     color: #d2d2d2;
     background: #353535;
     font-size: 9pt;
-}
-#Heading0 {
-    font-family: Sora;
-    font-size: 24pt;
 }
 #Heading1 {
     font-family: Sora;

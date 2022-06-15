@@ -753,9 +753,9 @@ class LicenceStatusBadge(QtWidgets.QWidget):
                 p.fillPath(path, QtGui.QBrush(QtGui.QColor(self._c_head)))
 
         widgets = {
-            "Plan": QtWidgets.QLabel("Complete"),
+            "Plan": QtWidgets.QLabel(),
             "Deco": _Arrow(),
-            "Stat": QtWidgets.QLabel("perpetual / AUP Apr.20.2023"),
+            "Stat": QtWidgets.QLabel(),
         }
 
         widgets["Deco"].setFixedWidth(10)

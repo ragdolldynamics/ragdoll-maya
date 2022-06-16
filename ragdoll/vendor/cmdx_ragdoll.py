@@ -4600,6 +4600,9 @@ class Vector(om.MVector):
 
     """
 
+    def __mul__(self, value):
+        return Vector(super(Vector, self).__mul__(value))
+
     def __add__(self, value):
         if isinstance(value, (int, float)):
             return type(self)(

@@ -775,10 +775,10 @@ class LicenceStatusBadge(QtWidgets.QWidget):
     def set_status(self, data):
         is_trial = data["isTrial"]
         trial_days = data["trialDays"]
-        product = data["product"]
         expiry = data["expiry"]
         perpetual = not expiry
         aup = data["annualUpgradeProgram"]
+        product = "Trial" if is_trial else data["marketingName"]
 
         if is_trial:
             expiry_date = datetime.now() + timedelta(days=trial_days)
@@ -813,7 +813,7 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         )
 
         w = self._widgets
-        w["Plan"].setText(data["marketingName"])
+        w["Plan"].setText(product)
         w["Stat"].setText("%s %s" % (
             "perpetual" if perpetual else "expired" if expired else "expiry",
             ("/ AUP " + aup) if perpetual else expiry,
@@ -881,12 +881,13 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def set_product(self, data):
         # todo: product feature list
         # todo: gradient color for each product and expired/invalid
-        product = data["product"]
+        is_trial = data["isTrial"]
+        product = "Trial" if is_trial else data["marketingName"]
         non_commercial = data["isNonCommercial"]
 
         product_pretty = {
-            "trial": "Trial Mode",
-        }.get(product, data["marketingName"])
+            "Trial": "Trial Mode",
+        }.get(product, product)
 
         self._widgets["Product"].setText(product_pretty)
         self._widgets["Commercial"].setText(

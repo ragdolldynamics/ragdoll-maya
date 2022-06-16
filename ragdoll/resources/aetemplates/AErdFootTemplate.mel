@@ -6,6 +6,8 @@ global proc AErdFootTemplate(string $nodeName) {
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
             editorTemplate -addControl "color";
+            editorTemplate -addControl "linearLimit";
+            editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "maxFootDeviation";
             editorTemplate -addControl "minFootDeviation";
             editorTemplate -addControl "nominalMatrix";

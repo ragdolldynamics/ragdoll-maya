@@ -1633,14 +1633,6 @@ def assign_plan(body, feet, opts=None):
     end_offset = cmdx.Vector(0, 0, 0)
     end_offset[walking_axis] = walking_distance
 
-    if len(feet) == 2:
-        rotation = cmdx.Quaternion(
-            cmdx.Vector(1, 0, 0),
-            cmdx.Vector(0, 0, 1) if up.y else cmdx.Vector(0, 1, 0)
-        )
-
-        end_offset = end_offset.rotate_by(rotation)
-
     outputs = []
 
     if up.y:
@@ -1648,9 +1640,24 @@ def assign_plan(body, feet, opts=None):
     else:
         limits = abs(relative_positions[0].z)
 
-    limits *= 0.25
     limits = cmdx.Vector(1, 1, 1) * limits
     limits[walking_axis] *= 2
+
+    if len(feet) == 2:
+        rotation = cmdx.Quaternion(
+            cmdx.Vector(1, 0, 0),
+            cmdx.Vector(0, 0, 1) if up.y else cmdx.Vector(0, 1, 0)
+        )
+
+        end_offset = end_offset.rotate_by(rotation)
+        print("before: %s" % str(limits))
+        limits = limits.rotate_by(rotation)
+        print("after: %s" % str(limits))
+
+        # In case it got spun around into the negative
+        limits.x = abs(limits.x)
+        limits.y = abs(limits.y)
+        limits.z = abs(limits.z)
 
     # Make nicer values in the Channel Box, avoid needless precision
     for axis in range(3):
@@ -1872,7 +1879,7 @@ def assign_plan(body, feet, opts=None):
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
             dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
 
-            dgmod.set_attr(rdfoot["linearLimit"], limits * 2)
+            dgmod.set_attr(rdfoot["linearLimit"], limits)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
 
             dgmod.set_attr(rdfoot["color"], internal.random_color())

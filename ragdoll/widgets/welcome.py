@@ -732,6 +732,14 @@ class AssetListPage(QtWidgets.QWidget):
 
 
 class LicenceStatusBadge(QtWidgets.QWidget):
+    """One liner product badge
+
+    A badge that sit at right bottom corner of top splash image.
+    Which looks like this:
+
+        ( Complete > Expiry June.20.2022 )
+
+    """
 
     def __init__(self, parent=None):
         super(LicenceStatusBadge, self).__init__(parent=parent)
@@ -773,47 +781,34 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         self._c_text = ""
 
     def set_status(self, data):
-        is_trial = data["isTrial"]
-        trial_days = data["trialDays"]
         expiry = data["expiry"]
-        perpetual = not expiry
         aup = data["annualUpgradeProgram"]
-        product = "Trial" if is_trial else data["marketingName"]
+        perpetual = not expiry and aup and data["product"] != "trial"
 
-        if is_trial:
-            expiry_date = datetime.now() + timedelta(days=trial_days)
-            expiry = expiry_date.strftime("%b.%d.%Y")
-            expired = trial_days < 1
-            perpetual = False
-
-        elif perpetual:
-            # Assuming perpetual licence always have AUP expiry date
+        if perpetual:
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
             aup = _aup_date.strftime("%b.%d.%Y")
             expired = False
-        else:
+        elif expiry:
             expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = expiry_date < datetime.now()
+        else:
+            # as in trial
+            expiry_date = datetime.now() + timedelta(days=data["trialDays"])
+            expiry = expiry_date.strftime("%b.%d.%Y")
+            expired = data["trialDays"] < 1
+            perpetual = False
 
         self._c_head = (
-            "#5ba3bd" if perpetual
-            else "#ac4a4a" if expired
-            else "#5ddb7a"
-        )
+            "#5ba3bd" if perpetual else "#ac4a4a" if expired else "#5ddb7a")
         self._c_tail = (
-            "#8ebecf" if perpetual
-            else "#e27d7d" if expired
-            else "#92dba3"
-        )
+            "#8ebecf" if perpetual else "#e27d7d" if expired else "#92dba3")
         self._c_text = (
-            "#2d5564" if perpetual
-            else "#732a2a" if expired
-            else "#206931"
-        )
+            "#2d5564" if perpetual else "#732a2a" if expired else "#206931")
 
         w = self._widgets
-        w["Plan"].setText(product)
+        w["Plan"].setText(data["marketingName"])
         w["Stat"].setText("%s %s" % (
             "perpetual" if perpetual else "expired" if expired else "expiry",
             ("/ AUP " + aup) if perpetual else expiry,
@@ -842,6 +837,18 @@ class LicenceStatusBadge(QtWidgets.QWidget):
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
+    """Fancy product banner
+
+    A big pretty banner that honors the product.
+    Which looks like this:
+
+    .---------------------------------------------.
+    |  Complete     Unlimited recording frames    |
+    |    ......     Export up to 10 Markers       |
+    |               Makes you look decent         |
+    `---------------------------------------------`
+
+    """
 
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
@@ -858,6 +865,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Features": QtWidgets.QLabel(),
         }
 
+        panels["Product"].setFixedWidth(250)
         panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Product"].setObjectName("PlateProduct")
         widgets["Commercial"].setObjectName("PlateCommercial")
@@ -866,42 +874,62 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(panels["Product"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(widgets["Product"])
+        layout.addWidget(widgets["Product"], alignment=QtCore.Qt.AlignRight)
         layout.addWidget(widgets["Commercial"], alignment=QtCore.Qt.AlignRight)
         layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(24, 12, 12, 12)
         layout.addWidget(panels["Product"])
+        layout.addSpacing(60)
         layout.addWidget(widgets["Features"])
         layout.addStretch(1)
 
         self._widgets = widgets
 
     def set_product(self, data):
-        # todo: product feature list
-        # todo: gradient color for each product and expired/invalid
-        is_trial = data["isTrial"]
-        product = "Trial" if is_trial else data["marketingName"]
-        non_commercial = data["isNonCommercial"]
-
-        product_pretty = {
-            "Trial": "Trial Mode",
-        }.get(product, product)
-
-        self._widgets["Product"].setText(product_pretty)
+        self._widgets["Product"].setText(data["marketingName"])
         self._widgets["Commercial"].setText(
-            "Non-Commercial" if non_commercial else "Commercial use"
+            "Non-Commercial" if data["isNonCommercial"] else "Commercial use"
         )
+        self._widgets["Features"].setText(
+            # Max four lines
+            {
+                "Trial": (
+                    "Record up to 100 frames\n"
+                    "Export up to 10 Markers\n"
+                ),
+                "Personal": (
+                    "Record up to 100 frames\n"
+                    "Export up to 10 Markers\n"
+                    "Free upgrades forever\n"
+                ),
+                "Complete": (
+                    "Unlimited recording frames\n"
+                    "Export up to 10 Markers\n"
+                    "High-performance solver\n"
+                ),
+                "Unlimited": (
+                    "The fully-featured, unrestricted version\n"
+                ),
+                "Batch": (
+                    ""
+                ),
+            }.get(data["marketingName"], "Unknown Product")
+        )
+        gradient = {
+            "Trial": "stop:0 #ff7a95, stop:1 #ffb696",
+            "Personal": "stop:0 #4facfe, stop:1 #00f2fe",
+            "Complete": "stop:0 #c1fdc9, stop:1 #57f5a1",
+            "Unlimited": "stop:0 #dbddd7, stop:0.5 #cf436b, stop:1 #1f1828",
+            "Batch": "stop:0 #a7a6cb, stop:1 #8989ba",
+        }.get(data["marketingName"], "stop:0 #959595, stop:1 #646464")
+
         self.setStyleSheet("""
         #LicencePlate {
             font-family: Sora;
             border-radius: 20px;
-            background: qlineargradient(
-                        x1:0, y1:0, x2:1, y2:1,
-                        stop:0 #c1fdc9,
-                        stop:1 #57f5a1
-                        );
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, %s);
         }
         #PlateProduct {
             font-family: Sora;
@@ -915,10 +943,11 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             color: #353535;
         }
         #PlateFeatures {
+            font-family: Sora;
             background: transparent;
             color: #FFFFFF;
         }
-        """)
+        """ % gradient)
 
     def paintEvent(self, event):
         # required for applying background styling
@@ -932,6 +961,15 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
 
 class LicenceSetupPanel(QtWidgets.QStackedWidget):
+    """Manage product licence
+
+    A widget that enables users to activate/deactivate licence, node-lock
+    or floating, and shows licencing status.
+
+    This widget is DCC App agnostic, you must connect corresponding signals
+    respectively so to collect licencing data from DCC App.
+
+    """
     updated = QtCore.Signal()
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
@@ -1323,14 +1361,14 @@ class LicencePage(QtWidgets.QWidget):
         self._widgets = widgets
 
     def input_widget(self):
-        """
+        """Exposed for connecting signals
         Returns:
             LicenceSetupPanel
         """
         return self._widgets["Body"]
 
     def status_widget(self):
-        """
+        """Exposed for connecting signals
         Returns:
             LicenceStatusPlate
         """
@@ -1445,21 +1483,21 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self.resize(1200, 850)
 
     def licence_input_widget(self):
-        """
+        """Exposed for connecting signals
         Returns:
             LicenceSetupPanel
         """
         return self._widgets["Licence"].input_widget()
 
     def licence_status_widget(self):
-        """
+        """Exposed for connecting signals
         Returns:
             LicenceStatusPlate
         """
         return self._widgets["Licence"].status_widget()
 
     def greeting_status_widget(self):
-        """
+        """Exposed for connecting signals
         Returns:
             GreetingStatus
         """

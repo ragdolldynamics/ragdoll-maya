@@ -813,7 +813,7 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         )
 
         w = self._widgets
-        w["Plan"].setText(product.capitalize())
+        w["Plan"].setText(data["marketingName"])
         w["Stat"].setText("%s %s" % (
             "perpetual" if perpetual else "expired" if expired else "expiry",
             ("/ AUP " + aup) if perpetual else expiry,
@@ -886,9 +886,9 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
         product_pretty = {
             "trial": "Trial Mode",
-        }.get(product, product)
+        }.get(product, data["marketingName"])
 
-        self._widgets["Product"].setText(product_pretty.capitalize())
+        self._widgets["Product"].setText(product_pretty)
         self._widgets["Commercial"].setText(
             "Non-Commercial" if non_commercial else "Commercial use"
         )

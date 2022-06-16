@@ -3366,6 +3366,9 @@ def welcome_user(*args):
 
         def on_lic_updated():
             data = licence.data()
+            data["marketingName"] = ui.product_to_marketingname(
+                data["product"]
+            )
             try:
                 data["ip"], data["port"] = licence._parse_environment()
             except AttributeError:

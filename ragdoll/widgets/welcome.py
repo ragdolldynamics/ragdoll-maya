@@ -4,7 +4,7 @@ import math
 import json
 import logging
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2 import QtWebEngineWidgets
 try:
@@ -155,12 +155,16 @@ class GreetingStatus(base.OverlayWidget):
             if data["offlineMode"]:
                 on_update_checked("offline", "")
             else:
-                _df = '%Y-%m-%d %H:%M:%S'
-                aup = data["annualUpgradeProgram"]
-                aup_expired = (
-                    datetime.strptime(aup, _df) < datetime.now() if aup
-                    else False
-                )
+                if data["isTrial"]:
+                    aup_expired = False  # doesn't have valid aup date in trial
+                else:
+                    _df = '%Y-%m-%d %H:%M:%S'
+                    aup = data["annualUpgradeProgram"]
+                    aup_expired = (
+                        datetime.strptime(aup, _df) < datetime.now() if aup
+                        else False
+                    )
+
                 if aup_expired:
                     on_update_checked("expired", "")
                 else:
@@ -176,11 +180,7 @@ class GreetingStatus(base.OverlayWidget):
         _check_update()
 
     def set_licence(self, data):
-        product = data["product"]
-        expiry = data["expiry"]
-        perpetual = not expiry
-        aup = data["annualUpgradeProgram"]
-        self._widgets["Badge"].set_status(product, perpetual, expiry, aup)
+        self._widgets["Badge"].set_status(data)
 
 
 class GreetingPage(QtWidgets.QWidget):
@@ -772,8 +772,21 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         self._c_tail = ""
         self._c_text = ""
 
-    def set_status(self, product, perpetual, expiry, aup):
-        if perpetual:
+    def set_status(self, data):
+        is_trial = data["isTrial"]
+        trial_days = data["trialDays"]
+        product = data["product"]
+        expiry = data["expiry"]
+        perpetual = not expiry
+        aup = data["annualUpgradeProgram"]
+
+        if is_trial:
+            expiry_date = datetime.now() + timedelta(days=trial_days)
+            expiry = expiry_date.strftime("%b.%d.%Y")
+            expired = trial_days < 1
+            perpetual = False
+
+        elif perpetual:
             # Assuming perpetual licence always have AUP expiry date
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
             aup = _aup_date.strftime("%b.%d.%Y")

@@ -3,6 +3,7 @@ import os
 import math
 import json
 import logging
+import zipfile
 import tempfile
 from datetime import datetime, timedelta
 from PySide2 import QtCore, QtWidgets, QtGui
@@ -410,6 +411,7 @@ class AssetVideoFooter(base.OverlayWidget):
 
 
 class AssetCardItem(QtWidgets.QWidget):
+    asset_opened = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(AssetCardItem, self).__init__(parent=parent)
@@ -447,6 +449,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._widgets = widgets
         self._effects = effects
         self._animations = animations
+        self._asset_data = None
 
     def init(self, index):
         """
@@ -461,10 +464,32 @@ class AssetCardItem(QtWidgets.QWidget):
             index.data(AssetCardModel.NameRole),
             [tag["color"] for tag in index.data(AssetCardModel.TagsRole)]
         )
+        self._asset_data = index.data(AssetCardModel.AssetRole)
 
     def on_clicked(self):
-        # todo: unzip and open, unzip to where? right next to the zip file.
-        print("clicked!")
+        """Unzip asset (.zip)
+        The content of the asset archive will be unpack to the same folder
+        where archive is.
+        """
+        asset = self._asset_data["asset"]
+        entry = self._asset_data["entry"]
+        asset_dir = os.path.dirname(asset)
+        entry_file = os.path.join(asset_dir, entry)
+
+        if os.path.isfile(entry_file):
+            self.asset_opened.emit(entry_file)
+            return
+
+        if not os.path.isfile(asset):
+            log.error("Asset file missing: %s" % asset)
+            return
+
+        with zipfile.ZipFile(asset, "r") as archive:
+            if entry in archive.namelist():
+                archive.extractall(asset_dir)
+                self.asset_opened.emit(entry_file)
+            else:
+                log.error("Entry file not exists in asset archive: %s" % asset)
 
     def on_transition_end(self):
         leave = self._animations["Poster"].endValue() == 1.0
@@ -507,7 +532,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
     TagsRole = QtCore.Qt.UserRole + 11
     VideoRole = QtCore.Qt.UserRole + 12
     PosterRole = QtCore.Qt.UserRole + 13
-    SceneRole = QtCore.Qt.UserRole + 14
+    AssetRole = QtCore.Qt.UserRole + 14
 
     AssetFileName = "ragdollAssets.json"
 
@@ -524,14 +549,15 @@ class AssetCardModel(QtGui.QStandardItemModel):
 
         all_tags = manifest.get("tags") or []
 
-        for asset in manifest.get("assets") or []:
+        for data in manifest.get("assets") or []:
             item = QtGui.QStandardItem()
-            name = asset["name"]
-            poster = os.path.join(lib_path, asset["poster"])
-            video = os.path.join(lib_path, asset["video"])  # todo: http link
-            scene = os.path.join(lib_path, asset["scene"])  # todo: http link
+            name = data["name"]
+            poster = os.path.join(lib_path, data["poster"])
+            video = os.path.join(lib_path, data["video"])  # todo: http link
+            asset = os.path.join(lib_path, data["asset"])  # todo: http link
+            entry = data["entry"]
             tags = []
-            for tag_name in set(asset["tags"]):
+            for tag_name in set(data["tags"]):
                 for tag in all_tags:
                     if tag["name"] == tag_name:
                         tags.append(tag)
@@ -545,8 +571,11 @@ class AssetCardModel(QtGui.QStandardItemModel):
             item.setData(name, AssetCardModel.NameRole)
             item.setData(poster, AssetCardModel.PosterRole)
             item.setData(video, AssetCardModel.VideoRole)
-            item.setData(scene, AssetCardModel.SceneRole)
             item.setData(tags, AssetCardModel.TagsRole)
+            item.setData({
+                "asset": asset,
+                "entry": entry,
+            }, AssetCardModel.AssetRole)
 
             self.appendRow(item)
 
@@ -681,6 +710,7 @@ class AssetLibraryPath(QtWidgets.QWidget):
 
 
 class AssetListPage(QtWidgets.QWidget):
+    asset_opened = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(AssetListPage, self).__init__(parent=parent)
@@ -757,6 +787,8 @@ class AssetListPage(QtWidgets.QWidget):
             self._models["Proxy"].mapFromSource(index),
             widget,
         )
+        # connect signal
+        widget.asset_opened.connect(self.asset_opened)
 
 
 class LicenceStatusBadge(QtWidgets.QWidget):
@@ -1474,6 +1506,7 @@ def _scaled_stylesheet(style):
 
 
 class WelcomeWindow(QtWidgets.QMainWindow):
+    asset_opened = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
@@ -1524,6 +1557,8 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
         self.resize(window_width, window_height)
+
+        widgets["Assets"].asset_opened.connect(self.asset_opened)
 
     def licence_input_widget(self):
         """Exposed for connecting signals

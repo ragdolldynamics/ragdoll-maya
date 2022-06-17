@@ -2,12 +2,13 @@
   "assets": [
     {
       "name": "Manikin",
-      "video": "assets/manikin.webm",
-      "poster": "assets/manikin.png",
+      "video": "assets/manikin_ragdoll_final.webm",
+      "poster": "assets/manikin_ragdoll_final.png",
       "tags": [
         "quickstart"
       ],
-      "scene": "assets/manikin.ma"
+      "asset": "assets/manikin_ragdoll_final.zip",
+      "entry": "manikin_ragdoll_final.ma"
     }
   ],
   "tags": [

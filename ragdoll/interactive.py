@@ -3430,6 +3430,16 @@ def welcome_user(*args):
             on_offline_deactivate_requested
         )
 
+        def on_asset_opened(entry_path):
+            if cmds.file(query=True, modified=True):
+                title = "Scene Not Saved"
+                message = "Scene unsaved, discard and open asset anyway?"
+                if MessageBox(title, message):
+                    cmds.file(entry_path, open=True, force=True)
+                    win.close()
+
+        win.asset_opened.connect(on_asset_opened)
+
     win.show()
     win.activateWindow()
 

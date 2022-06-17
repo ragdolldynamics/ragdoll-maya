@@ -681,7 +681,6 @@ class AssetLibraryPath(QtWidgets.QWidget):
 
 
 class AssetListPage(QtWidgets.QWidget):
-    # todo: poster shifts when scrolling
 
     def __init__(self, parent=None):
         super(AssetListPage, self).__init__(parent=parent)

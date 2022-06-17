@@ -28,7 +28,7 @@ scroll_width = px(6)
 
 video_width, video_height = px(217), px(122)
 card_padding = px(3)
-card_rounding = px(6)
+card_rounding = px(8)
 card_width = video_width + (card_padding * 2)
 card_height = video_height + (card_padding * 2)
 
@@ -37,7 +37,7 @@ sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(350)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
-window_height = px(700)  # just enough to see the first row of videos
+window_height = px(574)  # just enough to see the first row of videos
 
 
 def _resource(*fname):

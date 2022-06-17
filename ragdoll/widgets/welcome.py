@@ -526,11 +526,11 @@ class AssetCardModel(QtGui.QStandardItemModel):
             return
 
         with open(asset_file) as f:
-            data = json.load(f)
+            manifest = json.load(f)
 
-        all_tags = data.get("tags") or []
+        all_tags = manifest.get("tags") or []
 
-        for asset in data.get("assets") or []:
+        for asset in manifest.get("assets") or []:
             item = QtGui.QStandardItem()
             name = asset["name"]
             poster = os.path.join(lib_path, asset["poster"])
@@ -633,10 +633,11 @@ class AssetTagList(QtWidgets.QWidget):
         base.FlowLayout(self)
         self._tags = set()
 
-    def add_tag(self, tag, tag_color):
-        if tag in self._tags:
+    def add_tag(self, tag_name, tag_color):
+        if tag_name in self._tags:
             return
-        button = AssetTag(tag, tag_color)
+        self._tags.add(tag_name)
+        button = AssetTag(tag_name, tag_color)
         button.setIcon(QtGui.QIcon(_resource("ui", "tag-fill.svg")))
         button.setCheckable(True)
         button.toggled.connect(self.on_tag_toggled)

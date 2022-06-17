@@ -322,9 +322,8 @@ class AssetVideoPoster(base.OverlayWidget):
             h - (card_padding * 2),
         )
         path = QtGui.QPainterPath()
-        path.setFillRule(QtCore.Qt.WindingFill)
         path.addRoundedRect(rounded_rect, card_rounding, card_rounding)
-        painter.setClipPath(path.simplified())
+        painter.setClipPath(path)
         painter.drawPixmap(card_padding, card_padding, self._image)
 
 
@@ -361,21 +360,24 @@ class AssetVideoFooter(base.OverlayWidget):
         #  |                  |
         #  \_________________/
         #
+        # note: this footer is one pixel wider than the poster, to ensure
+        #   no glitchy rounding corner after overlay.
+        #
         footer_rect = QtCore.QRectF(
-            card_padding,
-            h - footer_h - card_padding,
-            w - (card_padding * 2),
+            card_padding - 1,
+            h - footer_h - card_padding + 1,
+            w - (card_padding * 2) + 2,  # +2 because both left and right
             footer_h,
         )
         footer_top_left = QtCore.QRectF(
-            card_padding,
-            h - footer_h - card_padding,
+            card_padding - 1,
+            h - footer_h - card_padding + 1,
             card_rounding,
             card_rounding,
         )
         footer_top_right = QtCore.QRectF(
-            w - card_padding - card_rounding,
-            h - footer_h - card_padding,
+            w - card_padding - card_rounding + 1,
+            h - footer_h - card_padding + 1,
             card_rounding,
             card_rounding,
         )

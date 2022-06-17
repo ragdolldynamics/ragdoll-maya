@@ -1317,11 +1317,13 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
                 text = self._widgets["ResponseCode"].toPlainText()
                 assert text, "No response found"
 
-                with open(self._resfname, "w") as f:
-                    f.write(text)
+                with open(self._resfname, "w") as _f:
+                    _f.write(text)
                 self.node_activated.emit(self._resfname)
             else:
-                key = self._widgets["ProductKey"].text() or self._data.get("key")
+                key = (
+                    self._widgets["ProductKey"].text() or self._data.get("key")
+                )
                 if key:
                     self.node_activated.emit(key)
                 else:

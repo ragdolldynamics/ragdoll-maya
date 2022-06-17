@@ -346,7 +346,8 @@ class FlowLayout(QtWidgets.QLayout):
         for item in self._item_list:
             size = size.expandedTo(item.minimumSize())
 
-        size += QtCore.QSize(2 * self.contentsMargins().top(), 2 * self.contentsMargins().top())
+        size += QtCore.QSize(2 * self.contentsMargins().top(),
+                             2 * self.contentsMargins().top())
         return size
 
     def _do_layout(self, rect, test_only):

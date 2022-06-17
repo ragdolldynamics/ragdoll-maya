@@ -245,38 +245,12 @@ class GreetingPage(QtWidgets.QWidget):
 
 
 class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
-    released = QtCore.Signal()
-    pressed = QtCore.Signal()
-    clicked = QtCore.Signal()
-    entered = QtCore.Signal()
-    leave = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(AssetVideoPlayer, self).__init__(parent=parent)
+        self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
         self.page().setBackgroundColor(QtGui.QColor("#353535"))
         self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
-
-    def eventFilter(self, source, event):
-        # note: for focus proxy
-        if event.type() == QtCore.QEvent.MouseButtonPress:
-            if event.button() is QtCore.Qt.LeftButton:
-                self.pressed.emit()
-
-        elif event.type() == QtCore.QEvent.MouseButtonRelease:
-            if event.button() is QtCore.Qt.LeftButton:
-                self.released.emit()
-                if self.geometry().contains(event.pos()):
-                    self.clicked.emit()
-
-        return super(AssetVideoPlayer, self).eventFilter(source, event)
-
-    def enterEvent(self, event):
-        self.entered.emit()
-        self.play()
-
-    def leaveEvent(self, event):
-        self.leave.emit()
-        self.pause()
 
     def play(self):
         self.page().runJavaScript("""
@@ -304,8 +278,6 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
         </div></body></html>
         """.format(video=video, r=card_rounding)
         self.setHtml(html_code, baseUrl=QtCore.QUrl("file://"))
-        self.focusProxy().installEventFilter(self)
-        # note: focus proxy exists after web content set.
 
         if QtCore.__version_info__ < (5, 13):
             # The web-engine (Chromium 73) that shipped with Qt 5.13 and
@@ -466,8 +438,6 @@ class AssetCardItem(QtWidgets.QWidget):
         layout.setContentsMargins(*(card_padding, ) * 4)
         layout.addWidget(widgets["Player"])
 
-        widgets["Player"].clicked.connect(self.on_clicked)
-
         self.setAutoFillBackground(True)
         self._widgets = widgets
         self._effects = effects
@@ -487,7 +457,8 @@ class AssetCardItem(QtWidgets.QWidget):
         )
 
     def on_clicked(self):
-        print("clicked!")  # todo: open scene
+        # todo: unzip and open, unzip to where? right next to the zip file.
+        print("clicked!")
 
     def enterEvent(self, event):
         anim = self._animations["Poster"]
@@ -497,6 +468,7 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setStartValue(current)
         anim.setEndValue(0.0)
         anim.start()
+        self._widgets["Player"].play()
 
     def leaveEvent(self, event):
         anim = self._animations["Poster"]
@@ -506,6 +478,11 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setStartValue(current)
         anim.setEndValue(1.0)
         anim.start()
+        self._widgets["Player"].pause()
+
+    def mousePressEvent(self, event):
+        super(AssetCardItem, self).mousePressEvent(event)
+        self.on_clicked()
 
 
 class AssetCardModel(QtGui.QStandardItemModel):

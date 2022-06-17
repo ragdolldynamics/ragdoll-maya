@@ -743,7 +743,8 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
         layout.addWidget(widgets["Empty"])
-        layout.addWidget(widgets["Path"])
+        # todo: unlock this feature
+        # layout.addWidget(widgets["Path"])
 
         widgets["Tags"].tagged.connect(self.on_tag_changed)
 

@@ -19,12 +19,25 @@ log = logging.getLogger("ragdoll")
 
 px = base.px
 
+# padding levels
+pd1 = px(20)
+pd2 = px(14)
+pd3 = px(10)
+pd4 = px(6)
+scroll_width = px(6)
 
-video_width, video_height = 320, 180
-card_padding = 6
-card_rounding = 12
+video_width, video_height = px(217), px(122)
+card_padding = px(3)
+card_rounding = px(6)
 card_width = video_width + (card_padding * 2)
 card_height = video_height + (card_padding * 2)
+
+anchor_size = px(48)
+sidebar_width = anchor_size + (pd3 * 2)
+splash_width = px(700)
+splash_height = px(350)
+window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
+window_height = px(700)  # just enough to see the first row of videos
 
 
 def _resource(*fname):
@@ -41,8 +54,37 @@ def _tint_color(pixmap, color):
     painter.end()
 
 
+class GreetingSplash(QtWidgets.QLabel):
+
+    def __init__(self, parent=None):
+        super(GreetingSplash, self).__init__(parent)
+        pixmap = QtGui.QPixmap(_resource("ui", "welcome-banner.png"))
+        pixmap = pixmap.scaled(
+            splash_width,
+            splash_height,
+            QtCore.Qt.KeepAspectRatioByExpanding,
+            QtCore.Qt.SmoothTransformation
+        )
+        self.setFixedWidth(splash_width)
+        self.setFixedHeight(splash_height)
+        self._image = pixmap
+
+    def paintEvent(self, event):
+        r = px(8)
+        w = self.width()
+        h = self.height()
+
+        path = QtGui.QPainterPath()
+        path.setFillRule(QtCore.Qt.WindingFill)
+        path.addRoundedRect(QtCore.QRect(0, 0, w, h), r, r)
+
+        painter = QtGui.QPainter(self)
+        painter.setClipPath(path.simplified())
+        painter.setRenderHint(painter.Antialiasing)
+        painter.drawPixmap(0, 0, self._image)
+
+
 class GreetingStatus(base.OverlayWidget):
-    FixedHeight = 48
 
     def __init__(self, parent=None):
         super(GreetingStatus, self).__init__(parent)
@@ -58,31 +100,29 @@ class GreetingStatus(base.OverlayWidget):
         }
 
         widgets["Line"].setObjectName("GreetingStatusLine")
-        widgets["Line"].setFixedWidth(GreetingPage.FixedWidth)
-        widgets["Line"].setFixedHeight(self.FixedHeight)
+        widgets["Line"].setFixedWidth(splash_width)
+        widgets["Line"].setFixedHeight(px(32))
         widgets["Line"].setStyleSheet("""
-        #GreetingStatusLine {
+        #GreetingStatusLine {{
             background-color: #8c000000;
-            border-bottom-left-radius: 16px;
-            border-bottom-right-radius: 16px;
-        }
-        """)
+            border-bottom-left-radius: {radius}px;
+            border-bottom-right-radius: {radius}px;
+        }}
+        """.format(radius=px(8)))
 
-        widgets["UpdateIcon"].setFixedSize(QtCore.QSize(32, 32))
+        widgets["UpdateIcon"].setFixedSize(QtCore.QSize(px(20), px(20)))
         widgets["UpdateLink"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Version"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Version"].setText("Version %s" % __.version_str)
 
+        widgets["StartupChk"].setObjectName("GreetingStartupChk")
         widgets["StartupChk"].setChecked(True)  # todo: optionVar
-        widgets["StartupChk"].setStyleSheet(
-            "background: transparent; padding-right: 20px; padding-top: 10px;"
-        )
 
         layout = QtWidgets.QHBoxLayout(widgets["Line"])
-        layout.setContentsMargins(16, 8, 0, 8)
-        layout.setSpacing(10)
+        layout.setContentsMargins(px(8), px(6), px(2), px(6))
+        layout.setSpacing(px(5))
         layout.addWidget(widgets["Version"])
-        layout.addSpacing(26)
+        layout.addSpacing(px(12))
         layout.addWidget(widgets["UpdateIcon"], alignment=QtCore.Qt.AlignLeft)
         layout.addWidget(widgets["UpdateLink"], alignment=QtCore.Qt.AlignLeft)
         layout.addStretch(1)
@@ -184,28 +224,18 @@ class GreetingStatus(base.OverlayWidget):
 
 
 class GreetingPage(QtWidgets.QWidget):
-    FixedWidth = 1060
-    FixedHeight = 533
 
     def __init__(self, parent=None):
         super(GreetingPage, self).__init__(parent)
 
         widgets = {
-            "Splash": QtWidgets.QLabel(),
+            "Splash": GreetingSplash(),
             "Status": GreetingStatus(self)  # overlay
         }
 
-        widgets["Splash"].setFixedWidth(self.FixedWidth)
-        widgets["Splash"].setFixedHeight(self.FixedHeight)
-        widgets["Splash"].setStyleSheet("""
-        background-image: url({banner});
-        background-repeat: no-repeat;
-        border-radius: 16px;
-        """.format(banner=_resource("ui", "welcome-banner.png")))
-
         layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, pd4, 0, 0)
         layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["Splash"], alignment=QtCore.Qt.AlignHCenter)
 
         self._widgets = widgets
@@ -344,10 +374,10 @@ class AssetVideoFooter(base.OverlayWidget):
         """
         w = self.width()
         h = self.height()
-        footer_h = int(h / 3) - 10
-        dot_radius = 9
-        dot_padding = 12
-        dot_gap = 3
+        footer_h = int(h / 3) - px(5)
+        dot_radius = px(5)
+        dot_padding = px(6)
+        dot_gap = px(3)
 
         painter = QtGui.QPainter(self)
         painter.setRenderHint(painter.Antialiasing)
@@ -386,7 +416,7 @@ class AssetVideoFooter(base.OverlayWidget):
         painter.fillRect(event.rect(), QtGui.QColor("#BB202020"))
 
         # draw text
-        text_rect = footer_rect.adjusted(20, 6, 0, 0)
+        text_rect = footer_rect.adjusted(px(10), px(3), 0, 0)
         painter.setPen(QtGui.QColor(255, 255, 255))
         painter.drawText(text_rect, self._label)
 
@@ -573,24 +603,26 @@ class AssetTag(QtWidgets.QPushButton):
 
     def __init__(self, name, color, parent=None):
         super(AssetTag, self).__init__(parent=parent)
+        hover = QtGui.QColor(color).darker().toRgb()
         self.setText(name)
         self.setCheckable(True)
         self.setStyleSheet("""
         AssetTag {{
             background: transparent;
-            height: 26px;
+            height: {h}px;
             border: 1px solid {color};
-            border-radius: 10px;
-            padding: 1px 10px 1px 8px;
+            border-radius: {r}px;
+            padding: 1px {p1}px 1px {p2}px;
             text-align: top center;
         }}
         AssetTag:checked {{
             background: {color};
         }}
         AssetTag:hover {{
-            background: {color};
+            background: {hover};
         }}
-        """.format(color=color))
+        """.format(color=color, hover=hover.name(),
+                   h=px(16), r=px(6), p1=px(5), p2=px(4)))
 
 
 class AssetTagList(QtWidgets.QWidget):
@@ -638,7 +670,7 @@ class AssetLibraryPath(QtWidgets.QWidget):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(QtWidgets.QLabel("Offline Library Path"))
-        layout.addSpacing(10)
+        layout.addSpacing(pd4)
         layout.addWidget(widgets["LineEdit"])
         layout.addWidget(widgets["Browse"])
 
@@ -673,7 +705,7 @@ class AssetListPage(QtWidgets.QWidget):
         }
 
         widgets["Head"].setObjectName("Heading1")
-        widgets["Empty"].setFixedHeight(200)
+        widgets["Empty"].setFixedHeight(px(100))
         widgets["Empty"].setAlignment(QtCore.Qt.AlignCenter)
         widgets["Empty"].setVisible(False)
 
@@ -681,6 +713,8 @@ class AssetListPage(QtWidgets.QWidget):
         widgets["List"].setModel(models["Proxy"])
 
         layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(pd1, 0, pd1, 0)
+        layout.setSpacing(pd3)
         layout.addWidget(widgets["Head"])
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
@@ -766,10 +800,10 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             "Stat": QtWidgets.QLabel(),
         }
 
-        widgets["Deco"].setFixedWidth(10)
+        widgets["Deco"].setFixedWidth(px(8))  # Arrow size |>
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setContentsMargins(px(5), 0, px(5), 0)
         layout.setSpacing(0)
         layout.addWidget(widgets["Plan"])
         layout.addWidget(widgets["Deco"])
@@ -778,7 +812,6 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         self._widgets = widgets
         self._c_head = ""
         self._c_tail = ""
-        self._c_text = ""
 
     def set_status(self, data):
         expiry = data["expiry"]
@@ -804,9 +837,11 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             "#5ba3bd" if perpetual else "#ac4a4a" if expired else "#5ddb7a")
         self._c_tail = (
             "#8ebecf" if perpetual else "#e27d7d" if expired else "#92dba3")
-        self._c_text = (
+        _text = (
             "#2d5564" if perpetual else "#732a2a" if expired else "#206931")
 
+        p = px(8)
+        r = px(6)  # border radius
         w = self._widgets
         w["Plan"].setText(data["marketingName"])
         w["Stat"].setText("%s %s" % (
@@ -817,23 +852,19 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         w["Plan"].setStyleSheet("""
             background: {c_head};
             color: #ffffff;
-            padding-left: 10px;
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px;
-        """.format(c_head=self._c_head))
-        w["Plan"].style().unpolish(w["Plan"])
-        w["Plan"].style().polish(w["Plan"])
+            padding-left: {p}px;
+            border-top-left-radius: {r}px;
+            border-bottom-left-radius: {r}px;
+        """.format(c_head=self._c_head, p=p, r=r))
 
         w["Stat"].setStyleSheet("""
             background: {c_tail};
             color: {c_text};
-            padding-left: 4px;
-            padding-right: 10px;
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px;
-        """.format(c_tail=self._c_tail, c_text=self._c_text))
-        w["Stat"].style().unpolish(w["Stat"])
-        w["Stat"].style().polish(w["Stat"])
+            padding-left: {_}px;
+            padding-right: {p}px;
+            border-top-right-radius: {r}px;
+            border-bottom-right-radius: {r}px;
+        """.format(c_tail=self._c_tail, c_text=_text, r=r, p=p, _=px(4)))
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
@@ -853,7 +884,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
         self.setObjectName("LicencePlate")
-        self.setFixedHeight(172)
+        self.setFixedHeight(px(86))
 
         panels = {
             "Product": QtWidgets.QWidget(),
@@ -865,7 +896,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Features": QtWidgets.QLabel(),
         }
 
-        panels["Product"].setFixedWidth(250)
+        panels["Product"].setFixedWidth(px(125))
         panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Product"].setObjectName("PlateProduct")
         widgets["Commercial"].setObjectName("PlateCommercial")
@@ -879,9 +910,9 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(24, 12, 12, 12)
+        layout.setContentsMargins(px(12), px(6), px(6), px(6))
         layout.addWidget(panels["Product"])
-        layout.addSpacing(60)
+        layout.addSpacing(px(30))
         layout.addWidget(widgets["Features"])
         layout.addStretch(1)
 
@@ -927,25 +958,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
         self.setStyleSheet("""
         #LicencePlate {
-            font-family: Sora;
-            border-radius: 20px;
             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, %s);
-        }
-        #PlateProduct {
-            font-family: Sora;
-            font-size: 24pt;
-            background: transparent;
-            color: #353535;
-        }
-        #PlateCommercial {
-            font-family: Sora;
-            background: transparent;
-            color: #353535;
-        }
-        #PlateFeatures {
-            font-family: Sora;
-            background: transparent;
-            color: #FFFFFF;
         }
         """ % gradient)
 
@@ -1007,19 +1020,20 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
             "ResponseCode": QtWidgets.QLineEdit(),
         }
 
-        panels["Floating"].setMaximumWidth(800)
-        panels["NodeLock"].setMaximumWidth(800)
+        panels["Floating"].setMaximumWidth(px(540))
+        panels["NodeLock"].setMaximumWidth(px(540))
 
-        widgets["ServerIP"].setFixedWidth(240)
-        widgets["ServerPort"].setFixedWidth(120)
+        widgets["ServerIP"].setFixedWidth(px(120))
+        widgets["ServerPort"].setFixedWidth(px(60))
         widgets["ServerIP"].setReadOnly(True)  # set from env var
         widgets["ServerPort"].setReadOnly(True)  # set from env var
 
-        widgets["RequestCode"].setReadOnly(True)
+        widgets["OfflineHint"].setObjectName("OfflineHint")
         widgets["RequestCodeBtn"].setObjectName("IconPushButton")
         widgets["RequestCodeBtn"].setIcon(
             QtGui.QIcon(_resource("ui", "arrow-repeat.svg"))
         )
+        widgets["RequestCode"].setReadOnly(True)
 
         widgets["CopyPasteURL"].setObjectName("CopyPasteURL")
         widgets["CopyPasteURL"].setOpenExternalLinks(True)
@@ -1040,7 +1054,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         )
 
         def _set_icon(label, image):
-            label.setFixedSize(QtCore.QSize(90, 90))
+            label.setFixedSize(QtCore.QSize(px(64), px(64)))
             label.setStyleSheet("""
             image: url({image});
             """.format(image=_resource("ui", image)))
@@ -1054,7 +1068,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
             label = QtWidgets.QLabel(with_label)
             _layout = QtWidgets.QVBoxLayout(c)
             _layout.setContentsMargins(0, 0, 0, 0)
-            _layout.setSpacing(19)
+            _layout.setSpacing(pd3)
             _layout.addWidget(label)
             _layout.addWidget(widget)
             widget.setParent(c)
@@ -1066,21 +1080,21 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         _server_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_server_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(_wrap(widgets["ServerIP"], "Server IP"))
         layout.addWidget(_wrap(widgets["ServerPort"], "Server Port"))
 
         _btn_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_btn_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addStretch(1)
         layout.addWidget(widgets["LeaseBtn"])
 
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["FloatingTitle"])
         layout.addWidget(_server_row)
         layout.addWidget(_btn_row)
@@ -1088,7 +1102,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
 
         layout = QtWidgets.QHBoxLayout(panels["Floating"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["FloatingIcon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
         layout.addStretch(1)
@@ -1099,20 +1113,20 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         _req_line = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_req_line)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(pd4)
         layout.addWidget(widgets["RequestCode"])
         layout.addWidget(widgets["RequestCodeBtn"])
 
         _req_code = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_req_code)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setSpacing(px(1))
         layout.addWidget(_wrap(_req_line, "Request Code"))
         layout.addWidget(widgets["CopyPasteURL"], 0, QtCore.Qt.AlignRight)
 
         layout = QtWidgets.QVBoxLayout(widgets["OfflineOpts"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["OfflineHint"])
         layout.addWidget(_req_code)
         layout.addWidget(_wrap(widgets["ResponseCode"], "Response Code"))
@@ -1120,14 +1134,14 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         _btn_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_btn_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addStretch(1)
         layout.addWidget(widgets["KeyBtn"])
 
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["NodeLockTitle"])
         layout.addWidget(_wrap(widgets["ProductKey"], "Product Key"))
         layout.addWidget(widgets["OfflineOpts"])
@@ -1136,7 +1150,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
 
         layout = QtWidgets.QHBoxLayout(panels["NodeLock"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(28)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["NodeLockIcon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
 
@@ -1353,7 +1367,8 @@ class LicencePage(QtWidgets.QWidget):
         widgets["Title"].setObjectName("Heading1")
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setSpacing(28)
+        layout.setContentsMargins(pd1, 0, pd1, 0)
+        layout.setSpacing(pd2)
         layout.addWidget(widgets["Title"])
         layout.addWidget(widgets["Plate"])
         layout.addWidget(widgets["Body"])
@@ -1383,30 +1398,32 @@ class SideBar(QtWidgets.QFrame):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(19)
-        layout.addSpacing(38)
-        self.setFixedWidth(100)
+        layout.setSpacing(pd3)
+        layout.addSpacing(pd1)
+        self.setFixedWidth(sidebar_width)
         self.setStyleSheet("background: #2b2b2b;")
         self._anchors = []
 
     def add_anchor(self, name, image, color):
+        icon_size = QtCore.QSize(px(30), px(30))
+
         unchecked_icon = QtGui.QIcon(_resource("ui", image))
-        pixmap = unchecked_icon.pixmap(QtCore.QSize(44, 44))
+        pixmap = unchecked_icon.pixmap(icon_size)
         _tint_color(pixmap, QtGui.QColor("#333333"))
         checked_icon = QtGui.QIcon(pixmap)
 
         anchor = base.ToggleButton()
         anchor.setChecked(False)
-        anchor.setIconSize(QtCore.QSize(44, 44))
+        anchor.setIconSize(icon_size)
 
         anchor.set_checked_icon(checked_icon)
         anchor.set_unchecked_icon(unchecked_icon)
 
         anchor.setStyleSheet("""
         QPushButton {{
-            height: 72px;
-            width: 72px;
-            border-radius: 36px;
+            height: {size}px;
+            width: {size}px;
+            border-radius: {radius}px;
             background: transparent;
             padding: 0px;
         }}
@@ -1416,7 +1433,7 @@ class SideBar(QtWidgets.QFrame):
         QPushButton:checked {{
             background: {color};
         }}
-        """.format(color=color))
+        """.format(color=color, size=anchor_size, radius=int(anchor_size / 2)))
 
         self.layout().addWidget(anchor)
         self._anchors.append(anchor)
@@ -1433,10 +1450,38 @@ class SideBar(QtWidgets.QFrame):
         anchor.setChecked(True)
 
 
+with open(_resource("ui", "style_welcome.css")) as f:
+    stylesheet = f.read()
+
+
+def _scaled_stylesheet(style):
+    """Replace any mention of <num>px with scaled version
+
+    This way, you can still use px without worrying about what
+    it will look like at HDPI resolution.
+
+    """
+
+    output = []
+    for line in style.splitlines():
+        line = line.rstrip()
+        if line.endswith("px;"):
+            key, value = line.rsplit(" ", 1)
+            value = px(int(value[:-3]))
+            line = "%s %dpx;" % (key, value)
+        output += [line]
+    result = "\n".join(output)
+    result = result % dict(
+        res=_resource().replace("\\", "/"),
+    )
+    return result
+
+
 class WelcomeWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
+        self.setWindowTitle("Welcome")
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         panels = {
@@ -1461,14 +1506,15 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         panels["SideBar"].add_anchor("Licence", "shield-lock.svg", "#80e5cc")
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["Greet"])
         layout.addWidget(widgets["Assets"])
         layout.addWidget(widgets["Licence"])
-        layout.addSpacing(200)
+        layout.addSpacing(px(100))
         layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
-        layout.setContentsMargins(0, 0, 4, 0)
+        layout.setContentsMargins(0, 0, px(2), 0)
         layout.setSpacing(0)
         layout.addWidget(panels["SideBar"])
         layout.addWidget(panels["Scroll"])
@@ -1478,9 +1524,9 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         self._panels = panels
         self._widgets = widgets
-        self.setStyleSheet(_main_stylesheet)
-        self.setMinimumWidth(1200)
-        self.resize(1200, 850)
+        self.setStyleSheet(_scaled_stylesheet(stylesheet))
+        self.setMinimumWidth(window_width)
+        self.resize(window_width, window_height)
 
     def licence_input_widget(self):
         """Exposed for connecting signals
@@ -1512,134 +1558,3 @@ class WelcomeWindow(QtWidgets.QMainWindow):
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
         self._panels["Scroll"].ensureWidgetVisible(widget)
-
-
-_main_stylesheet = """
-* {
-    color: #d2d2d2;
-    background: #353535;
-    font-size: 9pt;
-}
-#Heading1 {
-    font-family: Sora;
-    font-size: 18pt;
-}
-#Heading2 {
-    font-size: 15pt;
-}
-QLineEdit {
-    height: 40px;
-    border: 1px solid #4d4d4d;
-    border-radius: 20px;
-    padding-left: 20px;
-    padding-right: 20px;
-}
-QCheckBox::indicator:unchecked {
-    image: url("%(res)s/ui/square.svg");
-}
-QCheckBox::indicator:checked {
-    image: url("%(res)s/ui/square-check.svg");
-}
-QPushButton {
-    background: #4d4d4d;
-    height: 40px;
-    min-width: 40px;
-    border-radius: 20px;
-    padding-left: 20px;
-    padding-right: 20px;
-}
-QPushButton:hover {
-    background: #5f5f5f;
-}
-QPushButton:pressed {
-    background: #424242;
-}
-#IconPushButton {
-    padding: 0px;
-}
-
-AssetCardView {
-    border: none;
-    outline: none; /* Disable dotted border on focus */
-}
-AssetCardView::item:hovered {
-    background-color: transparent; /* no highlight on hovered */
-}
-
-QAbstractScrollArea {
-    border: none;
-}
-
-QScrollBar:horizontal {
-    height: 12px;
-    border: none;
-    margin: 0px 12px 0px 12px;
-}
-
-QScrollBar::handle:horizontal {
-    background-color: #AADDDDDD;
-    min-width: 14px;
-    margin: 1px 1px 0px 1px;
-}
-
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-    margin: 1px 0px 0px 0px;
-    height: 12px;
-    width: 12px;
-}
-
-QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-    background: none;
-}
-
-QScrollBar::sub-line:horizontal {
-    image: none;
-    subcontrol-position: left;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::add-line:horizontal {
-    image: none;
-    subcontrol-position: right;
-    subcontrol-origin: margin;
-}
-
-
-QScrollBar:vertical {
-    width: 12px;
-    border: none;
-    margin: 12px 0px 12px 0px;
-}
-
-QScrollBar::handle:vertical {
-    background-color: #40CDCDCD;
-    border-radius: 5px;
-    min-height: 14px;
-    margin: 1px 0px 1px 1px;
-}
-
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    margin: 0px 0px 0px 1px;
-    height: 12px;
-    width: 12px;
-}
-
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-    background: none;
-}
-
-QScrollBar::sub-line:vertical {
-    image: none;
-    subcontrol-position: top;
-    subcontrol-origin: margin;
-}
-
-QScrollBar::add-line:vertical {
-    image: none;
-    subcontrol-position: bottom;
-    subcontrol-origin: margin;
-}
-
-""" % dict(
-    res=_resource().replace("\\", "/"),
-)

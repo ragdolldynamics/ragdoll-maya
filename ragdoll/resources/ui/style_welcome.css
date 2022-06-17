@@ -1,0 +1,156 @@
+* {
+    color: #d2d2d2;
+    background: #353535;
+    font-size: 11px;
+}
+#Heading1 {
+    font-family: Sora;
+    font-size: 28px;
+}
+#Heading2 {
+    font-size: 20px;
+}
+QLineEdit {
+    height: 20px;
+    border: 1px solid #4d4d4d;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+QCheckBox::indicator:unchecked {
+    image: url("%(res)s/ui/square.svg");
+}
+QCheckBox::indicator:checked {
+    image: url("%(res)s/ui/square-check.svg");
+}
+QPushButton {
+    background: #4d4d4d;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+QPushButton:hover {
+    background: #5f5f5f;
+}
+QPushButton:pressed {
+    background: #424242;
+}
+#IconPushButton {
+    padding: 0px;
+}
+
+AssetCardView {
+    border: none;
+    outline: none; /* Disable dotted border on focus */
+}
+AssetCardView::item:hovered {
+    background-color: transparent; /* no highlight on hovered */
+}
+
+#GreetingStartupChk {
+    background: transparent;
+    padding-right: 16px;
+    padding-top: 20px
+}
+
+#OfflineHint {
+    color: #8c8c8c;
+}
+
+#LicencePlate {
+    font-family: Sora;
+    border-radius: 10px;
+}
+#PlateProduct {
+    font-family: Sora;
+    font-size: 12pt;
+    background: transparent;
+    color: #353535;
+}
+#PlateCommercial {
+    font-family: Sora;
+    background: transparent;
+    color: #353535;
+}
+#PlateFeatures {
+    font-family: Sora;
+    background: transparent;
+    color: #FFFFFF;
+}
+
+QAbstractScrollArea {
+    border: none;
+}
+
+QScrollBar:horizontal {
+    height: 6px;
+    border: none;
+    margin: 0px 6px 0px 6px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #40CDCDCD;
+    border-radius: 2px;
+    min-width: 7px;
+    margin: 1px 1px 0px 1px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    margin: 1px 0px 0px 0px;
+    height: 6px;
+    width: 6px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+QScrollBar::sub-line:horizontal {
+    image: none;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:horizontal {
+    image: none;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+
+
+QScrollBar:vertical {
+    width: 6px;
+    border: none;
+    margin: 6px 0px 6px 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #40CDCDCD;
+    border-radius: 2px;
+    min-height: 7px;
+    margin: 1px 0px 1px 1px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    margin: 0px 0px 0px 1px;
+    height: 6px;
+    width: 6px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar::sub-line:vertical {
+    image: none;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:vertical {
+    image: none;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}

@@ -414,20 +414,21 @@ class AssetCardItem(QtWidgets.QWidget):
 
         widgets = {
             "Footer": AssetVideoFooter(self),
-            "Poster": AssetVideoPoster(self),
+            "PosterStill": AssetVideoPoster(self),
+            "PosterAnim": AssetVideoPoster(self),
             "Player": AssetVideoPlayer(self),
         }
 
         effects = {
-            "Poster": QtWidgets.QGraphicsOpacityEffect(widgets["Poster"]),
+            "Poster": QtWidgets.QGraphicsOpacityEffect(widgets["PosterAnim"]),
         }
 
         animations = {
             "Poster": QtCore.QPropertyAnimation(effects["Poster"], b"opacity")
         }
 
-        widgets["Poster"].setAttribute(QtCore.Qt.WA_StyledBackground)
-        widgets["Poster"].setGraphicsEffect(effects["Poster"])
+        widgets["PosterAnim"].setAttribute(QtCore.Qt.WA_StyledBackground)
+        widgets["PosterAnim"].setGraphicsEffect(effects["Poster"])
         widgets["Player"].setFixedWidth(video_width)
         widgets["Player"].setFixedHeight(video_height)
 
@@ -437,6 +438,8 @@ class AssetCardItem(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(*(card_padding, ) * 4)
         layout.addWidget(widgets["Player"])
+
+        animations["Poster"].finished.connect(self.on_transition_end)
 
         self.setAutoFillBackground(True)
         self._widgets = widgets
@@ -450,7 +453,8 @@ class AssetCardItem(QtWidgets.QWidget):
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
         self._widgets["Player"].set_video(video)
-        self._widgets["Poster"].set_poster(poster)
+        self._widgets["PosterStill"].set_poster(poster)
+        self._widgets["PosterAnim"].set_poster(poster)
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
             [tag["color"] for tag in index.data(AssetCardModel.TagsRole)]
@@ -460,6 +464,16 @@ class AssetCardItem(QtWidgets.QWidget):
         # todo: unzip and open, unzip to where? right next to the zip file.
         print("clicked!")
 
+    def on_transition_end(self):
+        leave = self._animations["Poster"].endValue() == 1.0
+        if leave:
+            # Animated poster not able to update/redraw correctly when
+            #   the main page gets scrolled. Use another still poster
+            #   to cover that.
+            self._widgets["Player"].pause()
+            self._widgets["PosterStill"].show()
+            self._widgets["PosterAnim"].hide()
+
     def enterEvent(self, event):
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()
@@ -468,6 +482,8 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setStartValue(current)
         anim.setEndValue(0.0)
         anim.start()
+        self._widgets["PosterAnim"].show()
+        self._widgets["PosterStill"].hide()
         self._widgets["Player"].play()
 
     def leaveEvent(self, event):
@@ -478,7 +494,6 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setStartValue(current)
         anim.setEndValue(1.0)
         anim.start()
-        self._widgets["Player"].pause()
 
     def mousePressEvent(self, event):
         super(AssetCardItem, self).mousePressEvent(event)

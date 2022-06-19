@@ -931,9 +931,12 @@ def create_pose_constraint(parent, child, opts=None):
 
 
 @internal.with_undo_chunk
-def create_pin_constraint(child, opts=None):
-    """Create a new pin constraint for `child`"""
+def create_pin_constraint(child, parent=None, opts=None):
+    """Create a new pin constraint for `parent` and optionally `parent`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert not parent or parent.isA("rdMarker"), (
+        "%s was not a marker" % parent.type()
+    )
 
     opts = dict({
         "location": constants.AnimationLocation,
@@ -948,38 +951,59 @@ def create_pin_constraint(child, opts=None):
     source_name = source_transform.name(namespace=False)
     source_tm = source_transform.transform(cmdx.sWorld)
 
-    if opts["location"] == constants.SimulationLocation:
-        if cmds.ragdollLicence(isNonCommercial=True, query=True):
-            # A nont commercial licence cannot read
-            # outputMatrix beyond 100 frames
-            log.info(
-                "Cannot create pin at simulation "
-                "with a non-commercial licence"
-            )
-            source_tm = source_transform.transform(cmdx.sWorld)
-        else:
-            source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
+    pin_parent = None
 
-    name = internal.unique_name("%s_rPin" % source_name)
-    shape_name = internal.shape_name(name)
+    # Pin Constraint
+    if parent is None:
+        name = internal.unique_name("%s_rPin" % source_name)
+
+        if opts["location"] == constants.SimulationLocation:
+            if cmds.ragdollLicence(isNonCommercial=True, query=True):
+                # A non-commercial licence cannot read
+                # outputMatrix beyond 100 frames
+                log.info(
+                    "Cannot create pin at simulation "
+                    "with a non-commercial licence"
+                )
+                source_tm = source_transform.transform(cmdx.sWorld)
+            else:
+                source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
+
+    # Glue Constraint
+    else:
+        name = internal.unique_name("%s_rAttach" % source_name)
+        parent_transform = parent["src"].input(type=cmdx.kDagNode)
+        pin_parent = parent_transform
+        source_tm = cmdx.Tm(
+            source_transform["worldMatrix"][0].as_matrix() *
+            parent_transform["worldInverseMatrix"][0].as_matrix()
+        )
 
     with cmdx.DagModifier() as mod:
-        transform = mod.create_node("transform", name=name)
+        transform = mod.create_node("transform", name=name, parent=pin_parent)
         con = nodes.create("rdPinConstraint",
-                           mod, shape_name, parent=transform)
+                           mod,
+                           internal.shape_name(name),
+                           parent=transform)
 
         mod.set_attr(transform["translate"], source_tm.translation())
         mod.set_attr(transform["rotate"], source_tm.rotation())
 
-        # More suitable default values
-        mod.set_attr(con["linearStiffness"], 0.01)
-        mod.set_attr(con["angularStiffness"], 0.01)
+        if parent is None:
+            # More suitable default values
+            mod.set_attr(con["linearStiffness"], 0.01)
+            mod.set_attr(con["angularStiffness"], 0.01)
 
         # Temporary means of viewport selection
         mod.set_attr(transform["displayHandle"], True)
 
         mod.connect(child["ragdollId"], con["childMarker"])
-        mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
+
+        if parent is not None:
+            mod.connect(parent["ragdollId"], con["parentMarker"])
+            mod.connect(transform["matrix"], con["targetMatrix"])
+        else:
+            mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 
         _take_ownership(mod, con, transform)
         _add_constraint(mod, con, solver)

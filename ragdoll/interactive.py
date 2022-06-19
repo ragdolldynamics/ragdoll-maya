@@ -870,6 +870,8 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, create_pin_constraint_options, label="Pin")
+        item("attachConstraint",
+             create_attach_constraint, label="Attach")
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -1925,7 +1927,7 @@ def create_pin_constraint(selection=None, **opts):
                 "%s wasn't a marker" % selection[0]
             )
 
-        con = commands.create_pin_constraint(a, opts)
+        con = commands.create_pin_constraint(a, opts=opts)
         cons += [con.parent().path()]
 
     cmds.select(cons)
@@ -1935,36 +1937,17 @@ def create_pin_constraint(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def create_pose_constraint(selection=None, **opts):
-    selection = selection or cmdx.sl()
+def create_attach_constraint(selection=None, **opts):
 
     try:
-        a, b = selection
+        a, b = markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
             "Select two markers to constrain."
         )
 
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
-
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[0]
-        )
-
-    if not (b and b.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[1]
-        )
-
-    con = commands.create_pose_constraint(a, b)
+    con = commands.create_pin_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True

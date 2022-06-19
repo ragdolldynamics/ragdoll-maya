@@ -191,7 +191,7 @@ class _Recorder(object):
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
-        marker_to_joint = _generate_kinematic_hierarchy(self._solver)
+        marker_to_joint = _generate_kinematic_joints(self._solver)
 
         # Keep track of any mess we make
         def find_roots():
@@ -502,8 +502,8 @@ class _Recorder(object):
                 matrix = values["outputMatrix"]
                 parent_matrix = cmdx.Mat4()
 
-                if parent in self._cache and _is_enabled(parent):
-                    parent_matrix = self._cache[parent][frame]["outputMatrix"]
+                # if parent in self._cache and _is_enabled(parent):
+                #     parent_matrix = self._cache[parent][frame]["outputMatrix"]
 
                 tm = cmdx.Tm(matrix * parent_matrix.inverse())
                 t = tm.translation()
@@ -911,7 +911,7 @@ def _generate_kinematic_hierarchy(solver,
         parent = marker_to_dagnode.get(parent)
         name = marker.name() + "_jnt"
 
-        dagnode = mod.create_node("joint", name=name, parent=parent)
+        dagnode = mod.create_node("joint", name, parent)
         marker_to_dagnode[marker] = dagnode
 
         children = marker["ragdollId"].outputs(type="rdMarker", plugs=True)
@@ -946,6 +946,19 @@ def _generate_kinematic_hierarchy(solver,
         with cmdx.DagModifier() as mod:
             mod.do_it()
             extend_tips(mod)
+
+    return marker_to_dagnode
+
+
+def _generate_kinematic_joints(solver):
+    markers = _find_markers(solver)
+    marker_to_dagnode = {}
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            name = marker.name() + "_jnt"
+            dagnode = mod.create_node("joint", name)
+            marker_to_dagnode[marker] = dagnode
 
     return marker_to_dagnode
 

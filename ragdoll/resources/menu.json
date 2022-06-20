@@ -406,6 +406,7 @@
             "markersRecordInitialKey",
             "markersRecordUseSelection",
             "markersIgnoreJoints",
+            "markersRecordClosedLoop",
             "markersRecordKinematic",
             "markersRecordMode"
         ]

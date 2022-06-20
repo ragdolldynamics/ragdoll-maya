@@ -2022,6 +2022,7 @@ def record_markers(selection=None, **opts):
         "recordFilter": _opt("markersRecordFilter", opts),
         "autoCache": _opt("markersRecordAutoCache", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
+        "closedLoop": _opt("markersRecordClosedLoop", opts),
         "mode": _opt("markersRecordMode", opts),
         "protectOriginalInput": _opt(
             "markersRecordProtectOriginalInput", opts),
@@ -2100,6 +2101,7 @@ def record_markers(selection=None, **opts):
                 "toLayer": opts["recordToLayer"],
                 "setInitialKey": opts["recordInitialKey"],
                 "ignoreJoints": opts["ignoreJoints"],
+                "closedLoop": opts["closedLoop"],
                 "mode": opts["mode"],
             }
 

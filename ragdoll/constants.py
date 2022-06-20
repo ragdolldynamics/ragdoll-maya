@@ -80,6 +80,9 @@ GreaterThan = 1
 LodEqual = 2
 LodNotEqual = 3
 
+EulerFilter = 1
+QuaternionFilter = 2
+
 MatchByName = 0
 MatchByHierarchy = 1
 

@@ -1585,6 +1585,14 @@ class WelcomeWindow(QtWidgets.QMainWindow):
             "Licence": LicencePage(),
         }
 
+        animations = {
+            "FadeIn": QtCore.QPropertyAnimation(self, b"windowOpacity")
+        }
+
+        animations["FadeIn"].setDuration(150)
+        animations["FadeIn"].setStartValue(0.0)
+        animations["FadeIn"].setEndValue(1.0)
+
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
 
@@ -1613,6 +1621,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         self._panels = panels
         self._widgets = widgets
+        self._animations = animations
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
         self.resize(window_width, window_height)
@@ -1641,10 +1650,12 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         return self._widgets["Greet"].status_widget()
 
     def show(self):
-        super(WelcomeWindow, self).show()
         self._widgets["Assets"].reset()
         self.licence_input_widget().updated.emit()
         self._panels["SideBar"].set_current_anchor(0)
+        self.setWindowOpacity(0)
+        super(WelcomeWindow, self).show()
+        self._animations["FadeIn"].start()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)

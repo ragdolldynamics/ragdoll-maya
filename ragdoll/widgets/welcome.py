@@ -480,7 +480,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._widgets["PosterAnim"].set_poster(poster)
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
-            [tag["color"] for tag in index.data(AssetCardModel.TagsRole)]
+            list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._asset_data = index.data(AssetCardModel.AssetRole)
 
@@ -546,11 +546,19 @@ class AssetCardItem(QtWidgets.QWidget):
 
 
 class AssetCardModel(QtGui.QStandardItemModel):
-    NameRole = QtCore.Qt.UserRole + 10
-    TagsRole = QtCore.Qt.UserRole + 11
+    # (dict) path data to load asset
+    #   "asset": path/url to the asset zip archive
+    #   "entry": the name of file in archive to load the asset
+    AssetRole = QtCore.Qt.UserRole + 10
+    # (str) name of the asset
+    NameRole = QtCore.Qt.UserRole + 11
+    # (str) path/url to the video file
     VideoRole = QtCore.Qt.UserRole + 12
+    # (str) path to the poster image
     PosterRole = QtCore.Qt.UserRole + 13
-    AssetRole = QtCore.Qt.UserRole + 14
+    # (dict) tags of the asset
+    #   <tag name>: <tag color>
+    TagsRole = QtCore.Qt.UserRole + 14
 
     AssetFileName = "ragdollAssets.json"
 
@@ -578,8 +586,9 @@ class AssetCardModel(QtGui.QStandardItemModel):
         with open(asset_file) as f:
             manifest = json.load(f)
 
-        all_tags = manifest.get("tags") or []
-
+        all_dots = {
+            tag["name"]: tag["color"] for tag in manifest.get("tags") or []
+        }
         for data in manifest.get("assets") or []:
             item = QtGui.QStandardItem()
             name = data["name"]
@@ -587,17 +596,10 @@ class AssetCardModel(QtGui.QStandardItemModel):
             video = self.resource(data["video"], lib_path)
             asset = self.resource(data["asset"], lib_path)
             entry = data["entry"]
-            tags = []
-            for tag_name in set(data["tags"]):
-                for tag in all_tags:
-                    if tag["name"] == tag_name:
-                        tags.append(tag)
-                        break
-                else:
-                    tags.append({
-                        "name": tag_name,
-                        "color": "black",
-                    })
+            tags = {
+                tag_name: all_dots.get(tag_name, "black")
+                for tag_name in set(data["tags"])
+            }
 
             item.setData(name, AssetCardModel.NameRole)
             item.setData(poster, AssetCardModel.PosterRole)
@@ -615,8 +617,17 @@ class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
 
     def __init__(self, parent=None):
         super(AssetCardProxyModel, self).__init__(parent=parent)
-        self.setFilterRole(AssetCardModel.NameRole)
-        # todo: support multiple tags
+        self._tags = set()
+
+    def set_tags(self, tags):
+        self._tags = set(tags)
+        self.invalidate()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        model = self.sourceModel()
+        index = model.index(source_row, 0, source_parent)
+        item_tags = model.data(index, AssetCardModel.TagsRole).keys()
+        return any(t in self._tags for t in item_tags) if self._tags else True
 
 
 class AssetCardView(QtWidgets.QListView):
@@ -672,7 +683,7 @@ class AssetTag(QtWidgets.QPushButton):
         AssetTag:checked {{
             background: {color};
         }}
-        AssetTag:hover {{
+        AssetTag:hover:!checked {{
             background: {hover};
         }}
         """.format(color=color, hover=hover.name(),
@@ -787,10 +798,10 @@ class AssetListPage(QtWidgets.QWidget):
         self._widgets["List"].adjust_viewport()
 
     def on_tag_changed(self, tags):
-        _proxy = self._models["Proxy"]
         _view = self._widgets["List"]
+        _proxy = self._models["Proxy"]
+        _proxy.set_tags(tags)
 
-        _proxy.setFilterRegExp(" ".join(tags))
         for row in range(_proxy.rowCount()):
             index = _proxy.index(row, 0)
             if _view.indexWidget(index) is None:
@@ -805,8 +816,8 @@ class AssetListPage(QtWidgets.QWidget):
         for row in range(model.rowCount()):
             index = model.index(row, 0)
             self.init_widget(index)
-            for tag in model.data(index, model.TagsRole):
-                self._widgets["Tags"].add_tag(tag["name"], tag["color"])
+            for name, color in model.data(index, model.TagsRole).items():
+                self._widgets["Tags"].add_tag(name, color)
 
         self._widgets["Empty"].setVisible(not model.rowCount())
 

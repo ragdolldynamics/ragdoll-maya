@@ -20,8 +20,14 @@ except ImportError:
 from . import base
 from .. import __
 
-log = logging.getLogger("ragdoll")
 
+__throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
+# This is a workaround for a Py2 bug:
+#   The first use of strptime is not thread safe.
+#   See: https://bugs.python.org/issue7980#msg221094
+#        https://bugs.launchpad.net/openobject-server/+bug/947231/comments/8
+
+log = logging.getLogger("ragdoll")
 px = base.px
 
 # padding levels

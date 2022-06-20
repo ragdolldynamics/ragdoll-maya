@@ -1608,7 +1608,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         layout.addWidget(widgets["Greet"])
         layout.addWidget(widgets["Assets"])
         layout.addWidget(widgets["Licence"])
-        layout.addSpacing(px(100))
+        layout.addSpacing(px(300))  # virtual space
         layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
@@ -1660,4 +1660,4 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
-        self._panels["Scroll"].ensureWidgetVisible(widget)
+        self._panels["Scroll"].verticalScrollBar().setValue(widget.y())

@@ -12,6 +12,10 @@ try:
     from urllib import request
 except ImportError:
     import urllib as request  # py2
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse  # py2
 
 from . import base
 from .. import __
@@ -536,6 +540,19 @@ class AssetCardModel(QtGui.QStandardItemModel):
 
     AssetFileName = "ragdollAssets.json"
 
+    def is_net_location(self, url):
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except AttributeError:
+            return False
+
+    def resource(self, path, lib_path):
+        if self.is_net_location(path):
+            return path
+        else:
+            return os.path.join(lib_path, path)
+
     def refresh(self, lib_path=None):
         self.clear()
 
@@ -553,8 +570,8 @@ class AssetCardModel(QtGui.QStandardItemModel):
             item = QtGui.QStandardItem()
             name = data["name"]
             poster = os.path.join(lib_path, data["poster"])
-            video = os.path.join(lib_path, data["video"])  # todo: http link
-            asset = os.path.join(lib_path, data["asset"])  # todo: http link
+            video = self.resource(data["video"], lib_path)
+            asset = self.resource(data["asset"], lib_path)
             entry = data["entry"]
             tags = []
             for tag_name in set(data["tags"]):

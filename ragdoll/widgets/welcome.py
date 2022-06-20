@@ -37,7 +37,7 @@ card_rounding = px(8)
 card_width = video_width + (card_padding * 2)
 card_height = video_height + (card_padding * 2)
 
-anchor_size = px(48)
+anchor_size = px(32)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(350)
@@ -1492,7 +1492,8 @@ class SideBar(QtWidgets.QFrame):
         self._anchors = []
 
     def add_anchor(self, name, image, color):
-        icon_size = QtCore.QSize(px(30), px(30))
+        icon_size = int(anchor_size * 0.4)
+        icon_size = QtCore.QSize(px(icon_size), px(icon_size))
 
         unchecked_icon = QtGui.QIcon(_resource("ui", image))
         pixmap = unchecked_icon.pixmap(icon_size)

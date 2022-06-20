@@ -3351,14 +3351,14 @@ def repeatable(func):
 
 
 def welcome_user(*args):
-    if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):
-        return ui.SplashScreen.instance.show()
-
-    parent = ui.MayaWindow()
-
     if os.getenv("RAGDOLL_LEGACY_GREETS"):
+        if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):
+            return ui.SplashScreen.instance.show()
+
+        parent = ui.MayaWindow()
         win = ui.SplashScreen(parent)
     else:
+        parent = ui.MayaWindow()
         win = widgets.WelcomeWindow(parent)
         lic = win.licence_input_widget()
         stw = win.licence_status_widget()

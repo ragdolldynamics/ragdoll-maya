@@ -870,8 +870,11 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, create_pin_constraint_options, label="Pin")
-        item("attachConstraint",
-             create_attach_constraint, label="Attach")
+
+        if c.RAGDOLL_DEVELOPER:
+            item("attachConstraint",
+                 create_attach_constraint, label="Attach")
+
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 

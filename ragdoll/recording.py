@@ -278,7 +278,7 @@ class _Recorder(object):
         marker_to_dagnode = _generate_kinematic_hierarchy(
             self._solver, tips=True, visible=True)
 
-        for progress in self._cache_to_curves(marker_to_dagnode):
+        for progress in self._cache_to_curves(marker_to_dagnode, _ws=False):
             yield ("transferring", 50 + progress * 0.50)
 
         if self._opts["extractAndAttach"]:
@@ -320,7 +320,7 @@ class _Recorder(object):
         start_frame = self._solver_start_frame
         current_frame = int(initial_time.value)
 
-        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        marker_to_dagnode = _generate_kinematic_joints(self._solver)
         sim_to_cache = self._sim_to_cache([current_frame, start_frame])
         cache_to_curves = self._cache_to_curves(marker_to_dagnode,
                                                 [start_frame, current_frame])
@@ -458,7 +458,7 @@ class _Recorder(object):
             cmdx.current_time(initial_time)
 
     @internal.with_timing
-    def _cache_to_curves(self, marker_to_dagnode, _range=None):
+    def _cache_to_curves(self, marker_to_dagnode, _range=None, _ws=True):
         r"""Convert worldspace matrices into translate/rotate channels
 
                                  ___ z
@@ -500,12 +500,12 @@ class _Recorder(object):
             for frame in _range:
                 values = self._cache[marker][frame]
                 matrix = values["outputMatrix"]
-                parent_matrix = cmdx.Mat4()
 
-                # if parent in self._cache and _is_enabled(parent):
-                #     parent_matrix = self._cache[parent][frame]["outputMatrix"]
+                if not _ws and parent in self._cache and _is_enabled(parent):
+                    parent_matrix = self._cache[parent][frame]["outputMatrix"]
+                    matrix *= parent_matrix.inverse()
 
-                tm = cmdx.Tm(matrix * parent_matrix.inverse())
+                tm = cmdx.Tm(matrix)
                 t = tm.translation()
                 r = tm.rotation()
 

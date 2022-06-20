@@ -466,7 +466,10 @@ class Thread(QtCore.QThread):
         try:
             result = self._func(*self._args, **self._kwargs)
         except Exception as e:
-            message = f"\n{traceback.format_exc()}\n{str(e)}"
+            message = "\n{trace}\n{err}".format(
+                trace=traceback.format_exc(),
+                err=str(e),
+            )
             log.critical(message)
         else:
             self.result_ready.emit(result)

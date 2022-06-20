@@ -96,7 +96,6 @@ class GreetingStatus(base.OverlayWidget):
         self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
 
         widgets = {
-            "StartupChk": QtWidgets.QCheckBox("Show on startup"),
             "Line": QtWidgets.QLabel(),
             "Version": QtWidgets.QLabel(),
             "UpdateIcon": QtWidgets.QLabel(),
@@ -120,9 +119,6 @@ class GreetingStatus(base.OverlayWidget):
         widgets["Version"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Version"].setText("Version %s" % __.version_str)
 
-        widgets["StartupChk"].setObjectName("GreetingStartupChk")
-        widgets["StartupChk"].setChecked(True)  # todo: optionVar
-
         layout = QtWidgets.QHBoxLayout(widgets["Line"])
         layout.setContentsMargins(px(8), px(6), px(2), px(6))
         layout.setSpacing(px(5))
@@ -136,7 +132,6 @@ class GreetingStatus(base.OverlayWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(widgets["StartupChk"], alignment=QtCore.Qt.AlignRight)
         layout.addStretch(1)
         layout.addWidget(widgets["Line"], alignment=QtCore.Qt.AlignHCenter)
 

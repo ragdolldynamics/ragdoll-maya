@@ -1,8 +1,11 @@
-import shiboken2
 
+import logging
+import traceback
+import shiboken2
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
+log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
 
 try:
@@ -436,3 +439,34 @@ class OverlayWidget(QtWidgets.QWidget):
         elif event.type() == event.ParentChange:
             self.new_parent()
         return super(OverlayWidget, self).event(event)
+
+
+class Thread(QtCore.QThread):
+    result_ready = QtCore.Signal(tuple)
+
+    def __init__(self, func, parent=None):
+        super(Thread, self).__init__(parent=parent)
+        self._func = func
+        self._args = None
+        self._kwargs = None
+
+    def on_quit(self):
+        self.requestInterruption()
+        self.wait()
+
+    def start(self,
+              args=None,
+              kwargs=None,
+              priority=QtCore.QThread.InheritPriority):
+        self._args = args or ()
+        self._kwargs = kwargs or {}
+        super(Thread, self).start(priority)
+
+    def run(self):
+        try:
+            result = self._func(*self._args, **self._kwargs)
+        except Exception as e:
+            message = f"\n{traceback.format_exc()}\n{str(e)}"
+            log.critical(message)
+        else:
+            self.result_ready.emit(result)

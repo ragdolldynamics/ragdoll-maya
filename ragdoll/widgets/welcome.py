@@ -100,7 +100,7 @@ class GreetingStatus(base.OverlayWidget):
             "Line": QtWidgets.QLabel(),
             "Version": QtWidgets.QLabel(),
             "UpdateIcon": QtWidgets.QLabel(),
-            "UpdateLink": QtWidgets.QLabel(),
+            "UpdateLink": QtWidgets.QLabel("checking update..."),
             "Badge": LicenceStatusBadge(),
         }
 
@@ -142,87 +142,100 @@ class GreetingStatus(base.OverlayWidget):
 
         self._widgets = widgets
 
-    def check_update(self, data):
+    def _on_update_checked(self, result):
+        status, latest = result
         widgets = self._widgets
 
-        def on_update_checked(status, latest):
-            icon = {
-                "update": _resource("ui", "cloud-arrow-down-fill.svg"),
-                "uptodate": _resource("ui", "cloud-check-fill.svg"),
-                "offline": _resource("ui", "cloud-slash.svg"),
-                "expired": _resource("ui", "cloud.svg"),
-            }[status]
-            color = {
-                "update": "#83d0f0",
-                "uptodate": "",
-                "offline": "",
-                "expired": "",
-            }[status]
-            text = {
-                "update": "update available (%s)" % latest,
-                "uptodate": "you're up to date",
-                "offline": "no internet, can't check for update",
-                "expired": "annual upgrade expired",
-            }[status]
+        icon = {
+            "update": _resource("ui", "cloud-arrow-down-fill.svg"),
+            "uptodate": _resource("ui", "cloud-check-fill.svg"),
+            "offline": _resource("ui", "cloud-slash.svg"),
+            "expired": _resource("ui", "cloud.svg"),
+        }[status]
+        color = {
+            "update": "#83d0f0",
+            "uptodate": "",
+            "offline": "",
+            "expired": "",
+        }[status]
+        text = {
+            "update": "update available: %s" % latest,
+            "uptodate": "you're up to date",
+            "offline": "no internet, can't check for update",
+            "expired": "annual upgrade expired",
+        }[status]
 
-            # icon
-            widgets["UpdateIcon"].setStyleSheet(
-                "background: transparent; image: url(%s);" % icon
+        # icon
+        widgets["UpdateIcon"].setStyleSheet(
+            "background: transparent; image: url(%s);" % icon
+        )
+        widgets["UpdateIcon"].style().unpolish(widgets["UpdateIcon"])
+        widgets["UpdateIcon"].style().polish(widgets["UpdateIcon"])
+
+        # download link or text message
+        widgets["UpdateLink"].setStyleSheet("""
+            color: %s;
+            background: transparent;
+            border: none;
+            outline: none;
+        """ % color)
+
+        if status == "update":
+            widgets["UpdateLink"].setOpenExternalLinks(True)
+            widgets["UpdateLink"].setTextInteractionFlags(
+                QtCore.Qt.TextBrowserInteraction
             )
-            widgets["UpdateIcon"].style().unpolish(widgets["UpdateIcon"])
-            widgets["UpdateIcon"].style().polish(widgets["UpdateIcon"])
+            widgets["UpdateLink"].setText("""
+            <style> a:link {color: #83d0f0;}</style>
+            <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
+            """ % text)
+        else:
+            widgets["UpdateLink"].setOpenExternalLinks(False)
+            widgets["UpdateLink"].setTextInteractionFlags(
+                QtCore.Qt.NoTextInteraction
+            )
+            widgets["UpdateLink"].setText(text)
 
-            # download link or text message
-            widgets["UpdateLink"].setStyleSheet("""
-                color: %s;
-                background: transparent;
-                border: none;
-                outline: none;
-            """ % color)
+    def _check_update(self, data):
+        if data["isTrial"]:
+            aup_expired = False  # doesn't have valid aup date in trial
+        else:
+            _df = '%Y-%m-%d %H:%M:%S'
+            aup = data["annualUpgradeProgram"]
+            aup_expired = (
+                datetime.strptime(aup, _df) < datetime.now() if aup
+                else False
+            )
 
-            if status == "update":
-                widgets["UpdateLink"].setOpenExternalLinks(True)
-                widgets["UpdateLink"].setTextInteractionFlags(
-                    QtCore.Qt.TextBrowserInteraction
-                )
-                widgets["UpdateLink"].setText("""
-                <style> a:link {color: #83d0f0;}</style>
-                <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
-                """ % text)
+        if aup_expired:
+            return "expired", ""
+        else:
+            # check update
+            url = "https://ragdolldynamics.com/version"
+            try:
+                response = request.urlopen(url)
+            except Exception:
+                response = None
+                responded = False
             else:
-                widgets["UpdateLink"].setOpenExternalLinks(False)
-                widgets["UpdateLink"].setTextInteractionFlags(
-                    QtCore.Qt.NoTextInteraction
-                )
-                widgets["UpdateLink"].setText(text)
+                responded = response.code == 200
 
-        def _check_update():
-            if data["offlineMode"]:
-                on_update_checked("offline", "")
+            if responded:
+                latest = json.loads(response.read())["latestVersion"]
+                latest = tuple(map(int, latest.split("_", 3)[:3]))
+                current = tuple(map(int, __.version_str.split(".")[:3]))
+                if latest <= current:
+                    return "uptodate", ""
+                else:
+                    return "update", ".".join(map(str, latest))
             else:
-                if data["isTrial"]:
-                    aup_expired = False  # doesn't have valid aup date in trial
-                else:
-                    _df = '%Y-%m-%d %H:%M:%S'
-                    aup = data["annualUpgradeProgram"]
-                    aup_expired = (
-                        datetime.strptime(aup, _df) < datetime.now() if aup
-                        else False
-                    )
+                return "offline", ""
 
-                if aup_expired:
-                    on_update_checked("expired", "")
-                else:
-                    # check update
-                    url = "https://ragdolldynamics.com/version"
-                    response = request.urlopen(url)
-                    latest = json.loads(response.read())["latestVersion"]
-                    if latest == __.version_str:
-                        on_update_checked("uptodate", "")
-                    else:
-                        on_update_checked("update", latest)
-
-        _check_update()
+    def check_update(self, data):
+        worker = base.Thread(self._check_update, parent=self)
+        worker.result_ready.connect(self._on_update_checked)
+        worker.finished.connect(worker.deleteLater)
+        worker.start(args=[data])
 
     def set_licence(self, data):
         self._widgets["Badge"].set_status(data)
@@ -1053,6 +1066,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
             # node-lock
             "NodeLockIcon": QtWidgets.QLabel(),
             "NodeLockTitle": QtWidgets.QLabel(),
+            "ConnCheckHint": QtWidgets.QLabel("checking internet..."),
             "ProductKey": QtWidgets.QLineEdit(),
             "KeyBtn": QtWidgets.QPushButton(),
             # node-lock (offline)
@@ -1187,6 +1201,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(pd2)
         layout.addWidget(widgets["NodeLockTitle"])
+        layout.addWidget(widgets["ConnCheckHint"])
         layout.addWidget(_wrap(widgets["ProductKey"], "Product Key"))
         layout.addWidget(widgets["OfflineOpts"])
         layout.addWidget(_btn_row)
@@ -1216,7 +1231,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
             tempfile.gettempdir(), "ragdollTempResponse.xml"
         )
 
-    def update_data(self, data):
+    def _update(self, data):
         self._data = data
 
         # floating license
@@ -1236,6 +1251,32 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
         else:
             self.on_deactivated()
 
+    def _check_internet(self):
+        try:
+            response = request.urlopen("https://wyday.com")
+        except Exception:
+            return False
+        return response.code == 200
+
+    def update_data(self, data):
+        if data["isFloating"]:
+            data["isOffline"] = None
+            self._update(data)
+        else:
+            self._panels["NodeLock"].setEnabled(False)
+            self._widgets["OfflineOpts"].hide()
+
+            def _on_internet_checked(_200):
+                data["isOffline"] = not _200
+                self._update(data)
+                self._widgets["ConnCheckHint"].hide()
+                self._panels["NodeLock"].setEnabled(True)
+
+            worker = base.Thread(self._check_internet, parent=self)
+            worker.result_ready.connect(_on_internet_checked)
+            worker.finished.connect(worker.deleteLater)
+            worker.start()
+
     def set_offline_request_code(self):
         try:
             with open(self._reqfname) as f:
@@ -1244,7 +1285,7 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
             self._widgets["RequestCode"].setText("")
 
     def _offline_options(self):
-        if self._data["offlineMode"]:
+        if self._data["isOffline"]:
             self._widgets["OfflineOpts"].show()
             self._widgets["ResponseCode"].setText("")
             hint = (
@@ -1350,14 +1391,14 @@ class LicenceSetupPanel(QtWidgets.QStackedWidget):
                 log.info("Cancelled")
                 return
 
-            if self._data["offlineMode"]:
+            if self._data["isOffline"]:
                 self.offline_deactivate_requested.emit(self._reqfname)
             else:
                 self.node_deactivated.emit()
 
         else:
             # activation
-            if self._data["offlineMode"]:
+            if self._data["isOffline"]:
                 text = self._widgets["ResponseCode"].toPlainText()
                 assert text, "No response found"
 

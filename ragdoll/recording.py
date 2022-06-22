@@ -898,7 +898,7 @@ def _euler_filter(transforms):
 
 
 def _is_enabled(marker):
-    return marker["enabled"].read() and not marker["_culled"].read()
+    return cmds.ragdollInfo(str(marker), enabled=True, query=True)
 
 
 def _generate_kinematic_hierarchy(solver,

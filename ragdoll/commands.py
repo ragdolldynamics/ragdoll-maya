@@ -999,9 +999,11 @@ def create_pin_constraint(child, parent=None, opts=None):
 
         mod.connect(child["ragdollId"], con["childMarker"])
 
-        if parent is not None:
+        if parent:
             mod.connect(parent["ragdollId"], con["parentMarker"])
             mod.connect(transform["matrix"], con["targetMatrix"])
+            mod.set_attr(con["springType"], 0)  # Velocity spring per default
+
         else:
             mod.connect(transform["worldMatrix"][0], con["targetMatrix"])
 

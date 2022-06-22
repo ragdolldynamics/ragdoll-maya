@@ -46,7 +46,7 @@ card_height = video_height + (card_padding * 2)
 anchor_size = px(32)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
-splash_height = px(350)
+splash_height = px(160)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
 window_height = px(590)  # just enough to see the first row of videos
 
@@ -1860,7 +1860,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
-        self.setWindowTitle("Welcome")
+        self.setWindowTitle("Ragdoll Dynamics")
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         panels = {

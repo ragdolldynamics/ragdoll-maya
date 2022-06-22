@@ -3360,75 +3360,55 @@ def welcome_user(*args):
     else:
         parent = ui.MayaWindow()
         win = widgets.WelcomeWindow(parent)
-        lic = win.licence_input_widget()
-        stw = win.licence_status_widget()
-        gsw = win.greeting_status_widget()
 
-        def on_lic_updated():
+        def on_licence_updated():
             data = licence.data()
             data["marketingName"] = (
                 "Trial" if data["isTrial"]
                 else ui.product_to_marketingname(data["product"])
             )
             try:
-                data["ip"], data["port"] = licence._parse_environment()
+                data["ip"], port = licence._parse_environment()
+                data["port"] = str(port)
             except AttributeError:
-                data["ip"], data["port"] = None, None  # env not set
+                data["ip"], data["port"] = "", ""  # env not set
             except ValueError as e:
-                data["ip"], data["port"] = None, None
+                data["ip"], data["port"] = "", ""
                 log.error(e)
 
-            lic.update_data(data)
-            stw.set_product(data)
-            gsw.set_licence(data)
-            gsw.check_update(data)
+            win.on_licence_updated(data)
+
+        def _is_succeed(status):
+            if status != licence.STATUS_OK:
+                log.warning("Failed, see Script Editor")
+                return False
+            return True
 
         def on_node_activated(key_or_fname):
-            if os.path.isfile(key_or_fname):
-                if licence.activate_from_file(key_or_fname) != 0:
-                    log.warning("Failed, see Script Editor")
-                    return
-            else:
-                status = licence.activate(key_or_fname)
-                if status != licence.STATUS_OK:
-                    return
-
-            on_lic_updated()
+            is_file = os.path.isfile(key_or_fname)
+            func = licence.activate_from_file if is_file else licence.activate
+            if _is_succeed(func(key_or_fname)):
+                win.licence_updated.emit()
 
         def on_node_deactivated():
-            licence.deactivate()
-            on_lic_updated()
+            if _is_succeed(licence.deactivate()):
+                win.licence_updated.emit()
 
         def on_float_requested():
-            licence.request_lease()
-            on_lic_updated()
+            if _is_succeed(licence.request_lease()):
+                win.licence_updated.emit()
 
         def on_float_dropped():
-            licence.drop_lease()
-            on_lic_updated()
+            if _is_succeed(licence.drop_lease()):
+                win.licence_updated.emit()
 
         def on_offline_activate_requested(key, fname):
-            if licence.activation_request_to_file(key, fname) != 0:
-                log.warning("Failed, see Script Editor")
-                return
-            lic.set_offline_request_code()
+            if _is_succeed(licence.activation_request_to_file(key, fname)):
+                win.on_offline_activate_requested()
 
         def on_offline_deactivate_requested(fname):
-            if licence.deactivation_request_to_file(fname) != 0:
-                log.warning("Failed, see Script Editor")
-                return
-            on_lic_updated()
-            lic.set_offline_request_code()
-
-        lic.updated.connect(on_lic_updated)
-        lic.node_activated.connect(on_node_activated)
-        lic.node_deactivated.connect(on_node_deactivated)
-        lic.float_requested.connect(on_float_requested)
-        lic.float_dropped.connect(on_float_dropped)
-        lic.offline_activate_requested.connect(on_offline_activate_requested)
-        lic.offline_deactivate_requested.connect(
-            on_offline_deactivate_requested
-        )
+            if _is_succeed(licence.deactivation_request_to_file(fname)):
+                win.on_offline_deactivate_requested()
 
         def on_asset_opened(entry_path):
             if cmds.file(query=True, modified=True):
@@ -3438,6 +3418,15 @@ def welcome_user(*args):
                     cmds.file(entry_path, open=True, force=True)
                     win.close()
 
+        win.licence_updated.connect(on_licence_updated)
+        win.node_activated.connect(on_node_activated)
+        win.node_deactivated.connect(on_node_deactivated)
+        win.float_requested.connect(on_float_requested)
+        win.float_dropped.connect(on_float_dropped)
+        win.offline_activate_requested.connect(on_offline_activate_requested)
+        win.offline_deactivate_requested.connect(
+            on_offline_deactivate_requested
+        )
         win.asset_opened.connect(on_asset_opened)
 
     win.show()

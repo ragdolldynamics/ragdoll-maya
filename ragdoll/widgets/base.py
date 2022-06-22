@@ -51,6 +51,11 @@ def qt_wrap_instance(ptr, base=None):
     return func(long(ptr), base)
 
 
+def write_clipboard(text):
+    app = QtWidgets.QApplication.instance()
+    app.clipboard().setText(text)
+
+
 class ToggleButton(QtWidgets.QPushButton):
     """A QPushButton subclass that allows to change icon on check state
 

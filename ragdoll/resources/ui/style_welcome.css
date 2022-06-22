@@ -37,6 +37,10 @@ QPushButton:hover {
 QPushButton:pressed {
     background: #424242;
 }
+QPushButton:disabled {
+    color: #626262;
+    background: #3d3d3d;
+}
 #IconPushButton {
     padding: 0px;
 }
@@ -55,7 +59,7 @@ AssetCardView::item:hovered {
     padding-top: 20px
 }
 
-#OfflineHint {
+#HintMessage {
     color: #8c8c8c;
 }
 

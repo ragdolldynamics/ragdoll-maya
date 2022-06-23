@@ -1140,13 +1140,11 @@ class LicenceNodeLock(_LicencePanelHelper):
 
     def status_update(self, data):
         if data["isActivated"]:
-            log.info("Ragdoll is activated")
             self._widgets["ProductKey"].setText(data["key"])
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
             self._widgets["ProcessBtn"].setEnabled(True)
         else:
-            log.info("Ragdoll is deactivated")
             self._widgets["ProductKey"].setText("")
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["ProcessBtn"].setText("Activate")
@@ -1375,7 +1373,6 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
 
     def status_update(self, data):
         if data["isActivated"]:
-            log.info("Ragdoll is activated")
             self._widgets["ProductKey"].setText(data["key"])
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
@@ -1385,7 +1382,6 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             self.remove_temp_key()
 
         else:
-            log.info("Ragdoll is deactivated")
             # restore product key for continuing offline activation
             _temp_key = self.read_temp_key()
             self._widgets["ProductKey"].setText(self.read_temp_key())
@@ -1522,6 +1518,9 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
     def set_request_code(self, code):
         self._req_code = code
 
+    def status_update(self, data):
+        return
+
 
 class LicenceFloating(_LicencePanelHelper):
     float_requested = QtCore.Signal()
@@ -1572,7 +1571,6 @@ class LicenceFloating(_LicencePanelHelper):
         self.set_heading("Floating", "building.svg")
 
     def status_update(self, data):
-        log.info("Ragdoll is floating")
         action = "Drop Lease" if data["hasLease"] else "Request Lease"
         self._widgets["ServerIP"].setText(data["ip"])
         self._widgets["ServerPort"].setText(data["port"])
@@ -1680,9 +1678,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             _box.set_request_code(_off.read_deactivation_request_file())
 
         if data["isFloating"]:
+            log.info("Ragdoll is floating")
             self._widgets["Pages"].setCurrentIndex(2)
-            widget = self._widgets["Pages"].currentWidget()
-            widget.status_update(data)
 
         elif data["isTrial"]:
             if data["trialDays"] < 1:
@@ -1691,9 +1688,14 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                 log.info("Ragdoll is in trial mode")
         else:
             # node-lock
+            if data["isActivated"]:
+                log.info("Ragdoll is activated")
+            else:
+                log.info("Ragdoll is deactivated")
             self._widgets["Pages"].setCurrentIndex(bool(self._is_offline))
-            widget = self._widgets["Pages"].currentWidget()
-            widget.status_update(data)
+
+        widget = self._widgets["Pages"].currentWidget()
+        widget.status_update(data)
 
     def status_update(self, data):
         if not data["isFloating"] and self._is_offline is None:

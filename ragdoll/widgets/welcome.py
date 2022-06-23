@@ -132,20 +132,22 @@ class GreetingStatus(base.OverlayWidget):
         layout.addWidget(widgets["Badge"])
         layout.addStretch(1)
         layout.addWidget(widgets["Version"])
-        layout.addSpacing(px(6))
+        layout.addSpacing(px(8))
 
         _update_row = QtWidgets.QWidget()
+        _update_row.setFixedWidth(splash_width)
         layout = QtWidgets.QHBoxLayout(_update_row)
         layout.setContentsMargins(0, 0, px(12), px(6))
-        layout.addWidget(widgets["UpdateIcon"], alignment=QtCore.Qt.AlignRight)
+        layout.addStretch(1)
+        layout.addWidget(widgets["UpdateIcon"])
         layout.addSpacing(px(2))
-        layout.addWidget(widgets["UpdateLink"], alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(widgets["UpdateLink"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch(1)
-        layout.addWidget(_update_row, alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(_update_row, alignment=QtCore.Qt.AlignHCenter)
         layout.addWidget(widgets["Line"], alignment=QtCore.Qt.AlignHCenter)
 
         self._widgets = widgets
@@ -153,7 +155,6 @@ class GreetingStatus(base.OverlayWidget):
     def _on_update_checked(self, result):
         status, latest = result
         widgets = self._widgets
-        status = "update"  # testing
 
         icon = {
             "update": _resource("ui", "cloud-arrow-down-fill.svg"),
@@ -162,7 +163,7 @@ class GreetingStatus(base.OverlayWidget):
             "expired": _resource("ui", "cloud.svg"),
         }[status]
         color = {
-            "update": "#fff600",
+            "update": "#e0db57",
             "uptodate": "#67bf8f",
             "offline": "#585858",
             "expired": "#e27d7d",
@@ -184,11 +185,11 @@ class GreetingStatus(base.OverlayWidget):
         # download link or text message
         widgets["UpdateLink"].setStyleSheet("""
             color: %s;
-            font: bold;
+            font: %s;
             background: transparent;
             border: none;
             outline: none;
-        """ % color)
+        """ % (color, "bold" if status == "update" else "normal"))
 
         if status == "update":
             widgets["UpdateLink"].setOpenExternalLinks(True)
@@ -849,50 +850,32 @@ class AssetListPage(QtWidgets.QWidget):
 class LicenceStatusBadge(QtWidgets.QWidget):
     """One liner product badge
 
-    A badge that sit at right bottom corner of top splash image.
+    A badge that sit at left bottom corner of top splash image.
     Which looks like this:
 
-        ( Complete > Expiry June.20.2022 )
+        * Complete | Expiry June.20.2022
 
     """
 
     def __init__(self, parent=None):
         super(LicenceStatusBadge, self).__init__(parent=parent)
 
-        class _Arrow(QtWidgets.QWidget):
-            def paintEvent(self_, event):
-                rect = event.rect()
-
-                path = QtGui.QPainterPath()
-                path.moveTo(rect.topLeft())
-                path.lineTo(rect.bottomLeft())
-                path.lineTo(QtCore.QPointF(rect.width(), rect.height() / 2))
-                path.lineTo(rect.topLeft())
-
-                p = QtGui.QPainter(self_)
-                p.setRenderHint(p.Antialiasing)
-                p.setPen(QtCore.Qt.NoPen)
-                p.fillRect(rect, QtGui.QBrush(QtGui.QColor(self._c_tail)))
-                p.fillPath(path, QtGui.QBrush(QtGui.QColor(self._c_head)))
-
         widgets = {
+            "Icon": QtWidgets.QPushButton(),
             "Plan": QtWidgets.QLabel(),
-            "Deco": _Arrow(),
-            "Stat": QtWidgets.QLabel(),
         }
 
-        widgets["Deco"].setFixedWidth(px(8))  # Arrow size |>
+        widgets["Icon"].setStyleSheet("background: transparent; padding: 0px;")
+        widgets["Icon"].setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(px(5), 0, px(5), 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        layout.addWidget(widgets["Icon"])
         layout.addWidget(widgets["Plan"])
-        layout.addWidget(widgets["Deco"])
-        layout.addWidget(widgets["Stat"])
+        layout.addStretch(1)
 
         self._widgets = widgets
-        self._c_head = ""
-        self._c_tail = ""
 
     def set_status(self, data):
         expiry = data["expiry"]
@@ -904,57 +887,41 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
             aup = _aup_date.strftime("%b.%d.%Y")
             expired = False
-            self._c_head = "#568da1"
-            self._c_tail = "#63a1b8"
-            _text = "#2d5564"
+            color = "#63a1b8"
 
         elif trial:
             expiry_date = datetime.now() + timedelta(days=data["trialDays"])
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = data["trialDays"] < 1
             perpetual = False
-            self._c_head = "#dc4444" if expired else "#65906f"
-            self._c_tail = "#ec7171" if expired else "#67a776"
-            _text = "#732a2a" if expired else "#116f27"
+            color = "#ec7171" if expired else "#67a776"
 
         else:
             expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = expiry_date < datetime.now()
-            self._c_head = "#dc4444" if expired else "#65906f"
-            self._c_tail = "#ec7171" if expired else "#67a776"
-            _text = "#732a2a" if expired else "#116f27"
+            color = "#ec7171" if expired else "#67a776"
 
         if not expired and data["isFloating"] and not data["hasLease"]:
-            self._c_head = "#eb864a"
-            self._c_tail = "#f3bc75"
-            _text = "#a75f09"
+            color = "#f3bc75"
 
-        p = px(8)
-        r = px(6)  # border radius
         w = self._widgets
-        w["Plan"].setText(data["marketingName"])
-        w["Stat"].setText("%s %s" % (
-            "perpetual" if perpetual else "expired" if expired else "expiry",
+        status = "%s | %s %s" % (
+            data["marketingName"],
+            "Perpetual" if perpetual else "Expired" if expired else "Expiry",
             ("/ AUP " + aup) if perpetual else expiry,
-        ))
+        )
+        w["Plan"].setText(status)
+        w["Plan"].setStyleSheet("background: transparent; "
+                                "color: {color};".format(color=color))
 
-        w["Plan"].setStyleSheet("""
-            background: {c_head};
-            color: #353535;
-            padding-left: {p}px;
-            border-top-left-radius: {r}px;
-            border-bottom-left-radius: {r}px;
-        """.format(c_head=self._c_head, p=p, r=r))
-
-        w["Stat"].setStyleSheet("""
-            background: {c_tail};
-            color: {c_text};
-            padding-left: {_}px;
-            padding-right: {p}px;
-            border-top-right-radius: {r}px;
-            border-bottom-right-radius: {r}px;
-        """.format(c_tail=self._c_tail, c_text=_text, r=r, p=p, _=px(4)))
+        _size = QtCore.QSize(px(16), px(16))
+        _icon = QtGui.QIcon(_resource("ui", "award.svg"))
+        pixmap = _icon.pixmap(_size)
+        _tint_color(pixmap, QtGui.QColor(color))
+        _icon = QtGui.QIcon(pixmap)
+        w["Icon"].setIcon(_icon)
+        w["Icon"].setIconSize(_size)
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
@@ -1935,7 +1902,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         panels["SideBar"].add_anchor(
             "Greet", "ragdoll_silhouette_white_128.png", "#e5d680")
         panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680")
-        panels["SideBar"].add_anchor("Licence", "shield-lock.svg", "#80e5cc")
+        panels["SideBar"].add_anchor("Licence", "award.svg", "#80e5cc")
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)

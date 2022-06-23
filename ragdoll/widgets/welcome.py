@@ -90,8 +90,8 @@ class GreetingSplash(QtWidgets.QLabel):
         path.addRoundedRect(QtCore.QRect(0, 0, w, h), r, r)
 
         painter = QtGui.QPainter(self)
-        painter.setClipPath(path.simplified())
         painter.setRenderHint(painter.Antialiasing)
+        painter.setClipPath(path.simplified())
         painter.drawPixmap(0, 0, self._image)
 
 

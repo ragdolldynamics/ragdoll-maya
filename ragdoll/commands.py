@@ -1676,9 +1676,7 @@ def assign_plan(body, feet, opts=None):
         )
 
         end_offset = end_offset.rotate_by(rotation)
-        print("before: %s" % str(limits))
         limits = limits.rotate_by(rotation)
-        print("after: %s" % str(limits))
 
         # In case it got spun around into the negative
         limits.x = abs(limits.x)
@@ -1961,8 +1959,10 @@ def assign_plan(body, feet, opts=None):
 
                 dgmod.connect(blend["outTranslate" + axis],
                               translate_out)
-                dgmod.connect(blend["outRotate" + axis],
-                              rotate_out)
+
+                if rdoutput.is_a("rdPlan"):
+                    dgmod.connect(blend["outRotate" + axis],
+                                  rotate_out)
 
             if not output.has_attr("blend"):
                 dgmod.add_attr(output, cmdx.Double(

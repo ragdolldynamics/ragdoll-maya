@@ -975,7 +975,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Features": QtWidgets.QLabel(),
         }
 
-        panels["Product"].setFixedWidth(px(125))
+        panels["Product"].setFixedWidth(px(140))
         panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Product"].setObjectName("PlateProduct")
         widgets["Commercial"].setObjectName("PlateCommercial")
@@ -1000,7 +1000,9 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def set_product(self, data):
         self._widgets["Product"].setText(data["marketingName"])
         self._widgets["Commercial"].setText(
-            "Non-Commercial" if data["isNonCommercial"] else "Commercial use"
+            "Non-Commercial" if data["isNonCommercial"]
+            else "Commercial" if not data["isFloating"]
+            else "Lease Assigned" if data["hasLease"] else "Lease Dropped"
         )
         self._widgets["Features"].setText(
             # Max four lines
@@ -1027,13 +1029,34 @@ class LicenceStatusPlate(QtWidgets.QWidget):
                 ),
             }.get(data["marketingName"], "Unknown Product")
         )
-        gradient = {
-            "Trial": "stop:0 #ff7a95, stop:1 #ffb696",
-            "Personal": "stop:0 #4facfe, stop:1 #00f2fe",
-            "Complete": "stop:0 #c1fdc9, stop:1 #57f5a1",
-            "Unlimited": "stop:0 #dbddd7, stop:0.5 #cf436b, stop:1 #1f1828",
-            "Batch": "stop:0 #a7a6cb, stop:1 #8989ba",
-        }.get(data["marketingName"], "stop:0 #959595, stop:1 #646464")
+
+        expiry = data["expiry"]
+        aup = data["annualUpgradeProgram"]
+        perpetual = not expiry and aup and data["product"] != "trial"
+        has_lease = data["isFloating"] and data["hasLease"]
+
+        if perpetual:
+            expired = False
+            gradient = "stop:0 #4facfe, stop:1 #00f2fe"
+
+        elif expiry:
+            expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
+            expired = expiry_date < datetime.now()
+            if expired:
+                gradient = "stop:0 #f3465a, stop:1 #db2550"
+            else:
+                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
+
+        else:
+            # as in trial
+            expired = data["trialDays"] < 1
+            if expired:
+                gradient = "stop:0 #f3465a, stop:1 #db2550"
+            else:
+                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
+
+        if not expired and not has_lease:
+            gradient = "stop:0 #ff934c, stop:1 #fc686f"
 
         self.setStyleSheet("""
         #LicencePlate {

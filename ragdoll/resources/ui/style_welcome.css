@@ -69,7 +69,7 @@ AssetCardView::item:hovered {
 }
 #PlateProduct {
     font-family: Sora;
-    font-size: 12pt;
+    font-size: 16pt;
     background: transparent;
     color: #353535;
 }

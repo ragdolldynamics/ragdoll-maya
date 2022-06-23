@@ -878,7 +878,7 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         self._widgets = widgets
 
     def set_status(self, data):
-        expiry = data["expiry"]
+        expiry = data["expiry"] if data["expires"] else None
         trial = data["isTrial"] or data["product"] == "trial"
         aup = data["annualUpgradeProgram"]
         perpetual = not expiry and aup and not trial
@@ -1008,7 +1008,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             }.get(data["marketingName"], "Unknown Product")
         )
 
-        expiry = data["expiry"]
+        expiry = data["expiry"] if data["expires"] else None
         trial = data["isTrial"] or data["product"] == "trial"
         aup = data["annualUpgradeProgram"]
         perpetual = not expiry and aup and not trial

@@ -114,31 +114,38 @@ class GreetingStatus(base.OverlayWidget):
         widgets["Line"].setFixedHeight(px(32))
         widgets["Line"].setStyleSheet("""
         #GreetingStatusLine {{
-            background-color: #8c000000;
+            background-color: #6c000000;
             border-bottom-left-radius: {radius}px;
             border-bottom-right-radius: {radius}px;
         }}
         """.format(radius=px(8)))
 
         widgets["UpdateIcon"].setFixedSize(QtCore.QSize(px(20), px(20)))
+        widgets["UpdateLink"].setStyleSheet("color: #acacac;")
         widgets["UpdateLink"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["Version"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        widgets["Version"].setText("Version %s" % __.version_str)
+        widgets["Version"].setText("Current Version: %s" % __.version_str)
 
         layout = QtWidgets.QHBoxLayout(widgets["Line"])
         layout.setContentsMargins(px(8), px(6), px(2), px(6))
-        layout.setSpacing(px(5))
-        layout.addWidget(widgets["Version"])
-        layout.addSpacing(px(12))
-        layout.addWidget(widgets["UpdateIcon"], alignment=QtCore.Qt.AlignLeft)
-        layout.addWidget(widgets["UpdateLink"], alignment=QtCore.Qt.AlignLeft)
+        layout.setSpacing(px(6))
+        layout.addWidget(widgets["Badge"])
         layout.addStretch(1)
-        layout.addWidget(widgets["Badge"], alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(widgets["Version"])
+        layout.addSpacing(px(6))
+
+        _update_row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(_update_row)
+        layout.setContentsMargins(0, 0, px(12), px(6))
+        layout.addWidget(widgets["UpdateIcon"], alignment=QtCore.Qt.AlignRight)
+        layout.addSpacing(px(2))
+        layout.addWidget(widgets["UpdateLink"], alignment=QtCore.Qt.AlignRight)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch(1)
+        layout.addWidget(_update_row, alignment=QtCore.Qt.AlignRight)
         layout.addWidget(widgets["Line"], alignment=QtCore.Qt.AlignHCenter)
 
         self._widgets = widgets
@@ -146,6 +153,7 @@ class GreetingStatus(base.OverlayWidget):
     def _on_update_checked(self, result):
         status, latest = result
         widgets = self._widgets
+        status = "update"  # testing
 
         icon = {
             "update": _resource("ui", "cloud-arrow-down-fill.svg"),
@@ -154,16 +162,16 @@ class GreetingStatus(base.OverlayWidget):
             "expired": _resource("ui", "cloud.svg"),
         }[status]
         color = {
-            "update": "#83d0f0",
-            "uptodate": "",
-            "offline": "",
-            "expired": "",
+            "update": "#fff600",
+            "uptodate": "#67bf8f",
+            "offline": "#585858",
+            "expired": "#e27d7d",
         }[status]
         text = {
-            "update": "update available: %s" % latest,
-            "uptodate": "you're up to date",
-            "offline": "no internet, can't check for update",
-            "expired": "annual upgrade expired",
+            "update": "Update Version: %s" % latest,
+            "uptodate": "Version up to date.",
+            "offline": "No internet, can't check for update.",
+            "expired": "Annual upgrade expired.",
         }[status]
 
         # icon
@@ -176,6 +184,7 @@ class GreetingStatus(base.OverlayWidget):
         # download link or text message
         widgets["UpdateLink"].setStyleSheet("""
             color: %s;
+            font: bold;
             background: transparent;
             border: none;
             outline: none;
@@ -187,15 +196,17 @@ class GreetingStatus(base.OverlayWidget):
                 QtCore.Qt.TextBrowserInteraction
             )
             widgets["UpdateLink"].setText("""
-            <style> a:link {color: #83d0f0;}</style>
+            <style> a:link {color: %s;}</style>
             <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
-            """ % text)
+            """ % (color, text))
         else:
             widgets["UpdateLink"].setOpenExternalLinks(False)
             widgets["UpdateLink"].setTextInteractionFlags(
                 QtCore.Qt.NoTextInteraction
             )
             widgets["UpdateLink"].setText(text)
+
+        widgets["UpdateIcon"].show()
 
     def _check_update(self, data):
         if data["isTrial"]:
@@ -233,6 +244,7 @@ class GreetingStatus(base.OverlayWidget):
                 return "offline", ""
 
     def check_update(self, data):
+        self._widgets["UpdateIcon"].hide()
         worker = base.Thread(self._check_update, parent=self)
         worker.result_ready.connect(self._on_update_checked)
         worker.finished.connect(worker.deleteLater)
@@ -892,8 +904,8 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
             aup = _aup_date.strftime("%b.%d.%Y")
             expired = False
-            self._c_head = "#5ba3bd"
-            self._c_tail = "#8ebecf"
+            self._c_head = "#568da1"
+            self._c_tail = "#63a1b8"
             _text = "#2d5564"
 
         elif trial:
@@ -901,22 +913,22 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = data["trialDays"] < 1
             perpetual = False
-            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
-            self._c_tail = "#e27d7d" if expired else "#92dba3"
-            _text = "#732a2a" if expired else "#206931"
+            self._c_head = "#dc4444" if expired else "#65906f"
+            self._c_tail = "#ec7171" if expired else "#67a776"
+            _text = "#732a2a" if expired else "#116f27"
 
         else:
             expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = expiry_date < datetime.now()
-            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
-            self._c_tail = "#e27d7d" if expired else "#92dba3"
-            _text = "#732a2a" if expired else "#206931"
+            self._c_head = "#dc4444" if expired else "#65906f"
+            self._c_tail = "#ec7171" if expired else "#67a776"
+            _text = "#732a2a" if expired else "#116f27"
 
         if not expired and data["isFloating"] and not data["hasLease"]:
             self._c_head = "#eb864a"
             self._c_tail = "#f3bc75"
-            _text = "#bf7926"
+            _text = "#a75f09"
 
         p = px(8)
         r = px(6)  # border radius
@@ -929,7 +941,7 @@ class LicenceStatusBadge(QtWidgets.QWidget):
 
         w["Plan"].setStyleSheet("""
             background: {c_head};
-            color: #ffffff;
+            color: #353535;
             padding-left: {p}px;
             border-top-left-radius: {r}px;
             border-bottom-left-radius: {r}px;

@@ -3362,6 +3362,9 @@ def welcome_user(*args):
         win = widgets.WelcomeWindow(parent)
 
         def on_licence_updated():
+            licence.uninstall()
+            licence.install()
+
             data = licence.data()
             data["marketingName"] = (
                 "Trial" if data["isTrial"]
@@ -3387,20 +3390,20 @@ def welcome_user(*args):
         def on_node_activated(key_or_fname):
             is_file = os.path.isfile(key_or_fname)
             func = licence.activate_from_file if is_file else licence.activate
-            if _is_succeed(func(key_or_fname)):
-                win.licence_updated.emit()
+            _is_succeed(func(key_or_fname))
+            win.licence_updated.emit()
 
         def on_node_deactivated():
-            if _is_succeed(licence.deactivate()):
-                win.licence_updated.emit()
+            _is_succeed(licence.deactivate())
+            win.licence_updated.emit()
 
         def on_float_requested():
-            if _is_succeed(licence.request_lease()):
-                win.licence_updated.emit()
+            _is_succeed(licence.request_lease())
+            win.licence_updated.emit()
 
         def on_float_dropped():
-            if _is_succeed(licence.drop_lease()):
-                win.licence_updated.emit()
+            _is_succeed(licence.drop_lease())
+            win.licence_updated.emit()
 
         def on_offline_activate_requested(key, fname):
             if _is_succeed(licence.activation_request_to_file(key, fname)):

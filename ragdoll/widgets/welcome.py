@@ -884,9 +884,9 @@ class LicenceStatusBadge(QtWidgets.QWidget):
 
     def set_status(self, data):
         expiry = data["expiry"]
+        trial = data["isTrial"] or data["product"] == "trial"
         aup = data["annualUpgradeProgram"]
-        perpetual = not expiry and aup and data["product"] != "trial"
-        has_lease = data["isFloating"] and data["hasLease"]
+        perpetual = not expiry and aup and not trial
 
         if perpetual:
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
@@ -896,16 +896,7 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             self._c_tail = "#8ebecf"
             _text = "#2d5564"
 
-        elif expiry:
-            expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
-            expiry = expiry_date.strftime("%b.%d.%Y")
-            expired = expiry_date < datetime.now()
-            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
-            self._c_tail = "#e27d7d" if expired else "#92dba3"
-            _text = "#732a2a" if expired else "#206931"
-
-        else:
-            # as in trial
+        elif trial:
             expiry_date = datetime.now() + timedelta(days=data["trialDays"])
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = data["trialDays"] < 1
@@ -914,7 +905,15 @@ class LicenceStatusBadge(QtWidgets.QWidget):
             self._c_tail = "#e27d7d" if expired else "#92dba3"
             _text = "#732a2a" if expired else "#206931"
 
-        if not expired and not has_lease:
+        else:
+            expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
+            expiry = expiry_date.strftime("%b.%d.%Y")
+            expired = expiry_date < datetime.now()
+            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
+            self._c_tail = "#e27d7d" if expired else "#92dba3"
+            _text = "#732a2a" if expired else "#206931"
+
+        if not expired and data["isFloating"] and not data["hasLease"]:
             self._c_head = "#eb864a"
             self._c_tail = "#f3bc75"
             _text = "#bf7926"
@@ -1031,15 +1030,22 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         )
 
         expiry = data["expiry"]
+        trial = data["isTrial"] or data["product"] == "trial"
         aup = data["annualUpgradeProgram"]
-        perpetual = not expiry and aup and data["product"] != "trial"
-        has_lease = data["isFloating"] and data["hasLease"]
+        perpetual = not expiry and aup and not trial
 
         if perpetual:
             expired = False
             gradient = "stop:0 #4facfe, stop:1 #00f2fe"
 
-        elif expiry:
+        elif trial:
+            expired = data["trialDays"] < 1
+            if expired:
+                gradient = "stop:0 #f3465a, stop:1 #db2550"
+            else:
+                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
+
+        else:
             expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
             expired = expiry_date < datetime.now()
             if expired:
@@ -1047,15 +1053,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             else:
                 gradient = "stop:0 #43ea80, stop:1 #38f8d4"
 
-        else:
-            # as in trial
-            expired = data["trialDays"] < 1
-            if expired:
-                gradient = "stop:0 #f3465a, stop:1 #db2550"
-            else:
-                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
-
-        if not expired and not has_lease:
+        if not expired and data["isFloating"] and not data["hasLease"]:
             gradient = "stop:0 #ff934c, stop:1 #fc686f"
 
         self.setStyleSheet("""

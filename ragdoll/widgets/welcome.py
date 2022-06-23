@@ -886,28 +886,38 @@ class LicenceStatusBadge(QtWidgets.QWidget):
         expiry = data["expiry"]
         aup = data["annualUpgradeProgram"]
         perpetual = not expiry and aup and data["product"] != "trial"
+        has_lease = data["isFloating"] and data["hasLease"]
 
         if perpetual:
             _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
             aup = _aup_date.strftime("%b.%d.%Y")
             expired = False
+            self._c_head = "#5ba3bd"
+            self._c_tail = "#8ebecf"
+            _text = "#2d5564"
+
         elif expiry:
             expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = expiry_date < datetime.now()
+            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
+            self._c_tail = "#e27d7d" if expired else "#92dba3"
+            _text = "#732a2a" if expired else "#206931"
+
         else:
             # as in trial
             expiry_date = datetime.now() + timedelta(days=data["trialDays"])
             expiry = expiry_date.strftime("%b.%d.%Y")
             expired = data["trialDays"] < 1
             perpetual = False
+            self._c_head = "#ac4a4a" if expired else "#5ddb7a"
+            self._c_tail = "#e27d7d" if expired else "#92dba3"
+            _text = "#732a2a" if expired else "#206931"
 
-        self._c_head = (
-            "#5ba3bd" if perpetual else "#ac4a4a" if expired else "#5ddb7a")
-        self._c_tail = (
-            "#8ebecf" if perpetual else "#e27d7d" if expired else "#92dba3")
-        _text = (
-            "#2d5564" if perpetual else "#732a2a" if expired else "#206931")
+        if not expired and not has_lease:
+            self._c_head = "#eb864a"
+            self._c_tail = "#f3bc75"
+            _text = "#bf7926"
 
         p = px(8)
         r = px(6)  # border radius

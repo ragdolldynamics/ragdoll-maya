@@ -1718,14 +1718,17 @@ def markers_from_selection(selection=None):
 
     """
 
-    markers = set()
+    markers = list()
 
     for selected in selection or cmdx.selection():
         if selected.isA(cmdx.kDagNode):
             selected = selected["message"].output(type="rdMarker")
 
         if selected and selected.isA("rdMarker"):
-            markers.add(selected)
+            if selected in markers:
+                continue
+
+            markers.append(selected)
 
     return tuple(markers)
 

@@ -3421,6 +3421,9 @@ def welcome_user(*args):
                     cmds.file(entry_path, open=True, force=True)
                     win.close()
 
+        def on_asset_browsed(extra_assets_path):
+            options.write("extraAssets", extra_assets_path)
+
         win.licence_updated.connect(on_licence_updated)
         win.node_activated.connect(on_node_activated)
         win.node_deactivated.connect(on_node_deactivated)
@@ -3431,8 +3434,9 @@ def welcome_user(*args):
             on_offline_deactivate_requested
         )
         win.asset_opened.connect(on_asset_opened)
+        win.asset_browsed.connect(on_asset_browsed)
 
-    win.show()
+    win.show(extra_assets_path=options.read("extraAssets"))
     win.activateWindow()
 
     # Maya automatically centers new windows,

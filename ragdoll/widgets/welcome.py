@@ -588,15 +588,23 @@ class AssetCardModel(QtGui.QStandardItemModel):
         else:
             return os.path.join(lib_path, path)
 
-    def refresh(self, lib_path=None):
+    def refresh(self, extra_assets_path=""):
         self.clear()
+        self.load_assets(extra_assets_path)
+        self.load_assets(os.getenv("RAGDOLL_ASSETS", ""))
 
-        lib_path = lib_path or _resource()
-        asset_file = os.path.join(lib_path, self.AssetFileName)
-        if not os.path.isfile(asset_file):
+    def get_manifest(self, lib_path):
+        manifest_file = os.path.join(lib_path, self.AssetFileName)
+        return manifest_file if os.path.isfile(manifest_file) else None
+
+    def load_assets(self, lib_path):
+        log.info("Loading assets from %r" % lib_path)
+        manifest_file = self.get_manifest(lib_path)
+        if not manifest_file:
+            log.debug("No asset found in %r" % lib_path)
             return
 
-        with open(asset_file) as f:
+        with open(manifest_file) as f:
             manifest = json.load(f)
 
         all_dots = {
@@ -726,6 +734,7 @@ class AssetTagList(QtWidgets.QWidget):
         layout = self.layout()
         item = layout.takeAt(0)
         while item:
+            item.widget().deleteLater()
             item = layout.takeAt(0)
 
     def on_tag_toggled(self, _):
@@ -736,36 +745,9 @@ class AssetTagList(QtWidgets.QWidget):
         self.tagged.emit(activated)
 
 
-class AssetLibraryPath(QtWidgets.QWidget):
-
-    def __init__(self, parent=None):
-        super(AssetLibraryPath, self).__init__(parent=parent)
-
-        widgets = {
-            "LineEdit": QtWidgets.QLineEdit(),
-            "Browse": QtWidgets.QPushButton(),
-        }
-        widgets["Browse"].setIcon(QtGui.QIcon(_resource("ui", "folder.svg")))
-
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.addWidget(QtWidgets.QLabel("Offline Library Path"))
-        layout.addSpacing(pd4)
-        layout.addWidget(widgets["LineEdit"])
-        layout.addWidget(widgets["Browse"])
-
-        widgets["Browse"].clicked.connect(self.on_browsed)
-
-        self._widgets = widgets
-
-    def on_browsed(self):
-        pass  # todo: save selected folder into optionVar
-
-    def current_path(self):
-        return self._widgets["LineEdit"].text()
-
-
 class AssetListPage(QtWidgets.QWidget):
     asset_opened = QtCore.Signal(str)
+    asset_browsed = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(AssetListPage, self).__init__(parent=parent)
@@ -774,8 +756,9 @@ class AssetListPage(QtWidgets.QWidget):
             "Head": QtWidgets.QLabel("Assets"),
             "Tags": AssetTagList(),
             "List": AssetCardView(),
-            "Path": AssetLibraryPath(),
-            "Empty": QtWidgets.QLabel("No Asset Found.")
+            "Empty": QtWidgets.QLabel("No Asset Found."),
+            "Path": QtWidgets.QLineEdit(),
+            "Browse": QtWidgets.QPushButton(),
         }
 
         models = {
@@ -784,12 +767,21 @@ class AssetListPage(QtWidgets.QWidget):
         }
 
         widgets["Head"].setObjectName("Heading1")
-        widgets["Empty"].setFixedHeight(px(100))
-        widgets["Empty"].setAlignment(QtCore.Qt.AlignCenter)
+        widgets["Empty"].setFixedHeight(px(40))
+        widgets["Empty"].setAlignment(QtCore.Qt.AlignHCenter)
         widgets["Empty"].setVisible(False)
+        widgets["Browse"].setIcon(QtGui.QIcon(_resource("ui", "folder.svg")))
 
         models["Proxy"].setSourceModel(models["Source"])
         widgets["List"].setModel(models["Proxy"])
+
+        _path_row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(_path_row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QtWidgets.QLabel("Extra Assets"))
+        layout.addSpacing(pd4)
+        layout.addWidget(widgets["Path"])
+        layout.addWidget(widgets["Browse"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(pd1, 0, pd1, 0)
@@ -798,10 +790,11 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
         layout.addWidget(widgets["Empty"])
-        # todo: unlock this feature
-        # layout.addWidget(widgets["Path"])
+        layout.addWidget(_path_row)
 
         widgets["Tags"].tagged.connect(self.on_tag_changed)
+        widgets["Path"].textEdited.connect(lambda _: self.reset())
+        widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
 
         self._models = models
         self._widgets = widgets
@@ -821,10 +814,26 @@ class AssetListPage(QtWidgets.QWidget):
                 self.init_widget(_proxy.mapToSource(index))
         _view.adjust_viewport()
 
+    def on_asset_browse_clicked(self):
+        dialog = QtWidgets.QFileDialog()
+        dialog.setFileMode(dialog.ExistingFile)
+        dialog.setOptions(dialog.DontUseNativeDialog | dialog.ReadOnly)
+        dialog.setAcceptMode(dialog.AcceptOpen)
+        dialog.setNameFilter(AssetCardModel.AssetFileName)
+        if dialog.exec_():
+            paths = dialog.selectedFiles()
+            extra_assets_path = os.path.dirname(paths[0])
+            self.asset_browsed.emit(extra_assets_path)
+            self._widgets["Path"].setText(extra_assets_path)
+            self.reset()
+
+    def set_extra_assets(self, extra_assets_path):
+        self._widgets["Path"].setText(extra_assets_path)
+
     def reset(self):
-        lib_path = self._widgets["Path"].current_path()
+        self._widgets["Tags"].clear()
         model = self._models["Source"]
-        model.refresh(lib_path)
+        model.refresh(self._widgets["Path"].text())
 
         for row in range(model.rowCount()):
             index = model.index(row, 0)
@@ -832,7 +841,9 @@ class AssetListPage(QtWidgets.QWidget):
             for name, color in model.data(index, model.TagsRole).items():
                 self._widgets["Tags"].add_tag(name, color)
 
-        self._widgets["Empty"].setVisible(not model.rowCount())
+        asset_loaded = bool(model.rowCount())
+        self._widgets["Empty"].setVisible(not asset_loaded)
+        self._widgets["List"].setVisible(asset_loaded)
 
     def init_widget(self, index):
         widget = AssetCardItem()
@@ -1862,6 +1873,7 @@ def _scaled_stylesheet(style):
 
 class WelcomeWindow(QtWidgets.QMainWindow):
     asset_opened = QtCore.Signal(str)
+    asset_browsed = QtCore.Signal(str)
     licence_updated = QtCore.Signal()
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
@@ -1922,6 +1934,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
         widgets["Assets"].asset_opened.connect(self.asset_opened)
+        widgets["Assets"].asset_browsed.connect(self.asset_browsed)
         lic = widgets["Licence"].input_widget()
         lic.licence_updated.connect(self.licence_updated)
         lic.node_activated.connect(self.node_activated)
@@ -1953,7 +1966,8 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         w = self._widgets["Licence"].input_widget()
         w.on_offline_deactivate_requested()
 
-    def show(self):
+    def show(self, extra_assets_path=""):
+        self._widgets["Assets"].set_extra_assets(extra_assets_path)
         self._widgets["Assets"].reset()
         self._panels["SideBar"].set_current_anchor(0)
         self.setWindowOpacity(0)

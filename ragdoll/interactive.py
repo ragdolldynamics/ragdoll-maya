@@ -484,7 +484,7 @@ def _on_locomotion_limit(clientData=None):
     """Called on attempted planning from not-unlimited"""
 
     msg = (
-        "Locomotion is a feature of Ragdoll Unlimited, any other"
+        "Locomotion is a feature of Ragdoll Unlimited, any other "
         "version is limited to 100 frames of generated motion. "
         "See Pricing for purchase options."
     )
@@ -870,6 +870,11 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, create_pin_constraint_options, label="Pin")
+
+        if c.RAGDOLL_DEVELOPER:
+            item("attachConstraint",
+                 create_attach_constraint, label="Attach")
+
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -1713,14 +1718,17 @@ def markers_from_selection(selection=None):
 
     """
 
-    markers = set()
+    markers = list()
 
     for selected in selection or cmdx.selection():
         if selected.isA(cmdx.kDagNode):
             selected = selected["message"].output(type="rdMarker")
 
         if selected and selected.isA("rdMarker"):
-            markers.add(selected)
+            if selected in markers:
+                continue
+
+            markers.append(selected)
 
     return tuple(markers)
 
@@ -1925,7 +1933,7 @@ def create_pin_constraint(selection=None, **opts):
                 "%s wasn't a marker" % selection[0]
             )
 
-        con = commands.create_pin_constraint(a, opts)
+        con = commands.create_pin_constraint(a, opts=opts)
         cons += [con.parent().path()]
 
     cmds.select(cons)
@@ -1935,36 +1943,17 @@ def create_pin_constraint(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def create_pose_constraint(selection=None, **opts):
-    selection = selection or cmdx.sl()
+def create_attach_constraint(selection=None, **opts):
 
     try:
-        a, b = selection
+        a, b = markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
             "Select two markers to constrain."
         )
 
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
-
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[0]
-        )
-
-    if not (b and b.isA("rdMarker")):
-        raise i__.UserWarning(
-            "Not a marker",
-            "%s wasn't a marker" % selection[1]
-        )
-
-    con = commands.create_pose_constraint(a, b)
+    con = commands.create_pin_constraint(a, b)
     cmds.select(str(con.parent()))
 
     return True
@@ -2036,6 +2025,7 @@ def record_markers(selection=None, **opts):
         "recordFilter": _opt("markersRecordFilter", opts),
         "autoCache": _opt("markersRecordAutoCache", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
+        "closedLoop": _opt("markersRecordClosedLoop", opts),
         "mode": _opt("markersRecordMode", opts),
         "protectOriginalInput": _opt(
             "markersRecordProtectOriginalInput", opts),
@@ -2114,6 +2104,7 @@ def record_markers(selection=None, **opts):
                 "toLayer": opts["recordToLayer"],
                 "setInitialKey": opts["recordInitialKey"],
                 "ignoreJoints": opts["ignoreJoints"],
+                "closedLoop": opts["closedLoop"],
                 "mode": opts["mode"],
             }
 

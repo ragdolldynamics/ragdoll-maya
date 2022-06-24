@@ -372,6 +372,15 @@
         ]
     },
 
+    "attachConstraint": {
+        "label": "Attach Constraint",
+        "icon": "link.png",
+        "summary": "Softly constrain the position and orientation of a marker relative another marker.",
+        "description": "Create a new attach constraint between two selected markers.",
+        "options": [
+        ]
+    },
+
     "mimicConstraint": {
         "label": "Mimic Constraint",
         "icon": "mimic.png",
@@ -397,6 +406,7 @@
             "markersRecordInitialKey",
             "markersRecordUseSelection",
             "markersIgnoreJoints",
+            "markersRecordClosedLoop",
             "markersRecordKinematic",
             "markersRecordMode"
         ]

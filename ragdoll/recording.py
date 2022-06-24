@@ -92,7 +92,7 @@ class _Recorder(object):
             "include": None,
             "exclude": None,
             "toLayer": True,
-            "rotationFilter": 1,
+            "rotationFilter": constants.EulerFilter,
             "ignoreJoints": False,
             "resetMarkers": False,
             "experimental": False,
@@ -101,6 +101,7 @@ class _Recorder(object):
             "includeKinematic": False,
             "protectOriginalInput": True,
             "setInitialKey": True,
+            "closedLoop": False,
             "mode": constants.RecordNiceAndSteady,
         }, **(opts or {}))
 
@@ -191,7 +192,10 @@ class _Recorder(object):
         for progress in self._sim_to_cache():
             yield ("simulating", progress * 0.49)
 
-        marker_to_joint = _generate_kinematic_hierarchy(self._solver)
+        if self._opts["closedLoop"]:
+            marker_to_joint = _generate_kinematic_joints(self._solver)
+        else:
+            marker_to_joint = _generate_kinematic_hierarchy(self._solver)
 
         # Keep track of any mess we make
         def find_roots():
@@ -204,7 +208,11 @@ class _Recorder(object):
 
         self._temporaries.extend(find_roots())
 
-        for progress in self._cache_to_curves(marker_to_joint):
+        it = self._cache_to_curves(
+            marker_to_joint, _worldspace=self._opts["closedLoop"]
+        )
+
+        for progress in it:
             yield ("transferring", 49 + progress * 0.10)
 
         # Channels without keyframes can still get recorded onto a layer,
@@ -255,9 +263,9 @@ class _Recorder(object):
             self._reset()
 
         try:
-            if self._opts["rotationFilter"] == 1:
+            if self._opts["rotationFilter"] == constants.EulerFilter:
                 _euler_filter(self._dst_to_marker.keys())
-            elif self._opts["rotationFilter"] == 2:
+            elif self._opts["rotationFilter"] == constants.QuaternionFilter:
                 _quat_filter(self._dst_to_marker.keys())
 
         except Exception:
@@ -278,7 +286,8 @@ class _Recorder(object):
         marker_to_dagnode = _generate_kinematic_hierarchy(
             self._solver, tips=True, visible=True)
 
-        for progress in self._cache_to_curves(marker_to_dagnode):
+        for progress in self._cache_to_curves(marker_to_dagnode,
+                                              _worldspace=False):
             yield ("transferring", 50 + progress * 0.50)
 
         if self._opts["extractAndAttach"]:
@@ -320,7 +329,7 @@ class _Recorder(object):
         start_frame = self._solver_start_frame
         current_frame = int(initial_time.value)
 
-        marker_to_dagnode = _generate_kinematic_hierarchy(self._solver)
+        marker_to_dagnode = _generate_kinematic_joints(self._solver)
         sim_to_cache = self._sim_to_cache([current_frame, start_frame])
         cache_to_curves = self._cache_to_curves(marker_to_dagnode,
                                                 [start_frame, current_frame])
@@ -354,10 +363,10 @@ class _Recorder(object):
 
         cmds.delete(temp)
 
-        if self._opts["rotationFilter"] == 1:
+        if self._opts["rotationFilter"] == constants.EulerFilter:
             _euler_filter(self._dst_to_marker.keys())
 
-        elif self._opts["rotationFilter"] == 2:
+        elif self._opts["rotationFilter"] == constants.QuaternionFilter:
             _quat_filter(self._dst_to_marker.keys())
 
     def _snap_from_retarget(self, _force=False):
@@ -458,7 +467,10 @@ class _Recorder(object):
             cmdx.current_time(initial_time)
 
     @internal.with_timing
-    def _cache_to_curves(self, marker_to_dagnode, _range=None):
+    def _cache_to_curves(self,
+                         marker_to_dagnode,
+                         _range=None,
+                         _worldspace=True):
         r"""Convert worldspace matrices into translate/rotate channels
 
                                  ___ z
@@ -492,6 +504,11 @@ class _Recorder(object):
                 continue
 
             parent = marker["parentMarker"].input(type="rdMarker")
+            use_parent = (
+                not _worldspace and
+                parent in self._cache and
+                _is_enabled(parent)
+            )
 
             tx, ty, tz = {}, {}, {}
             rx, ry, rz = {}, {}, {}
@@ -500,12 +517,12 @@ class _Recorder(object):
             for frame in _range:
                 values = self._cache[marker][frame]
                 matrix = values["outputMatrix"]
-                parent_matrix = cmdx.Mat4()
 
-                if parent in self._cache and _is_enabled(parent):
+                if use_parent:
                     parent_matrix = self._cache[parent][frame]["outputMatrix"]
+                    matrix = matrix * parent_matrix.inverse()
 
-                tm = cmdx.Tm(matrix * parent_matrix.inverse())
+                tm = cmdx.Tm(matrix)
                 t = tm.translation()
                 r = tm.rotation()
 
@@ -881,7 +898,7 @@ def _euler_filter(transforms):
 
 
 def _is_enabled(marker):
-    return marker["enabled"].read() and not marker["_culled"].read()
+    return cmds.ragdollInfo(str(marker), enabled=True, query=True)
 
 
 def _generate_kinematic_hierarchy(solver,
@@ -911,7 +928,7 @@ def _generate_kinematic_hierarchy(solver,
         parent = marker_to_dagnode.get(parent)
         name = marker.name() + "_jnt"
 
-        dagnode = mod.create_node("joint", name=name, parent=parent)
+        dagnode = mod.create_node("joint", name, parent)
         marker_to_dagnode[marker] = dagnode
 
         children = marker["ragdollId"].outputs(type="rdMarker", plugs=True)
@@ -946,6 +963,19 @@ def _generate_kinematic_hierarchy(solver,
         with cmdx.DagModifier() as mod:
             mod.do_it()
             extend_tips(mod)
+
+    return marker_to_dagnode
+
+
+def _generate_kinematic_joints(solver):
+    markers = _find_markers(solver)
+    marker_to_dagnode = {}
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            name = marker.name() + "_jnt"
+            dagnode = mod.create_node("joint", name)
+            marker_to_dagnode[marker] = dagnode
 
     return marker_to_dagnode
 

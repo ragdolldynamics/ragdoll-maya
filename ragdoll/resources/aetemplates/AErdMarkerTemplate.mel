@@ -35,6 +35,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Advanced Pose" -collapse true;
             editorTemplate -addControl "driveInterpolation";
+            editorTemplate -addControl "driveSpringType";
             editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveAngularAmountTwist";
             editorTemplate -addControl "driveAngularAmountSwing";

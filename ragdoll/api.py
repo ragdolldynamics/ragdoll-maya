@@ -163,20 +163,20 @@ def create_distance_constraint(parent, child, opts=None):
 
 
 @_wraps(_commands.create_pin_constraint)
-def create_pin_constraint(parent, child=None, opts=None):
-    _assert_is_nodepath(parent)
+def create_pin_constraint(child, parent=None, opts=None):
     _assert_is_nodepath(child)
-    _assert_is_a(parent, "rdMarker")
     _assert_is_a(child, "rdMarker")
+    parent is None or _assert_is_nodepath(parent)
+    parent is None or _assert_is_a(parent, "rdMarker")
 
-    parent = _cmdx.encode(parent)
+    child = _cmdx.encode(child)
     return _return(
-        _commands.create_pin_constraint(parent, opts)
+        _commands.create_pin_constraint(_child, parent, opts)
     )
 
 
 @_wraps(_commands.create_fixed_constraint)
-def create_fixed_constraint(parent, child=None, opts=None):
+def create_fixed_constraint(parent, child, opts=None):
     _assert_is_nodepath(parent)
     _assert_is_nodepath(child)
 

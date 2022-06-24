@@ -484,7 +484,7 @@ def _on_locomotion_limit(clientData=None):
     """Called on attempted planning from not-unlimited"""
 
     msg = (
-        "Locomotion is a feature of Ragdoll Unlimited, any other"
+        "Locomotion is a feature of Ragdoll Unlimited, any other "
         "version is limited to 100 frames of generated motion. "
         "See Pricing for purchase options."
     )

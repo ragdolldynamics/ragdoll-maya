@@ -1986,7 +1986,7 @@ def progressbar(status="Progress.. ", max_value=100):
 @with_exception_handling
 def snap_markers(selection=None, **opts):
     opts = dict({
-        "useSelection": _opt("markersUseSelection", opts),
+        "useSelection": _opt("markersSnapUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "maintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
@@ -2018,7 +2018,7 @@ def record_markers(selection=None, **opts):
         "recordKinematic": _opt("markersRecordKinematic", opts),
         "recordToLayer": _opt("markersRecordToLayer", opts),
         "recordInitialKey": _opt("markersRecordInitialKey", opts),
-        "useSelection": _opt("markersUseSelection", opts),
+        "useSelection": _opt("markersRecordUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
         "recordSimplify": _opt("markersRecordSimplify", opts),

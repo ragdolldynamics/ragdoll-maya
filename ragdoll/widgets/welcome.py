@@ -136,6 +136,7 @@ class GreetingStatus(base.OverlayWidget):
 
         _update_row = QtWidgets.QWidget()
         _update_row.setFixedWidth(splash_width)
+        _update_row.setAttribute(QtCore.Qt.WA_NoSystemBackground)
         layout = QtWidgets.QHBoxLayout(_update_row)
         layout.setContentsMargins(0, 0, px(12), px(6))
         layout.addStretch(1)

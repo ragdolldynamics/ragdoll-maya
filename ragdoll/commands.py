@@ -1607,8 +1607,6 @@ def assign_plan(body, feet, opts=None):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
-
-
     # Determine the direction and distance to offset the end target
     body_pos = _position_incl_pivot(body)
     relative_positions = []

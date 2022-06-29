@@ -26,6 +26,7 @@ def create(typ, mod, name, parent=None):
         mod.set_attr(node["gravity"], up * -982)
         mod.set_attr(node["spaceMultiplier"], 0.1)
         mod.set_attr(node["airDensity"], 0.1)
+        mod.set_attr(node["frameskipMethod"], constants.FrameskipIgnore)
 
         if up.y:
             mod.set_keyable(node["gravityY"])

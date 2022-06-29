@@ -4579,6 +4579,12 @@ class MatrixType(om.MMatrix):
         values = tuple(self)
         return values[row * 4 + col % 4]
 
+    def isEquivalent(self, other, tolerance=1e-10):
+        return super(MatrixType, self).isEquivalent(other, tolerance)
+
+    if ENABLE_PEP8:
+        is_equivalent = isEquivalent
+
 
 # Alias
 Transformation = TransformationMatrix
@@ -6110,7 +6116,7 @@ class _BaseModifier(object):
 
         """
 
-        assert isinstance(node, Node), "%s was not a cmdx.Node"
+        assert isinstance(node, Node), "%s was not a cmdx.Node" % str(node)
 
         if SAFE_MODE:
             assert _isalive(node._mobject)
@@ -8174,11 +8180,11 @@ Distance4Attribute = Distance4
 
 
 # Support for multiple co-existing versions of apiundo.
-unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
+unique_command = "cmdx_%s_command" % (__version__.replace(".", "_"))
 
 # This module is both a Python module and Maya plug-in.
 # Data is shared amongst the two through this "module"
-unique_shared = "cmdx_%s_shared" % __version__.replace(".", "_")
+unique_shared = "cmdx_%s_shared" % (__version__.replace(".", "_"))
 
 if unique_shared not in sys.modules:
     sys.modules[unique_shared] = types.ModuleType(unique_shared)
@@ -8351,6 +8357,11 @@ class _apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
+    if hasattr(cmds, unique_command):
+        # E.g. another cmdx from another vendored version
+        initializePlugin.installedElsewhere = True
+        return
+
     # Only supports major.minor (no patch)
     version = ".".join(__version__.rsplit(".")[:2])
 
@@ -8361,6 +8372,9 @@ def initializePlugin(plugin):
 
 
 def uninitializePlugin(plugin):
+    if hasattr(initializePlugin, "installedElsewhere"):
+        return
+
     om.MFnPlugin(plugin).deregisterCommand(unique_command)
 
 

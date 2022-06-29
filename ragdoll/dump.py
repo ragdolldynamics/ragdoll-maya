@@ -541,7 +541,7 @@ class Loader(object):
         # already existed in the scene.
         override = self._opts["overrideSolver"]
 
-        if self._opts["preserveAttributes"] and override:
+        if self._opts["preserveAttributes"] and not override:
             with cmdx.DagModifier() as mod:
                 for entity, rdsolver in rdsolvers.items():
                     try:

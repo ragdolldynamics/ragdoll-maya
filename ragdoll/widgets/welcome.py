@@ -1799,8 +1799,8 @@ class SideBar(QtWidgets.QFrame):
         self._anchors = []
 
     def add_anchor(self, name, image, color):
-        icon_size = int(anchor_size * 0.4)
-        icon_size = QtCore.QSize(px(icon_size), px(icon_size))
+        icon_size = int(anchor_size * 0.6)
+        icon_size = QtCore.QSize(icon_size, icon_size)
 
         unchecked_icon = QtGui.QIcon(_resource("ui", image))
         pixmap = unchecked_icon.pixmap(icon_size)

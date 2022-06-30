@@ -3408,9 +3408,10 @@ def welcome_user(*args):
             if cmds.file(query=True, modified=True):
                 title = "Scene Not Saved"
                 message = "Scene unsaved, discard and open asset anyway?"
-                if MessageBox(title, message):
-                    cmds.file(entry_path, open=True, force=True)
-                    win.close()
+                if not MessageBox(title, message):
+                    return
+            cmds.file(entry_path, open=True, force=True)
+            win.close()
 
         def on_asset_browsed(extra_assets_path):
             options.write("extraAssets", extra_assets_path)

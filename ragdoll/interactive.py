@@ -842,6 +842,7 @@ def install_menu():
 
         divider("Edit")
 
+        item("addTarget", add_target)
         item("resetFoot", reset_foot)
         item("recordLocomotion")
 
@@ -2747,6 +2748,61 @@ def assign_plan(selection=None, **opts):
                 continue
 
             cmds.modelEditor(panel, edit=True, handles=True)
+
+    return kSuccess
+
+@i__.with_undo_chunk
+@with_exception_handling
+def add_target(selection=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select plan to add target"
+        )
+
+    plan = sel[0]
+
+    if plan.is_a(cmdx.kTransform):
+        plan = plan.shape(type="rdPlan")
+
+    if not (plan and plan.is_a("rdPlan")):
+        raise i__.UserWarning(
+            "You need to select a plan",
+            "Select the plan to be able to add a target to it."
+        )
+
+    # get up axis
+    up = cmdx.up_axis()
+    if up.y:
+        walk_index = 2
+    else:
+        walk_index = 1
+    p_offset = [0, 0, 0]
+    p_offset[walk_index] = 5
+
+    # first do the body
+    with cmdx.DagModifier() as mod:
+        idx = plan["targets"].count()
+        body_tm = cmdx.Tm(plan["targets"][idx - 1].as_matrix())
+        body_tm.setScale(cmdx.Vector(1, 1, 1))
+
+        body_tm.translateBy(p_offset, cmdx.sTransform)
+        mod.set_attr(plan["targets"][idx], body_tm.as_matrix())
+        mod.do_it()
+
+    # then the feet
+    for element in plan["inputStart"]:
+        foot = element.input(type="rdFoot")
+
+        with cmdx.DagModifier() as mod:
+            idx = foot["targets"].count()
+            foot_tm = cmdx.Tm(foot["targets"][idx - 1].as_matrix())
+            foot_tm.setScale(cmdx.Vector(1, 1, 1))
+            foot_tm.translateBy(p_offset, cmdx.sTransform)
+            mod.set_attr(foot["targets"][idx], foot_tm.as_matrix())
+            mod.do_it()
 
     return kSuccess
 

@@ -109,7 +109,6 @@ def assign_markers(transforms, solver, opts=None):
     )
 
     opts = dict({
-        "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
         "refit": True,
@@ -195,7 +194,6 @@ def assign_markers(transforms, solver, opts=None):
             dgmod.set_attr(marker["shapeRadius"], geo.radius)
             dgmod.set_attr(marker["shapeRotation"], geo.rotation)
             dgmod.set_attr(marker["shapeOffset"], geo.offset)
-            dgmod.set_attr(marker["densityType"], opts["density"])
 
             # Assign some random color, within some nice range
             dgmod.set_attr(marker["color"], internal.random_color())
@@ -248,6 +246,12 @@ def assign_markers(transforms, solver, opts=None):
 
             parent_marker = marker
             markers.append(marker)
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            mod.set_attr(marker["densityType"], 0)
+            mod.do_it()
+            mod.set_attr(marker["densityType"], 6)
 
     if opts["refit"] and refit_root is not None:
         reset_shape(refit_root)

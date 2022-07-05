@@ -989,7 +989,7 @@
         "label": "Closed Loop",
         "type": "Boolean",
         "default": false,
-        "help": "Include support for closed loops during the recording process. This can also help speed up recording and avoid cycles in cases in the off occasions where an e.g. upper arm is parented to the hand, but runs the risk of adding 180 or 360 degree rotations."
+        "help": "Include support for closed loops during the recording process. This can also help speed up recording and avoid cycles in cases where an e.g. upper arm is parented to the hand, but runs the risk of adding 180 or 360 degree rotations."
     },
 
     "markersShowPluginShapes": {
@@ -1158,7 +1158,7 @@
         "name": "markersDensity",
         "label": "Density",
         "type": "Enum",
-        "default": 3,
+        "default": 6,
         "items": ["Off", "Cotton", "Wood", "Flesh", "Uranium", "Black Hole", "Custom"],
         "help": "Use the volume and density of the shape to determine its mass."
     },
@@ -1241,7 +1241,7 @@
         "name": "frameskipMethod",
         "label": "Frameskip Method",
         "type": "Enum",
-        "default": 1,
+        "default": 0,
         "items": ["Ignore", "Pause"],
         "help": "What should Ragdoll do when one or more frames are skipped? Should Ragdoll pause simulation until you revisit the last-known frame? Or just pretend everything is OK, and produce garbage values?"
     },

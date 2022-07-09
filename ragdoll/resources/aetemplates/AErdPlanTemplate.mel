@@ -5,34 +5,40 @@ global proc AErdPlanTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "spaceMultiplier";
             editorTemplate -addControl "gravity";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "startTimeCustom";
             editorTemplate -addControl "duration";
             editorTemplate -addControl "maxOptimisationTime";
-            editorTemplate -addControl "maxOptimisationIterations";
+            editorTemplate -label "Max Optimisation Iterations" -addControl "maxOptimisationIterations";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Geometry" -collapse false;
+        editorTemplate -beginLayout "Geometry" -collapse true;
             editorTemplate -addControl "mass";
             editorTemplate -addControl "extents";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Terrain" -collapse false;
+        editorTemplate -beginLayout "Terrain" -collapse true;
             editorTemplate -addControl "heightmapEnabled";
             editorTemplate -addControl "heightmapResolution";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Display" -collapse false;
+        editorTemplate -beginLayout "Display" -collapse true;
             editorTemplate -addControl "drawHud";
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawTrajectories";
             editorTemplate -addControl "drawShape";
         editorTemplate -endLayout;
 
-        editorTemplate -beginLayout "Advanced" -collapse false;
+        editorTemplate -beginLayout "Targets" -collapse true;
+            editorTemplate -addControl "targets";
+        editorTemplate -endLayout;
+
+        editorTemplate -beginLayout "Advanced" -collapse true;
         editorTemplate -beginNoOptimize;
             editorTemplate -addControl "minFeetSeparation";
+            editorTemplate -addControl "optimizeBaseLinearVelocity";
             editorTemplate -addControl "optimizeBaseAngularVelocity";
             editorTemplate -addControl "optimizeBaseOrientation";
         editorTemplate -endNoOptimize;

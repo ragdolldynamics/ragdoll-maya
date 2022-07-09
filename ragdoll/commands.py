@@ -52,7 +52,6 @@ def create_solver(name=None, opts=None):
 
     opts = dict({
         "sceneScale": 0.1,
-        "frameskipMethod": constants.FrameskipPause,
     }, **(opts or {}))
 
     name = name or "rSolver"
@@ -65,7 +64,6 @@ def create_solver(name=None, opts=None):
                               name=shape_name,
                               parent=solver_parent)
 
-        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
         mod.set_attr(solver["spaceMultiplier"], opts["sceneScale"])
 
         # Scale isn't relevant for the solver, what would it mean?

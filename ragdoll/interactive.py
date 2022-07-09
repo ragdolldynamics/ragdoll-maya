@@ -1327,7 +1327,6 @@ def _find_current_solver(solver, show_plugin_shapes=True):
             return None, None
 
         solver = commands.create_solver(opts={
-            "frameskipMethod": options.read("frameskipMethod"),
             "sceneScale": options.read("markersSceneScale"),
         })
         is_new = True

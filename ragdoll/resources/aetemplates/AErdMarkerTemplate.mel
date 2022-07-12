@@ -22,8 +22,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Material" -collapse true;
             editorTemplate -addControl "collide";
-            editorTemplate -addControl "contactStiffness";
-            editorTemplate -addControl "contactDamping";
             editorTemplate -addControl "densityType";
             editorTemplate -addControl "mass";
             editorTemplate -addControl "densityCustom";
@@ -98,6 +96,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "ignoreGravity";
             editorTemplate -addControl "ignoreFields";
+            editorTemplate -addControl "ignoreMass";
             editorTemplate -addControl "collideWithParent";
             editorTemplate -label "Start Asleep" -addControl "asleep";
             editorTemplate -addControl "angularMass";

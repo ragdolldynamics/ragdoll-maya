@@ -1462,6 +1462,7 @@ def assign_marker(selection=None, **opts):
         "basicAttributes": _opt("lollipopBasicAttributes", opts),
         "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
         "groupAttributes": _opt("lollipopGroupAttributes", opts),
+        "linearAngularStiffness": _opt("markersLinearAngularStiffness", opts),
 
     }, **(opts or {}))
 
@@ -1527,6 +1528,7 @@ def assign_marker(selection=None, **opts):
             "refit": opts["refit"],
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
+            "linearAngularStiffness": opts["linearAngularStiffness"],
         })
 
     except RuntimeError as e:

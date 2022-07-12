@@ -111,6 +111,7 @@ def assign_markers(transforms, solver, opts=None):
         "connect": True,
         "refit": True,
         "preventDuplicateMarker": True,
+        "linearAngularStiffness": False,
     }, **(opts or {}))
 
     if len(transforms) == 1:
@@ -241,6 +242,20 @@ def assign_markers(transforms, solver, opts=None):
 
             if opts["autoLimit"]:
                 auto_limit(dgmod, marker)
+
+            if opts["linearAngularStiffness"]:
+                dgmod.set_attr(marker["useLinearAngularStiffness"], True)
+
+                dgmod.set_keyable(marker["linearStiffness"], True)
+                dgmod.set_keyable(marker["linearDampingRatio"], True)
+                dgmod.set_keyable(marker["angularStiffness"], True)
+                dgmod.set_keyable(marker["angularDampingRatio"], True)
+
+                dgmod.set_keyable(marker["driveStiffness"], False)
+                dgmod.set_keyable(marker["driveSpace"], False)
+                dgmod.set_keyable(marker["driveSpaceCustom"], False)
+                dgmod.set_keyable(marker["driveDampingRatio"], False)
+                dgmod.set_channel_box(marker["linearMotion"], False)
 
             parent_marker = marker
             markers.append(marker)
@@ -1291,7 +1306,7 @@ def toggle_channel_box_attributes(markers, opts=None):
         "restitution",
         "displayType",
         "collisionGroup",
-        "maxDepenetrationVelocity",  # A.k.a. Hardness
+        # "maxDepenetrationVelocity",  # A.k.a. Hardness
     )
 
     shape_attrs = (

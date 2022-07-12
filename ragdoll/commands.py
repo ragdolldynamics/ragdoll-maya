@@ -92,8 +92,7 @@ def assign_markers(transforms, solver, opts=None):
 
     Options:
         autoLimit (bool): Transfer locked channels into physics limits
-        density (enum): Auto-compute mass based on volume and a density,
-            such as api.Flesh or api.Wood
+        defaults (dict): Key/value pairs of default attribute values
 
     """
 
@@ -112,6 +111,7 @@ def assign_markers(transforms, solver, opts=None):
         "refit": True,
         "preventDuplicateMarker": True,
         "linearAngularStiffness": False,
+        "defaults": {},
     }, **(opts or {}))
 
     if len(transforms) == 1:
@@ -256,6 +256,9 @@ def assign_markers(transforms, solver, opts=None):
                 dgmod.set_keyable(marker["driveSpaceCustom"], False)
                 dgmod.set_keyable(marker["driveDampingRatio"], False)
                 dgmod.set_channel_box(marker["linearMotion"], False)
+
+            for key, value in opts["defaults"].items():
+                dgmod.set_attr(marker[key], value)
 
             parent_marker = marker
             markers.append(marker)

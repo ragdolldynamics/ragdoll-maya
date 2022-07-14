@@ -1327,11 +1327,7 @@ def _find_current_solver(solver, show_plugin_shapes=True):
         if not validate_cached_playback():
             return None, None
 
-        if not validate_playbackspeed():
-            return None, None
-
         solver = commands.create_solver(opts={
-            "frameskipMethod": options.read("frameskipMethod"),
             "sceneScale": options.read("markersSceneScale"),
         })
         is_new = True
@@ -1457,7 +1453,6 @@ def assign_marker(selection=None, **opts):
         "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
         "showPluginShapes": _opt("markersShowPluginShapes", opts),
-        "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
@@ -1468,6 +1463,7 @@ def assign_marker(selection=None, **opts):
         "basicAttributes": _opt("lollipopBasicAttributes", opts),
         "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
         "groupAttributes": _opt("lollipopGroupAttributes", opts),
+        "linearAngularStiffness": _opt("markersLinearAngularStiffness", opts),
 
     }, **(opts or {}))
 
@@ -1533,7 +1529,7 @@ def assign_marker(selection=None, **opts):
             "refit": opts["refit"],
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
-            "density": opts["density"],
+            "linearAngularStiffness": opts["linearAngularStiffness"],
         })
 
     except RuntimeError as e:

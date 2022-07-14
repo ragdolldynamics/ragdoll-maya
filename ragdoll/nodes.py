@@ -60,6 +60,9 @@ def create(typ, mod, name, parent=None):
         # Prefer the simpler visualisation
         mod.set_attr(node["fieldCentroids"], constants.ComCentroid)
 
+        # Deprecated, a custom=0 means "Use Mass"
+        mod.set_attr(node["densityType"], constants.DensityCustom)
+
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)
 

@@ -52,7 +52,6 @@ def create_solver(name=None, opts=None):
 
     opts = dict({
         "sceneScale": 0.1,
-        "frameskipMethod": constants.FrameskipPause,
     }, **(opts or {}))
 
     name = name or "rSolver"
@@ -65,7 +64,6 @@ def create_solver(name=None, opts=None):
                               name=shape_name,
                               parent=solver_parent)
 
-        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
         mod.set_attr(solver["spaceMultiplier"], opts["sceneScale"])
 
         # Scale isn't relevant for the solver, what would it mean?
@@ -94,8 +92,7 @@ def assign_markers(transforms, solver, opts=None):
 
     Options:
         autoLimit (bool): Transfer locked channels into physics limits
-        density (enum): Auto-compute mass based on volume and a density,
-            such as api.Flesh or api.Wood
+        defaults (dict): Key/value pairs of default attribute values
 
     """
 
@@ -109,11 +106,12 @@ def assign_markers(transforms, solver, opts=None):
     )
 
     opts = dict({
-        "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
         "refit": True,
         "preventDuplicateMarker": True,
+        "linearAngularStiffness": False,
+        "defaults": {},
     }, **(opts or {}))
 
     if len(transforms) == 1:
@@ -195,7 +193,6 @@ def assign_markers(transforms, solver, opts=None):
             dgmod.set_attr(marker["shapeRadius"], geo.radius)
             dgmod.set_attr(marker["shapeRotation"], geo.rotation)
             dgmod.set_attr(marker["shapeOffset"], geo.offset)
-            dgmod.set_attr(marker["densityType"], opts["density"])
 
             # Assign some random color, within some nice range
             dgmod.set_attr(marker["color"], internal.random_color())
@@ -246,8 +243,31 @@ def assign_markers(transforms, solver, opts=None):
             if opts["autoLimit"]:
                 auto_limit(dgmod, marker)
 
+            if opts["linearAngularStiffness"]:
+                dgmod.set_attr(marker["useLinearAngularStiffness"], True)
+
+                dgmod.set_keyable(marker["linearStiffness"], True)
+                dgmod.set_keyable(marker["linearDampingRatio"], True)
+                dgmod.set_keyable(marker["angularStiffness"], True)
+                dgmod.set_keyable(marker["angularDampingRatio"], True)
+
+                dgmod.set_keyable(marker["driveStiffness"], False)
+                dgmod.set_keyable(marker["driveSpace"], False)
+                dgmod.set_keyable(marker["driveSpaceCustom"], False)
+                dgmod.set_keyable(marker["driveDampingRatio"], False)
+                dgmod.set_channel_box(marker["linearMotion"], False)
+
+            for key, value in opts["defaults"].items():
+                dgmod.set_attr(marker[key], value)
+
             parent_marker = marker
             markers.append(marker)
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            mod.set_attr(marker["densityType"], 0)
+            mod.do_it()
+            mod.set_attr(marker["densityType"], 6)
 
     if opts["refit"] and refit_root is not None:
         reset_shape(refit_root)
@@ -1289,7 +1309,7 @@ def toggle_channel_box_attributes(markers, opts=None):
         "restitution",
         "displayType",
         "collisionGroup",
-        "maxDepenetrationVelocity",  # A.k.a. Hardness
+        # "maxDepenetrationVelocity",  # A.k.a. Hardness
     )
 
     shape_attrs = (

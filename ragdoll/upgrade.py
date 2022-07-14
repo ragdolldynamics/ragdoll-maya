@@ -135,6 +135,10 @@ def marker(node, from_version, to_version):
         _marker_20211007_20211129(node)
         upgraded = True
 
+    if from_version < 20220629:
+        _marker_20220629_20220709(node)
+        upgraded = True
+
     return upgraded
 
 
@@ -287,3 +291,33 @@ def _group_20210928_20211007(group):
 
         for oldcurrent in group["inputMarker"]:
             mod.disconnect(oldcurrent)
+
+
+@try_it
+def _marker_20220629_20220709(marker):
+    density_type = marker["densityType"].read()
+
+    if density_type == constants.DensityCotton:
+        density = 0.05
+
+    elif density_type == constants.DensityWood:
+        density = 0.2
+
+    elif density_type == constants.DensityFlesh:
+        density = 1.0
+
+    elif density_type == constants.DensityUranium:
+        density = 19.0
+
+    elif density_type == constants.DensityBlackHole:
+        density = 1000.0
+
+    else:
+        # No upgrade necessary
+        return
+
+    log.info("Upgrading %s to 2022.07.09" % marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(marker["densityType"], constants.DensityCustom)
+        mod.set_attr(marker["densityCustom"], density)

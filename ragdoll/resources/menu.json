@@ -158,7 +158,6 @@
         "options": [
             "markersAssignSolver",
             "markersAssignGroup",
-            "markersDensity",
             "markersSceneScale",
             "markersAutoLimit",
             "markersShowPluginShapes",
@@ -166,6 +165,7 @@
             "markersCreateObjectSet",
             "markersCreateLollipop",
             "markersRefit",
+            "markersLinearAngularStiffness",
 
             "channelBoxSeparator",
 
@@ -184,7 +184,6 @@
         "options": [
             "markersAssignSolver",
             "markersAssignGroup",
-            "markersDensity",
             "markersSceneScale",
             "markersAutoLimit",
             "markersShowPluginShapes",
@@ -192,6 +191,7 @@
             "markersCreateObjectSet",
             "markersCreateLollipop",
             "markersRefit",
+            "markersLinearAngularStiffness",
 
             "channelBoxSeparator",
 
@@ -449,7 +449,6 @@
         "summary": "Automatically transfer locked rotate channels into Ragdoll limits",
         "description": "Determine how to replicate the locked Maya channels in physics using the rotate limits of a marker.",
         "options": [
-            "markersDensity"
         ]
     },
 

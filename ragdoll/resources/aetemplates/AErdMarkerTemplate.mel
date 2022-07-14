@@ -22,7 +22,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Material" -collapse true;
             editorTemplate -addControl "collide";
-            editorTemplate -addControl "densityType";
             editorTemplate -addControl "mass";
             editorTemplate -addControl "densityCustom";
             editorTemplate -addControl "friction";

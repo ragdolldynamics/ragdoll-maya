@@ -1028,7 +1028,7 @@
 
     "markersLinearAngularStiffness": {
         "name": "markersLinearAngularStiffness",
-        "label": "Use Translate & Rotate Stiffness",
+        "label": "Use Translate/Rotate Stiffness",
         "type": "Boolean",
         "default": false,
         "help": "Instead of Pose Stiffness, use Translate and Rotate Stiffness. This replaces the attributes in the Channel Box with some, potentially more intuitive attributes."

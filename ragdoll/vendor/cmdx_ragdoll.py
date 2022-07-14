@@ -6875,7 +6875,11 @@ def currentTime(time=None):
         if not isinstance(time, om.MTime):
             time = om.MTime(time, TimeUiUnit())
 
-        return oma.MAnimControl.setCurrentTime(time)
+        cmds.currentTime(time.value)
+
+        # For whatever reason, MAnimControl.setCurrentTime
+        # interferes with threading, cause of deadlocks. So
+        # we instead rely on the trusty old cmds.currentTime
 
 
 def selectedTime():

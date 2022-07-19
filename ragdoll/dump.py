@@ -1228,7 +1228,7 @@ class Loader(object):
         for dest in MarkerUi["destinationTransforms"]:
             retarget(dest)
 
-        should_write_mesh = False
+        mesh_replaced = False
         if MarkerUi["inputGeometryPath"]:
             path = MarkerUi["inputGeometryPath"]
             path = self._pre_process_path(path)
@@ -1237,7 +1237,6 @@ class Loader(object):
                 shape = cmdx.encode(path)
 
             except cmdx.ExistError:
-                should_write_mesh = True
 
                 # Backwards compatibility, before meshes were exported
                 if not self._registry.has(entity, "ConvexMeshComponents"):
@@ -1255,12 +1254,13 @@ class Loader(object):
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
+                mesh_replaced = True
 
             mod.set_attr(marker["inputGeometryMatrix"],
                          MarkerUi["inputGeometryMatrix"])
 
         if self._registry.has(entity, "ConvexMeshComponents"):
-            if should_write_mesh:
+            if not mesh_replaced:
                 if marker["inputGeometry"].connected:
                     mod.disconnect(marker["inputGeometry"])
                     mod.do_it()

@@ -181,10 +181,10 @@ class Registry(object):
                 self._dump["entities"][entity]["components"][component]
             )
 
-        except KeyError:
+        except KeyError as e:
             Name = self.get(entity, "NameComponent")
             name = Name["path"] or Name["value"]
-            raise KeyError("%s did not have '%s'" % (name, component))
+            raise KeyError("%s did not have '%s' (%s)" % (name, component, e))
 
     def components(self, entity):
         """Return *all* components for `entity`"""
@@ -647,8 +647,7 @@ class Loader(object):
                         self._apply_marker(mod, entity, rdmarker)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning("Could not restore attribute: %s.%s"
-                                    % (rdmarker, e))
+                        log.warning("Could not restore attribute: %s" % e)
 
         log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
@@ -1211,6 +1210,7 @@ class Loader(object):
         for dest in MarkerUi["destinationTransforms"]:
             retarget(dest)
 
+        should_write_mesh = False
         if MarkerUi["inputGeometryPath"]:
             path = MarkerUi["inputGeometryPath"]
             path = self._pre_process_path(path)
@@ -1219,24 +1219,85 @@ class Loader(object):
                 shape = cmdx.encode(path)
 
             except cmdx.ExistError:
-                if shape_type == constants.MeshShape:
-                    # No mesh? Resort to a plain capsule
-                    mod.set_attr(marker["shapeType"], constants.CapsuleShape)
-                    log.warning(
-                        "%s.%s=%s could not be found, reverting "
-                        "to a capsule shape" % (
-                            marker, "inputGeometry", path
+                should_write_mesh = True
+
+                # Backwards compatibility, before meshes were exported
+                if not self._registry.has(entity, "ConvexMeshComponents"):
+                    if shape_type == constants.MeshShape:
+                        # No mesh? Resort to a plain capsule
+                        shape_type = constants.CapsuleShape
+                        log.warning(
+                            "%s.%s=%s could not be found, reverting "
+                            "to a capsule shape" % (
+                                marker, "inputGeometry", path
+                            )
                         )
-                    )
 
             else:
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
 
+            mod.set_attr(marker["inputGeometryMatrix"],
+                         MarkerUi["inputGeometryMatrix"])
+
+        if self._registry.has(entity, "ConvexMeshComponents"):
+            if should_write_mesh:
+                if marker["inputGeometry"].connected:
+                    mod.disconnect(marker["inputGeometry"])
+                    mod.do_it()
+
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+                mobj = meshes_to_mobj(Meshes)
+                mod.set_attr(marker["inputGeometry"], mobj)
+
+                # Matrix is baked into the exported vertices
                 mod.set_attr(marker["inputGeometryMatrix"],
-                             MarkerUi["inputGeometryMatrix"])
+                             cmdx.Matrix4())
 
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
         mod.set_attr(marker["shapeType"], shape_type)
+
+
+def meshes_to_mobj(Meshes):
+    vertices = cmdx.om.MFloatPointArray()
+    polygon_connects = cmdx.om.MIntArray()
+    polygon_counts = cmdx.om.MIntArray()
+
+    vertexCount = len(Meshes["vertices"]["values"]) / 3
+
+    # Vertices are stored flat; every 3 values represent an MPoint
+    stride = 0
+    for _ in range(vertexCount):
+        vert = Meshes["vertices"]["values"]
+        vertices.append(cmdx.om.MFloatPoint(
+            vert[stride + 0],
+            vert[stride + 1],
+            vert[stride + 2],
+        ))
+
+        stride += 3
+
+    # Multiple meshes are stored one after the other
+    # They are distinguished via their connectivity
+    for index in Meshes["indices"]["values"]:
+        polygon_connects.append(index)
+
+    if len(vertices) == 0:
+        return cmdx.om.MObject.kNullObj
+
+    # It's all triangles, 3 points each
+    for index in range(len(polygon_connects) / 3):
+        polygon_counts.append(3)
+
+    data = cmdx.om.MFnMeshData()
+    mobj = data.create()
+    fn = cmdx.om.MFnMesh(mobj)
+
+    fn.create(vertices,
+              polygon_counts,
+              polygon_connects,
+              [], [], mobj)
+
+    return mobj

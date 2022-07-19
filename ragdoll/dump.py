@@ -120,7 +120,7 @@ def Component(comp):
 
             # Values are stored flat; every 3 values represent an Point
             stride = 0
-            for _ in range(len(value["values"]) / 3):
+            for _ in range(len(value["values"]) // 3):
                 values.append(cmdx.Point(
                     value["values"][stride + 0],
                     value["values"][stride + 1],

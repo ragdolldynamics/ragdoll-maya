@@ -115,6 +115,24 @@ def Component(comp):
         elif value["type"] == "Quaternion":
             value = cmdx.Quaternion(*value["values"])
 
+        elif value["type"] == "PointArray":
+            values = []
+
+            # Values are stored flat; every 3 values represent an Point
+            stride = 0
+            for _ in range(len(value["values"]) / 3):
+                values.append(cmdx.Point(
+                    value["values"][stride + 0],
+                    value["values"][stride + 1],
+                    value["values"][stride + 2],
+                ))
+
+                stride += 3
+            value = values
+
+        elif value["type"] == "UintArray":
+            value = value["values"]
+
         else:
             raise TypeError("Unsupported type: %s" % value)
 
@@ -1248,12 +1266,15 @@ class Loader(object):
                     mod.do_it()
 
                 Meshes = self._registry.get(entity, "ConvexMeshComponents")
-                mobj = meshes_to_mobj(Meshes)
-                mod.set_attr(marker["inputGeometry"], mobj)
 
-                # Matrix is baked into the exported vertices
-                mod.set_attr(marker["inputGeometryMatrix"],
-                             cmdx.Matrix4())
+                # May be empty
+                if Meshes["vertices"]:
+                    mobj = meshes_to_mobj(Meshes)
+                    mod.set_attr(marker["inputGeometry"], mobj)
+
+                    # Matrix is baked into the exported vertices
+                    mod.set_attr(marker["inputGeometryMatrix"],
+                                 cmdx.Matrix4())
 
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
@@ -1265,23 +1286,10 @@ def meshes_to_mobj(Meshes):
     polygon_connects = cmdx.om.MIntArray()
     polygon_counts = cmdx.om.MIntArray()
 
-    vertexCount = len(Meshes["vertices"]["values"]) / 3
+    for vertex in Meshes["vertices"]:
+        vertices.append(vertex)
 
-    # Vertices are stored flat; every 3 values represent an MPoint
-    stride = 0
-    for _ in range(vertexCount):
-        vert = Meshes["vertices"]["values"]
-        vertices.append(cmdx.om.MFloatPoint(
-            vert[stride + 0],
-            vert[stride + 1],
-            vert[stride + 2],
-        ))
-
-        stride += 3
-
-    # Multiple meshes are stored one after the other
-    # They are distinguished via their connectivity
-    for index in Meshes["indices"]["values"]:
+    for index in Meshes["indices"]:
         polygon_connects.append(index)
 
     if len(vertices) == 0:

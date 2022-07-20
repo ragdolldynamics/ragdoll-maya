@@ -963,7 +963,7 @@
         "name": "markersRecordAutoCache",
         "label": "Auto Cache",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Leave the simulation cached upon completing the record. This can help compare the recorded result to the simulation, as any subsequent simulation would use the newly recorded animation as input."
     },
 

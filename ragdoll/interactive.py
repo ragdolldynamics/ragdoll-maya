@@ -941,6 +941,9 @@ def install_menu():
              replace_marker_mesh,
              replace_marker_mesh_options)
 
+        item("convertMesh", convert_to_mesh, convert_to_mesh_options)
+        item("bakeMesh", bake_mesh, bake_mesh_options)
+
         divider()
 
         item("extractMarkers", extract_markers, extract_markers_options)
@@ -3051,6 +3054,39 @@ def isolate_select(nodes):
 
 
 @with_exception_handling
+def bake_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    for marker in markers:
+        commands.bake_mesh(marker)
+
+    log.info("Successfully baked %d markers" % len(markers))
+    return kSuccess
+
+
+def bake_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
+def convert_to_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    meshes = []
+    for marker in markers:
+        meshes += [commands.marker_to_mesh(marker)]
+
+    cmds.select(list(str(mesh.parent()) for mesh in meshes))
+    log.info("Successfully converted %d markers" % len(meshes))
+
+    return kSuccess
+
+
+def convert_to_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
 def replace_marker_mesh(selection=None, **opts):
     opts = {
         "exclusive": _opt("replaceMeshExclusive", opts),
@@ -3064,15 +3100,7 @@ def replace_marker_mesh(selection=None, **opts):
         _filtered_selection("nurbsSurface", selection)
     )
 
-    markers = []
-    for node in selection or cmdx.selection():
-        if node.isA("rdMarker"):
-            markers.append(node)
-
-        elif node.isA(cmdx.kDagNode):
-            marker = node["message"].output(type="rdMarker")
-            if marker is not None:
-                markers.append(marker)
+    markers = markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(

@@ -62,14 +62,20 @@
         ]
     },
 
-    "replaceMesh": {
-        "label": "Replace Mesh",
-        "icon": "replace.png",
-        "summary": "Replace input of the 'Mesh' shape type with another polygonal or NURBS mesh.",
-        "description": "Substitute the current input of the 'Mesh' shape type with another. Also taking worldspace into account, so the mesh can be anywhere in the scene, under any group or voodoo magic.",
+    "bakeMesh": {
+        "label": "Bake Mesh",
+        "icon": "bake.png",
+        "summary": "Store geometry inside of the Marker, disconnecting it from its source mesh.",
+        "description": "When replacing a mesh, or automatically decomposing it into many smaller convex hulls, the connection typically remains between the Marker and mesh. This command persistently stores the mesh inside of the Marker such that the original can be deleted.",
         "options": [
-            "replaceMeshExclusive",
-            "replaceMeshMaintainOffset"
+        ]
+    },
+    "convertMesh": {
+        "label": "Convert to Mesh",
+        "icon": "source.png",
+        "summary": "Convert the Marker geometry into a Maya mesh.",
+        "description": "Sometimes you want whatever Ragdoll uses for collisions as a Maya mesh that you can further manipulate using normal Maya tools.",
+        "options": [
         ]
     },
     "editConstraintFrames": {

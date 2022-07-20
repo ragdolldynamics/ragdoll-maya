@@ -58,17 +58,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -beginLayout "Automatic Decomposition Settings" -collapse true;
                 editorTemplate -label "Resolution" -addControl "convexResolution";
                 editorTemplate -label "Concavity" -addControl "convexConcavity";
-                editorTemplate -label "Symmetry Bias" -addControl "convexSymmetryBias";
-                editorTemplate -label "Revolute Bias" -addControl "convexRevoluteBias";
-                editorTemplate -label "Min Volume" -addControl "convexMinVolume";
                 editorTemplate -label "Max Convex Hulls" -addControl "convexMaxConvexHulls";
-                editorTemplate -label "Plane Downsampling" -addControl "convexPlaneDownsampling";
-                editorTemplate -label "Hull Downsampling" -addControl "convexHullDownsampling";
                 editorTemplate -label "Fill Mode" -addControl "convexFillMode";
-                editorTemplate -beginNoOptimize;
-                    editorTemplate -label "Approximate Hull" -addControl "convexApproximateHull";
-                    editorTemplate -label "Project Hull Vertices" -addControl "convexProjectHullVertices";
-                editorTemplate -endNoOptimize;
+                editorTemplate -label "Project Hull Vertices" -addControl "convexProjectHullVertices";
             editorTemplate -endLayout;
         editorTemplate -endLayout;
 

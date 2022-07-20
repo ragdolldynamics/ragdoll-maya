@@ -2356,7 +2356,6 @@ def _infer_geometry(root,
 
     geometry = geometry or internal.Geometry()
     original = root
-    inverted = False
 
     # Automatically find children
     if children is constants.Auto:
@@ -2377,7 +2376,6 @@ def _infer_geometry(root,
         children = [root]
         root = parent
         parent = None
-        inverted = True
 
     all_joints = all(child.is_a(cmdx.kJoint) for child in children)
 
@@ -2712,6 +2710,100 @@ def merge_solvers(a, b):
         )
 
     return True
+
+
+def marker_to_mesh(marker):
+    """Convert the geometry of any marker into Maya geometry"""
+
+    shape_type = marker["shapeType"].read()
+
+    if shape_type == constants.BoxShape:
+        mesh, gen = cmds.polyCube()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeExtentsX"], gen["width"])
+            mod.connect(marker["shapeExtentsY"], gen["height"])
+            mod.connect(marker["shapeExtentsZ"], gen["depth"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.SphereShape:
+        mesh, gen = cmds.polySphere()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.CapsuleShape:
+        mesh, gen = cmds.polyCylinder(axis=(1, 0, 0),
+                                      roundCap=True,
+                                      subdivisionsCaps=10)
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+            mod.connect(marker["shapeLength"], gen["height"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.MeshShape:
+        with cmdx.DagModifier() as mod:
+            parent = mod.create_node("transform", marker.name() + "Mesh")
+            mesh = mod.create_node("mesh", marker.name() + "MeshShape", parent)
+            mod.connect(marker["outputGeometry"], mesh["inMesh"])
+
+        cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+
+    else:
+        raise ValueError("Unsupported shape type: %s" % shape_type)
+
+    with cmdx.DagModifier() as mod:
+        mtx = marker["inputMatrix"].as_matrix()
+
+        if shape_type != constants.MeshShape:
+            parent = mesh.parent()
+            shape_offset = marker["shapeOffset"].as_vector()
+            shape_rotation = cmdx.Euler(marker["shapeRotation"].as_vector())
+            shape_tm = cmdx.Tm(translate=shape_offset, rotate=shape_rotation)
+            mtx = shape_tm.as_matrix() * mtx
+
+        tm = cmdx.Tm(mtx)
+        mod.set_attr(parent["translate"], tm.translation())
+        mod.set_attr(parent["rotate"], tm.rotation())
+        mod.set_attr(parent["scale"], tm.scale())
+
+    cmdx.encode("initialShadingGroup").add(mesh)
+
+    return mesh
+
+
+def bake_mesh(marker):
+    """Convert automatically generated convex hulls into islands
+
+    Islands are much faster to compute and is also deterministic
+    across each file-open.
+
+    """
+
+    mesh = marker_to_mesh(marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(mesh["outMesh"], marker["inputGeometry"])
+        mod.set_attr(marker["convexDecomposition"],
+                     constants.DecompositionIslands)
+        mod.do_it()
+
+        # Pass data into the node
+        marker["inputGeometry"].pull()
+
+        # Then get rid of it!
+        mod.delete(mesh)
 
 
 def _add_to_group(mod, marker, group):

@@ -2573,6 +2573,7 @@ def auto_limit(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_refresh_suspended
 def cache_all(selection=None, **opts):
     solvers = _filtered_selection("rdSolver", selection)
     solvers = solvers or cmdx.ls(type="rdSolver")
@@ -2587,20 +2588,19 @@ def cache_all(selection=None, **opts):
     with i__.Timer() as duration, progressbar() as p:
         it = commands.cache(solvers)
 
-        with i__.with_refresh_suspended():
-            previous_progress = 0
-            for progress in it:
-                progress = int(progress)
-                if progress % 5 == 0 and progress != previous_progress:
-                    log.info("%.1f%%" % progress)
-                    previous_progress = progress
+        previous_progress = 0
+        for progress in it:
+            progress = int(progress)
+            if progress % 5 == 0 and progress != previous_progress:
+                log.info("%.1f%%" % progress)
+                previous_progress = progress
 
-                # Allow the user to cancel with the ESC key
-                if cmds.progressBar(p, query=True, isCancelled=True):
-                    break
+            # Allow the user to cancel with the ESC key
+            if cmds.progressBar(p, query=True, isCancelled=True):
+                break
 
-                total_frames += 1
-                cmds.progressBar(p, edit=True, step=1)
+            total_frames += 1
+            cmds.progressBar(p, edit=True, step=1)
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Cached %d frames for %d solvers in %.1fs (%d fps)" % (

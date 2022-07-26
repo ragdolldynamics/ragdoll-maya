@@ -951,7 +951,7 @@ def create_pose_constraint(parent, child, opts=None):
 
 
 @internal.with_undo_chunk
-def create_pin_constraint(child, parent=None, opts=None):
+def create_pin_constraint(child, parent=None, transform=None, opts=None):
     """Create a new pin constraint for `parent` and optionally `parent`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert not parent or parent.isA("rdMarker"), (
@@ -989,14 +989,27 @@ def create_pin_constraint(child, parent=None, opts=None):
             else:
                 source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
 
-    # Glue Constraint
+    # Attach Constraint
     else:
         name = internal.unique_name("%s_rAttach" % source_name)
-        parent_transform = parent["src"].input(type=cmdx.kDagNode)
-        pin_parent = parent_transform
+        pin_parent = transform
+
+        if pin_parent is None:
+            # Prefer attaching to the destination transform, which
+            # has a greater odds of being the control a user expects.
+            # As opposed to a potential # joint that was originally assigned.
+            try:
+                parent_transform = parent["dst"][0].input(type=cmdx.kDagNode)
+
+            except AttributeError:
+                # Fallback to the originally assigned node
+                parent_transform = parent["src"].input(type=cmdx.kDagNode)
+
+            pin_parent = parent_transform
+
         source_tm = cmdx.Tm(
             source_transform["worldMatrix"][0].as_matrix() *
-            parent_transform["worldInverseMatrix"][0].as_matrix()
+            pin_parent["worldInverseMatrix"][0].as_matrix()
         )
 
     with cmdx.DagModifier() as mod:
@@ -1288,6 +1301,9 @@ def replace_mesh(marker, mesh, opts=None):
             mesh_matrix = mesh["worldMatrix"][0].as_matrix()
             mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
             mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
+
+        # Display the newly replaced mesh
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
 
 
 def toggle_channel_box_attributes(markers, opts=None):
@@ -1613,6 +1629,7 @@ def delete_all_physics(dry_run=False):
 def assign_plan(body, feet, opts=None):
     opts = dict({
         "useTransform": False,
+        "duration": 100,
     }, **(opts or {}))
 
     assert (
@@ -1708,9 +1725,8 @@ def assign_plan(body, feet, opts=None):
         elif limits[axis] > 1:
             limits[axis] = int(limits[axis] * 10) * 0.1
 
-    duration = int((cmdx.max_time() - cmdx.min_time()).value) - 9
+    duration = opts["duration"]
     duration = max(duration, 50)  # Minimum 2 seconds
-    duration = min(duration, 100)
 
     WalkPreset = 0
     HopPreset = 1

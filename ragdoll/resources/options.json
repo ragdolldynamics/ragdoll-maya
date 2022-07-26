@@ -468,6 +468,16 @@
     "#": " Planning       ",
     "#": "----------------",
 
+    "planDuration": {
+        "name": "planDuration",
+        "label": "Duration",
+        "type": "Integer",
+        "default": 100,
+        "min": 50,
+        "max": 500,
+        "help": "How long to make the default plan."
+    },
+
     "planForceUpdate": {
         "name": "planForceUpdate",
         "label": "Force Update",

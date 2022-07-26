@@ -1940,6 +1940,7 @@ def create_pin_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_attach_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
 
     try:
         a, b = markers_from_selection(selection)
@@ -1949,7 +1950,7 @@ def create_attach_constraint(selection=None, **opts):
             "Select two markers to constrain."
         )
 
-    con = commands.create_pin_constraint(a, b)
+    con = commands.create_pin_constraint(a, b, transform=selection[1])
     cmds.select(str(con.parent()))
 
     return True
@@ -2721,6 +2722,7 @@ def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": _opt("planNativeTargets", opts),
         "preset": _opt("planPreset", opts),
+        "duration": _opt("planDuration", opts),
     }, **(opts or {}))
 
     sel = selection or cmdx.selection()
@@ -3139,10 +3141,6 @@ def replace_marker_mesh(selection=None, **opts):
             )
 
     commands.replace_mesh(markers[0], meshes[0], opts=opts)
-
-    # Make life easier for the user
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(markers[0]["shapeType"], c.MeshShape)
 
     return kSuccess
 

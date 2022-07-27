@@ -2216,6 +2216,22 @@ def extract_markers(selection=None, **opts):
     return kSuccess
 
 
+def transfer_live(selection=None, **opts):
+    manip = json.loads(cmds.ragdollDump(manipulator=True))
+
+    if not manip["solverPath"]:
+        return kFailure
+
+    solver = cmdx.encode(manip["solverPath"])
+
+    with i__.Timer("transfer") as duration:
+        recording.transfer_live(solver)
+
+    log.info("Transferred animation in %.1f ms" % duration.ms)
+
+    return kSuccess
+
+
 @i__.with_undo_chunk
 @with_exception_handling
 def retarget_marker(selection=None, **opts):

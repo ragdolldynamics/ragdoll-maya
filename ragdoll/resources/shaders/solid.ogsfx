@@ -10,6 +10,7 @@ uniform mat4 gWvpXf : WorldViewProjection;
 uniform mat4 gWorldView : ViewProjectionTranspose;
 
 uniform float gGamma;
+uniform vec3 gColor;
 
 /* Data from application vertex buffer */
 attribute ToVertex {
@@ -72,7 +73,7 @@ GLSLShader ShaderColor
         vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
         vec3 specular = spec * lightColor * specularAmount * ObjectShading;
-        vec3 objectColor = ObjectColor.rgb * colorAmount;
+        vec3 objectColor = gColor * colorAmount;
 
         // Composite
         vec3 result = objectColor + diffuse + specular;

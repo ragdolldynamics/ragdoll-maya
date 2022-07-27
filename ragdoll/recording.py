@@ -57,6 +57,47 @@ def extract(solver, opts=None):
         pass
 
 
+def transfer_live(solver):
+    def _transfer_dst(marker, dst):
+        mtx = marker["outputMatrix"].as_matrix()
+        parent = marker["parentMarker"].input(type="rdMarker")
+
+        if parent is not None:
+            mtx *= parent["outputMatrix"].as_matrix().inverse()
+            mtx *= (
+                marker["originMatrix"].as_matrix() *
+                parent["originMatrix"].as_matrix().inverse()
+            ).inverse()
+        else:
+            mtx *= dst["parentInverseMatrix"][0].as_matrix()
+
+        tm = cmdx.Tm(mtx)
+        rotate = tm.rotation()
+        translate = tm.translation()
+
+        for i, axis in enumerate("XYZ"):
+            if dst["rotate" + axis].editable:
+                mod.set_attr(dst["rotate" + axis], rotate[i])
+
+            if parent is None:
+                if dst["translate" + axis].editable:
+                    mod.set_attr(dst["translate" + axis], translate[i])
+
+    with cmdx.DagModifier() as mod:
+        for marker in internal.markers_from_solver(solver):
+            if cmds.ragdollInfo(str(marker), kinematic=True):
+                continue
+
+            for el in marker["dst"]:
+                dst = el.input()
+
+                if dst is None:
+                    print("%s skipped" % marker)
+                    continue
+
+                _transfer_dst(marker, dst)
+
+
 class _Recorder(object):
     """Stateful recording class
 

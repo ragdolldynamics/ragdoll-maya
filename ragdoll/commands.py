@@ -878,7 +878,7 @@ def create_fixed_constraint(parent, child, opts=None):
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
-        "%s and %s not part of the same solver"
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
@@ -956,6 +956,10 @@ def create_pin_constraint(child, parent=None, transform=None, opts=None):
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert not parent or parent.isA("rdMarker"), (
         "%s was not a marker" % parent.type()
+    )
+
+    assert parent is None or _same_solver(parent, child), (
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     opts = dict({

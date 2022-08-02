@@ -592,6 +592,12 @@ def _on_manipulator_exited(clientData=None):
     if options.read("manipulatorFitToViewOverride"):
         _uninstall_fit_to_view()
 
+    # For recording.transfer_live()
+    for marker in cmdx.ls(type="rdMarker"):
+        marker.data.pop("previousMatrix", None)
+        marker.data.pop("previousTranslate", None)
+        marker.data.pop("previousRotate", None)
+
 
 def _on_plan_complete(clientData=None):
     """User has exited the manipulator, restore viewport HUD"""

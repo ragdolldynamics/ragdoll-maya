@@ -4755,12 +4755,16 @@ class Quaternion(om.MQuaternion):
     def asMatrix(self):
         return Matrix4(super(Quaternion, self).asMatrix())
 
+    def isEquivalent(self, other, tolerance=om.MQuaternion.kTolerance):
+        return super(Quaternion, self).isEquivalent(other, tolerance)
+
     if ENABLE_PEP8:
         as_matrix = asMatrix
         is_normalised = isNormalised
         length_squared = lengthSquared
         as_euler_rotation = asEulerRotation
         as_euler = asEulerRotation
+        is_equivalent = isEquivalent
 
 
 # Alias

@@ -22,9 +22,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Material" -collapse true;
             editorTemplate -addControl "collide";
-            editorTemplate -addControl "contactStiffness";
-            editorTemplate -addControl "contactDamping";
-            editorTemplate -addControl "densityType";
             editorTemplate -addControl "mass";
             editorTemplate -addControl "densityCustom";
             editorTemplate -addControl "friction";
@@ -61,17 +58,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -beginLayout "Automatic Decomposition Settings" -collapse true;
                 editorTemplate -label "Resolution" -addControl "convexResolution";
                 editorTemplate -label "Concavity" -addControl "convexConcavity";
-                editorTemplate -label "Symmetry Bias" -addControl "convexSymmetryBias";
-                editorTemplate -label "Revolute Bias" -addControl "convexRevoluteBias";
-                editorTemplate -label "Min Volume" -addControl "convexMinVolume";
                 editorTemplate -label "Max Convex Hulls" -addControl "convexMaxConvexHulls";
-                editorTemplate -label "Plane Downsampling" -addControl "convexPlaneDownsampling";
-                editorTemplate -label "Hull Downsampling" -addControl "convexHullDownsampling";
                 editorTemplate -label "Fill Mode" -addControl "convexFillMode";
-                editorTemplate -beginNoOptimize;
-                    editorTemplate -label "Approximate Hull" -addControl "convexApproximateHull";
-                    editorTemplate -label "Project Hull Vertices" -addControl "convexProjectHullVertices";
-                editorTemplate -endNoOptimize;
+                editorTemplate -label "Project Hull Vertices" -addControl "convexProjectHullVertices";
             editorTemplate -endLayout;
         editorTemplate -endLayout;
 
@@ -98,6 +87,7 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -beginLayout "Advanced" -collapse true;
             editorTemplate -addControl "ignoreGravity";
             editorTemplate -addControl "ignoreFields";
+            editorTemplate -addControl "ignoreMass";
             editorTemplate -addControl "collideWithParent";
             editorTemplate -label "Start Asleep" -addControl "asleep";
             editorTemplate -addControl "angularMass";

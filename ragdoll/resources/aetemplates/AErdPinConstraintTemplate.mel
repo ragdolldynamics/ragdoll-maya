@@ -12,6 +12,12 @@ global proc AErdPinConstraintTemplate(string $nodeName) {
             editorTemplate -addControl "angularDampingRatio";
         editorTemplate -endLayout;
 
+        editorTemplate -beginLayout "Advanced" -collapse false;
+            editorTemplate -addControl "linearStiffnessXYZ";
+            editorTemplate -addControl "angularStiffnessSwing";
+            editorTemplate -addControl "angularStiffnessTwist";
+        editorTemplate -endLayout;
+
         // Create an "Extras" section and also add controls for any
         // attributes we have not explicitly mentioned.
         editorTemplate -addExtraControls;

@@ -26,6 +26,7 @@ def create(typ, mod, name, parent=None):
         mod.set_attr(node["gravity"], up * -982)
         mod.set_attr(node["spaceMultiplier"], 0.1)
         mod.set_attr(node["airDensity"], 0.1)
+        mod.set_attr(node["frameskipMethod"], constants.FrameskipIgnore)
 
         if up.y:
             mod.set_keyable(node["gravityY"])
@@ -58,6 +59,9 @@ def create(typ, mod, name, parent=None):
 
         # Prefer the simpler visualisation
         mod.set_attr(node["fieldCentroids"], constants.ComCentroid)
+
+        # Deprecated, a custom=0 means "Use Mass"
+        mod.set_attr(node["densityType"], constants.DensityCustom)
 
     elif typ == "rdGroup":
         node = mod.create_node(typ, name=name, parent=parent)

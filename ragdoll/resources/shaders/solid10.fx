@@ -14,6 +14,7 @@ cbuffer UpdatePerObject : register(b1) {
     mat4 gWvpXf : WorldViewProjection < string UIWidget = "None"; >;
     mat4 gWorldXf : World < string UIWidget = "None"; >;
     mat4 gWorldView : ViewProjectionTranspose;
+    vec3 gColor;
 };
 
 
@@ -70,14 +71,14 @@ ToScreen ShaderPixel(ToPixel IN) {
     mat3 worldView = (mat3)gWorldView;
     vec3 lightDir = -normalize(mul(worldView, gLightDir));
     float diff = max(dot(norm, lightDir), ambient);
-    vec3 diffuse = diff * lightColor * diffuseAmount * IN.Color.w;
+    vec3 diffuse = diff * lightColor * diffuseAmount;
 
     // Specular
     vec3 reflectDir = reflect(-lightDir, norm);
     float spec = pow(max(dot(lightDir, reflectDir), 0.0), shininess);
-    vec3 specular = spec * lightColor * specularAmount * IN.Color.w;
+    vec3 specular = spec * lightColor * specularAmount;
 
-    vec3 objectColor = IN.Color.xyz * colorAmount;
+    vec3 objectColor = gColor * colorAmount;
     vec3 result = objectColor + diffuse + specular;
 
     OUT.Color = vec4(result, 1);

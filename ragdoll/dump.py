@@ -115,6 +115,24 @@ def Component(comp):
         elif value["type"] == "Quaternion":
             value = cmdx.Quaternion(*value["values"])
 
+        elif value["type"] == "PointArray":
+            values = []
+
+            # Values are stored flat; every 3 values represent an Point
+            stride = 0
+            for _ in range(len(value["values"]) // 3):
+                values.append(cmdx.Point(
+                    value["values"][stride + 0],
+                    value["values"][stride + 1],
+                    value["values"][stride + 2],
+                ))
+
+                stride += 3
+            value = values
+
+        elif value["type"] == "UintArray":
+            value = value["values"]
+
         else:
             raise TypeError("Unsupported type: %s" % value)
 
@@ -181,10 +199,10 @@ class Registry(object):
                 self._dump["entities"][entity]["components"][component]
             )
 
-        except KeyError:
+        except KeyError as e:
             Name = self.get(entity, "NameComponent")
             name = Name["path"] or Name["value"]
-            raise KeyError("%s did not have '%s'" % (name, component))
+            raise KeyError("%s did not have '%s' (%s)" % (name, component, e))
 
     def components(self, entity):
         """Return *all* components for `entity`"""
@@ -541,7 +559,7 @@ class Loader(object):
         # already existed in the scene.
         override = self._opts["overrideSolver"]
 
-        if self._opts["preserveAttributes"] and override:
+        if self._opts["preserveAttributes"] and not override:
             with cmdx.DagModifier() as mod:
                 for entity, rdsolver in rdsolvers.items():
                     try:
@@ -647,8 +665,7 @@ class Loader(object):
                         self._apply_marker(mod, entity, rdmarker)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning("Could not restore attribute: %s.%s"
-                                    % (rdmarker, e))
+                        log.warning("Could not restore attribute: %s" % e)
 
         log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
@@ -1211,6 +1228,7 @@ class Loader(object):
         for dest in MarkerUi["destinationTransforms"]:
             retarget(dest)
 
+        mesh_replaced = False
         if MarkerUi["inputGeometryPath"]:
             path = MarkerUi["inputGeometryPath"]
             path = self._pre_process_path(path)
@@ -1219,24 +1237,75 @@ class Loader(object):
                 shape = cmdx.encode(path)
 
             except cmdx.ExistError:
-                if shape_type == constants.MeshShape:
-                    # No mesh? Resort to a plain capsule
-                    mod.set_attr(marker["shapeType"], constants.CapsuleShape)
-                    log.warning(
-                        "%s.%s=%s could not be found, reverting "
-                        "to a capsule shape" % (
-                            marker, "inputGeometry", path
+
+                # Backwards compatibility, before meshes were exported
+                if not self._registry.has(entity, "ConvexMeshComponents"):
+                    if shape_type == constants.MeshShape:
+                        # No mesh? Resort to a plain capsule
+                        shape_type = constants.CapsuleShape
+                        log.warning(
+                            "%s.%s=%s could not be found, reverting "
+                            "to a capsule shape" % (
+                                marker, "inputGeometry", path
+                            )
                         )
-                    )
 
             else:
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
+                mesh_replaced = True
 
-                mod.set_attr(marker["inputGeometryMatrix"],
-                             MarkerUi["inputGeometryMatrix"])
+            mod.set_attr(marker["inputGeometryMatrix"],
+                         MarkerUi["inputGeometryMatrix"])
+
+        if self._registry.has(entity, "ConvexMeshComponents"):
+            if not mesh_replaced:
+                if marker["inputGeometry"].connected:
+                    mod.disconnect(marker["inputGeometry"])
+                    mod.do_it()
+
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+
+                # May be empty
+                if Meshes["vertices"]:
+                    mobj = meshes_to_mobj(Meshes)
+                    mod.set_attr(marker["inputGeometry"], mobj)
+
+                    # Matrix is baked into the exported vertices
+                    mod.set_attr(marker["inputGeometryMatrix"],
+                                 cmdx.Matrix4())
 
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
         mod.set_attr(marker["shapeType"], shape_type)
+
+
+def meshes_to_mobj(Meshes):
+    vertices = cmdx.om.MFloatPointArray()
+    polygon_connects = cmdx.om.MIntArray()
+    polygon_counts = cmdx.om.MIntArray()
+
+    for vertex in Meshes["vertices"]:
+        vertices.append(vertex)
+
+    for index in Meshes["indices"]:
+        polygon_connects.append(index)
+
+    if len(vertices) == 0:
+        return cmdx.om.MObject.kNullObj
+
+    # It's all triangles, 3 points each
+    for index in range(len(polygon_connects) / 3):
+        polygon_counts.append(3)
+
+    data = cmdx.om.MFnMeshData()
+    mobj = data.create()
+    fn = cmdx.om.MFnMesh(mobj)
+
+    fn.create(vertices,
+              polygon_counts,
+              polygon_connects,
+              [], [], mobj)
+
+    return mobj

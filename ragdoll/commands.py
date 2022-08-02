@@ -52,7 +52,6 @@ def create_solver(name=None, opts=None):
 
     opts = dict({
         "sceneScale": 0.1,
-        "frameskipMethod": constants.FrameskipPause,
     }, **(opts or {}))
 
     name = name or "rSolver"
@@ -65,7 +64,6 @@ def create_solver(name=None, opts=None):
                               name=shape_name,
                               parent=solver_parent)
 
-        mod.set_attr(solver["frameskipMethod"], opts["frameskipMethod"])
         mod.set_attr(solver["spaceMultiplier"], opts["sceneScale"])
 
         # Scale isn't relevant for the solver, what would it mean?
@@ -94,8 +92,7 @@ def assign_markers(transforms, solver, opts=None):
 
     Options:
         autoLimit (bool): Transfer locked channels into physics limits
-        density (enum): Auto-compute mass based on volume and a density,
-            such as api.Flesh or api.Wood
+        defaults (dict): Key/value pairs of default attribute values
 
     """
 
@@ -109,11 +106,12 @@ def assign_markers(transforms, solver, opts=None):
     )
 
     opts = dict({
-        "density": constants.DensityFlesh,
         "autoLimit": False,
         "connect": True,
         "refit": True,
         "preventDuplicateMarker": True,
+        "linearAngularStiffness": False,
+        "defaults": {},
     }, **(opts or {}))
 
     if len(transforms) == 1:
@@ -195,7 +193,6 @@ def assign_markers(transforms, solver, opts=None):
             dgmod.set_attr(marker["shapeRadius"], geo.radius)
             dgmod.set_attr(marker["shapeRotation"], geo.rotation)
             dgmod.set_attr(marker["shapeOffset"], geo.offset)
-            dgmod.set_attr(marker["densityType"], opts["density"])
 
             # Assign some random color, within some nice range
             dgmod.set_attr(marker["color"], internal.random_color())
@@ -246,8 +243,31 @@ def assign_markers(transforms, solver, opts=None):
             if opts["autoLimit"]:
                 auto_limit(dgmod, marker)
 
+            if opts["linearAngularStiffness"]:
+                dgmod.set_attr(marker["useLinearAngularStiffness"], True)
+
+                dgmod.set_keyable(marker["linearStiffness"], True)
+                dgmod.set_keyable(marker["linearDampingRatio"], True)
+                dgmod.set_keyable(marker["angularStiffness"], True)
+                dgmod.set_keyable(marker["angularDampingRatio"], True)
+
+                dgmod.set_keyable(marker["driveStiffness"], False)
+                dgmod.set_keyable(marker["driveSpace"], False)
+                dgmod.set_keyable(marker["driveSpaceCustom"], False)
+                dgmod.set_keyable(marker["driveDampingRatio"], False)
+                dgmod.set_channel_box(marker["linearMotion"], False)
+
+            for key, value in opts["defaults"].items():
+                dgmod.set_attr(marker[key], value)
+
             parent_marker = marker
             markers.append(marker)
+
+    with cmdx.DGModifier() as mod:
+        for marker in markers:
+            mod.set_attr(marker["densityType"], 0)
+            mod.do_it()
+            mod.set_attr(marker["densityType"], 6)
 
     if opts["refit"] and refit_root is not None:
         reset_shape(refit_root)
@@ -858,7 +878,7 @@ def create_fixed_constraint(parent, child, opts=None):
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
-        "%s and %s not part of the same solver"
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
@@ -931,11 +951,15 @@ def create_pose_constraint(parent, child, opts=None):
 
 
 @internal.with_undo_chunk
-def create_pin_constraint(child, parent=None, opts=None):
+def create_pin_constraint(child, parent=None, transform=None, opts=None):
     """Create a new pin constraint for `parent` and optionally `parent`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert not parent or parent.isA("rdMarker"), (
         "%s was not a marker" % parent.type()
+    )
+
+    assert parent is None or _same_solver(parent, child), (
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     opts = dict({
@@ -969,14 +993,27 @@ def create_pin_constraint(child, parent=None, opts=None):
             else:
                 source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
 
-    # Glue Constraint
+    # Attach Constraint
     else:
         name = internal.unique_name("%s_rAttach" % source_name)
-        parent_transform = parent["src"].input(type=cmdx.kDagNode)
-        pin_parent = parent_transform
+        pin_parent = transform
+
+        if pin_parent is None:
+            # Prefer attaching to the destination transform, which
+            # has a greater odds of being the control a user expects.
+            # As opposed to a potential # joint that was originally assigned.
+            try:
+                parent_transform = parent["dst"][0].input(type=cmdx.kDagNode)
+
+            except AttributeError:
+                # Fallback to the originally assigned node
+                parent_transform = parent["src"].input(type=cmdx.kDagNode)
+
+            pin_parent = parent_transform
+
         source_tm = cmdx.Tm(
             source_transform["worldMatrix"][0].as_matrix() *
-            parent_transform["worldInverseMatrix"][0].as_matrix()
+            pin_parent["worldInverseMatrix"][0].as_matrix()
         )
 
     with cmdx.DagModifier() as mod:
@@ -1269,6 +1306,9 @@ def replace_mesh(marker, mesh, opts=None):
             mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
             mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
 
+        # Display the newly replaced mesh
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
+
 
 def toggle_channel_box_attributes(markers, opts=None):
     assert markers, "No markers were passed"
@@ -1289,7 +1329,7 @@ def toggle_channel_box_attributes(markers, opts=None):
         "restitution",
         "displayType",
         "collisionGroup",
-        "maxDepenetrationVelocity",  # A.k.a. Hardness
+        # "maxDepenetrationVelocity",  # A.k.a. Hardness
     )
 
     shape_attrs = (
@@ -1593,6 +1633,7 @@ def delete_all_physics(dry_run=False):
 def assign_plan(body, feet, opts=None):
     opts = dict({
         "useTransform": False,
+        "duration": 100,
     }, **(opts or {}))
 
     assert (
@@ -1606,8 +1647,6 @@ def assign_plan(body, feet, opts=None):
         isinstance(feet, (tuple, list)) and
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
-
-
 
     # Determine the direction and distance to offset the end target
     body_pos = _position_incl_pivot(body)
@@ -1690,9 +1729,8 @@ def assign_plan(body, feet, opts=None):
         elif limits[axis] > 1:
             limits[axis] = int(limits[axis] * 10) * 0.1
 
-    duration = int((cmdx.max_time() - cmdx.min_time()).value) - 9
+    duration = opts["duration"]
     duration = max(duration, 50)  # Minimum 2 seconds
-    duration = min(duration, 100)
 
     WalkPreset = 0
     HopPreset = 1
@@ -2338,7 +2376,6 @@ def _infer_geometry(root,
 
     geometry = geometry or internal.Geometry()
     original = root
-    inverted = False
 
     # Automatically find children
     if children is constants.Auto:
@@ -2359,7 +2396,6 @@ def _infer_geometry(root,
         children = [root]
         root = parent
         parent = None
-        inverted = True
 
     all_joints = all(child.is_a(cmdx.kJoint) for child in children)
 
@@ -2694,6 +2730,100 @@ def merge_solvers(a, b):
         )
 
     return True
+
+
+def marker_to_mesh(marker):
+    """Convert the geometry of any marker into Maya geometry"""
+
+    shape_type = marker["shapeType"].read()
+
+    if shape_type == constants.BoxShape:
+        mesh, gen = cmds.polyCube()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeExtentsX"], gen["width"])
+            mod.connect(marker["shapeExtentsY"], gen["height"])
+            mod.connect(marker["shapeExtentsZ"], gen["depth"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.SphereShape:
+        mesh, gen = cmds.polySphere()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.CapsuleShape:
+        mesh, gen = cmds.polyCylinder(axis=(1, 0, 0),
+                                      roundCap=True,
+                                      subdivisionsCaps=10)
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+            mod.connect(marker["shapeLength"], gen["height"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.MeshShape:
+        with cmdx.DagModifier() as mod:
+            parent = mod.create_node("transform", marker.name() + "Mesh")
+            mesh = mod.create_node("mesh", marker.name() + "MeshShape", parent)
+            mod.connect(marker["outputGeometry"], mesh["inMesh"])
+
+        cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+
+    else:
+        raise ValueError("Unsupported shape type: %s" % shape_type)
+
+    with cmdx.DagModifier() as mod:
+        mtx = marker["inputMatrix"].as_matrix()
+
+        if shape_type != constants.MeshShape:
+            parent = mesh.parent()
+            shape_offset = marker["shapeOffset"].as_vector()
+            shape_rotation = cmdx.Euler(marker["shapeRotation"].as_vector())
+            shape_tm = cmdx.Tm(translate=shape_offset, rotate=shape_rotation)
+            mtx = shape_tm.as_matrix() * mtx
+
+        tm = cmdx.Tm(mtx)
+        mod.set_attr(parent["translate"], tm.translation())
+        mod.set_attr(parent["rotate"], tm.rotation())
+        mod.set_attr(parent["scale"], tm.scale())
+
+    cmdx.encode("initialShadingGroup").add(mesh)
+
+    return mesh
+
+
+def bake_mesh(marker):
+    """Convert automatically generated convex hulls into islands
+
+    Islands are much faster to compute and is also deterministic
+    across each file-open.
+
+    """
+
+    mesh = marker_to_mesh(marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(mesh["outMesh"], marker["inputGeometry"])
+        mod.set_attr(marker["convexDecomposition"],
+                     constants.DecompositionIslands)
+        mod.do_it()
+
+        # Pass data into the node
+        marker["inputGeometry"].pull()
+
+        # Then get rid of it!
+        mod.delete(mesh)
 
 
 def _add_to_group(mod, marker, group):

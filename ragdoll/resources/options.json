@@ -468,6 +468,16 @@
     "#": " Planning       ",
     "#": "----------------",
 
+    "planDuration": {
+        "name": "planDuration",
+        "label": "Duration",
+        "type": "Integer",
+        "default": 100,
+        "min": 50,
+        "max": 500,
+        "help": "How long to make the default plan."
+    },
+
     "planForceUpdate": {
         "name": "planForceUpdate",
         "label": "Force Update",
@@ -963,7 +973,7 @@
         "name": "markersRecordAutoCache",
         "label": "Auto Cache",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Leave the simulation cached upon completing the record. This can help compare the recorded result to the simulation, as any subsequent simulation would use the newly recorded animation as input."
     },
 
@@ -989,7 +999,7 @@
         "label": "Closed Loop",
         "type": "Boolean",
         "default": false,
-        "help": "Include support for closed loops during the recording process. This can also help speed up recording and avoid cycles in cases in the off occasions where an e.g. upper arm is parented to the hand, but runs the risk of adding 180 or 360 degree rotations."
+        "help": "Include support for closed loops during the recording process. This can also help speed up recording and avoid cycles in cases where an e.g. upper arm is parented to the hand, but runs the risk of adding 180 or 360 degree rotations."
     },
 
     "markersShowPluginShapes": {
@@ -1024,6 +1034,14 @@
         "type": "Boolean",
         "default": false,
         "help": "This will apply the same Parent and Orient constraints onto the assigned controls are Record Simulation, without actually recording anything."
+    },
+
+    "markersLinearAngularStiffness": {
+        "name": "markersLinearAngularStiffness",
+        "label": "Use Translate/Rotate Stiffness",
+        "type": "Boolean",
+        "default": false,
+        "help": "Instead of Pose Stiffness, use Translate and Rotate Stiffness. This replaces the attributes in the Channel Box with some, potentially more intuitive attributes."
     },
 
     "markersRefit": {
@@ -1158,7 +1176,7 @@
         "name": "markersDensity",
         "label": "Density",
         "type": "Enum",
-        "default": 3,
+        "default": 6,
         "items": ["Off", "Cotton", "Wood", "Flesh", "Uranium", "Black Hole", "Custom"],
         "help": "Use the volume and density of the shape to determine its mass."
     },
@@ -1241,7 +1259,7 @@
         "name": "frameskipMethod",
         "label": "Frameskip Method",
         "type": "Enum",
-        "default": 1,
+        "default": 0,
         "items": ["Ignore", "Pause"],
         "help": "What should Ragdoll do when one or more frames are skipped? Should Ragdoll pause simulation until you revisit the last-known frame? Or just pretend everything is OK, and produce garbage values?"
     },

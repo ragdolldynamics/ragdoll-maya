@@ -672,6 +672,25 @@ def sort_by_evaluation_order(nodes, minimal=False):
     return list(keys[item[0]] for item in items)
 
 
+def markers_from_solver(solver):
+    markers = []
+
+    for entity in (el.input() for el in solver["inputStart"]):
+        if entity is None:
+            continue
+
+        if entity.isA("rdMarker"):
+            markers.append(entity)
+
+        elif entity.isA("rdGroup"):
+            markers.extend(markers_from_solver(entity))
+
+        elif entity.isA("rdSolver"):
+            markers.extend(markers_from_solver(entity))
+
+    return markers
+
+
 def sort_by_hierarchy(dagnodes):
     pass
 

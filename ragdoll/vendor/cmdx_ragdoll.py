@@ -4579,6 +4579,12 @@ class MatrixType(om.MMatrix):
         values = tuple(self)
         return values[row * 4 + col % 4]
 
+    def isEquivalent(self, other, tolerance=1e-10):
+        return super(MatrixType, self).isEquivalent(other, tolerance)
+
+    if ENABLE_PEP8:
+        is_equivalent = isEquivalent
+
 
 # Alias
 Transformation = TransformationMatrix
@@ -4749,12 +4755,16 @@ class Quaternion(om.MQuaternion):
     def asMatrix(self):
         return Matrix4(super(Quaternion, self).asMatrix())
 
+    def isEquivalent(self, other, tolerance=om.MQuaternion.kTolerance):
+        return super(Quaternion, self).isEquivalent(other, tolerance)
+
     if ENABLE_PEP8:
         as_matrix = asMatrix
         is_normalised = isNormalised
         length_squared = lengthSquared
         as_euler_rotation = asEulerRotation
         as_euler = asEulerRotation
+        is_equivalent = isEquivalent
 
 
 # Alias
@@ -5759,6 +5769,7 @@ class _BaseModifier(object):
             # These all involve calling on cmds,
             # which manages undo on its own.
             self._doKeyableAttrs()
+            self._doChannelBoxAttrs()
             self._doNiceNames()
             self._doLockAttrs()
 
@@ -5793,6 +5804,7 @@ class _BaseModifier(object):
         # Extras
         self._lockAttrs = []
         self._keyableAttrs = []
+        self._channelBoxAttrs = []
         self._niceNames = []
         self._animChanges = []
 
@@ -5917,6 +5929,42 @@ class _BaseModifier(object):
         assert isinstance(plug, Plug), "%s was not a plug" % plug
         self._keyableAttrs.append((plug, value))
 
+    @record_history
+    def setChannelBox(self, plug, value=True):
+        """Make a plug appear in channel box
+
+        Examples:
+            >>> with DagModifier() as mod:
+            ...    node = mod.createNode("transform")
+            ...    mod.setChannelBox(node["rotatePivotX"])
+            ...    mod.setChannelBox(node["translateX"], False)
+            ...
+            >>> node["rotatePivotX"].channelBox
+            True
+            >>> node["translateX"].channelBox
+            False
+
+            # Also works with dynamic attributes
+            >>> with DagModifier() as mod:
+            ...    node = mod.createNode("transform")
+            ...    _ = mod.addAttr(node, Double("myDynamic"))
+            ...
+            >>> node["myDynamic"].channelBox
+            False
+            >>> with DagModifier() as mod:
+            ...    mod.setChannelBox(node["myDynamic"])
+            ...
+            >>> node["myDynamic"].channelBox
+            True
+
+        """
+
+        if isinstance(plug, om.MPlug):
+            plug = Plug(Node(plug.node()), plug)
+
+        assert isinstance(plug, Plug), "%s was not a plug" % plug
+        self._channelBoxAttrs.append((plug, value))
+
     def _doLockAttrs(self):
         while self._lockAttrs:
             plug, value = self._lockAttrs.pop(0)
@@ -5932,6 +5980,14 @@ class _BaseModifier(object):
 
             for el in elements:
                 cmds.setAttr(el.path(), keyable=value)
+
+    def _doChannelBoxAttrs(self):
+        while self._channelBoxAttrs:
+            plug, value = self._channelBoxAttrs.pop(0)
+            elements = plug if plug.isArray or plug.isCompound else [plug]
+
+            for el in elements:
+                cmds.setAttr(el.path(), channelBox=value)
 
     def _doNiceNames(self):
         while self._niceNames:
@@ -6110,7 +6166,7 @@ class _BaseModifier(object):
 
         """
 
-        assert isinstance(node, Node), "%s was not a cmdx.Node"
+        assert isinstance(node, Node), "%s was not a cmdx.Node" % str(node)
 
         if SAFE_MODE:
             assert _isalive(node._mobject)
@@ -6667,6 +6723,7 @@ class _BaseModifier(object):
         connect_attr = connectAttr
         connect_attrs = connectAttrs
         set_keyable = setKeyable
+        set_channel_box = setChannelBox
         set_locked = setLocked
         set_nice_name = setNiceName
 
@@ -6822,7 +6879,11 @@ def currentTime(time=None):
         if not isinstance(time, om.MTime):
             time = om.MTime(time, TimeUiUnit())
 
-        return oma.MAnimControl.setCurrentTime(time)
+        cmds.currentTime(time.value)
+
+        # For whatever reason, MAnimControl.setCurrentTime
+        # interferes with threading, cause of deadlocks. So
+        # we instead rely on the trusty old cmds.currentTime
 
 
 def selectedTime():
@@ -8174,11 +8235,11 @@ Distance4Attribute = Distance4
 
 
 # Support for multiple co-existing versions of apiundo.
-unique_command = "cmdx_%s_command" % __version__.replace(".", "_")
+unique_command = "cmdx_%s_command" % (__version__.replace(".", "_"))
 
 # This module is both a Python module and Maya plug-in.
 # Data is shared amongst the two through this "module"
-unique_shared = "cmdx_%s_shared" % __version__.replace(".", "_")
+unique_shared = "cmdx_%s_shared" % (__version__.replace(".", "_"))
 
 if unique_shared not in sys.modules:
     sys.modules[unique_shared] = types.ModuleType(unique_shared)
@@ -8351,6 +8412,11 @@ class _apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
+    if hasattr(cmds, unique_command):
+        # E.g. another cmdx from another vendored version
+        initializePlugin.installedElsewhere = True
+        return
+
     # Only supports major.minor (no patch)
     version = ".".join(__version__.rsplit(".")[:2])
 
@@ -8361,6 +8427,9 @@ def initializePlugin(plugin):
 
 
 def uninitializePlugin(plugin):
+    if hasattr(initializePlugin, "installedElsewhere"):
+        return
+
     om.MFnPlugin(plugin).deregisterCommand(unique_command)
 
 

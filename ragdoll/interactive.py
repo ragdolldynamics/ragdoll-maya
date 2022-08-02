@@ -592,6 +592,12 @@ def _on_manipulator_exited(clientData=None):
     if options.read("manipulatorFitToViewOverride"):
         _uninstall_fit_to_view()
 
+    # For recording.transfer_live()
+    for marker in cmdx.ls(type="rdMarker"):
+        marker.data.pop("previousMatrix", None)
+        marker.data.pop("previousTranslate", None)
+        marker.data.pop("previousRotate", None)
+
 
 def _on_plan_complete(clientData=None):
     """User has exited the manipulator, restore viewport HUD"""
@@ -870,11 +876,8 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, create_pin_constraint_options, label="Pin")
-
-        if c.RAGDOLL_DEVELOPER:
-            item("attachConstraint",
-                 create_attach_constraint, label="Attach")
-
+        item("attachConstraint",
+             create_attach_constraint, label="Attach")
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -943,6 +946,9 @@ def install_menu():
         item("markerReplaceMesh",
              replace_marker_mesh,
              replace_marker_mesh_options)
+
+        item("convertMesh", convert_to_mesh, convert_to_mesh_options)
+        item("bakeMesh", bake_mesh, bake_mesh_options)
 
         divider()
 
@@ -1326,11 +1332,7 @@ def _find_current_solver(solver, show_plugin_shapes=True):
         if not validate_cached_playback():
             return None, None
 
-        if not validate_playbackspeed():
-            return None, None
-
         solver = commands.create_solver(opts={
-            "frameskipMethod": options.read("frameskipMethod"),
             "sceneScale": options.read("markersSceneScale"),
         })
         is_new = True
@@ -1456,7 +1458,6 @@ def assign_marker(selection=None, **opts):
         "solver": _opt("markersAssignSolver", opts),
         "autoLimit": _opt("markersAutoLimit", opts),
         "showPluginShapes": _opt("markersShowPluginShapes", opts),
-        "density": _opt("markersDensity", opts),
         "materialInChannelBox": _opt("markersChannelBoxMaterial", opts),
         "shapeInChannelBox": _opt("markersChannelBoxShape", opts),
         "limitInChannelBox": _opt("markersChannelBoxLimit", opts),
@@ -1467,6 +1468,7 @@ def assign_marker(selection=None, **opts):
         "basicAttributes": _opt("lollipopBasicAttributes", opts),
         "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
         "groupAttributes": _opt("lollipopGroupAttributes", opts),
+        "linearAngularStiffness": _opt("markersLinearAngularStiffness", opts),
 
     }, **(opts or {}))
 
@@ -1532,7 +1534,7 @@ def assign_marker(selection=None, **opts):
             "refit": opts["refit"],
             "connect": opts["connect"],
             "autoLimit": opts["autoLimit"],
-            "density": opts["density"],
+            "linearAngularStiffness": opts["linearAngularStiffness"],
         })
 
     except RuntimeError as e:
@@ -1944,6 +1946,7 @@ def create_pin_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_attach_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
 
     try:
         a, b = markers_from_selection(selection)
@@ -1953,7 +1956,7 @@ def create_attach_constraint(selection=None, **opts):
             "Select two markers to constrain."
         )
 
-    con = commands.create_pin_constraint(a, b)
+    con = commands.create_pin_constraint(a, b, transform=selection[1])
     cmds.select(str(con.parent()))
 
     return True
@@ -1986,7 +1989,7 @@ def progressbar(status="Progress.. ", max_value=100):
 @with_exception_handling
 def snap_markers(selection=None, **opts):
     opts = dict({
-        "useSelection": _opt("markersUseSelection", opts),
+        "useSelection": _opt("markersSnapUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "maintainOffset": _opt("markersRecordMaintainOffset2", opts),
     }, **(opts or {}))
@@ -2018,7 +2021,7 @@ def record_markers(selection=None, **opts):
         "recordKinematic": _opt("markersRecordKinematic", opts),
         "recordToLayer": _opt("markersRecordToLayer", opts),
         "recordInitialKey": _opt("markersRecordInitialKey", opts),
-        "useSelection": _opt("markersUseSelection", opts),
+        "useSelection": _opt("markersRecordUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
         "recordSimplify": _opt("markersRecordSimplify", opts),
@@ -2215,6 +2218,22 @@ def extract_markers(selection=None, **opts):
         pos="topCenter",
         fade=True
     )
+
+    return kSuccess
+
+
+def transfer_live(selection=None, **opts):
+    manip = json.loads(cmds.ragdollDump(manipulator=True))
+
+    if not manip["solverPath"]:
+        return kFailure
+
+    solver = cmdx.encode(manip["solverPath"])
+
+    with i__.Timer("transfer") as duration:
+        recording.transfer_live(solver)
+
+    log.info("Transferred animation in %.1f ms" % duration.ms)
 
     return kSuccess
 
@@ -2580,6 +2599,7 @@ def auto_limit(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_refresh_suspended
 def cache_all(selection=None, **opts):
     solvers = _filtered_selection("rdSolver", selection)
     solvers = solvers or cmdx.ls(type="rdSolver")
@@ -2724,6 +2744,7 @@ def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": _opt("planNativeTargets", opts),
         "preset": _opt("planPreset", opts),
+        "duration": _opt("planDuration", opts),
     }, **(opts or {}))
 
     sel = selection or cmdx.selection()
@@ -3057,6 +3078,39 @@ def isolate_select(nodes):
 
 
 @with_exception_handling
+def bake_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    for marker in markers:
+        commands.bake_mesh(marker)
+
+    log.info("Successfully baked %d markers" % len(markers))
+    return kSuccess
+
+
+def bake_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
+def convert_to_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    meshes = []
+    for marker in markers:
+        meshes += [commands.marker_to_mesh(marker)]
+
+    cmds.select(list(str(mesh.parent()) for mesh in meshes))
+    log.info("Successfully converted %d markers" % len(meshes))
+
+    return kSuccess
+
+
+def convert_to_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
 def replace_marker_mesh(selection=None, **opts):
     opts = {
         "exclusive": _opt("replaceMeshExclusive", opts),
@@ -3070,15 +3124,7 @@ def replace_marker_mesh(selection=None, **opts):
         _filtered_selection("nurbsSurface", selection)
     )
 
-    markers = []
-    for node in selection or cmdx.selection():
-        if node.isA("rdMarker"):
-            markers.append(node)
-
-        elif node.isA(cmdx.kDagNode):
-            marker = node["message"].output(type="rdMarker")
-            if marker is not None:
-                markers.append(marker)
+    markers = markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3117,10 +3163,6 @@ def replace_marker_mesh(selection=None, **opts):
             )
 
     commands.replace_mesh(markers[0], meshes[0], opts=opts)
-
-    # Make life easier for the user
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(markers[0]["shapeType"], c.MeshShape)
 
     return kSuccess
 

@@ -57,6 +57,77 @@ def extract(solver, opts=None):
         pass
 
 
+def transfer_live(solver):
+    # Only apply changes from Markers that has changed
+
+    tolerance = 1e-3
+
+    def _transfer_dst(marker, dst):
+        mtx = marker["outputMatrix"].as_matrix()
+
+        world_tm = cmdx.Tm(mtx)
+        world_translate = world_tm.translation()
+        world_rotate = world_tm.rotation(asQuaternion=True)
+
+        skip_any = False
+
+        if "previousTranslate" in dst.data:
+            previous = dst.data["previousTranslate"]
+            if previous.is_equivalent(world_translate, tolerance):
+                skip_any = True
+
+        if "previousRotate" in dst.data and not skip_any:
+            previous = dst.data["previousRotate"]
+            if previous.is_equivalent(world_rotate, tolerance):
+                skip_any = True
+
+        dst.data["previousTranslate"] = world_translate
+        dst.data["previousRotate"] = world_rotate
+
+        # if skip_any:
+        #     print("%s skipped (unchanged)" % marker)
+        #     return
+
+        parent = marker["parentMarker"].input(type="rdMarker")
+
+        if parent is not None:
+            mtx *= parent["outputMatrix"].as_matrix().inverse()
+            mtx *= (
+                marker["originMatrix"].as_matrix() *
+                parent["originMatrix"].as_matrix().inverse()
+            ).inverse()
+        else:
+            mtx *= dst["parentInverseMatrix"][0].as_matrix()
+
+        tm = cmdx.Tm(mtx)
+        rotate = tm.rotation()
+        translate = tm.translation()
+
+        for i, axis in enumerate("XYZ"):
+            if dst["rotate" + axis].editable:
+                mod.set_attr(dst["rotate" + axis], rotate[i])
+
+        if parent is None:
+            for i, axis in enumerate("XYZ"):
+                if dst["translate" + axis].editable:
+                    mod.set_attr(dst["translate" + axis], translate[i])
+
+    with cmdx.DagModifier() as mod:
+        for marker in internal.markers_from_solver(solver):
+            if cmds.ragdollInfo(str(marker), kinematic=True):
+                print("%s skipped (kinematic)" % marker)
+                continue
+
+            for el in marker["dst"]:
+                dst = el.input()
+
+                if dst is None:
+                    print("%s skipped" % marker)
+                    continue
+
+                _transfer_dst(marker, dst)
+
+
 class _Recorder(object):
     """Stateful recording class
 

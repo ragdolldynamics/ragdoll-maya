@@ -28,6 +28,18 @@ def load(fname, opts=None):
 
     """
 
+    opts = dict(opts or {}, **{
+
+        # Any namespace in the input, get rid of it
+        "namespace": " ",
+
+        # No hierarchy here, it's cleeeean
+        "matchBy": constants.MatchByName,
+
+        # No need to retarget, we're targeting the inputs
+        "retarget": False,
+    })
+
     loader = Loader(opts)
     loader.read(fname)
     return loader.load()
@@ -275,6 +287,7 @@ class Loader(object):
             "searchAndReplace": ["", ""],
             "namespace": None,
             "preserveAttributes": True,
+            "retarget": True,
 
             "overrideSolver": "",
             "createMissingTransforms": False,
@@ -350,6 +363,68 @@ class Loader(object):
         """Return reasons for failure, useful for reporting"""
         return self._invalid_reasons[:]
 
+    def create(self):
+        seen = {}
+        created = {}
+
+        def recursive_create(mod, entity):
+            if entity in seen:
+                return
+
+            # Avoid cycles
+            seen[entity] = True
+
+            Rigid = self._registry.get(entity, "RigidComponent")
+            MarkerUi = self._registry.get(entity, "MarkerUIComponent")
+            Rest = self._registry.get(entity, "RestComponent")
+
+            parent = Rigid["parentRigid"]
+
+            # Ensure we've created the parent already
+            if parent and parent not in created:
+                recursive_create(mod, parent)
+
+            path = MarkerUi["sourceTransform"]
+            name = path.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+            parent_transform = created.get(parent)
+            joint = mod.create_node("joint",
+                                    name=name,
+                                    parent=parent_transform)
+
+            mtx = Rest["matrix"]
+
+            if parent:
+                ParentRest = self._registry.get(parent, "RestComponent")
+                mtx *= ParentRest["matrix"].inverse()
+
+            tm = cmdx.Tm(mtx)
+
+            mod.set_attr(joint["translate"], tm.translation())
+            mod.set_attr(joint["jointOrient"], tm.rotation())
+
+            created[entity] = joint
+
+        def extend_tip(mod, entity, joint):
+            child = joint.child()
+
+            if child:
+                return
+
+            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+            offset = Desc["offset"]
+            name = joint.name() + "_tip"
+            joint = mod.create_node("joint", name=name, parent=joint)
+            mod.set_attr(joint["translate"], offset * 2)
+
+        with cmdx.DagModifier() as mod:
+            for entity in self._registry.view("RigidComponent", "MarkerUIComponent"):
+                recursive_create(mod, entity)
+
+            for entity, joint in created.items():
+                extend_tip(mod, entity, joint)
+
+        return created
+
     def analyse(self):
         """Fill internal state from dump with something we can use"""
 
@@ -409,6 +484,11 @@ class Loader(object):
 
         if not any([solvers, groups, constraints, markers]):
             log.warning("Dump was empty")
+
+    @internal.with_undo_chunk
+    def load(self):
+        self.create()
+        return self.reinterpret()
 
     @internal.with_undo_chunk
     def reinterpret(self, dry_run=False):
@@ -1225,8 +1305,9 @@ class Loader(object):
                 mod.do_it()
 
         # There will be *no* destinations per default
-        for dest in MarkerUi["destinationTransforms"]:
-            retarget(dest)
+        if self._opts["retarget"]:
+            for dest in MarkerUi["destinationTransforms"]:
+                retarget(dest)
 
         mesh_replaced = False
         if MarkerUi["inputGeometryPath"]:

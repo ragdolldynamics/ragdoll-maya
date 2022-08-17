@@ -868,6 +868,8 @@ def install_menu():
 
     item("exportPhysics", export_physics, export_physics_options)
     item("importPhysics", import_physics, import_physics_options)
+    item("openPhysics", open_physics, open_physics_options)
+    item("updatePhysics", open_physics, open_physics_options)
 
     divider("Manipulate")
 
@@ -3698,6 +3700,43 @@ def _export_physics_wrapper(thumbnail=None):
     )
 
     return True
+
+
+def open_physics(selection=None, **opts):
+    from PySide2 import QtWidgets
+    path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        ui.MayaWindow(),
+        "Open Ragdoll File",
+        options.read("lastVisitedPath"),
+        "Ragdoll scene files (*.rag)"
+    )
+
+    if not path:
+        return log.debug("Cancelled")
+
+    if not path.endswith(".rag"):
+        path += ".rag"
+
+    path = os.path.normpath(path)
+
+    with i__.Timer("openPhysics") as duration:
+        created = dump.load(path)
+
+    log.info("Successfully opened %s.." % path)
+    log.info("..in %.1f ms" % duration.ms)
+
+    stats = (len(created["markers"]), duration.ms)
+    cmds.inViewMessage(
+        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+    return kSuccess
+
+
+def open_physics_options(*args):
+    return open_physics(*args)
 
 
 def import_physics(selection=None, **opts):

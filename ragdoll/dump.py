@@ -9,6 +9,7 @@ dedump(dump)
 """
 
 import re
+import os
 import json
 import copy
 import logging
@@ -309,7 +310,8 @@ class Loader(object):
         # Original dump
         self._dump = None
 
-        self._current_fname = ""
+        # Default, in case data is passed in directly rather than a file
+        self._current_fname = "character"
 
     def count(self):
         return len(self._state["entityToTransform"])
@@ -367,7 +369,7 @@ class Loader(object):
         seen = {}
         created = {}
 
-        def recursive_create(mod, entity):
+        def recursive_create(mod, entity, group):
             if entity in seen:
                 return
 
@@ -382,11 +384,11 @@ class Loader(object):
 
             # Ensure we've created the parent already
             if parent and parent not in created:
-                recursive_create(mod, parent)
+                recursive_create(mod, parent, group)
 
             path = MarkerUi["sourceTransform"]
             name = path.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
-            parent_transform = created.get(parent)
+            parent_transform = created.get(parent) or group
             joint = mod.create_node("joint",
                                     name=name,
                                     parent=parent_transform)
@@ -463,16 +465,31 @@ class Loader(object):
 
             return mesh
 
+        name = os.path.basename(self._current_fname)
+        name, _ = os.path.splitext(name)
+
+        with cmdx.DagModifier() as mod:
+            assembly = mod.create_node("transform", name)
+            geometry_grp = mod.create_node("transform", "geometry_grp", assembly)
+            skeleton_grp = mod.create_node("transform", "skeleton_grp", assembly)
+
         with cmdx.DagModifier() as mod:
             for entity in self._registry.view("RigidComponent", "MarkerUIComponent"):
-                recursive_create(mod, entity)
+                recursive_create(mod, entity, skeleton_grp)
 
             for entity, joint in created.items():
                 extend_tip(mod, entity, joint)
 
+        joint_to_mesh = {}
         with cmdx.DagModifier() as mod:
             for entity, joint in created.items():
-                create_mesh(mod, entity, joint)
+                parent = mod.create_node("transform", name, geometry_grp)
+                mesh = create_mesh(mod, entity, parent)
+                joint_to_mesh[joint] = parent
+
+        for joint, mesh in joint_to_mesh.items():
+            cmds.parentConstraint(str(joint), str(mesh),
+                                  maintainOffset=False)
 
         return created
 

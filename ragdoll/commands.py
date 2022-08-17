@@ -2732,6 +2732,78 @@ def merge_solvers(a, b):
     return True
 
 
+def _polycube(parent, width=1, height=1, depth=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polyCube")
+        dgmod.set_attr(gen["width"], width)
+        dgmod.set_attr(gen["height"], height)
+        dgmod.set_attr(gen["depth"], depth)
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
+def _polysphere(parent, radius=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polySphere")
+        dgmod.set_attr(gen["radius"], radius)
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
+def _polycapsule(parent, height=1, radius=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polyCylinder")
+        dgmod.set_attr(gen["roundCap"], True)
+        dgmod.set_attr(gen["subdivisionsCaps"], 5)
+        dgmod.set_attr(gen["radius"], radius)
+        dgmod.set_attr(gen["height"], height)
+        dgmod.set_attr(gen["axis"], cmdx.Vector(1, 0, 0))
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
 def marker_to_mesh(marker):
     """Convert the geometry of any marker into Maya geometry"""
 

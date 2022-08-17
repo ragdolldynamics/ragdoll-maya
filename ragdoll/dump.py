@@ -416,12 +416,63 @@ class Loader(object):
             joint = mod.create_node("joint", name=name, parent=joint)
             mod.set_attr(joint["translate"], offset * 2)
 
+        def create_mesh(mod, entity, parent):
+            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+            name = parent.name()
+            offset = cmdx.Tm(
+                translate=Desc["offset"],
+                rotate=Desc["rotation"]
+            ).as_matrix()
+
+            if Desc["type"] == "Box":
+                mesh, _ = commands._polycube(parent,
+                                             Desc["extents"].x,
+                                             Desc["extents"].y,
+                                             Desc["extents"].z,
+                                             offset=offset)
+
+            elif Desc["type"] == "Sphere":
+                mesh, _ = commands._polysphere(parent,
+                                               Desc["radius"],
+                                               offset=offset)
+
+            elif Desc["type"] == "Capsule":
+                mesh, _ = commands._polycapsule(parent,
+                                                Desc["length"],
+                                                Desc["radius"],
+                                                offset=offset)
+
+            elif Desc["type"] == "ConvexHull":
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+                mobj = meshes_to_mobj(Meshes, parent.object())
+
+                # For some reason, we can't set inMesh.
+                # So instead, we use the above meshes_to_mobj to generate a
+                # new shape from scratch and change its name. A bit of a bummer..
+                mesh = cmdx.Node(mobj)
+                mod.rename_node(mesh, name + "Shape")
+
+                mod.do_it()
+
+                cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+
+            else:
+                raise ValueError("Unsupported shape type: %s" % shape_type)
+
+            cmdx.encode("initialShadingGroup").add(mesh)
+
+            return mesh
+
         with cmdx.DagModifier() as mod:
             for entity in self._registry.view("RigidComponent", "MarkerUIComponent"):
                 recursive_create(mod, entity)
 
             for entity, joint in created.items():
                 extend_tip(mod, entity, joint)
+
+        with cmdx.DagModifier() as mod:
+            for entity, joint in created.items():
+                create_mesh(mod, entity, joint)
 
         return created
 
@@ -1362,7 +1413,7 @@ class Loader(object):
         mod.set_attr(marker["shapeType"], shape_type)
 
 
-def meshes_to_mobj(Meshes):
+def meshes_to_mobj(Meshes, parent=None):
     vertices = cmdx.om.MFloatPointArray()
     polygon_connects = cmdx.om.MIntArray()
     polygon_counts = cmdx.om.MIntArray()
@@ -1380,13 +1431,16 @@ def meshes_to_mobj(Meshes):
     for index in range(len(polygon_connects) / 3):
         polygon_counts.append(3)
 
-    data = cmdx.om.MFnMeshData()
-    mobj = data.create()
-    fn = cmdx.om.MFnMesh(mobj)
+    mobj = parent
 
-    fn.create(vertices,
-              polygon_counts,
-              polygon_connects,
-              [], [], mobj)
+    if parent is None:
+        data = cmdx.om.MFnMeshData()
+        mobj = data.create()
 
-    return mobj
+    fn = cmdx.om.MFnMesh()
+    out = fn.create(vertices,
+                    polygon_counts,
+                    polygon_connects,
+                    [], [], mobj)
+
+    return mobj if parent is None else out

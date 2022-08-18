@@ -1517,12 +1517,17 @@ class DagNode(Node):
             >>> parent | "child"
             |parent|child
 
-            # Stacklable too
+            # Stackable too
             >>> grand =  createNode("transform", "grand", child)
             >>> parent | "child" | "grand"
             |parent|child|grand
 
         """
+
+        # Handle cases where self has a namespace
+        # and no namespace is provided.
+        if ":" not in other:
+            other = "%s:%s" % (self.namespace(), other)
 
         return encode("%s|%s" % (self.path(), other))
 

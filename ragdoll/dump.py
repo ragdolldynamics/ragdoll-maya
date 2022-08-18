@@ -31,9 +31,6 @@ def load(fname, opts=None):
 
     opts = dict(opts or {}, **{
 
-        # Any namespace in the input, get rid of it
-        "namespace": " ",
-
         # No hierarchy here, it's cleeeean
         "matchBy": constants.MatchByName,
 
@@ -365,7 +362,7 @@ class Loader(object):
         """Return reasons for failure, useful for reporting"""
         return self._invalid_reasons[:]
 
-    def create(self):
+    def create(self, assembly):
         seen = {}
         created = {}
 
@@ -379,6 +376,7 @@ class Loader(object):
             Rigid = self._registry.get(entity, "RigidComponent")
             MarkerUi = self._registry.get(entity, "MarkerUIComponent")
             Rest = self._registry.get(entity, "RestComponent")
+            Scale = self._registry.get(entity, "ScaleComponent")
 
             parent = Rigid["parentRigid"]
 
@@ -403,6 +401,7 @@ class Loader(object):
 
             mod.set_attr(joint["translate"], tm.translation())
             mod.set_attr(joint["jointOrient"], tm.rotation())
+            mod.set_attr(joint["scale"], Scale["value"])
 
             created[entity] = joint
 
@@ -418,78 +417,14 @@ class Loader(object):
             joint = mod.create_node("joint", name=name, parent=joint)
             mod.set_attr(joint["translate"], offset * 2)
 
-        def create_mesh(mod, entity, parent):
-            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
-            name = parent.name()
-            offset = cmdx.Tm(
-                translate=Desc["offset"],
-                rotate=Desc["rotation"]
-            ).as_matrix()
-
-            if Desc["type"] == "Box":
-                mesh, _ = commands._polycube(parent,
-                                             Desc["extents"].x,
-                                             Desc["extents"].y,
-                                             Desc["extents"].z,
-                                             offset=offset)
-
-            elif Desc["type"] == "Sphere":
-                mesh, _ = commands._polysphere(parent,
-                                               Desc["radius"],
-                                               offset=offset)
-
-            elif Desc["type"] == "Capsule":
-                mesh, _ = commands._polycapsule(parent,
-                                                Desc["length"],
-                                                Desc["radius"],
-                                                offset=offset)
-
-            elif Desc["type"] == "ConvexHull":
-                Meshes = self._registry.get(entity, "ConvexMeshComponents")
-                mobj = meshes_to_mobj(Meshes, parent.object())
-
-                # For some reason, we can't set inMesh.
-                # So instead, we use the above meshes_to_mobj to generate a
-                # new shape from scratch and change its name. A bit of a bummer..
-                mesh = cmdx.Node(mobj)
-                mod.rename_node(mesh, name + "Shape")
-
-                mod.do_it()
-
-                cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
-
-            else:
-                raise ValueError("Unsupported shape type: %s" % shape_type)
-
-            cmdx.encode("initialShadingGroup").add(mesh)
-
-            return mesh
-
-        name = os.path.basename(self._current_fname)
-        name, _ = os.path.splitext(name)
-
         with cmdx.DagModifier() as mod:
-            assembly = mod.create_node("transform", name)
-            geometry_grp = mod.create_node("transform", "geometry_grp", assembly)
-            skeleton_grp = mod.create_node("transform", "skeleton_grp", assembly)
+            skeleton_grp = assembly | "skeleton_grp"
 
-        with cmdx.DagModifier() as mod:
             for entity in self._registry.view("RigidComponent", "MarkerUIComponent"):
                 recursive_create(mod, entity, skeleton_grp)
 
             for entity, joint in created.items():
                 extend_tip(mod, entity, joint)
-
-        joint_to_mesh = {}
-        with cmdx.DagModifier() as mod:
-            for entity, joint in created.items():
-                parent = mod.create_node("transform", name, geometry_grp)
-                mesh = create_mesh(mod, entity, parent)
-                joint_to_mesh[joint] = parent
-
-        for joint, mesh in joint_to_mesh.items():
-            cmds.parentConstraint(str(joint), str(mesh),
-                                  maintainOffset=False)
 
         return created
 
@@ -554,9 +489,94 @@ class Loader(object):
             log.warning("Dump was empty")
 
     @internal.with_undo_chunk
+    @internal.maintain_selection
     def load(self):
-        self.create()
-        return self.reinterpret()
+        def create_mesh(mod, entity, name, parent):
+            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+            offset = cmdx.Tm(
+                translate=Desc["offset"],
+                rotate=Desc["rotation"]
+            ).as_matrix()
+
+            if Desc["type"] == "Box":
+                mesh, _ = commands._polycube(parent,
+                                             Desc["extents"].x,
+                                             Desc["extents"].y,
+                                             Desc["extents"].z,
+                                             offset=offset)
+
+            elif Desc["type"] == "Sphere":
+                mesh, _ = commands._polysphere(parent,
+                                               Desc["radius"],
+                                               offset=offset)
+
+            elif Desc["type"] == "Capsule":
+                mesh, _ = commands._polycapsule(parent,
+                                                Desc["length"],
+                                                Desc["radius"],
+                                                offset=offset)
+
+            elif Desc["type"] == "ConvexHull":
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+                mobj = meshes_to_mobj(Meshes, parent.object())
+
+                # For some reason, we can't set inMesh.
+                # So instead, we use the above meshes_to_mobj to generate a
+                # new shape from scratch and change its name. A bit of a bummer..
+                mesh = cmdx.Node(mobj)
+                mod.rename_node(mesh, name + "Shape")
+
+                mod.do_it()
+
+                cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+
+            else:
+                raise ValueError("Unsupported shape type: %s" % shape_type)
+
+            cmdx.encode("initialShadingGroup").add(mesh)
+
+            return mesh
+
+        name = os.path.basename(self._current_fname)
+        name, _ = os.path.splitext(name)
+
+        namespace = "%s" % name
+        namespace = internal.unique_namespace(namespace)
+
+        previous = cmds.namespaceInfo(currentNamespace=True)
+        cmds.namespace(add=namespace)
+        cmds.namespace(set=namespace)
+
+        self._opts["namespace"] = namespace
+
+        with cmdx.DagModifier() as mod:
+            assembly = mod.create_node("transform", name)
+            geometry_grp = mod.create_node("transform", "geometry_grp", assembly)
+            skeleton_grp = mod.create_node("transform", "skeleton_grp", assembly)
+
+        try:
+            created = self.create(assembly)
+            out = self.reinterpret()
+
+            # Create meshes last, to avoid name conflict
+            joint_to_mesh = {}
+            with cmdx.DagModifier() as mod:
+                for entity, joint in created.items():
+                    name = joint.name()
+                    parent = mod.create_node("transform", name, geometry_grp)
+                    mesh = create_mesh(mod, entity, name, parent)
+                    joint_to_mesh[joint] = parent
+
+            for joint, mesh in joint_to_mesh.items():
+                cmds.parentConstraint(str(joint), str(mesh),
+                                      maintainOffset=False)
+                cmds.scaleConstraint(str(joint), str(mesh),
+                                     maintainOffset=False)
+
+        finally:
+            cmds.namespace(set=previous)
+
+        return out
 
     @internal.with_undo_chunk
     def reinterpret(self, dry_run=False):
@@ -802,11 +822,12 @@ class Loader(object):
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
 
-                # Get this information from the file
-                for marker in rdmarkers.values():
-                    mod.disconnect(marker["dst"][0])
+                if self._opts["retarget"]:
+                    # Get this information from the file
+                    for marker in rdmarkers.values():
+                        mod.disconnect(marker["dst"][0])
 
-                mod.do_it()
+                    mod.do_it()
 
                 for entity, rdmarker in rdmarkers.items():
                     try:
@@ -1064,6 +1085,12 @@ class Loader(object):
 
         # In case of double || characters
         path = path.replace("||", "|")
+
+        # Support wildcard names
+        # E.g. :manikin:L_arm -> :manikin:*L_arm
+        if self._opts["matchBy"] == constants.MatchByName:
+            if ":" in path and "|" not in path:
+                path = "{0}:*{1}".format(*path.rsplit(":", 1))
 
         return path
 

@@ -576,7 +576,7 @@
     },
 
     "selectMarkers": {
-        "label": "Select Markers",
+        "label": "Markers",
         "icon": "marker.png",
         "summary": "Select all markers in the scene.",
         "description": "Select all markers in the scene.",
@@ -585,7 +585,7 @@
     },
 
     "selectGroups": {
-        "label": "Select Groups",
+        "label": "Groups",
         "icon": "suit.png",
         "summary": "Select all groups in the scene.",
         "description": "Select all groups in the scene.",
@@ -594,7 +594,7 @@
     },
 
     "selectGroupMembers": {
-        "label": "Select Group Members",
+        "label": "Group Members",
         "icon": "suit.png",
         "summary": "Select members of selected groups",
         "description": "Select all members of the currently selected groups.",
@@ -603,7 +603,7 @@
     },
 
     "selectSolvers": {
-        "label": "Select Solvers",
+        "label": "Solvers",
         "icon": "solver.png",
         "summary": "Select all solvers in the scene.",
         "description": "Select all solvers in the scene.",

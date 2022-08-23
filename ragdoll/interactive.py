@@ -2288,70 +2288,37 @@ def retarget_marker(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reparent_marker(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
     try:
-        a, b = selection or cmdx.sl()
+        children, parent = markers[:-1], markers[-1]
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
-            "Select a child marker along with "
-            "the marker to make the new parent."
+            "Select any number of child markers "
+            "along with the new parent."
         )
 
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
+    for child in children:
+        commands.reparent_marker(child, parent)
+        log.info("Parented %s -> %s" % (child, parent))
 
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.type() == "rdMarker"):
-        raise i__.UserWarning(
-            "No child marker found",
-            "The first selection should be a child marker."
-        )
-
-    if not (b and b.type() == "rdMarker"):
-        raise i__.UserWarning(
-            "No parent marker found",
-            "The second selection should be the new parent."
-        )
-
-    commands.reparent_marker(a, b)
-
-    log.info("Parented %s -> %s" % (a, b))
     return kSuccess
 
 
 @i__.with_undo_chunk
 @with_exception_handling
 def unparent_marker(selection=None, **opts):
-    selection = selection or cmdx.sl()
+    markers = markers_from_selection(selection)
 
-    if not selection:
+    if not markers:
         raise i__.UserWarning(
-            "Selection Problem",
-            "Select a marker to unparent."
+            "No markers found",
+            "Select one or more markers to unparent."
         )
 
-    for node in selection:
-        marker = node
-
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if not marker:
-            raise i__.UserWarning(
-                "No marker found",
-                "Select a marker to unparent."
-            )
-
-        if marker.type() != "rdMarker":
-            raise i__.UserWarning(
-                "No marker found",
-                "%s was not a marker." % node
-            )
-
+    for marker in markers:
         commands.unparent_marker(marker)
-
         log.info("Unparented %s" % (marker))
 
     return kSuccess
@@ -2360,7 +2327,6 @@ def unparent_marker(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
-    selection = selection or cmdx.sl()
     markers = markers_from_selection(selection)
 
     if not markers:

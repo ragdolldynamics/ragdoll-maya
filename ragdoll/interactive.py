@@ -3392,6 +3392,7 @@ def welcome_user(*args):
 
         parent = ui.MayaWindow()
         win = ui.SplashScreen(parent)
+        show_kwargs = {}
     else:
         parent = ui.MayaWindow()
         win = widgets.WelcomeWindow(parent)
@@ -3472,7 +3473,9 @@ def welcome_user(*args):
         win.asset_opened.connect(on_asset_opened)
         win.asset_browsed.connect(on_asset_browsed)
 
-    win.show(extra_assets_path=options.read("extraAssets"))
+        show_kwargs = {"extra_assets_path": options.read("extraAssets")}
+
+    win.show(**show_kwargs)
     win.activateWindow()
 
     # Maya automatically centers new windows,

@@ -953,10 +953,11 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
         self.setObjectName("LicencePlate")
-        self.setFixedHeight(px(86))
+        self.setMinimumHeight(px(86))
 
         panels = {
             "Product": QtWidgets.QWidget(),
+            "Features": QtWidgets.QWidget(),
         }
 
         widgets = {
@@ -967,6 +968,8 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
         panels["Product"].setFixedWidth(px(140))
         panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
+        panels["Features"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
+
         widgets["Product"].setObjectName("PlateProduct")
         widgets["Commercial"].setObjectName("PlateCommercial")
         widgets["Features"].setObjectName("PlateFeatures")
@@ -974,15 +977,24 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(panels["Product"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        layout.addSpacing(pd4)
         layout.addWidget(widgets["Product"], alignment=QtCore.Qt.AlignRight)
         layout.addWidget(widgets["Commercial"], alignment=QtCore.Qt.AlignRight)
         layout.addStretch(1)
+
+        layout = QtWidgets.QVBoxLayout(panels["Features"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addSpacing(pd4)
+        layout.addWidget(widgets["Features"], alignment=QtCore.Qt.AlignLeft)
+        layout.addStretch(1)
+        layout.addSpacing(pd4)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(px(12), px(6), px(6), px(6))
         layout.addWidget(panels["Product"])
         layout.addSpacing(px(30))
-        layout.addWidget(widgets["Features"])
+        layout.addWidget(panels["Features"])
         layout.addStretch(1)
 
         self._widgets = widgets
@@ -994,30 +1006,33 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             else "Commercial" if not data["isFloating"]
             else "Lease Assigned" if data["hasLease"] else "Lease Dropped"
         )
+
+        features = {
+            "Trial": (
+                "Record up to 100 frames\n"
+                "Export up to 10 Markers"
+            ),
+            "Personal": (
+                "Record up to 100 frames\n"
+                "Export up to 10 Markers\n"
+                "Free upgrades forever"
+            ),
+            "Complete": (
+                "Unlimited recording frames\n"
+                "Export up to 10 Markers\n"
+                "High-performance solver"
+            ),
+            "Unlimited": (
+                "The fully-featured, unrestricted version"
+            ),
+            "Batch": (
+                ""
+            ),
+        }.get(data["marketingName"], "Unknown Product")
+
         self._widgets["Features"].setText(
-            # Max four lines
-            {
-                "Trial": (
-                    "Record up to 100 frames\n"
-                    "Export up to 10 Markers\n"
-                ),
-                "Personal": (
-                    "Record up to 100 frames\n"
-                    "Export up to 10 Markers\n"
-                    "Free upgrades forever\n"
-                ),
-                "Complete": (
-                    "Unlimited recording frames\n"
-                    "Export up to 10 Markers\n"
-                    "High-performance solver\n"
-                ),
-                "Unlimited": (
-                    "The fully-featured, unrestricted version\n"
-                ),
-                "Batch": (
-                    ""
-                ),
-            }.get(data["marketingName"], "Unknown Product")
+            "<p style=\"line-height:%d%%\">%s</p>"
+            % (140, features.replace("\n", "<br>"))
         )
 
         expiry = data["expiry"] if data["expires"] else None

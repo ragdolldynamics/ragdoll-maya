@@ -45,9 +45,18 @@
     "openPhysics": {
         "label": "Open Physics",
         "icon": "physics.png",
-        "enable": false,
         "summary": "Generate new Maya scene from .rag file",
         "description": "Be rid of all native Maya nodes and work with pure physics at optimal performance. Export and apply the baked keyframes onto your original, heavy character rig once finished tinkering.",
+        "options": [
+        ]
+    },
+
+    "updatePhysics": {
+        "label": "Update Physics",
+        "icon": "physics.png",
+        "enable": false,
+        "summary": "Update changed physics parameters and add new Markers to existing Maya scene",
+        "description": "Use this to update the .rag file whilst preserving your edited and animated attributes. Should save you from having to re-import or redo your work!",
         "options": [
         ]
     },

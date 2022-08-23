@@ -43,7 +43,7 @@ card_rounding = px(8)
 card_width = video_width + (card_padding * 2)
 card_height = video_height + (card_padding * 2)
 
-anchor_size = px(32)
+anchor_size = px(48)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(160)
@@ -1789,13 +1789,27 @@ class SideBar(QtWidgets.QFrame):
 
     def __init__(self, parent=None):
         super(SideBar, self).__init__(parent=parent)
-        layout = QtWidgets.QVBoxLayout(self)
+
+        widgets = {
+            "Body": QtWidgets.QWidget(),
+        }
+
+        widgets["Body"].setMinimumWidth(sidebar_width)
+
+        layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(pd3)
         layout.addSpacing(pd1)
-        self.setFixedWidth(sidebar_width)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addStretch(1)
+        layout.addWidget(widgets["Body"], stretch=2)
+
         self.setStyleSheet("background: #2b2b2b;")
+        self._widgets = widgets
         self._anchors = []
 
     def add_anchor(self, name, image, color):
@@ -1830,7 +1844,7 @@ class SideBar(QtWidgets.QFrame):
         }}
         """.format(color=color, size=anchor_size, radius=int(anchor_size / 2)))
 
-        self.layout().addWidget(anchor)
+        self._widgets["Body"].layout().addWidget(anchor)
         self._anchors.append(anchor)
 
         def on_clicked():
@@ -1899,11 +1913,19 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         }
 
         widgets = {
+            "Stretch": QtWidgets.QWidget(),
             "Body": QtWidgets.QWidget(),
             "Greet": GreetingPage(),
             "Assets": AssetListPage(),
             "Licence": LicencePage(),
+            "VirtualSpace": QtWidgets.QSpacerItem(pd1, pd1),
         }
+
+        spacers = []
+
+        def add_body_spacer(_layout):
+            spacers.append(QtWidgets.QSpacerItem(pd1, 0))
+            _layout.addSpacerItem(spacers[-1])
 
         animations = {
             "FadeIn": QtCore.QPropertyAnimation(self, b"windowOpacity")
@@ -1914,7 +1936,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         animations["FadeIn"].setEndValue(1.0)
 
         panels["Scroll"].setWidgetResizable(True)
-        panels["Scroll"].setWidget(widgets["Body"])
+        panels["Scroll"].setWidget(widgets["Stretch"])
 
         panels["SideBar"].add_anchor(
             "Greet", "ragdoll_silhouette_white_128.png", "#e5d680")
@@ -1923,18 +1945,25 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd1)
+        layout.setSpacing(0)
         layout.addWidget(widgets["Greet"])
+        add_body_spacer(layout)
         layout.addWidget(widgets["Assets"])
+        add_body_spacer(layout)
         layout.addWidget(widgets["Licence"])
-        layout.addSpacing(px(300))  # virtual space
-        layout.addStretch(1)
+        layout.addSpacerItem(widgets["VirtualSpace"])
+
+        layout = QtWidgets.QHBoxLayout(widgets["Stretch"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QtWidgets.QWidget(), stretch=1)
+        layout.addWidget(widgets["Body"], stretch=20)
+        layout.addWidget(QtWidgets.QWidget(), stretch=1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
         layout.setContentsMargins(0, 0, px(2), 0)
         layout.setSpacing(0)
-        layout.addWidget(panels["SideBar"])
-        layout.addWidget(panels["Scroll"])
+        layout.addWidget(panels["SideBar"], stretch=1)
+        layout.addWidget(panels["Scroll"], stretch=16)
         self.setCentralWidget(panels["Central"])
 
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
@@ -1952,10 +1981,23 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         self._panels = panels
         self._widgets = widgets
+        self._spacers = spacers
         self._animations = animations
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
-        self.resize(window_width, window_height)
+
+    def resizeEvent(self, event):
+        width, height = event.size().toTuple()
+
+        spacing = pd1 * (width / window_width)
+        for spacer in self._spacers:
+            spacer.changeSize(pd1, spacing)
+
+        virtual_space = height - self._widgets["Licence"].height()
+        self._widgets["VirtualSpace"].changeSize(pd1, virtual_space)
+
+        self._widgets["Body"].layout().invalidate()
+        super(WelcomeWindow, self).resizeEvent(event)
 
     def on_licence_updated(self, data):
         self._widgets["Licence"].input_widget().status_update(data)
@@ -1977,10 +2019,11 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self._panels["SideBar"].set_current_anchor(0)
         self.setWindowOpacity(0)
         super(WelcomeWindow, self).show()
+        self.resize(window_width, window_height)
         self._animations["FadeIn"].start()
         # init
         self.licence_updated.emit()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
-        self._panels["Scroll"].verticalScrollBar().setValue(widget.y())
+        self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - pd1)

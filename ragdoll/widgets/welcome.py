@@ -1,5 +1,6 @@
 
 import os
+import re
 import math
 import json
 import logging
@@ -47,6 +48,8 @@ anchor_size = px(48)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(160)
+timeline_width = splash_width
+timeline_height = px(14)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
 window_height = px(590)  # just enough to see the first row of videos
 
@@ -63,6 +66,10 @@ def _tint_color(pixmap, color):
     painter.setCompositionMode(painter.CompositionMode_SourceIn)
     painter.fillRect(pixmap.rect(), color)
     painter.end()
+
+
+def _aup_to_datetime(aup_string):
+    return datetime.strptime(aup_string, "%Y-%m-%d %H:%M:%S")
 
 
 class GreetingSplash(QtWidgets.QLabel):
@@ -214,10 +221,9 @@ class GreetingStatus(base.OverlayWidget):
         if data["isTrial"]:
             aup_expired = False  # doesn't have valid aup date in trial
         else:
-            _df = '%Y-%m-%d %H:%M:%S'
             aup = data["annualUpgradeProgram"]
             aup_expired = (
-                datetime.strptime(aup, _df) < datetime.now() if aup
+                _aup_to_datetime(aup) < datetime.now() if aup
                 else False
             )
 
@@ -256,10 +262,10 @@ class GreetingStatus(base.OverlayWidget):
         self._widgets["Badge"].set_status(data)
 
 
-class GreetingPage(QtWidgets.QWidget):
+class GreetingBanner(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingPage, self).__init__(parent)
+        super(GreetingBanner, self).__init__(parent)
 
         widgets = {
             "Splash": GreetingSplash(),
@@ -275,6 +281,128 @@ class GreetingPage(QtWidgets.QWidget):
 
     def status_widget(self):
         return self._widgets["Status"]
+
+
+class GreetingTimeline(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(GreetingTimeline, self).__init__(parent)
+
+        widgets = {
+            "Timeline": base.TimelineWidget(),
+        }
+
+        widgets["Timeline"].min_size = QtCore.QSize(
+            timeline_width, timeline_height
+        )
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(widgets["Timeline"])
+
+        self._widgets = widgets
+
+    def _fetch_versions(self, data):
+        # get AUP, or expire date
+        expiry = data["expiry"] if data["expires"] else None
+        trial = data["isTrial"] or data["product"] == "trial"
+        aup = data["annualUpgradeProgram"]
+        perpetual = not expiry and aup and not trial
+
+        if perpetual:
+            pass
+
+        elif trial:
+            pass
+
+        else:
+            pass
+
+        aup_end = _aup_to_datetime(aup).replace(hour=0, minute=0, second=0)
+        aup_start = aup_end.replace(year=aup_end.year - 1)
+
+        # aup_expired = (
+        #     _aup_to_datetime(aup) < datetime.now() if aup
+        #     else False
+        # )
+
+        def count_days(date):
+            return (date - aup_start).days
+
+        def in_range(ver_str):
+            ver_date = datetime(*map(int, ver_str.split(".")))
+            if aup_start <= ver_date <= aup_end:
+                return count_days(ver_date), ver_str
+
+        def parse(ver_list):
+            return {
+                ver_days: ver_str
+                for ver_days, ver_str in filter(None, map(in_range, ver_list))
+            }
+
+        url = "https://learn.ragdolldynamics.com/news"
+        try:
+            response = request.urlopen(url)
+        except Exception:
+            response = None
+            responded = False
+        else:
+            responded = response.code == 200
+
+        if responded:
+            pattern = re.compile(
+                rb'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            )
+            versions = []
+            for line in response.readlines():
+                matched = pattern.match(line)
+                if matched:
+                    versions.append(matched.group(1).decode())
+
+            current = ".".join(__.version_str.split(".")[:3])
+            versions.append(current)
+            versions.append("2022.06.12")  # test
+
+            return {
+                "versions": parse(versions),
+                "current": in_range(current),
+                "start": aup_start,
+                "end": aup_end,
+            }
+        else:
+            return {}
+
+    def set_timeline(self, data):
+        worker = base.Thread(self._fetch_versions, parent=self)
+        worker.result_ready.connect(self._widgets["Timeline"].set_data)
+        worker.finished.connect(worker.deleteLater)
+        worker.start(args=[data])
+
+
+class GreetingPage(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(GreetingPage, self).__init__(parent)
+
+        widgets = {
+            "Banner": GreetingBanner(),
+            "Timeline": GreetingTimeline(),
+        }
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(pd3)
+        layout.addWidget(widgets["Banner"])
+        layout.addWidget(widgets["Timeline"])
+
+        self._widgets = widgets
+
+    def status_widget(self):
+        return self._widgets["Banner"].status_widget()
+
+    def timeline_widget(self):
+        return self._widgets["Timeline"]
 
 
 class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
@@ -2019,6 +2147,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self._widgets["Licence"].status_widget().set_product(data)
         self._widgets["Greet"].status_widget().set_licence(data)
         self._widgets["Greet"].status_widget().check_update(data)
+        self._widgets["Greet"].timeline_widget().set_timeline(data)
 
     def on_offline_activate_requested(self):
         w = self._widgets["Licence"].input_widget()

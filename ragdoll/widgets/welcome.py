@@ -4,7 +4,6 @@ import re
 import math
 import json
 import logging
-import zipfile
 import tempfile
 from datetime import datetime, timedelta
 from PySide2 import QtCore, QtWidgets, QtGui
@@ -19,7 +18,7 @@ except ImportError:
     from urlparse import urlparse  # py2
 
 from . import base
-from .. import __
+from .. import __, ui
 
 
 __throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
@@ -66,6 +65,14 @@ def _tint_color(pixmap, color):
     painter.setCompositionMode(painter.CompositionMode_SourceIn)
     painter.fillRect(pixmap.rect(), color)
     painter.end()
+
+
+def _text_to_color(text):
+    return QtGui.QColor.fromHsv(
+        (hash(text) & 0xFF0000) >> 16,
+        (hash(text) & 0x00FF00) >> 8,
+        180,
+    )
 
 
 def _aup_to_datetime(aup_string):
@@ -459,7 +466,11 @@ class AssetVideoPoster(base.OverlayWidget):
         self._image = None
 
     def set_poster(self, poster):
-        self._image = QtGui.QPixmap(poster).scaled(
+        """
+        Args:
+            poster (QtGui.QPixmap):
+        """
+        self._image = poster.scaled(
             video_width,
             video_height,
             QtCore.Qt.KeepAspectRatioByExpanding,
@@ -609,7 +620,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._widgets = widgets
         self._effects = effects
         self._animations = animations
-        self._asset_data = None
+        self._file_path = None
 
     def init(self, index):
         """
@@ -624,32 +635,13 @@ class AssetCardItem(QtWidgets.QWidget):
             index.data(AssetCardModel.NameRole),
             list(index.data(AssetCardModel.TagsRole).values()),
         )
-        self._asset_data = index.data(AssetCardModel.AssetRole)
+        self._file_path = index.data(AssetCardModel.AssetRole)
 
     def on_clicked(self):
-        """Unzip asset (.zip)
-        The content of the asset archive will be unpack to the same folder
-        where archive is.
-        """
-        asset = self._asset_data["asset"]
-        entry = self._asset_data["entry"]
-        asset_dir = os.path.dirname(asset)
-        entry_file = os.path.join(asset_dir, entry)
-
-        if os.path.isfile(entry_file):
-            self.asset_opened.emit(entry_file)
-            return
-
-        if not os.path.isfile(asset):
-            log.error("Asset file missing: %s" % asset)
-            return
-
-        with zipfile.ZipFile(asset, "r") as archive:
-            if entry in archive.namelist():
-                archive.extractall(asset_dir)
-                self.asset_opened.emit(entry_file)
-            else:
-                log.error("Entry file not exists in asset archive: %s" % asset)
+        if os.path.isfile(self._file_path):
+            self.asset_opened.emit(self._file_path)
+        else:
+            log.error("Asset file missing: %s" % self._file_path)
 
     def on_transition_end(self):
         leave = self._animations["Poster"].endValue() == 1.0
@@ -702,8 +694,6 @@ class AssetCardModel(QtGui.QStandardItemModel):
     #   <tag name>: <tag color>
     TagsRole = QtCore.Qt.UserRole + 14
 
-    AssetFileName = "ragdollAssets.json"
-
     def is_net_location(self, url):
         try:
             result = urlparse(url)
@@ -722,43 +712,66 @@ class AssetCardModel(QtGui.QStandardItemModel):
         self.load_assets(extra_assets_path)
         self.load_assets(os.getenv("RAGDOLL_ASSETS", ""))
 
-    def get_manifest(self, lib_path):
-        manifest_file = os.path.join(lib_path, self.AssetFileName)
-        return manifest_file if os.path.isfile(manifest_file) else None
+    @staticmethod
+    def get_manifest(lib_path):
+        manifest = {
+            "assets": list(),
+            "tags": set(),
+        }
+
+        rag_files = []
+        for item in os.listdir(lib_path):
+            path = os.path.join(lib_path, item)
+            if item.endswith(".rag") and os.path.isfile(path):
+                rag_files.append(path)
+
+        for path in sorted(rag_files, key=lambda p: os.stat(p).st_mtime):
+            with open(path) as _f:
+                rag = json.load(_f)
+            _d = rag.get("ui")
+            _fname = os.path.basename(path)
+
+            manifest["assets"].append({
+                "path": path,
+                "name": rag.get("name") or _fname.rsplit(".", 1)[0],
+                "video": _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm",
+                "poster": _d["thumbnail"],
+                "tags": _d.get("tags") or [],
+            })
+
+            manifest["tags"].update(
+                _d.get("tags") or []
+            )
+
+        return manifest
 
     def load_assets(self, lib_path):
-        log.info("Loading assets from %r" % lib_path)
-        manifest_file = self.get_manifest(lib_path)
-        if not manifest_file:
-            log.debug("No asset found in %r" % lib_path)
+        if not lib_path:
             return
 
-        with open(manifest_file) as f:
-            manifest = json.load(f)
+        log.info("Loading assets from %r" % lib_path)
+        manifest = self.get_manifest(lib_path)
 
         all_dots = {
-            tag["name"]: tag["color"] for tag in manifest.get("tags") or []
+            tag: _text_to_color(tag) for tag in manifest["tags"]
         }
         for data in manifest.get("assets") or []:
             item = QtGui.QStandardItem()
             name = data["name"]
-            poster = os.path.join(lib_path, data["poster"])
+            asset = data["path"]
+            poster = ui.base64_to_pixmap(data["poster"].encode("ascii"))
             video = self.resource(data["video"], lib_path)
-            asset = self.resource(data["asset"], lib_path)
-            entry = data["entry"]
+
             tags = {
                 tag_name: all_dots.get(tag_name, "black")
                 for tag_name in set(data["tags"])
             }
 
             item.setData(name, AssetCardModel.NameRole)
+            item.setData(asset, AssetCardModel.AssetRole)
             item.setData(poster, AssetCardModel.PosterRole)
             item.setData(video, AssetCardModel.VideoRole)
             item.setData(tags, AssetCardModel.TagsRole)
-            item.setData({
-                "asset": asset,
-                "entry": entry,
-            }, AssetCardModel.AssetRole)
 
             self.appendRow(item)
 

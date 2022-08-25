@@ -3415,13 +3415,8 @@ def welcome_user(*args):
             if _is_succeed(licence.deactivation_request_to_file(fname)):
                 win.on_offline_deactivate_requested()
 
-        def on_asset_opened(entry_path):
-            if cmds.file(query=True, modified=True):
-                title = "Scene Not Saved"
-                message = "Scene unsaved, discard and open asset anyway?"
-                if not MessageBox(title, message):
-                    return
-            cmds.file(entry_path, open=True, force=True)
+        def on_asset_opened(file_path):
+            _open_physics(file_path)
             win.close()
 
         def on_asset_browsed(extra_assets_path):
@@ -3752,6 +3747,21 @@ def _export_physics_wrapper(thumbnail=None):
     return True
 
 
+def _open_physics(path):
+    with i__.Timer("openPhysics") as duration:
+        created = dump.load(path)
+
+    log.info("Successfully opened %s.." % path)
+    log.info("..in %.1f ms" % duration.ms)
+
+    stats = (len(created["markers"]), duration.ms)
+    cmds.inViewMessage(
+        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+
 def open_physics(selection=None, **opts):
     from PySide2 import QtWidgets
     path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -3768,19 +3778,7 @@ def open_physics(selection=None, **opts):
         path += ".rag"
 
     path = os.path.normpath(path)
-
-    with i__.Timer("openPhysics") as duration:
-        created = dump.load(path)
-
-    log.info("Successfully opened %s.." % path)
-    log.info("..in %.1f ms" % duration.ms)
-
-    stats = (len(created["markers"]), duration.ms)
-    cmds.inViewMessage(
-        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
-        pos="topCenter",
-        fade=True
-    )
+    _open_physics(path)
 
     return kSuccess
 

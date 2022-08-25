@@ -35,7 +35,7 @@ pd1 = px(20)
 pd2 = px(14)
 pd3 = px(10)
 pd4 = px(6)
-scroll_width = px(6)
+scroll_width = px(12)
 
 video_width, video_height = px(217), px(122)
 card_padding = px(3)

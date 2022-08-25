@@ -43,7 +43,7 @@ card_rounding = px(8)
 card_width = video_width + (card_padding * 2)
 card_height = video_height + (card_padding * 2)
 
-anchor_size = px(48)
+anchor_size = px(42)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(160)
@@ -1944,7 +1944,7 @@ class SideBar(QtWidgets.QFrame):
             "Body": QtWidgets.QWidget(),
         }
 
-        widgets["Body"].setMinimumWidth(sidebar_width)
+        self.setFixedWidth(sidebar_width)
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
@@ -1955,8 +1955,7 @@ class SideBar(QtWidgets.QFrame):
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addStretch(1)
-        layout.addWidget(widgets["Body"], stretch=2)
+        layout.addWidget(widgets["Body"])
 
         self.setStyleSheet("background: #2b2b2b;")
         self._widgets = widgets
@@ -2097,8 +2096,8 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QHBoxLayout(panels["Central"])
         layout.setContentsMargins(0, 0, px(2), 0)
         layout.setSpacing(0)
-        layout.addWidget(panels["SideBar"], stretch=1)
-        layout.addWidget(panels["Scroll"], stretch=16)
+        layout.addWidget(panels["SideBar"])
+        layout.addWidget(panels["Scroll"])
         self.setCentralWidget(panels["Central"])
 
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)

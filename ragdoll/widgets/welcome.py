@@ -2069,19 +2069,12 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         }
 
         widgets = {
-            "Stretch": QtWidgets.QWidget(),
             "Body": QtWidgets.QWidget(),
             "Greet": GreetingPage(),
             "Assets": AssetListPage(),
             "Licence": LicencePage(),
             "VirtualSpace": QtWidgets.QSpacerItem(pd1, pd1),
         }
-
-        spacers = []
-
-        def add_body_spacer(_layout):
-            spacers.append(QtWidgets.QSpacerItem(pd1, 0))
-            _layout.addSpacerItem(spacers[-1])
 
         animations = {
             "FadeIn": QtCore.QPropertyAnimation(self, b"windowOpacity")
@@ -2092,7 +2085,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         animations["FadeIn"].setEndValue(1.0)
 
         panels["Scroll"].setWidgetResizable(True)
-        panels["Scroll"].setWidget(widgets["Stretch"])
+        panels["Scroll"].setWidget(widgets["Body"])
 
         panels["SideBar"].add_anchor(
             "Greet", "ragdoll_silhouette_white_128.png", "#e5d680")
@@ -2101,19 +2094,11 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(pd1)
         layout.addWidget(widgets["Greet"])
-        add_body_spacer(layout)
         layout.addWidget(widgets["Assets"])
-        add_body_spacer(layout)
         layout.addWidget(widgets["Licence"])
         layout.addSpacerItem(widgets["VirtualSpace"])
-
-        layout = QtWidgets.QHBoxLayout(widgets["Stretch"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(QtWidgets.QWidget(), stretch=1)
-        layout.addWidget(widgets["Body"], stretch=20)
-        layout.addWidget(QtWidgets.QWidget(), stretch=1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
         layout.setContentsMargins(0, 0, px(2), 0)
@@ -2137,17 +2122,12 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         self._panels = panels
         self._widgets = widgets
-        self._spacers = spacers
         self._animations = animations
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
-
-        spacing = pd1 * (width / window_width)
-        for spacer in self._spacers:
-            spacer.changeSize(pd1, spacing)
 
         virtual_space = height - self._widgets["Licence"].height()
         self._widgets["VirtualSpace"].changeSize(pd1, virtual_space)

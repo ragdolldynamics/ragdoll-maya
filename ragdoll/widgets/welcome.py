@@ -954,7 +954,6 @@ class AssetListPage(QtWidgets.QWidget):
         if dialog.exec_():
             paths = dialog.selectedFiles()
             extra_assets_path = paths[0]
-            self.asset_browsed.emit(extra_assets_path)
             self._widgets["Path"].setText(extra_assets_path)
             self.reset()
 
@@ -963,8 +962,12 @@ class AssetListPage(QtWidgets.QWidget):
 
     def reset(self):
         self._widgets["Tags"].clear()
+
+        extra_assets_path = self._widgets["Path"].text()
+        self.asset_browsed.emit(extra_assets_path)
+
         model = self._models["Source"]
-        model.refresh(self._widgets["Path"].text())
+        model.refresh(extra_assets_path)
 
         for row in range(model.rowCount()):
             index = model.index(row, 0)

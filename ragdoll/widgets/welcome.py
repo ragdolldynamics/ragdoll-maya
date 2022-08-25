@@ -958,13 +958,12 @@ class AssetListPage(QtWidgets.QWidget):
 
     def on_asset_browse_clicked(self):
         dialog = QtWidgets.QFileDialog()
-        dialog.setFileMode(dialog.ExistingFile)
+        dialog.setFileMode(dialog.DirectoryOnly)
         dialog.setOptions(dialog.DontUseNativeDialog | dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
-        dialog.setNameFilter(AssetCardModel.AssetFileName)
         if dialog.exec_():
             paths = dialog.selectedFiles()
-            extra_assets_path = os.path.dirname(paths[0])
+            extra_assets_path = paths[0]
             self.asset_browsed.emit(extra_assets_path)
             self._widgets["Path"].setText(extra_assets_path)
             self.reset()

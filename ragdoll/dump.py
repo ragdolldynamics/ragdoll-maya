@@ -1472,7 +1472,7 @@ def meshes_to_mobj(Meshes, parent=None):
         return cmdx.om.MObject.kNullObj
 
     # It's all triangles, 3 points each
-    for index in range(len(polygon_connects) / 3):
+    for index in range(int(len(polygon_connects) / 3)):
         polygon_counts.append(3)
 
     mobj = parent

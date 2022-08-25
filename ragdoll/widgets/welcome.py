@@ -304,7 +304,7 @@ class GreetingTimeline(QtWidgets.QWidget):
         )
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(pd4, 0, pd4, 0)
         layout.setSpacing(0)
         layout.addWidget(widgets["Timeline"])
 

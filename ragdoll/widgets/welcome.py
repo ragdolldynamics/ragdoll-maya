@@ -985,6 +985,7 @@ class AssetListPage(QtWidgets.QWidget):
         asset_loaded = bool(model.rowCount())
         self._widgets["Empty"].setVisible(not asset_loaded)
         self._widgets["List"].setVisible(asset_loaded)
+        self._widgets["List"].adjust_viewport()
 
     def init_widget(self, index):
         widget = AssetCardItem()

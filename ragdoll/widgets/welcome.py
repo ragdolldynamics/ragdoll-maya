@@ -329,11 +329,6 @@ class GreetingTimeline(QtWidgets.QWidget):
         aup_end = _aup_to_datetime(aup).replace(hour=0, minute=0, second=0)
         aup_start = aup_end.replace(year=aup_end.year - 1)
 
-        # aup_expired = (
-        #     _aup_to_datetime(aup) < datetime.now() if aup
-        #     else False
-        # )
-
         def count_days(date):
             return (date - aup_start).days
 
@@ -369,7 +364,6 @@ class GreetingTimeline(QtWidgets.QWidget):
 
             current = ".".join(__.version_str.split(".")[:3])
             versions.append(current)
-            versions.append("2022.06.12")  # test
 
             return {
                 "versions": parse(versions),

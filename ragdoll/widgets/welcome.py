@@ -47,8 +47,6 @@ anchor_size = px(42)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(160)
-timeline_width = splash_width
-timeline_height = px(14)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
 window_height = px(590)  # just enough to see the first row of videos
 
@@ -299,9 +297,7 @@ class GreetingTimeline(QtWidgets.QWidget):
             "Timeline": base.TimelineWidget(),
         }
 
-        widgets["Timeline"].min_size = QtCore.QSize(
-            timeline_width, timeline_height
-        )
+        widgets["Timeline"].min_width = splash_width
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(pd4, 0, pd4, 0)

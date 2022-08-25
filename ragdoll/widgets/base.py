@@ -489,7 +489,8 @@ class TimelineInterface(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(TimelineInterface, self).__init__(parent=parent)
 
-        self._dot_radius = 6
+        self._dot_radius = 8
+        self._inner_radius = 3
         self._time_frame = 0
         self._remains = 0
         self._date_start = None
@@ -501,6 +502,12 @@ class TimelineInterface(QtWidgets.QWidget):
         self._sect_name = list()  # type: list[str]
         self._cur_str = ""
         self._cur_days = 0
+
+        self.min_width = 200
+        self.min_height = int(self._dot_radius * 3.5)
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(self.min_width, self.min_height)
 
     def mouseMoveEvent(self, event):
         self.update()
@@ -535,7 +542,7 @@ class TimelineInterface(QtWidgets.QWidget):
         unit = width / self._time_frame
         eta = int(unit * self._remains)
         dot_r = self._dot_radius
-        _r = int(dot_r / 3)
+        _r = self._inner_radius
         _thick = _r * 2
 
         fg_color = QtGui.QColor("#568c50")
@@ -669,7 +676,7 @@ class TimelineInterface(QtWidgets.QWidget):
                 if rect.contains(cursor):
                     painter.save()
                     painter.setPen(fg_color)
-                    offset = QtCore.QPoint(0, -4)
+                    offset = QtCore.QPoint(0, -px(2))
                     p1 = rect.topLeft() + offset
                     p2 = rect.topRight() + offset
                     painter.drawLine(p1, p2)
@@ -723,10 +730,6 @@ class TimelineWidget(TimelineInterface):
         self.__menu = None
         self.__index = None
         self.__mouse_pressed = False
-        self.min_size = QtCore.QSize(200, 20)
-
-    def minimumSizeHint(self):
-        return self.min_size
 
     def mousePressEvent(self, event):
         self.__mouse_pressed = True
@@ -804,7 +807,7 @@ class TimelineWidget(TimelineInterface):
         rect = self._rect_list[index]
         menu.show_upward(
             anchor=self.mapToGlobal(rect.center()),
-            offset_y=self.min_size.height(),
+            offset_y=self.min_height,
         )
 
     def show_hint(self, index):

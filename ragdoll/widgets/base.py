@@ -1,13 +1,19 @@
 
+import re
 import logging
 import traceback
 import shiboken2
 import webbrowser
 from functools import partial
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
+
+try:
+    from urllib import request
+except ImportError:
+    import urllib as request  # py2
 
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
@@ -817,3 +823,138 @@ class TimelineWidget(TimelineInterface):
         pos.setY(pos.y() + px(5))
         pos = self.mapToGlobal(pos)
         QtWidgets.QToolTip.showText(pos, self._sect_name[index], self)
+
+
+class ProductStatus(object):
+
+    def __init__(self):
+        self._data = dict()
+        self._has_internet = None
+        self._release_history = None
+
+    @property
+    def data(self):
+        return self._data.copy()
+
+    @data.setter
+    def data(self, data):
+        self._data = data.copy()
+
+    def name(self):
+        name = self.data["product"]
+        if name == "unknown" and self.is_expired():
+            name = "complete"
+
+        return {
+            "enterprise": "Unlimited",
+            "educational": "Educational",
+            "freelance": "Freelance",
+            "headless": "Batch",
+            "personal": "Personal",
+            "complete": "Complete",
+            "trial": "Trial",
+        }.get(name) or name
+
+    def key(self):
+        return self.data["key"]
+
+    def is_non_commercial(self):
+        return self.data["isNonCommercial"]
+
+    def is_floating(self):
+        return self.data["isFloating"]
+
+    def has_lease(self):
+        return self.data["hasLease"]
+
+    def licence_server(self):
+        return self.data["ip"], self.data["port"]
+
+    def is_activated(self):
+        return (
+            self.data["isActivated"]
+            or (self.data["key"] and self.is_expired())
+        )
+
+    def is_perpetual(self):
+        return (
+            not self.data["expires"]
+            and not self.is_trial()
+        )
+
+    def is_subscription(self):
+        return not self.is_perpetual() and not self.is_trial()
+
+    def is_trial(self):
+        return self.data["isTrial"] or self.data["product"] == "trial"
+
+    def is_expired(self):
+        if self.is_trial():
+            return self.data["trialDays"] < 1
+        else:
+            if self.data["expires"]:
+                return self.data["expiryDays"] < 1
+            else:
+                return False
+
+    def is_updatable(self):
+        if self.is_trial() or self.is_subscription():
+            return not self.is_expired()
+        else:
+            return self.aup_date() > datetime.now()
+
+    def start_date(self):
+        if self.is_trial():
+            return datetime.now() - timedelta(days=30 - self.data["trialDays"])
+        else:
+            aup = self.aup_date()
+            return aup.replace(year=aup.year - 1)
+
+    def expiry_date(self):
+        if self.is_trial():
+            return datetime.now() + timedelta(days=self.data["trialDays"])
+        else:
+            if self.data["expires"]:
+                return datetime.strptime(
+                    self.data["expiry"], "%Y-%m-%d %H:%M:%S")
+            else:
+                return None  # perpetual
+
+    def aup_date(self):
+        if self.is_trial():
+            return None
+        else:
+            return datetime.strptime(
+                self.data["annualUpgradeProgram"], "%Y-%m-%d %H:%M:%S")
+
+    def release_history(self, refresh=False):
+        if not refresh and self._release_history is not None:
+            return self._release_history
+
+        with request.urlopen("https://learn.ragdolldynamics.com/news") as r:
+            if r.code == 200:
+                self._release_history = sorted(
+                    self._iter_parsed_versions(r.readlines())
+                )
+            else:
+                self._release_history = []
+
+        return self._release_history[:]
+
+    def has_internet(self, refresh=False):
+        if not refresh and self._has_internet is not None:
+            return self._has_internet
+
+        with request.urlopen("https://wyday.com") as r:
+            self._has_internet = r.code == 200
+
+        return self._has_internet
+
+    def _iter_parsed_versions(self, lines):
+        pattern = re.compile(
+            rb'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+        )
+        for line in lines:
+            matched = pattern.match(line)
+            if matched:
+                yield matched.group(1).decode()

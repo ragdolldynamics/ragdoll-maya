@@ -218,6 +218,7 @@ def install():
 
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
+        cmds.evalDeferred(widgets.WelcomeWindow.preload)
 
         # 2018 and consolidation doesn't play nicely without animated shaders
         if cmdx.__maya_version__ < 2019:
@@ -3351,6 +3352,7 @@ def repeatable(func):
     return repeatable_wrapper
 
 
+@i__.with_timing
 def welcome_user(*args):
     if os.getenv("RAGDOLL_LEGACY_GREETS"):
         if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):

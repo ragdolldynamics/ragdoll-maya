@@ -1,17 +1,13 @@
 
 import os
-import re
 import math
 import json
 import logging
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2 import QtWebEngineWidgets
-try:
-    from urllib import request
-except ImportError:
-    import urllib as request  # py2
+
 try:
     from urllib.parse import urlparse
 except ImportError:
@@ -73,8 +69,7 @@ def _text_to_color(text):
     )
 
 
-def _aup_to_datetime(aup_string):
-    return datetime.strptime(aup_string, "%Y-%m-%d %H:%M:%S")
+product_status = base.ProductStatus()
 
 
 class GreetingSplash(QtWidgets.QLabel):
@@ -165,8 +160,24 @@ class GreetingStatus(base.OverlayWidget):
 
         self._widgets = widgets
 
-    def _on_update_checked(self, result):
-        status, latest = result
+    def check_update(self):
+        self._widgets["UpdateIcon"].hide()
+
+        if product_status.is_updatable():
+            versions = product_status.release_history()
+
+            if versions:
+                latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
+                current = tuple(map(int, __.version_str.split(".")[:3]))
+                if latest <= current:
+                    status, latest = "uptodate", ""
+                else:
+                    status, latest = "update", ".".join(map(str, latest))
+            else:
+                status, latest = "offline", ""
+        else:
+            status, latest = "expired", ""
+
         widgets = self._widgets
 
         icon = {
@@ -222,49 +233,8 @@ class GreetingStatus(base.OverlayWidget):
 
         widgets["UpdateIcon"].show()
 
-    def _check_update(self, data):
-        if data["isTrial"]:
-            aup_expired = False  # doesn't have valid aup date in trial
-        else:
-            aup = data["annualUpgradeProgram"]
-            aup_expired = (
-                _aup_to_datetime(aup) < datetime.now() if aup
-                else False
-            )
-
-        if aup_expired:
-            return "expired", ""
-        else:
-            # check update
-            url = "https://ragdolldynamics.com/version"
-            try:
-                response = request.urlopen(url)
-            except Exception:
-                response = None
-                responded = False
-            else:
-                responded = response.code == 200
-
-            if responded:
-                latest = json.loads(response.read())["latestVersion"]
-                latest = tuple(map(int, latest.split("_", 3)[:3]))
-                current = tuple(map(int, __.version_str.split(".")[:3]))
-                if latest <= current:
-                    return "uptodate", ""
-                else:
-                    return "update", ".".join(map(str, latest))
-            else:
-                return "offline", ""
-
-    def check_update(self, data):
-        self._widgets["UpdateIcon"].hide()
-        worker = base.Thread(self._check_update, parent=self)
-        worker.result_ready.connect(self._on_update_checked)
-        worker.finished.connect(worker.deleteLater)
-        worker.start(args=[data])
-
-    def set_licence(self, data):
-        self._widgets["Badge"].set_status(data)
+    def set_licence(self):
+        self._widgets["Badge"].set_status()
 
 
 class GreetingBanner(QtWidgets.QWidget):
@@ -306,24 +276,14 @@ class GreetingTimeline(QtWidgets.QWidget):
 
         self._widgets = widgets
 
-    def _fetch_versions(self, data):
-        # get AUP, or expire date
-        expiry = data["expiry"] if data["expires"] else None
-        trial = data["isTrial"] or data["product"] == "trial"
-        aup = data["annualUpgradeProgram"]
-        perpetual = not expiry and aup and not trial
+    def set_timeline(self):
+        p_ = product_status
 
-        if perpetual:
-            pass
-
-        elif trial:
-            pass
-
-        else:
-            pass
-
-        aup_end = _aup_to_datetime(aup).replace(hour=0, minute=0, second=0)
-        aup_start = aup_end.replace(year=aup_end.year - 1)
+        aup_start = p_.start_date()
+        aup_end = p_.aup_date().replace(hour=0, minute=0, second=0)
+        versions = p_.release_history()
+        current = ".".join(__.version_str.split(".")[:3])
+        versions.append(current)
 
         def count_days(date):
             return (date - aup_start).days
@@ -339,42 +299,12 @@ class GreetingTimeline(QtWidgets.QWidget):
                 for ver_days, ver_str in filter(None, map(in_range, ver_list))
             }
 
-        url = "https://learn.ragdolldynamics.com/news"
-        try:
-            response = request.urlopen(url)
-        except Exception:
-            response = None
-            responded = False
-        else:
-            responded = response.code == 200
-
-        if responded:
-            pattern = re.compile(
-                rb'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
-            )
-            versions = []
-            for line in response.readlines():
-                matched = pattern.match(line)
-                if matched:
-                    versions.append(matched.group(1).decode())
-
-            current = ".".join(__.version_str.split(".")[:3])
-            versions.append(current)
-
-            return {
-                "versions": parse(versions),
-                "current": in_range(current),
-                "start": aup_start,
-                "end": aup_end,
-            }
-        else:
-            return {}
-
-    def set_timeline(self, data):
-        worker = base.Thread(self._fetch_versions, parent=self)
-        worker.result_ready.connect(self._widgets["Timeline"].set_data)
-        worker.finished.connect(worker.deleteLater)
-        worker.start(args=[data])
+        self._widgets["Timeline"].set_data({
+            "versions": parse(versions),
+            "current": in_range(current),
+            "start": aup_start,
+            "end": aup_end,
+        })
 
 
 class GreetingPage(QtWidgets.QWidget):
@@ -1023,37 +953,30 @@ class LicenceStatusBadge(QtWidgets.QWidget):
 
         self._widgets = widgets
 
-    def set_status(self, data):
-        expiry = data["expiry"] if data["expires"] else None
-        trial = data["isTrial"] or data["product"] == "trial"
-        aup = data["annualUpgradeProgram"]
-        perpetual = not expiry and aup and not trial
+    def set_status(self):
+        p_ = product_status
+        name = p_.name()
+        trial = p_.is_trial()
+        perpetual = p_.is_perpetual()
+        expiry_date = p_.expiry_date()
+        expiry = expiry_date.strftime("%b.%d.%Y") if expiry_date else None
+        expired = p_.is_expired()
+        aup_date = p_.aup_date()
+        aup = aup_date.strftime("%b.%d.%Y") if aup_date else None
 
         if perpetual:
-            _aup_date = datetime.strptime(aup, '%Y-%m-%d %H:%M:%S')
-            aup = _aup_date.strftime("%b.%d.%Y")
-            expired = False
             color = "#63a1b8"
-
         elif trial:
-            expiry_date = datetime.now() + timedelta(days=data["trialDays"])
-            expiry = expiry_date.strftime("%b.%d.%Y")
-            expired = data["trialDays"] < 1
-            perpetual = False
             color = "#ec7171" if expired else "#67a776"
-
         else:
-            expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
-            expiry = expiry_date.strftime("%b.%d.%Y")
-            expired = expiry_date < datetime.now()
             color = "#ec7171" if expired else "#67a776"
 
-        if not expired and data["isFloating"] and not data["hasLease"]:
+        if not expired and p_.is_floating() and not p_.has_lease():
             color = "#f3bc75"
 
         w = self._widgets
         status = "%s | %s %s" % (
-            data["marketingName"],
+            name,
             "Perpetual" if perpetual else "Expired" if expired else "Expiry",
             ("/ AUP " + aup) if perpetual else expiry,
         )
@@ -1133,12 +1056,18 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
         self._widgets = widgets
 
-    def set_product(self, data):
-        self._widgets["Product"].setText(data["marketingName"])
+    def set_product(self):
+        p_ = product_status
+        name = p_.name()
+        trial = p_.is_trial()
+        perpetual = p_.is_perpetual()
+        expired = p_.is_expired()
+
+        self._widgets["Product"].setText(name)
         self._widgets["Commercial"].setText(
-            "Non-Commercial" if data["isNonCommercial"]
-            else "Commercial" if not data["isFloating"]
-            else "Lease Assigned" if data["hasLease"] else "Lease Dropped"
+            "Non-Commercial" if p_.is_non_commercial()
+            else "Commercial" if not p_.is_floating()
+            else "Lease Assigned" if p_.has_lease() else "Lease Dropped"
         )
 
         features = {
@@ -1162,38 +1091,28 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Batch": (
                 ""
             ),
-        }.get(data["marketingName"], "Unknown Product")
+        }.get(name, "Unknown Product")
 
         self._widgets["Features"].setText(
             "<p style=\"line-height:%d%%\">%s</p>"
             % (140, features.replace("\n", "<br>"))
         )
 
-        expiry = data["expiry"] if data["expires"] else None
-        trial = data["isTrial"] or data["product"] == "trial"
-        aup = data["annualUpgradeProgram"]
-        perpetual = not expiry and aup and not trial
-
         if perpetual:
-            expired = False
             gradient = "stop:0 #4facfe, stop:1 #00f2fe"
 
         elif trial:
-            expired = data["trialDays"] < 1
             if expired:
                 gradient = "stop:0 #f3465a, stop:1 #db2550"
             else:
                 gradient = "stop:0 #43ea80, stop:1 #38f8d4"
-
         else:
-            expiry_date = datetime.strptime(expiry, '%Y-%m-%d %H:%M:%S')
-            expired = expiry_date < datetime.now()
             if expired:
                 gradient = "stop:0 #f3465a, stop:1 #db2550"
             else:
                 gradient = "stop:0 #43ea80, stop:1 #38f8d4"
 
-        if not expired and data["isFloating"] and not data["hasLease"]:
+        if not expired and p_.is_floating() and not p_.has_lease():
             gradient = "stop:0 #ff934c, stop:1 #fc686f"
 
         self.setStyleSheet("""
@@ -1309,9 +1228,9 @@ class LicenceNodeLock(_LicencePanelHelper):
                 return
             self.node_deactivated.emit()
 
-    def status_update(self, data):
-        if data["isActivated"]:
-            self._widgets["ProductKey"].setText(data["key"])
+    def status_update(self):
+        if product_status.is_activated():
+            self._widgets["ProductKey"].setText(product_status.key())
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
             self._widgets["ProcessBtn"].setEnabled(True)
@@ -1542,9 +1461,9 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         except OSError:
             pass
 
-    def status_update(self, data):
-        if data["isActivated"]:
-            self._widgets["ProductKey"].setText(data["key"])
+    def status_update(self):
+        if product_status.is_activated():
+            self._widgets["ProductKey"].setText(product_status.key())
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
             self._widgets["ProcessBtn"].setEnabled(True)
@@ -1689,7 +1608,7 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
     def set_request_code(self, code):
         self._req_code = code
 
-    def status_update(self, data):
+    def status_update(self):
         return
 
 
@@ -1741,10 +1660,12 @@ class LicenceFloating(_LicencePanelHelper):
         self._widgets = widgets
         self.set_heading("Floating", "building.svg")
 
-    def status_update(self, data):
-        action = "Drop Lease" if data["hasLease"] else "Request Lease"
-        self._widgets["ServerIP"].setText(data["ip"])
-        self._widgets["ServerPort"].setText(data["port"])
+    def status_update(self):
+        p_ = product_status
+        action = "Drop Lease" if p_.has_lease() else "Request Lease"
+        ip, port = p_.licence_server()
+        self._widgets["ServerIP"].setText(ip)
+        self._widgets["ServerPort"].setText(port)
         self._widgets["ProcessBtn"].setText(action)
         self._widgets["ProcessBtn"].setEnabled(True)
 
@@ -1792,15 +1713,12 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         super(LicenceSetupPanel, self).__init__(parent=parent)
 
         widgets = {
-            "ConnCheckHint": QtWidgets.QLabel("Checking internet..."),
             "Pages": QtWidgets.QStackedWidget(),
             "NodeLock": LicenceNodeLock(),
             "NodeLockOffline": LicenceNodeLockOffline(),
             "Floating": LicenceFloating(),
             "DeactivationBox": LicenceOfflineDeactivationBox(),
         }
-        widgets["ConnCheckHint"].setVisible(False)
-        widgets["ConnCheckHint"].setObjectName("HintMessage")
 
         widgets["Pages"].addWidget(widgets["NodeLock"])
         widgets["Pages"].addWidget(widgets["NodeLockOffline"])
@@ -1810,7 +1728,6 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(pd2)
-        layout.addWidget(widgets["ConnCheckHint"])
         layout.addWidget(widgets["Pages"])
 
         widgets["DeactivationBox"].dismissed.connect(self.on_box_dismissed)
@@ -1825,7 +1742,6 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             self.offline_deactivate_requested)
 
         self._widgets = widgets
-        self._is_offline = None
 
     def on_offline_activate_requested(self):
         self._widgets["NodeLockOffline"].set_activation_request()
@@ -1839,7 +1755,9 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         self._widgets["NodeLockOffline"].remove_temp_key()
         self.licence_updated.emit()
 
-    def _update(self, data):
+    def status_update(self):
+        p_ = product_status
+
         if self._widgets["NodeLockOffline"].is_deactivation_requested():
             # ensure user completed the process before dumping request code
             self._widgets["Pages"].setCurrentIndex(3)
@@ -1848,52 +1766,25 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             _box.set_product_key(_off.read_temp_key())
             _box.set_request_code(_off.read_deactivation_request_file())
 
-        if data["isFloating"]:
+        if p_.is_floating():
             log.info("Ragdoll is floating")
             self._widgets["Pages"].setCurrentIndex(2)
 
-        elif data["isTrial"]:
-            if data["trialDays"] < 1:
+        elif p_.is_trial():
+            if p_.is_expired():
                 log.info("Ragdoll is expired")
             else:
                 log.info("Ragdoll is in trial mode")
         else:
             # node-lock
-            if data["isActivated"]:
+            if p_.is_activated():
                 log.info("Ragdoll is activated")
             else:
                 log.info("Ragdoll is deactivated")
-            self._widgets["Pages"].setCurrentIndex(bool(self._is_offline))
+            self._widgets["Pages"].setCurrentIndex(p_.has_internet())
 
         widget = self._widgets["Pages"].currentWidget()
-        widget.status_update(data)
-
-    def status_update(self, data):
-        if not data["isFloating"] and self._is_offline is None:
-            # check server connection for node-lock licencing on first run
-            self._widgets["ConnCheckHint"].setVisible(True)
-            self.setEnabled(False)
-
-            def check_internet():
-                try:
-                    response = request.urlopen("https://wyday.com")
-                except Exception:
-                    return False
-                return response.code == 200
-
-            def on_internet_checked(_200):
-                self._is_offline = not _200
-                self._widgets["ConnCheckHint"].setVisible(False)
-                self._update(data)
-                self.setEnabled(True)
-
-            worker = base.Thread(check_internet, parent=self)
-            worker.result_ready.connect(on_internet_checked)
-            worker.finished.connect(worker.deleteLater)
-            worker.start()
-
-        else:
-            self._update(data)
+        widget.status_update()
 
 
 class LicencePage(QtWidgets.QWidget):
@@ -2045,6 +1936,11 @@ class WelcomeWindow(QtWidgets.QMainWindow):
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
 
+    @staticmethod
+    def preload():
+        product_status.has_internet(refresh=True)
+        product_status.release_history(refresh=True)
+
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.setWindowTitle("Ragdoll Dynamics")
@@ -2128,11 +2024,12 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         super(WelcomeWindow, self).resizeEvent(event)
 
     def on_licence_updated(self, data):
-        self._widgets["Licence"].input_widget().status_update(data)
-        self._widgets["Licence"].status_widget().set_product(data)
-        self._widgets["Greet"].status_widget().set_licence(data)
-        self._widgets["Greet"].status_widget().check_update(data)
-        self._widgets["Greet"].timeline_widget().set_timeline(data)
+        product_status.data = data
+        self._widgets["Licence"].input_widget().status_update()
+        self._widgets["Licence"].status_widget().set_product()
+        self._widgets["Greet"].status_widget().set_licence()
+        self._widgets["Greet"].status_widget().check_update()
+        self._widgets["Greet"].timeline_widget().set_timeline()
 
     def on_offline_activate_requested(self):
         w = self._widgets["Licence"].input_widget()

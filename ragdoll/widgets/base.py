@@ -605,8 +605,32 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self._current = None
         self._first = None
         self._versions = None
+        self._latest_update = None
 
-    def set_data(self, merged_releases, current_ver, first_date, expiry_date):
+    def set_data(self, released_versions, current_ver, expiry_date):
+        current_ver = datetime(*map(int, current_ver.split(".")))
+        released_versions = sorted(released_versions)
+        released_dates = [
+            datetime(*map(int, v.split("."))) for v in released_versions
+        ]
+        # merge release if the distance between them gets too close
+        merged_releases = defaultdict(list)
+        unit = ProductTimelineBase.DayWidth
+        dot_r = ProductTimelineView.DotRadius
+        first_date = released_dates[0]
+        threshold = dot_r * 6
+        index = 0
+        previous = 0
+        for date in released_dates:
+            days = (date - first_date).days
+            if previous and unit * (days - previous) > threshold:
+                index += 1
+            merged_releases[index].append(date)
+            previous = days
+
+            if date < expiry_date:
+                self._latest_update = date
+
         self._days = self.DayPadding + (self._today - first_date).days
         self._expiry_days = self.DayPadding + (expiry_date - first_date).days
         self._expiry_shown = self._expiry_days - self._days < self.DayPadding
@@ -768,8 +792,9 @@ class ProductReleasedView(ProductTimelineBase):
         return prev_items
 
     def _draw_button(self, date, y_base):
+        cl = ("#344527" if date == self._current else
+              "#101010" if date != self._latest_update else "#1953be")
         tx = date.strftime("%Y.%m.%d ")
-        cl = "#1a1a1a" if date == self._current else "#101010"
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)
@@ -850,27 +875,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         self._widgets = widgets
 
     def set_data(self, released_versions, current_ver, expiry_date):
-        current_ver = datetime(*map(int, current_ver.split(".")))
-        released_versions = sorted(released_versions)
-        released_dates = [
-            datetime(*map(int, v.split("."))) for v in released_versions
-        ]
-        # merge release if the distance between them gets too close
-        merged_releases = defaultdict(list)
-        unit = ProductTimelineBase.DayWidth
-        dot_r = ProductTimelineView.DotRadius
-        first_date = released_dates[0]
-        threshold = dot_r * 6
-        index = 0
-        previous = 0
-        for date in released_dates:
-            days = (date - first_date).days
-            if previous and unit * (days - previous) > threshold:
-                index += 1
-            merged_releases[index].append(date)
-            previous = days
-
-        _args = merged_releases, current_ver, first_date, expiry_date
+        _args = released_versions, current_ver, expiry_date
         self._widgets["Timeline"].set_data(*_args)
         self._widgets["Released"].set_data(*_args)
 

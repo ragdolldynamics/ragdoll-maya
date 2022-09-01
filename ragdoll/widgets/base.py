@@ -655,10 +655,11 @@ class ProductTimelineView(ProductTimelineBase):
         self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
 
         self.draw_timeline()
-        self.draw_expiry()
         for index, dates in self._versions.items():
             self.draw_highlight(dates)
-        self.draw_today()
+        if self._expiry_shown:
+            self.draw_incident(self._expiry_date, 2 / 3, "#e96868")
+        self.draw_incident(self._today, 1 / 2, "#dfdfdf")
 
     def draw_timeline(self):
         h = self.LineThick
@@ -679,30 +680,23 @@ class ProductTimelineView(ProductTimelineBase):
             self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#445442")
 
     def draw_highlight(self, dates):
+        color = "#d4ac20" if dates[-1] > self._expiry_date else "#92d453"
         r = self.DotRadius
         x = self.compute_x(dates[0]) - r
         y = (self.view.height() / 2) - r
         w = self.compute_x(dates[-1]) - r - x + (r * 2)
         h = r * 2
-        it = self.draw_item(x=x, y=y, z=2, w=w, h=h, r=r, color="#92d453")
+        it = self.draw_item(x=x, y=y, z=2, w=w, h=h, r=r, color=color)
         it.setData(it.DateListRole, dates)
         it.enable_hover("#7399ce")
 
-    def draw_today(self):
-        r = self.DotRadius * 2 / 3
-        x = self.compute_x(self._today) - r
+    def draw_incident(self, date, scale, color):
+        z = 3 if scale < 1 else 2
+        r = self.DotRadius * scale
+        x = self.compute_x(date) - r
         y = (self.view.height() / 2) - r
         w = h = r * 2
-        self.draw_item(x=x, y=y, z=3, w=w, h=h, r=r, color="#F0F0F0")
-
-    def draw_expiry(self):
-        if not self._expiry_shown:
-            return
-        r = self.DotRadius * 6 / 5
-        x = self.compute_x(self._expiry_date) - r
-        y = (self.view.height() / 2) - r
-        w = h = r * 2
-        self.draw_item(x=x, y=y, z=2, w=w, h=h, r=r, color="#e96868")
+        return self.draw_item(x=x, y=y, z=z, w=w, h=h, r=r, color=color)
 
 
 class ProductReleasedView(ProductTimelineBase):
@@ -730,6 +724,9 @@ class ProductReleasedView(ProductTimelineBase):
         top_left = QtCore.QPoint(0, 0)
         bottom_right = QtCore.QPoint(self._view_len, self.ViewHeight)
         self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
+
+        self.draw_time(self._current, "#8d8d8d")
+        self.draw_time(self._expiry_date, "#e96868")
 
         row_count = int(self.ViewHeight / self.ButtonHeight)
         row_count -= 1  # reserve 1 row spacing for hint message line
@@ -772,7 +769,7 @@ class ProductReleasedView(ProductTimelineBase):
 
     def _draw_button(self, date, y_base):
         tx = date.strftime("%Y.%m.%d ")
-        cl = "#101010"
+        cl = "#1a1a1a" if date == self._current else "#101010"
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)
@@ -783,6 +780,12 @@ class ProductReleasedView(ProductTimelineBase):
         it.enable_hover("#a4a4a4", "#1c1c1c")
 
         return it
+
+    def draw_time(self, date, color):
+        x = self.compute_x(date)
+        y0 = self.view.mapToScene(0, 0).y() + 2
+        line = QtCore.QLineF(x, y0, x, self.ViewHeight)
+        self.scene.addLine(line, QtGui.QPen(QtGui.QColor(color)))
 
     def connect_timeline(self, timeline):
         items = self.scene.items()
@@ -875,6 +878,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         self._widgets["Timeline"].draw()
         self._widgets["Released"].draw()
         self._widgets["Released"].connect_timeline(self._widgets["Timeline"])
+        # slide to present day
         bar = self._widgets["Released"].view.horizontalScrollBar()
         bar.setValue(bar.maximum())
 

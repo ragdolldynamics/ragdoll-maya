@@ -825,12 +825,401 @@ class TimelineWidget(TimelineInterface):
         QtWidgets.QToolTip.showText(pos, self._sect_name[index], self)
 
 
+class TimelineItem(QtWidgets.QGraphicsItem):
+    DateRole = QtCore.Qt.UserRole
+    DateListRole = QtCore.Qt.UserRole + 1
+    VersionRole = QtCore.Qt.UserRole + 2
+
+    def __init__(self, w, h, r, color, text=None):
+        super(TimelineItem, self).__init__()
+        self.setCursor(QtCore.Qt.ArrowCursor)
+        self.hover_parent = None
+        self.hover_children = list()
+        self._w = w
+        self._h = h
+        self._r = r
+        self._color = color
+        self._text = text
+        self._hovered = False
+        self._color_hov = None
+        self._text_hov = None
+
+    def hoverEnterEvent(self, event):
+        self._hovered = True
+        super(TimelineItem, self).hoverEnterEvent(event)
+
+        if self.hover_parent:
+            self.hover_parent.set_hovered(True)
+        for child in self.hover_children:
+            child.set_hovered(True)
+
+    def hoverLeaveEvent(self, event):
+        self._hovered = False
+        super(TimelineItem, self).hoverLeaveEvent(event)
+
+        if self.hover_parent:
+            self.hover_parent.set_hovered(False)
+        for child in self.hover_children:
+            child.set_hovered(False)
+
+    def mousePressEvent(self, event):
+        pass  # reimplement this so the release event can be received
+
+    def mouseReleaseEvent(self, event):
+        super(TimelineItem, self).mouseReleaseEvent(event)
+        if self.boundingRect().contains(event.pos()):
+            ver = self.data(self.VersionRole)
+            if ver:
+                url = "https://learn.ragdolldynamics.com/releases/" + ver
+                webbrowser.open(url)
+
+    def boundingRect(self):
+        return QtCore.QRectF(0, 0, self._w, self._h)
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(self.boundingRect(), self._r, self._r)
+        return path
+
+    def paint(self, painter, option, widget=None):
+        bg = self._color_hov if self._hovered else self._color
+        fg = self._text_hov if self._hovered else self._color.lighter(800)
+
+        painter.setRenderHint(painter.Antialiasing)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setBrush(bg)
+        painter.drawPath(self.shape())
+        if self._text:
+            fr = painter.fontMetrics().boundingRect(self._text)
+            fr.moveCenter(self.boundingRect().center().toPoint())
+            painter.setPen(fg)
+            painter.drawText(fr, self._text)
+
+    def is_hovered(self):
+        return self._hovered
+
+    def set_hovered(self, value):
+        self._hovered = value
+        self.update()
+
+    def enable_hover(self, bg_color, fg_color=None):
+        self.setAcceptHoverEvents(True)
+        self._color_hov = QtGui.QColor(bg_color)
+        self._text_hov = QtGui.QColor(fg_color or "white")
+
+
+class ArrowCursorGraphicsView(QtWidgets.QGraphicsView):
+
+    def enterEvent(self, event):
+        super(ArrowCursorGraphicsView, self).enterEvent(event)
+        self.viewport().setCursor(QtCore.Qt.ArrowCursor)
+
+
+class ProductTimelineBase(QtWidgets.QWidget):
+    DayWidth = px(3)
+    DayPadding = 30
+
+    def __init__(self, parent=None):
+        super(ProductTimelineBase, self).__init__(parent)
+
+        scene = QtWidgets.QGraphicsScene()
+        view = ArrowCursorGraphicsView()
+
+        view.setScene(scene)
+        view.setDragMode(view.ScrollHandDrag)
+        view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        self.view = view
+        self.scene = scene
+        self._today = datetime.now()
+        self._days = 0
+        self._expiry_days = 0
+        self._expiry_date = None
+        self._expiry_shown = False
+        self._view_len = 0
+        self._current = None
+        self._first = None
+        self._versions = None
+
+    def set_data(self, merged_releases, current_ver, first_date, expiry_date):
+        self._days = self.DayPadding + (self._today - first_date).days
+        self._expiry_days = self.DayPadding + (expiry_date - first_date).days
+        self._expiry_shown = self._expiry_days - self._days < self.DayPadding
+        self._expiry_date = expiry_date
+        self._view_len = (self._days + self.DayPadding) * self.DayWidth
+        self._current = current_ver
+        self._first = first_date
+        self._versions = merged_releases
+
+    def compute_x(self, date):
+        days_after_v0 = self.DayPadding + (date - self._first).days
+        return days_after_v0 * self.DayWidth
+
+    def draw_item(self, x, y, w, h, r, color, text=None, z=0):
+        item = TimelineItem(w, h, r, QtGui.QColor(color), text)
+        item.setX(x)
+        item.setY(y)
+        item.setZValue(z)
+        self.scene.addItem(item)
+        return item
+
+
+class ProductTimelineView(ProductTimelineBase):
+    ViewHeight = px(20)
+    LineThick = px(5)
+    DotRadius = px(5)
+
+    def __init__(self, parent=None):
+        super(ProductTimelineView, self).__init__(parent)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.view)
+
+        shadow = QtWidgets.QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(10)
+        shadow.setOffset(0, 5)
+        shadow.setColor(QtGui.QColor("#5F000000"))  # ARGB
+        self.setGraphicsEffect(shadow)
+        self.setStyleSheet("border: none; background: transparent;")
+        self.setFixedHeight(self.ViewHeight)
+
+    def draw(self):
+        top_left = QtCore.QPoint(0, 0)
+        bottom_right = QtCore.QPoint(self._view_len, self.ViewHeight)
+        self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
+
+        self.draw_timeline()
+        self.draw_expiry()
+        for index, dates in self._versions.items():
+            self.draw_highlight(dates)
+        self.draw_today()
+
+    def draw_timeline(self):
+        h = self.LineThick
+        r = int(h / 2)
+        y = (self.view.height() / 2) - (h / 2)
+
+        if self._expiry_shown:
+            x = 0
+            w = self._expiry_days * self.DayWidth
+            self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#445442")
+
+            x = w
+            w = self._view_len - w
+            self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#967100")
+        else:
+            x = 0
+            w = self._view_len
+            self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#445442")
+
+    def draw_highlight(self, dates):
+        r = self.DotRadius
+        x = self.compute_x(dates[0]) - r
+        y = (self.view.height() / 2) - r
+        w = self.compute_x(dates[-1]) - r - x + (r * 2)
+        h = r * 2
+        it = self.draw_item(x=x, y=y, z=2, w=w, h=h, r=r, color="#92d453")
+        it.setData(it.DateListRole, dates)
+        it.enable_hover("#7399ce")
+
+    def draw_today(self):
+        r = self.DotRadius * 2 / 3
+        x = self.compute_x(self._today) - r
+        y = (self.view.height() / 2) - r
+        w = h = r * 2
+        self.draw_item(x=x, y=y, z=3, w=w, h=h, r=r, color="#F0F0F0")
+
+    def draw_expiry(self):
+        if not self._expiry_shown:
+            return
+        r = self.DotRadius * 6 / 5
+        x = self.compute_x(self._expiry_date) - r
+        y = (self.view.height() / 2) - r
+        w = h = r * 2
+        self.draw_item(x=x, y=y, z=2, w=w, h=h, r=r, color="#e96868")
+
+
+class ProductReleasedView(ProductTimelineBase):
+    ViewHeight = px(80)
+    ButtonWidth = px(68)
+    ButtonHeight = px(18)
+
+    def __init__(self, parent=None):
+        super(ProductReleasedView, self).__init__(parent)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.view)
+
+        self.setFixedHeight(self.ViewHeight + px(12))  # + scrollbar height
+        self.setStyleSheet("""
+        border: none;
+        border-radius: 0;
+        border-bottom-right-radius: {radius}px;
+        border-bottom-left-radius: {radius}px;
+        background: #202020;
+        """.format(radius=px(12)))
+
+    def draw(self):
+        top_left = QtCore.QPoint(0, 0)
+        bottom_right = QtCore.QPoint(self._view_len, self.ViewHeight)
+        self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
+
+        row_count = int(self.ViewHeight / self.ButtonHeight)
+        prev_items = [None] * row_count  # for collision check
+        reversed_dates = [
+            self._versions[i]
+            for i in sorted(self._versions.keys(), reverse=True)
+        ]
+        for i, dates in enumerate(reversed_dates):
+            prev_items = self.draw_releases(reversed(dates), prev_items)
+
+    def draw_releases(self, dates, prev_items):
+        last_row = len(prev_items) - 1
+        y_base = -(self.ButtonHeight / 2) + px(4)
+        gap = px(2)
+
+        def get_rightest_row():
+            # get row that has the most clearance for overflowed item
+            rx = max(p.x() for p in prev_items)
+            return next(i for i, p in enumerate(prev_items) if p.x() == rx)
+
+        for date in dates:
+            it = self._draw_button(date, y_base)
+            # check collision with previous item in each row
+            for row, prev in enumerate(prev_items):
+                if prev and it.collidesWithItem(prev):
+                    if row != last_row:
+                        it.setY(it.y() + gap + self.ButtonHeight)
+                    else:
+                        rr = get_rightest_row()
+                        it.setY(prev_items[rr].y())
+                        while it.collidesWithItem(prev_items[rr]):
+                            it.setX(it.x() - gap)
+                        prev_items[rr] = it
+                else:
+                    prev_items[row] = it
+                    break
+
+        return prev_items
+
+    def _draw_button(self, date, y_base):
+        tx = date.strftime("%Y.%m.%d ")
+        cl = "#101010"
+        w, h = self.ButtonWidth, self.ButtonHeight
+        r = int(h / 2)
+        x = self.compute_x(date) - (w / 2)
+        y = y_base
+        it = self.draw_item(x=x, y=y, z=0, w=w, h=h, r=r, color=cl, text=tx)
+        it.setData(it.DateRole, date)
+        it.setData(it.VersionRole, tx.strip())
+        it.enable_hover("#a4a4a4", "#1c1c1c")
+
+        return it
+
+    def connect_timeline(self, timeline):
+        items = self.scene.items()
+        for dot in timeline.scene.items():
+            for date in dot.data(TimelineItem.DateListRole) or []:
+                for item in items:
+                    if item.data(TimelineItem.DateRole) == date:
+                        dot.hover_children.append(item)
+                        item.hover_parent = dot
+                        items.remove(item)
+                        break
+
+
+class ProductTimelineWidget(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(ProductTimelineWidget, self).__init__(parent)
+
+        widgets = {
+            "Timeline": ProductTimelineView(),
+            "Released": ProductReleasedView(),
+        }
+
+        # timeline has shadow fx + transparent bg,
+        # so we need another container for transparent gradient bg
+        time_container = QtWidgets.QWidget()
+        time_container.setStyleSheet("""
+        border: none;
+        background: qlineargradient(
+            x1:0, y1:0, x2:0, y2:1, stop:0.5 transparent, stop:0.51 #202020);
+        """)
+        layout = QtWidgets.QVBoxLayout(time_container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["Timeline"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(time_container)
+        layout.addWidget(widgets["Released"])
+
+        # scroll sync
+        t_w = widgets["Timeline"]
+        r_w = widgets["Released"]
+        t_bar = t_w.view.horizontalScrollBar()
+        r_bar = r_w.view.horizontalScrollBar()
+
+        t_bar.valueChanged.connect(
+            lambda v: r_w.view.horizontalScrollBar().setValue(v))
+        r_bar.valueChanged.connect(
+            lambda v: t_w.view.horizontalScrollBar().setValue(v))
+        r_bar.rangeChanged.connect(
+            lambda m, x: t_w.view.horizontalScrollBar().setMaximum(x))
+
+        def cleanup(obj):
+            t_w.view.horizontalScrollBar().valueChanged.disconnect()
+            r_w.view.horizontalScrollBar().valueChanged.disconnect()
+            r_w.view.horizontalScrollBar().rangeChanged.disconnect()
+
+        self.destroyed.connect(cleanup)
+
+        self._widgets = widgets
+
+    def set_data(self, released_versions, current_ver, expiry_date):
+        current_ver = datetime(*map(int, current_ver.split(".")))
+        released_versions = sorted(released_versions)
+        released_dates = [
+            datetime(*map(int, v.split("."))) for v in released_versions
+        ]
+        # merge release if the distance between them gets too close
+        merged_releases = defaultdict(list)
+        unit = ProductTimelineBase.DayWidth
+        dot_r = ProductTimelineView.DotRadius
+        first_date = released_dates[0]
+        threshold = dot_r * 6
+        index = 0
+        previous = 0
+        for date in released_dates:
+            days = (date - first_date).days
+            if previous and unit * (days - previous) > threshold:
+                index += 1
+            merged_releases[index].append(date)
+            previous = days
+
+        _args = merged_releases, current_ver, first_date, expiry_date
+        self._widgets["Timeline"].set_data(*_args)
+        self._widgets["Released"].set_data(*_args)
+
+    def draw(self):
+        self._widgets["Timeline"].draw()
+        self._widgets["Released"].draw()
+        self._widgets["Released"].connect_timeline(self._widgets["Timeline"])
+        bar = self._widgets["Released"].view.horizontalScrollBar()
+        bar.setValue(bar.maximum())
+
+
 class ProductStatus(object):
 
     def __init__(self):
         self._data = dict()
         self._has_internet = None
-        self._release_history = None
+        self._released = None
 
     @property
     def data(self):
@@ -928,18 +1317,18 @@ class ProductStatus(object):
                 self.data["annualUpgradeProgram"], "%Y-%m-%d %H:%M:%S")
 
     def release_history(self, refresh=False):
-        if not refresh and self._release_history is not None:
-            return self._release_history
+        if not refresh and self._released is not None:
+            return self._released
 
         with request.urlopen("https://learn.ragdolldynamics.com/news") as r:
             if r.code == 200:
-                self._release_history = sorted(
+                self._released = list(
                     self._iter_parsed_versions(r.readlines())
                 )
             else:
-                self._release_history = []
+                self._released = []
 
-        return self._release_history[:]
+        return self._released[:]
 
     def has_internet(self, refresh=False):
         if not refresh and self._has_internet is not None:

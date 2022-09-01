@@ -164,7 +164,7 @@ class GreetingStatus(base.OverlayWidget):
         self._widgets["UpdateIcon"].hide()
 
         if product_status.is_updatable():
-            versions = product_status.release_history()
+            versions = sorted(product_status.release_history())
 
             if versions:
                 latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
@@ -258,16 +258,16 @@ class GreetingBanner(QtWidgets.QWidget):
         return self._widgets["Status"]
 
 
-class GreetingTimeline(QtWidgets.QWidget):
+class GreetingProductTimeline(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingTimeline, self).__init__(parent)
+        super(GreetingProductTimeline, self).__init__(parent)
 
         widgets = {
-            "Timeline": base.TimelineWidget(),
+            "Timeline": base.ProductTimelineWidget(),
         }
 
-        widgets["Timeline"].min_width = splash_width
+        widgets["Timeline"].setMinimumWidth(splash_width)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(pd4, 0, pd4, 0)
@@ -279,32 +279,17 @@ class GreetingTimeline(QtWidgets.QWidget):
     def set_timeline(self):
         p_ = product_status
 
-        aup_start = p_.start_date()
-        aup_end = p_.aup_date().replace(hour=0, minute=0, second=0)
-        versions = p_.release_history()
+        versions = set(p_.release_history())
         current = ".".join(__.version_str.split(".")[:3])
-        versions.append(current)
+        versions.add(current)
+        expiry_date = p_.aup_date() or p_.expiry_date()
 
-        def count_days(date):
-            return (date - aup_start).days
-
-        def in_range(ver_str):
-            ver_date = datetime(*map(int, ver_str.split(".")))
-            if aup_start <= ver_date <= aup_end:
-                return count_days(ver_date), ver_str
-
-        def parse(ver_list):
-            return {
-                ver_days: ver_str
-                for ver_days, ver_str in filter(None, map(in_range, ver_list))
-            }
-
-        self._widgets["Timeline"].set_data({
-            "versions": parse(versions),
-            "current": in_range(current),
-            "start": aup_start,
-            "end": aup_end,
-        })
+        self._widgets["Timeline"].set_data(
+            released_versions=versions,
+            current_ver=current,
+            expiry_date=expiry_date,
+        )
+        self._widgets["Timeline"].draw()
 
 
 class GreetingPage(QtWidgets.QWidget):
@@ -314,7 +299,7 @@ class GreetingPage(QtWidgets.QWidget):
 
         widgets = {
             "Banner": GreetingBanner(),
-            "Timeline": GreetingTimeline(),
+            "Timeline": GreetingProductTimeline(),
         }
 
         layout = QtWidgets.QVBoxLayout(self)

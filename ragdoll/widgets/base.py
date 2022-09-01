@@ -581,7 +581,7 @@ class ArrowCursorGraphicsView(QtWidgets.QGraphicsView):
 
 class ProductTimelineBase(QtWidgets.QWidget):
     DayWidth = px(3)
-    DayPadding = 30
+    DayPadding = 45
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
@@ -732,6 +732,7 @@ class ProductReleasedView(ProductTimelineBase):
         self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
 
         row_count = int(self.ViewHeight / self.ButtonHeight)
+        row_count -= 1  # reserve 1 row spacing for hint message line
         prev_items = [None] * row_count  # for collision check
         reversed_dates = [
             self._versions[i]

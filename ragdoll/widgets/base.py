@@ -593,6 +593,15 @@ class ProductTimelineBase(QtWidgets.QWidget):
         view.setDragMode(view.ScrollHandDrag)
         view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        # NOTE
+        # The direction of timeline is as follows.
+        # | Past <-> Present |
+        # And the scrollBar value ramp direction is as follows.
+        # | Min <-> Maximum |
+        # So by default, when we scroll down mouse wheel, it slides the
+        # timeline toward the present.
+        # But what we want is opposite, hence we set this to False.
+        view.horizontalScrollBar().setInvertedControls(False)
 
         self.view = view
         self.scene = scene

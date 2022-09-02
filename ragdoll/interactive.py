@@ -2778,6 +2778,8 @@ def add_target(selection=None, **opts):
     p_offset = [0, 0, 0]
     p_offset[walk_index] = 5
 
+    duration = plan["duration"].as_double()
+
     # first do the body
     with cmdx.DagModifier() as mod:
         idx = plan["targets"].count()
@@ -2786,6 +2788,14 @@ def add_target(selection=None, **opts):
 
         body_tm.translateBy(p_offset, cmdx.sTransform)
         mod.set_attr(plan["targets"][idx], body_tm.as_matrix())
+
+        prev_t = plan["timings"][idx - 2].as_double()
+        t = int(prev_t + (duration - prev_t) / 2.)
+
+        # assume same size for targets/timings/hards
+        mod.set_attr(plan["timings"][idx], duration)
+        mod.set_attr(plan["hards"][idx], True)
+        mod.set_attr(plan["timings"][idx - 1], t)
         mod.do_it()
 
     # then the feet
@@ -2798,6 +2808,14 @@ def add_target(selection=None, **opts):
             foot_tm.setScale(cmdx.Vector(1, 1, 1))
             foot_tm.translateBy(p_offset, cmdx.sTransform)
             mod.set_attr(foot["targets"][idx], foot_tm.as_matrix())
+
+            prev_t = foot["timings"][idx - 2].as_double()
+            t = int(prev_t + (duration - prev_t) / 2.)
+
+            # assume same size for targets/timings/hards
+            mod.set_attr(foot["timings"][idx], duration)
+            mod.set_attr(foot["hards"][idx], True)
+            mod.set_attr(foot["timings"][idx - 1], t)
             mod.do_it()
 
     return kSuccess

@@ -493,6 +493,7 @@ class TimelineItem(QtWidgets.QGraphicsItem):
     DateRole = QtCore.Qt.UserRole
     DateListRole = QtCore.Qt.UserRole + 1
     VersionRole = QtCore.Qt.UserRole + 2
+    MessageRole = QtCore.Qt.UserRole + 3
 
     def __init__(self, w, h, r, color, text=None):
         super(TimelineItem, self).__init__()
@@ -510,6 +511,8 @@ class TimelineItem(QtWidgets.QGraphicsItem):
 
     def hoverEnterEvent(self, event):
         self._hovered = True
+        if self.data(self.MessageRole):
+            self.scene().message_set.emit(self.data(self.MessageRole))
         super(TimelineItem, self).hoverEnterEvent(event)
 
         if self.hover_parent:
@@ -519,6 +522,8 @@ class TimelineItem(QtWidgets.QGraphicsItem):
 
     def hoverLeaveEvent(self, event):
         self._hovered = False
+        if self.data(self.MessageRole):
+            self.scene().message_unset.emit()
         super(TimelineItem, self).hoverLeaveEvent(event)
 
         if self.hover_parent:
@@ -559,6 +564,9 @@ class TimelineItem(QtWidgets.QGraphicsItem):
             painter.setPen(fg)
             painter.drawText(fr, self._text)
 
+    def set_message(self, text):
+        self.setData(self.MessageRole, text)
+
     def is_hovered(self):
         return self._hovered
 
@@ -572,22 +580,29 @@ class TimelineItem(QtWidgets.QGraphicsItem):
         self._text_hov = QtGui.QColor(fg_color or "white")
 
 
-class ArrowCursorGraphicsView(QtWidgets.QGraphicsView):
+class ProductTimelineGraphicsScene(QtWidgets.QGraphicsScene):
+    message_set = QtCore.Signal(str)
+    message_unset = QtCore.Signal()
+
+
+class ProductTimelineGraphicsView(QtWidgets.QGraphicsView):
 
     def enterEvent(self, event):
-        super(ArrowCursorGraphicsView, self).enterEvent(event)
+        super(ProductTimelineGraphicsView, self).enterEvent(event)
         self.viewport().setCursor(QtCore.Qt.ArrowCursor)
 
 
 class ProductTimelineBase(QtWidgets.QWidget):
+    message_sent = QtCore.Signal(str)
+
     DayWidth = px(3)
     DayPadding = 45
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
 
-        scene = QtWidgets.QGraphicsScene()
-        view = ArrowCursorGraphicsView()
+        scene = ProductTimelineGraphicsScene()
+        view = ProductTimelineGraphicsView()
 
         view.setScene(scene)
         view.setDragMode(view.ScrollHandDrag)
@@ -602,6 +617,10 @@ class ProductTimelineBase(QtWidgets.QWidget):
         # timeline toward the present.
         # But what we want is opposite, hence we set this to False.
         view.horizontalScrollBar().setInvertedControls(False)
+
+        # signals
+        scene.message_set.connect(self.on_item_message_set)
+        scene.message_unset.connect(self.on_item_message_unset)
 
         self.view = view
         self.scene = scene
@@ -661,6 +680,12 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self.scene.addItem(item)
         return item
 
+    def on_item_message_set(self, text):
+        self.message_sent.emit(text)
+
+    def on_item_message_unset(self):
+        self.message_sent.emit("")
+
 
 class ProductTimelineView(ProductTimelineBase):
     ViewHeight = px(20)
@@ -691,8 +716,11 @@ class ProductTimelineView(ProductTimelineBase):
         for index, dates in self._versions.items():
             self.draw_highlight(dates)
         if self._expiry_shown:
-            self.draw_incident(self._expiry_date, 2 / 3, "#e96868")
-        self.draw_incident(self._today, 1 / 2, "#dfdfdf")
+            it = self.draw_incident(self._expiry_date, 2 / 3, "#e96868")
+            it.set_message("Licence/AUP/Trial expired after: %s"
+                           % self._expiry_date.strftime("%b.%d.%Y"))
+        it = self.draw_incident(self._today, 1 / 2, "#dfdfdf")
+        it.set_message("Today: %s" % self._today.strftime("%b.%d.%Y"))
 
     def draw_timeline(self):
         h = self.LineThick
@@ -729,11 +757,13 @@ class ProductTimelineView(ProductTimelineBase):
         x = self.compute_x(date) - r
         y = (self.view.height() / 2) - r
         w = h = r * 2
-        return self.draw_item(x=x, y=y, z=z, w=w, h=h, r=r, color=color)
+        it = self.draw_item(x=x, y=y, z=z, w=w, h=h, r=r, color=color)
+        it.enable_hover("#7399ce")
+        return it
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(80)
+    ViewHeight = px(60)
     ButtonWidth = px(68)
     ButtonHeight = px(18)
 
@@ -745,13 +775,7 @@ class ProductReleasedView(ProductTimelineBase):
         layout.addWidget(self.view)
 
         self.setFixedHeight(self.ViewHeight + px(12))  # + scrollbar height
-        self.setStyleSheet("""
-        border: none;
-        border-radius: 0;
-        border-bottom-right-radius: {radius}px;
-        border-bottom-left-radius: {radius}px;
-        background: #202020;
-        """.format(radius=px(12)))
+        self.setStyleSheet("border: none; background: #202020;")
 
     def draw(self):
         top_left = QtCore.QPoint(0, 0)
@@ -762,7 +786,6 @@ class ProductReleasedView(ProductTimelineBase):
         self.draw_time(self._expiry_date, "#e96868")
 
         row_count = int(self.ViewHeight / self.ButtonHeight)
-        row_count -= 1  # reserve 1 row spacing for hint message line
         prev_items = [None] * row_count  # for collision check
         reversed_dates = [
             self._versions[i]
@@ -812,7 +835,13 @@ class ProductReleasedView(ProductTimelineBase):
         it.setData(it.DateRole, date)
         it.setData(it.VersionRole, tx.strip())
         it.enable_hover("#a4a4a4", "#1c1c1c")
-
+        if date == self._current:
+            it.set_message("Current Ragdoll version.")
+        elif date == self._latest_update:
+            it.set_message("Latest updatable Ragdoll version. Go get it!")
+        else:
+            it.set_message("Old Ragdoll release, click to open release note "
+                           "in web browser.")
         return it
 
     def draw_time(self, date, color):
@@ -833,6 +862,46 @@ class ProductReleasedView(ProductTimelineBase):
                         break
 
 
+class ProductTimelineFooter(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(ProductTimelineFooter, self).__init__(parent)
+
+        widgets = {
+            "Messages": QtWidgets.QLabel(),
+        }
+        _radius = px(12)
+
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.setContentsMargins(_radius, 0, _radius, px(4))
+        layout.addWidget(widgets["Messages"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(container)
+
+        self.setStyleSheet("""
+        color: #4a4a4a;
+        background: #202020;
+        border: none;
+        border-radius: 0;
+        border-bottom-right-radius: {radius}px;
+        border-bottom-left-radius: {radius}px;
+        """.format(radius=_radius))
+
+        self._widgets = widgets
+        self.set_message("")
+
+    def set_message(self, text):
+        if text:
+            self._widgets["Messages"].setText(text)
+        else:
+            self._widgets["Messages"].setText(
+                "Click & drag, or scroll mouse wheel with Alt key pressed to "
+                "navigate.")
+
+
 class ProductTimelineWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
@@ -841,6 +910,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         widgets = {
             "Timeline": ProductTimelineView(),
             "Released": ProductReleasedView(),
+            "Footer": ProductTimelineFooter(),
         }
 
         # timeline has shadow fx + transparent bg,
@@ -860,6 +930,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         layout.setSpacing(0)
         layout.addWidget(time_container)
         layout.addWidget(widgets["Released"])
+        layout.addWidget(widgets["Footer"])
 
         # scroll sync
         t_w = widgets["Timeline"]
@@ -880,6 +951,8 @@ class ProductTimelineWidget(QtWidgets.QWidget):
             r_w.view.horizontalScrollBar().rangeChanged.disconnect()
 
         self.destroyed.connect(cleanup)
+        widgets["Timeline"].message_sent.connect(widgets["Footer"].set_message)
+        widgets["Released"].message_sent.connect(widgets["Footer"].set_message)
 
         self._widgets = widgets
 

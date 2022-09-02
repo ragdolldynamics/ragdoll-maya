@@ -2794,7 +2794,7 @@ def add_target(selection=None, **opts):
 
         # assume same size for targets/timings/hards
         mod.set_attr(plan["timings"][idx], duration)
-        mod.set_attr(plan["hards"][idx], True)
+        mod.set_attr(plan["hards"][idx], 1)
         mod.set_attr(plan["timings"][idx - 1], t)
         mod.do_it()
 
@@ -2814,7 +2814,7 @@ def add_target(selection=None, **opts):
 
             # assume same size for targets/timings/hards
             mod.set_attr(foot["timings"][idx], duration)
-            mod.set_attr(foot["hards"][idx], True)
+            mod.set_attr(foot["hards"][idx], 1)
             mod.set_attr(foot["timings"][idx - 1], t)
             mod.do_it()
 

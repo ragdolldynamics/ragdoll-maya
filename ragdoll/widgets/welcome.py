@@ -69,7 +69,52 @@ def _text_to_color(text):
     )
 
 
-product_status = base.ProductStatus()
+class _ProductStatus(base.ProductStatus):
+
+    def get_gradient(self):
+        if self.is_expired():
+            return "#f3465a", "#db2550"
+        elif self.is_floating() and not self.has_lease():
+            return "#ff934c", "#fc686f"
+        elif self.is_perpetual():
+            return "#01e9bd", "#007cde"
+        elif self.is_trial():
+            return "#38f8d4", "#13dc5c"
+        else:
+            return "#216383", "#71bfbc"
+
+    def get_features(self):
+        return {
+            "Trial": (
+                "Record up to 100 frames\n"
+                "Export up to 10 Markers"
+            ),
+            "Personal": (
+                "Record up to 100 frames\n"
+                "Export up to 10 Markers\n"
+                "Free upgrades forever"
+            ),
+            "Complete": (
+                "Unlimited recording frames\n"
+                "Export up to 10 Markers\n"
+                "High-performance solver"
+            ),
+            "Unlimited": (
+                "The fully-featured, unrestricted version"
+            ),
+            "Freelance": (
+                "The fully-featured, unrestricted version"
+            ),
+            "Educational": (
+                "The fully-featured, unrestricted version"
+            ),
+            "Batch": (
+                ""
+            ),
+        }.get(self.name(), "Unknown Product")
+
+
+product_status = _ProductStatus()
 
 
 class GreetingSplash(QtWidgets.QLabel):
@@ -127,29 +172,9 @@ class GreetingSplash(QtWidgets.QLabel):
         painter.fillPath(path, QtGui.QBrush(gradient))
 
     def set_color(self):
-        p_ = product_status
-        trial = p_.is_trial()
-        perpetual = p_.is_perpetual()
-        expired = p_.is_expired()
-
-        if perpetual:
-            gradient = "#01e9bd", "#007cde"
-
-        elif trial:
-            if expired:
-                gradient = "#f3465a", "#db2550"
-            else:
-                gradient = "#38f8d4", "#13dc5c"
-        else:
-            if expired:
-                gradient = "#f3465a", "#db2550"
-            else:
-                gradient = "#216383", "#71bfbc"
-
-        if not expired and p_.is_floating() and not p_.has_lease():
-            gradient = "#ff934c", "#fc686f"
-
-        self._gradient = QtGui.QColor(gradient[0]), QtGui.QColor(gradient[1])
+        self._gradient = tuple(
+            map(QtGui.QColor, product_status.get_gradient())
+        )
 
 
 class GreetingUpdate(QtWidgets.QWidget):
@@ -1033,9 +1058,6 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def set_product(self):
         p_ = product_status
         name = p_.name()
-        trial = p_.is_trial()
-        perpetual = p_.is_perpetual()
-        expired = p_.is_expired()
 
         self._widgets["Product"].setText(name)
         self._widgets["Commercial"].setText(
@@ -1043,63 +1065,16 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             else "Commercial" if not p_.is_floating()
             else "Lease Assigned" if p_.has_lease() else "Lease Dropped"
         )
-
-        features = {
-            "Trial": (
-                "Record up to 100 frames\n"
-                "Export up to 10 Markers"
-            ),
-            "Personal": (
-                "Record up to 100 frames\n"
-                "Export up to 10 Markers\n"
-                "Free upgrades forever"
-            ),
-            "Complete": (
-                "Unlimited recording frames\n"
-                "Export up to 10 Markers\n"
-                "High-performance solver"
-            ),
-            "Unlimited": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Freelance": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Educational": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Batch": (
-                ""
-            ),
-        }.get(name, "Unknown Product")
-
         self._widgets["Features"].setText(
             "<p style=\"line-height:%d%%\">%s</p>"
-            % (140, features.replace("\n", "<br>"))
+            % (140, p_.get_features().replace("\n", "<br>"))
         )
-
-        if perpetual:
-            gradient = "stop:0 #01e9bd, stop:1 #007cde"
-
-        elif trial:
-            if expired:
-                gradient = "stop:0 #f3465a, stop:1 #db2550"
-            else:
-                gradient = "stop:0 #38f8d4, stop:1 #13dc5c"
-        else:
-            if expired:
-                gradient = "stop:0 #f3465a, stop:1 #db2550"
-            else:
-                gradient = "stop:0 #216383, stop:1 #71bfbc"
-
-        if not expired and p_.is_floating() and not p_.has_lease():
-            gradient = "stop:0 #ff934c, stop:1 #fc686f"
-
         self.setStyleSheet("""
         #LicencePlate {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:1, %s);
-        }
-        """ % gradient)
+            background: qlineargradient(
+            x1:0, y1:0, x2:1, y2:1, stop:0 %s, stop:1 %s
+        );}
+        """ % p_.get_gradient())
 
     def paintEvent(self, event):
         # required for applying background styling

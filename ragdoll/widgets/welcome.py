@@ -1760,7 +1760,7 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                 log.info("Ragdoll is activated")
             else:
                 log.info("Ragdoll is deactivated")
-            self._widgets["Pages"].setCurrentIndex(p_.has_internet())
+            self._widgets["Pages"].setCurrentIndex(not p_.has_internet())
 
         widget = self._widgets["Pages"].currentWidget()
         widget.status_update()

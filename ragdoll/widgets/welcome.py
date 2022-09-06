@@ -42,7 +42,7 @@ card_height = video_height + (card_padding * 2)
 anchor_size = px(42)
 sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
-splash_height = px(160)
+splash_height = px(125)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
 window_height = px(590)  # just enough to see the first row of videos
 
@@ -83,69 +83,81 @@ class GreetingSplash(QtWidgets.QLabel):
             QtCore.Qt.KeepAspectRatioByExpanding,
             QtCore.Qt.SmoothTransformation
         )
-        self.setFixedWidth(splash_width)
+        self.setMinimumWidth(splash_width)
         self.setFixedHeight(splash_height)
         self._image = pixmap
 
     def paintEvent(self, event):
+        """
+          Splash image                 Status
+         .------------------------,-----------.
+        |   RAGDOLL              /             |
+        |      DYNAMICS         /              |
+        |______________________/_______________|
+
+        """
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(painter.Antialiasing)
+
         r = px(8)
         w = self.width()
         h = self.height()
 
-        path = QtGui.QPainterPath()
-        path.setFillRule(QtCore.Qt.WindingFill)
-        path.addRoundedRect(QtCore.QRect(0, 0, w, h), r, r)
+        clip_path = QtGui.QPainterPath()
+        clip_path.setFillRule(QtCore.Qt.WindingFill)
+        clip_path.addRoundedRect(QtCore.QRect(0, 0, w, h), r, r)
+        clip_path.addRect(0, h - r, w, r)
+        painter.setClipPath(clip_path.simplified())
 
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(painter.Antialiasing)
-        painter.setClipPath(path.simplified())
         painter.drawPixmap(0, 0, self._image)
 
+        spacing = px(400)
+        path = QtGui.QPainterPath()
+        path.moveTo(spacing + px(75), 0)
+        path.lineTo(spacing, h)
+        path.lineTo(w, h)
+        path.lineTo(w, 0)
 
-class GreetingStatus(base.OverlayWidget):
+        gradient = QtGui.QLinearGradient()
+        gradient.setStart(spacing, h)
+        gradient.setFinalStop(w, 0)
+        gradient.setColorAt(0, QtGui.QColor("#01e9bd"))
+        gradient.setColorAt(1, QtGui.QColor("#007cde"))
+        painter.fillPath(path, QtGui.QBrush(gradient))
+
+
+class GreetingUpdate(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingStatus, self).__init__(parent)
-        self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
+        super(GreetingUpdate, self).__init__(parent)
 
         widgets = {
-            "Line": QtWidgets.QLabel(),
-            "Version": QtWidgets.QLabel(),
+            "ExpiryIcon": QtWidgets.QPushButton(),
+            "ExpiryDate": QtWidgets.QLabel(),
+            "ProductName": QtWidgets.QLabel(),
             "UpdateIcon": QtWidgets.QLabel(),
             "UpdateLink": QtWidgets.QLabel("checking update..."),
-            "Badge": LicenceStatusBadge(),
         }
 
-        widgets["Line"].setObjectName("GreetingStatusLine")
-        widgets["Line"].setFixedWidth(splash_width)
-        widgets["Line"].setFixedHeight(px(32))
-        widgets["Line"].setStyleSheet("""
-        #GreetingStatusLine {{
-            background-color: #6c000000;
-            border-bottom-left-radius: {radius}px;
-            border-bottom-right-radius: {radius}px;
-        }}
-        """.format(radius=px(8)))
+        widgets["ExpiryIcon"].setAttribute(
+            QtCore.Qt.WA_TransparentForMouseEvents
+        )
+        widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
+        widgets["ExpiryIcon"].setStyleSheet("padding: 0px;")
+        widgets["UpdateIcon"].setFixedSize(px(20), px(20))
+        widgets["ProductName"].setStyleSheet("font-size: %dpx" % px(30))
 
-        widgets["UpdateIcon"].setFixedSize(QtCore.QSize(px(20), px(20)))
-        widgets["UpdateLink"].setStyleSheet("color: #acacac;")
-        widgets["UpdateLink"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        widgets["Version"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        widgets["Version"].setText("Current Version: %s" % __.version_str)
-
-        layout = QtWidgets.QHBoxLayout(widgets["Line"])
-        layout.setContentsMargins(px(8), px(6), px(2), px(6))
-        layout.setSpacing(px(6))
-        layout.addWidget(widgets["Badge"])
+        head = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(head)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addStretch(1)
-        layout.addWidget(widgets["Version"])
-        layout.addSpacing(px(8))
+        layout.addWidget(widgets["ExpiryIcon"])
+        layout.addWidget(widgets["ExpiryDate"])
 
-        _update_row = QtWidgets.QWidget()
-        _update_row.setFixedWidth(splash_width)
-        _update_row.setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        layout = QtWidgets.QHBoxLayout(_update_row)
-        layout.setContentsMargins(0, 0, px(12), px(6))
+        footer = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(footer)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch(1)
         layout.addWidget(widgets["UpdateIcon"])
         layout.addSpacing(px(2))
@@ -153,67 +165,89 @@ class GreetingStatus(base.OverlayWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, px(4), px(14), px(4))
+        layout.addWidget(head)
         layout.addStretch(1)
-        layout.addWidget(_update_row, alignment=QtCore.Qt.AlignHCenter)
-        layout.addWidget(widgets["Line"], alignment=QtCore.Qt.AlignHCenter)
+        layout.addWidget(widgets["ProductName"], 0, QtCore.Qt.AlignRight)
+        layout.addWidget(footer)
 
+        self.setStyleSheet("""
+        border: none;
+        outline: none;
+        color: #fefefe;
+        font-family: Sora;
+        background: transparent;
+        """)
         self._widgets = widgets
 
-    def check_update(self):
-        self._widgets["UpdateIcon"].hide()
+    def _expiry(self):
+        p_ = product_status
+        trial = p_.is_trial()
+        perpetual = p_.is_perpetual()
+        expiry_date = p_.expiry_date()
+        expiry = expiry_date.strftime("%b.%d.%Y") if expiry_date else None
+        expired = p_.is_expired()
+        aup_date = p_.aup_date()
+        aup = aup_date.strftime("%b.%d.%Y") if aup_date else None
 
-        if product_status.is_updatable():
-            versions = sorted(product_status.release_history())
-
-            if versions:
-                latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
-                current = tuple(map(int, __.version_str.split(".")[:3]))
-                if latest <= current:
-                    status, latest = "uptodate", ""
-                else:
-                    status, latest = "update", ".".join(map(str, latest))
-            else:
-                status, latest = "offline", ""
+        if perpetual:
+            color = "#fefefe"
+        elif trial:
+            color = "#ec7171" if expired else "#fefefe"
         else:
-            status, latest = "expired", ""
+            color = "#ec7171" if expired else "#fefefe"
 
+        if not expired and p_.is_floating() and not p_.has_lease():
+            color = "#f3bc75"
+
+        status = "%s %s" % (
+            "Perpetual" if perpetual else "Expired" if expired else "Expiry",
+            ("/ AUP " + aup) if perpetual else expiry,
+        )
+
+        w = self._widgets
+        w["ExpiryDate"].setText(status)
+        w["ExpiryDate"].setStyleSheet("color: %s;" % color)
+
+        _size = QtCore.QSize(px(16), px(16))
+        _icon = QtGui.QIcon(_resource("ui", "award.svg"))
+        pixmap = _icon.pixmap(_size)
+        _tint_color(pixmap, QtGui.QColor(color))
+        _icon = QtGui.QIcon(pixmap)
+        w["ExpiryIcon"].setIcon(_icon)
+        w["ExpiryIcon"].setIconSize(_size)
+
+    def _product(self, status):
+        if status == "update":
+            self._widgets["ProductName"].hide()
+        else:
+            self._widgets["ProductName"].setText(product_status.name())
+            self._widgets["ProductName"].show()
+
+    def _update(self, status, latest):
         widgets = self._widgets
+        widgets["UpdateIcon"].hide()
 
-        icon = {
-            "update": _resource("ui", "cloud-arrow-down-fill.svg"),
-            "uptodate": _resource("ui", "cloud-check-fill.svg"),
-            "offline": _resource("ui", "cloud-slash.svg"),
-            "expired": _resource("ui", "cloud.svg"),
-        }[status]
+        icon = _resource("ui", {
+            "update": "cloud-arrow-down-fill.svg",
+            "uptodate": "cloud-check-fill.svg",
+            "offline": "cloud-slash.svg",
+            "expired": "cloud.svg",
+        }[status])
+
         color = {
-            "update": "#e0db57",
-            "uptodate": "#67bf8f",
+            "update": "#fefefe",
+            "uptodate": "#fefefe",
             "offline": "#585858",
             "expired": "#e27d7d",
         }[status]
+
         text = {
-            "update": "Update Version: %s" % latest,
-            "uptodate": "Version up to date.",
-            "offline": "No internet, can't check for update.",
-            "expired": "Annual upgrade expired.",
+            "update": "Update Available<br/>%s" % latest,
+            "uptodate": "Version up to date",
+            "offline": "No internet, can't check update",
+            "expired": "Upgrade plan expired",
         }[status]
-
-        # icon
-        widgets["UpdateIcon"].setStyleSheet(
-            "background: transparent; image: url(%s);" % icon
-        )
-        widgets["UpdateIcon"].style().unpolish(widgets["UpdateIcon"])
-        widgets["UpdateIcon"].style().polish(widgets["UpdateIcon"])
-
-        # download link or text message
-        widgets["UpdateLink"].setStyleSheet("""
-            color: %s;
-            font: %s;
-            background: transparent;
-            border: none;
-            outline: none;
-        """ % (color, "bold" if status == "update" else "normal"))
 
         if status == "update":
             widgets["UpdateLink"].setOpenExternalLinks(True)
@@ -221,60 +255,81 @@ class GreetingStatus(base.OverlayWidget):
                 QtCore.Qt.TextBrowserInteraction
             )
             widgets["UpdateLink"].setText("""
-            <style> a:link {color: %s;}</style>
+            <p align="right" style="line-height: 82%%;">
+            <style> a:link {color: %s;} </style>
             <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
+            </p>
             """ % (color, text))
+            widgets["UpdateLink"].setStyleSheet(
+                "background: black;"
+                "padding: 0px 16px 16px 0px;"
+                "border-radius: 24px;"
+                "color: %s; font-size: %dpx;" % (color, px(20))
+            )
         else:
             widgets["UpdateLink"].setOpenExternalLinks(False)
             widgets["UpdateLink"].setTextInteractionFlags(
                 QtCore.Qt.NoTextInteraction
             )
             widgets["UpdateLink"].setText(text)
+            widgets["UpdateLink"].setStyleSheet(
+                "color: %s; font-size: %dpx;" % (color, px(10))
+            )
 
+        widgets["UpdateIcon"].setStyleSheet("image: url(%s);" % icon)
         widgets["UpdateIcon"].show()
 
-    def set_licence(self):
-        self._widgets["Badge"].set_status()
+    def set_status(self):
+        if product_status.is_updatable():
+            current_ver = __.version_str
+            versions = sorted(product_status.release_history())
+
+            if versions:
+                latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
+                current = tuple(map(int, current_ver.split(".")[:3]))
+                if latest <= current:
+                    status, latest = "uptodate", ""
+                else:
+                    status, latest = "update", "%d.%02d.%02d" % latest
+            else:
+                status, latest = "offline", ""
+        else:
+            status, latest = "expired", ""
+
+        self._expiry()
+        self._product(status)
+        self._update(status, latest)
 
 
-class GreetingBanner(QtWidgets.QWidget):
-
-    def __init__(self, parent=None):
-        super(GreetingBanner, self).__init__(parent)
-
-        widgets = {
-            "Splash": GreetingSplash(),
-            "Status": GreetingStatus(self)  # overlay
-        }
-
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, pd4, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(widgets["Splash"], alignment=QtCore.Qt.AlignHCenter)
-
-        self._widgets = widgets
-
-    def status_widget(self):
-        return self._widgets["Status"]
-
-
-class GreetingProductTimeline(QtWidgets.QWidget):
+class GreetingInteract(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingProductTimeline, self).__init__(parent)
+        super(GreetingInteract, self).__init__(parent)
 
         widgets = {
+            "Update": GreetingUpdate(),
             "Timeline": base.ProductTimelineWidget(),
         }
 
         widgets["Timeline"].setMinimumWidth(splash_width)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(pd4, 0, pd4, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        layout.addWidget(widgets["Update"])
         layout.addWidget(widgets["Timeline"])
 
+        self.setFixedHeight(
+            splash_height
+            + widgets["Timeline"].minimumHeight()
+        )
         self._widgets = widgets
+
+    def status_widget(self):
+        return self._widgets["Update"]
+
+    def timeline_widget(self):
+        return self
 
     def set_timeline(self):
         p_ = product_status
@@ -282,7 +337,7 @@ class GreetingProductTimeline(QtWidgets.QWidget):
         versions = set(p_.release_history())
         current = ".".join(__.version_str.split(".")[:3])
         versions.add(current)
-        expiry_date = p_.aup_date() or p_.expiry_date()
+        expiry_date = p_.aup_date() if p_.is_perpetual() else p_.expiry_date()
 
         self._widgets["Timeline"].set_data(
             released_versions=versions,
@@ -298,23 +353,32 @@ class GreetingPage(QtWidgets.QWidget):
         super(GreetingPage, self).__init__(parent)
 
         widgets = {
-            "Banner": GreetingBanner(),
-            "Timeline": GreetingProductTimeline(),
+            "Splash": GreetingSplash(),
+            "Interact": GreetingInteract(),
         }
 
+        overlay = base.OverlayWidget(parent=self)  # for overlay
+        overlay.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
+        layout = QtWidgets.QVBoxLayout(overlay)
+        layout.setContentsMargins(pd4, 0, pd4, 0)
+        layout.addStretch(1)  # for overlay
+        layout.addWidget(widgets["Interact"])
+
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(pd4, 0, pd4, 0)
         layout.setSpacing(pd3)
-        layout.addWidget(widgets["Banner"])
-        layout.addWidget(widgets["Timeline"])
+        layout.addWidget(widgets["Splash"])
+        layout.addStretch(1)
+
+        self.setFixedHeight(widgets["Interact"].height())
 
         self._widgets = widgets
 
     def status_widget(self):
-        return self._widgets["Banner"].status_widget()
+        return self._widgets["Interact"].status_widget()
 
     def timeline_widget(self):
-        return self._widgets["Timeline"]
+        return self._widgets["Interact"].timeline_widget()
 
 
 class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
@@ -906,76 +970,6 @@ class AssetListPage(QtWidgets.QWidget):
         )
         # connect signal
         widget.asset_opened.connect(self.asset_opened)
-
-
-class LicenceStatusBadge(QtWidgets.QWidget):
-    """One liner product badge
-
-    A badge that sit at left bottom corner of top splash image.
-    Which looks like this:
-
-        * Complete | Expiry June.20.2022
-
-    """
-
-    def __init__(self, parent=None):
-        super(LicenceStatusBadge, self).__init__(parent=parent)
-
-        widgets = {
-            "Icon": QtWidgets.QPushButton(),
-            "Plan": QtWidgets.QLabel(),
-        }
-
-        widgets["Icon"].setStyleSheet("background: transparent; padding: 0px;")
-        widgets["Icon"].setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(widgets["Icon"])
-        layout.addWidget(widgets["Plan"])
-        layout.addStretch(1)
-
-        self._widgets = widgets
-
-    def set_status(self):
-        p_ = product_status
-        name = p_.name()
-        trial = p_.is_trial()
-        perpetual = p_.is_perpetual()
-        expiry_date = p_.expiry_date()
-        expiry = expiry_date.strftime("%b.%d.%Y") if expiry_date else None
-        expired = p_.is_expired()
-        aup_date = p_.aup_date()
-        aup = aup_date.strftime("%b.%d.%Y") if aup_date else None
-
-        if perpetual:
-            color = "#63a1b8"
-        elif trial:
-            color = "#ec7171" if expired else "#67a776"
-        else:
-            color = "#ec7171" if expired else "#67a776"
-
-        if not expired and p_.is_floating() and not p_.has_lease():
-            color = "#f3bc75"
-
-        w = self._widgets
-        status = "%s | %s %s" % (
-            name,
-            "Perpetual" if perpetual else "Expired" if expired else "Expiry",
-            ("/ AUP " + aup) if perpetual else expiry,
-        )
-        w["Plan"].setText(status)
-        w["Plan"].setStyleSheet("background: transparent; "
-                                "color: {color};".format(color=color))
-
-        _size = QtCore.QSize(px(16), px(16))
-        _icon = QtGui.QIcon(_resource("ui", "award.svg"))
-        pixmap = _icon.pixmap(_size)
-        _tint_color(pixmap, QtGui.QColor(color))
-        _icon = QtGui.QIcon(pixmap)
-        w["Icon"].setIcon(_icon)
-        w["Icon"].setIconSize(_size)
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
@@ -1968,6 +1962,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(pd1)
+        layout.addSpacing(pd4)
         layout.addWidget(widgets["Greet"])
         layout.addWidget(widgets["Assets"])
         layout.addWidget(widgets["Licence"])
@@ -2012,8 +2007,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         product_status.data = data
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Licence"].status_widget().set_product()
-        self._widgets["Greet"].status_widget().set_licence()
-        self._widgets["Greet"].status_widget().check_update()
+        self._widgets["Greet"].status_widget().set_status()
         self._widgets["Greet"].timeline_widget().set_timeline()
 
     def on_offline_activate_requested(self):

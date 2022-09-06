@@ -763,7 +763,7 @@ class ProductTimelineView(ProductTimelineBase):
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(60)
+    ViewHeight = px(80)
     ButtonWidth = px(68)
     ButtonHeight = px(18)
 
@@ -775,7 +775,13 @@ class ProductReleasedView(ProductTimelineBase):
         layout.addWidget(self.view)
 
         self.setFixedHeight(self.ViewHeight + px(12))  # + scrollbar height
-        self.setStyleSheet("border: none; background: #202020;")
+        self.setStyleSheet("""
+        background: #202020;
+        border: none;
+        border-radius: 0;
+        border-bottom-right-radius: {radius}px;
+        border-bottom-left-radius: {radius}px;
+        """.format(radius=px(8)))
 
     def draw(self):
         top_left = QtCore.QPoint(0, 0)
@@ -786,6 +792,7 @@ class ProductReleasedView(ProductTimelineBase):
         self.draw_time(self._expiry_date, "#e96868")
 
         row_count = int(self.ViewHeight / self.ButtonHeight)
+        row_count -= 1  # for footer overlaying
         prev_items = [None] * row_count  # for collision check
         reversed_dates = [
             self._versions[i]
@@ -846,8 +853,9 @@ class ProductReleasedView(ProductTimelineBase):
 
     def draw_time(self, date, color):
         x = self.compute_x(date)
-        y0 = self.view.mapToScene(0, 0).y() + 2
-        line = QtCore.QLineF(x, y0, x, self.ViewHeight)
+        y1 = self.view.mapToScene(0, 0).y() + 2
+        y2 = self.ViewHeight - self.ButtonHeight  # for footer
+        line = QtCore.QLineF(x, y1, x, y2)
         self.scene.addLine(line, QtGui.QPen(QtGui.QColor(color)))
 
     def connect_timeline(self, timeline):
@@ -868,38 +876,35 @@ class ProductTimelineFooter(QtWidgets.QWidget):
         super(ProductTimelineFooter, self).__init__(parent)
 
         widgets = {
-            "Messages": QtWidgets.QLabel(),
+            "Message": QtWidgets.QLabel(),
+            "Version": QtWidgets.QLabel(),
         }
-        _radius = px(12)
 
         container = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(_radius, 0, _radius, px(4))
-        layout.addWidget(widgets["Messages"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["Message"], stretch=1)
+        layout.addWidget(widgets["Version"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(container)
 
-        self.setStyleSheet("""
-        color: #4a4a4a;
-        background: #202020;
-        border: none;
-        border-radius: 0;
-        border-bottom-right-radius: {radius}px;
-        border-bottom-left-radius: {radius}px;
-        """.format(radius=_radius))
+        widgets["Message"].setStyleSheet("color: #4a4a4a;")
+        widgets["Version"].setStyleSheet("color: #8b8b8b;")
 
         self._widgets = widgets
         self.set_message("")
 
     def set_message(self, text):
         if text:
-            self._widgets["Messages"].setText(text)
+            self._widgets["Message"].setText(text)
         else:
-            self._widgets["Messages"].setText(
-                "Click & drag, or scroll mouse wheel with Alt key pressed to "
-                "navigate.")
+            self._widgets["Message"].setText(
+                "Drag, or scroll with Alt key pressed to navigate.")
+
+    def set_version(self, ver_str):
+        self._widgets["Version"].setText("Current Version: %s" % ver_str)
 
 
 class ProductTimelineWidget(QtWidgets.QWidget):
@@ -925,12 +930,17 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["Timeline"])
 
+        overlay = OverlayWidget(parent=widgets["Released"])  # for overlay
+        layout = QtWidgets.QVBoxLayout(overlay)
+        layout.setContentsMargins(px(12), 0, px(12), px(4))
+        layout.addStretch(1)  # for overlay
+        layout.addWidget(widgets["Footer"])
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(time_container)
         layout.addWidget(widgets["Released"])
-        layout.addWidget(widgets["Footer"])
 
         # scroll sync
         t_w = widgets["Timeline"]
@@ -956,10 +966,17 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
         self._widgets = widgets
 
+    def minimumHeight(self):
+        return (
+            self._widgets["Timeline"].ViewHeight
+            + self._widgets["Released"].ViewHeight
+        )
+
     def set_data(self, released_versions, current_ver, expiry_date):
         _args = released_versions, current_ver, expiry_date
         self._widgets["Timeline"].set_data(*_args)
         self._widgets["Released"].set_data(*_args)
+        self._widgets["Footer"].set_version(current_ver)
 
     def draw(self):
         self._widgets["Timeline"].draw()

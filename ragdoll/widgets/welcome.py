@@ -73,7 +73,7 @@ class _ProductStatus(base.ProductStatus):
 
     def get_gradient(self):
         if self.is_expired():
-            return "#f3465a", "#db2550"
+            return "#ed3b4b", "#652626"
         elif self.is_floating() and not self.has_lease():
             return "#ff934c", "#fc686f"
         elif self.is_perpetual():
@@ -1009,7 +1009,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
         self.setObjectName("LicencePlate")
-        self.setMinimumHeight(px(120))
+        self.setMinimumHeight(px(100))
 
         panels = {
             "Product": QtWidgets.QWidget(),
@@ -1018,7 +1018,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
         widgets = {
             "Product": QtWidgets.QLabel(),
-            "Commercial": QtWidgets.QLabel(),
+            "BriefDes": QtWidgets.QLabel(),
             "Features": QtWidgets.QLabel(),
         }
 
@@ -1027,7 +1027,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         panels["Features"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
 
         widgets["Product"].setObjectName("PlateProduct")
-        widgets["Commercial"].setObjectName("PlateCommercial")
+        widgets["BriefDes"].setObjectName("PlateBriefDes")
         widgets["Features"].setObjectName("PlateFeatures")
 
         layout = QtWidgets.QVBoxLayout(panels["Product"])
@@ -1035,7 +1035,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout.setSpacing(0)
         layout.addSpacing(pd4)
         layout.addWidget(widgets["Product"], alignment=QtCore.Qt.AlignRight)
-        layout.addWidget(widgets["Commercial"], alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(widgets["BriefDes"], alignment=QtCore.Qt.AlignRight)
         layout.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(panels["Features"])
@@ -1060,8 +1060,9 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         name = p_.name()
 
         self._widgets["Product"].setText(name)
-        self._widgets["Commercial"].setText(
-            "Non-Commercial" if p_.is_non_commercial()
+        self._widgets["BriefDes"].setText(
+            "Expired" if p_.is_expired()
+            else "Non-Commercial" if p_.is_non_commercial()
             else "Commercial" if not p_.is_floating()
             else "Lease Assigned" if p_.has_lease() else "Lease Dropped"
         )

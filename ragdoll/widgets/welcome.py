@@ -14,7 +14,7 @@ except ImportError:
     from urlparse import urlparse  # py2
 
 from . import base
-from .. import __, ui
+from .. import ui
 
 
 __throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
@@ -281,7 +281,7 @@ class GreetingUpdate(QtWidgets.QWidget):
 
     def set_status(self):
         if product_status.is_updatable():
-            current_ver = __.version_str
+            current_ver = product_status.current_version()
             versions = sorted(product_status.release_history())
 
             if versions:
@@ -335,7 +335,7 @@ class GreetingInteract(QtWidgets.QWidget):
         p_ = product_status
 
         versions = set(p_.release_history())
-        current = ".".join(__.version_str.split(".")[:3])
+        current = p_.current_version()
         versions.add(current)
         expiry_date = p_.aup_date() if p_.is_perpetual() else p_.expiry_date()
 

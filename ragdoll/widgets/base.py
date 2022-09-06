@@ -1017,6 +1017,9 @@ class ProductStatus(object):
             "trial": "Trial",
         }.get(name) or name
 
+    def current_version(self):
+        return self.data["currentVersion"]
+
     def key(self):
         return self.data["key"]
 

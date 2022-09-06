@@ -3370,6 +3370,7 @@ def welcome_user(*args):
             licence.install()
 
             data = licence.data()
+            data["currentVersion"] = ".".join(__.version_str.split(".")[:3])
             try:
                 data["ip"], port = licence._parse_environment()
                 data["port"] = str(port)

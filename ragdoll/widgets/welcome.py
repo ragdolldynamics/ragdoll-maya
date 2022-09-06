@@ -86,6 +86,7 @@ class GreetingSplash(QtWidgets.QLabel):
         self.setMinimumWidth(splash_width)
         self.setFixedHeight(splash_height)
         self._image = pixmap
+        self._gradient = (QtGui.QColor("black"), QtGui.QColor("gray"))
 
     def paintEvent(self, event):
         """
@@ -121,9 +122,34 @@ class GreetingSplash(QtWidgets.QLabel):
         gradient = QtGui.QLinearGradient()
         gradient.setStart(spacing, h)
         gradient.setFinalStop(w, 0)
-        gradient.setColorAt(0, QtGui.QColor("#01e9bd"))
-        gradient.setColorAt(1, QtGui.QColor("#007cde"))
+        gradient.setColorAt(0, self._gradient[0])
+        gradient.setColorAt(1, self._gradient[1])
         painter.fillPath(path, QtGui.QBrush(gradient))
+
+    def set_color(self):
+        p_ = product_status
+        trial = p_.is_trial()
+        perpetual = p_.is_perpetual()
+        expired = p_.is_expired()
+
+        if perpetual:
+            gradient = "#01e9bd", "#007cde"
+
+        elif trial:
+            if expired:
+                gradient = "#f3465a", "#db2550"
+            else:
+                gradient = "#38f8d4", "#13dc5c"
+        else:
+            if expired:
+                gradient = "#f3465a", "#db2550"
+            else:
+                gradient = "#216383", "#71bfbc"
+
+        if not expired and p_.is_floating() and not p_.has_lease():
+            gradient = "#ff934c", "#fc686f"
+
+        self._gradient = QtGui.QColor(gradient[0]), QtGui.QColor(gradient[1])
 
 
 class GreetingUpdate(QtWidgets.QWidget):
@@ -345,6 +371,9 @@ class GreetingPage(QtWidgets.QWidget):
 
     def timeline_widget(self):
         return self._widgets["Interact"].timeline_widget()
+
+    def splash_widget(self):
+        return self._widgets["Splash"]
 
 
 class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
@@ -955,7 +984,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
         self.setObjectName("LicencePlate")
-        self.setMinimumHeight(px(86))
+        self.setMinimumHeight(px(120))
 
         panels = {
             "Product": QtWidgets.QWidget(),
@@ -968,7 +997,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Features": QtWidgets.QLabel(),
         }
 
-        panels["Product"].setFixedWidth(px(140))
+        panels["Product"].setFixedWidth(px(180))
         panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         panels["Features"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
 
@@ -1033,6 +1062,12 @@ class LicenceStatusPlate(QtWidgets.QWidget):
             "Unlimited": (
                 "The fully-featured, unrestricted version"
             ),
+            "Freelance": (
+                "The fully-featured, unrestricted version"
+            ),
+            "Educational": (
+                "The fully-featured, unrestricted version"
+            ),
             "Batch": (
                 ""
             ),
@@ -1044,18 +1079,18 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         )
 
         if perpetual:
-            gradient = "stop:0 #4facfe, stop:1 #00f2fe"
+            gradient = "stop:0 #01e9bd, stop:1 #007cde"
 
         elif trial:
             if expired:
                 gradient = "stop:0 #f3465a, stop:1 #db2550"
             else:
-                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
+                gradient = "stop:0 #38f8d4, stop:1 #13dc5c"
         else:
             if expired:
                 gradient = "stop:0 #f3465a, stop:1 #db2550"
             else:
-                gradient = "stop:0 #43ea80, stop:1 #38f8d4"
+                gradient = "stop:0 #216383, stop:1 #71bfbc"
 
         if not expired and p_.is_floating() and not p_.has_lease():
             gradient = "stop:0 #ff934c, stop:1 #fc686f"
@@ -1973,6 +2008,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         product_status.data = data
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Licence"].status_widget().set_product()
+        self._widgets["Greet"].splash_widget().set_color()
         self._widgets["Greet"].status_widget().set_status()
         self._widgets["Greet"].timeline_widget().set_timeline()
 

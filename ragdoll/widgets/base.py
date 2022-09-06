@@ -708,6 +708,7 @@ class ProductTimelineView(ProductTimelineBase):
         self.setFixedHeight(self.ViewHeight)
 
     def draw(self):
+        self.scene.clear()
         top_left = QtCore.QPoint(0, 0)
         bottom_right = QtCore.QPoint(self._view_len, self.ViewHeight)
         self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))
@@ -784,6 +785,7 @@ class ProductReleasedView(ProductTimelineBase):
         """.format(radius=px(8)))
 
     def draw(self):
+        self.scene.clear()
         top_left = QtCore.QPoint(0, 0)
         bottom_right = QtCore.QPoint(self._view_len, self.ViewHeight)
         self.scene.setSceneRect(QtCore.QRectF(top_left, bottom_right))

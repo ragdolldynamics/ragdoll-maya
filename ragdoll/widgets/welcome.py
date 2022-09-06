@@ -132,31 +132,24 @@ class GreetingUpdate(QtWidgets.QWidget):
         super(GreetingUpdate, self).__init__(parent)
 
         widgets = {
-            "ExpiryIcon": QtWidgets.QPushButton(),
             "ExpiryDate": QtWidgets.QLabel(),
             "ProductName": QtWidgets.QLabel(),
             "UpdateIcon": QtWidgets.QLabel(),
             "UpdateLink": QtWidgets.QLabel("checking update..."),
         }
 
-        widgets["ExpiryIcon"].setAttribute(
-            QtCore.Qt.WA_TransparentForMouseEvents
-        )
-        widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
-        widgets["ExpiryIcon"].setStyleSheet("padding: 0px;")
         widgets["UpdateIcon"].setFixedSize(px(20), px(20))
         widgets["ProductName"].setStyleSheet("font-size: %dpx" % px(30))
 
-        head = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(head)
+        expiry = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(expiry)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addStretch(1)
-        layout.addWidget(widgets["ExpiryIcon"])
         layout.addWidget(widgets["ExpiryDate"])
 
-        footer = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(footer)
+        update = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(update)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addStretch(1)
         layout.addWidget(widgets["UpdateIcon"])
@@ -166,10 +159,10 @@ class GreetingUpdate(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
         layout.setContentsMargins(0, px(4), px(14), px(4))
-        layout.addWidget(head)
+        layout.addWidget(expiry)
         layout.addStretch(1)
         layout.addWidget(widgets["ProductName"], 0, QtCore.Qt.AlignRight)
-        layout.addWidget(footer)
+        layout.addWidget(update)
 
         self.setStyleSheet("""
         border: none;
@@ -182,23 +175,12 @@ class GreetingUpdate(QtWidgets.QWidget):
 
     def _expiry(self):
         p_ = product_status
-        trial = p_.is_trial()
         perpetual = p_.is_perpetual()
         expiry_date = p_.expiry_date()
         expiry = expiry_date.strftime("%b.%d.%Y") if expiry_date else None
         expired = p_.is_expired()
         aup_date = p_.aup_date()
         aup = aup_date.strftime("%b.%d.%Y") if aup_date else None
-
-        if perpetual:
-            color = "#fefefe"
-        elif trial:
-            color = "#ec7171" if expired else "#fefefe"
-        else:
-            color = "#ec7171" if expired else "#fefefe"
-
-        if not expired and p_.is_floating() and not p_.has_lease():
-            color = "#f3bc75"
 
         status = "%s %s" % (
             "Perpetual" if perpetual else "Expired" if expired else "Expiry",
@@ -207,15 +189,6 @@ class GreetingUpdate(QtWidgets.QWidget):
 
         w = self._widgets
         w["ExpiryDate"].setText(status)
-        w["ExpiryDate"].setStyleSheet("color: %s;" % color)
-
-        _size = QtCore.QSize(px(16), px(16))
-        _icon = QtGui.QIcon(_resource("ui", "award.svg"))
-        pixmap = _icon.pixmap(_size)
-        _tint_color(pixmap, QtGui.QColor(color))
-        _icon = QtGui.QIcon(pixmap)
-        w["ExpiryIcon"].setIcon(_icon)
-        w["ExpiryIcon"].setIconSize(_size)
 
     def _product(self, status):
         if status == "update":
@@ -232,15 +205,8 @@ class GreetingUpdate(QtWidgets.QWidget):
             "update": "cloud-arrow-down-fill.svg",
             "uptodate": "cloud-check-fill.svg",
             "offline": "cloud-slash.svg",
-            "expired": "cloud.svg",
+            "expired": "cloud-slash.svg",
         }[status])
-
-        color = {
-            "update": "#fefefe",
-            "uptodate": "#fefefe",
-            "offline": "#585858",
-            "expired": "#e27d7d",
-        }[status]
 
         text = {
             "update": "Update Available<br/>%s" % latest,
@@ -256,15 +222,15 @@ class GreetingUpdate(QtWidgets.QWidget):
             )
             widgets["UpdateLink"].setText("""
             <p align="right" style="line-height: 82%%;">
-            <style> a:link {color: %s;} </style>
+            <style> a:link {color: #fefefe;} </style>
             <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
             </p>
-            """ % (color, text))
+            """ % text)
             widgets["UpdateLink"].setStyleSheet(
                 "background: black;"
                 "padding: 0px 16px 16px 0px;"
                 "border-radius: 24px;"
-                "color: %s; font-size: %dpx;" % (color, px(20))
+                "font-size: %dpx;" % px(20)
             )
         else:
             widgets["UpdateLink"].setOpenExternalLinks(False)
@@ -273,7 +239,7 @@ class GreetingUpdate(QtWidgets.QWidget):
             )
             widgets["UpdateLink"].setText(text)
             widgets["UpdateLink"].setStyleSheet(
-                "color: %s; font-size: %dpx;" % (color, px(10))
+                "font-size: %dpx;" % px(10)
             )
 
         widgets["UpdateIcon"].setStyleSheet("image: url(%s);" % icon)

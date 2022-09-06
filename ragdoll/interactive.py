@@ -3370,10 +3370,6 @@ def welcome_user(*args):
             licence.install()
 
             data = licence.data()
-            data["marketingName"] = (
-                "Trial" if data["isTrial"]
-                else ui.product_to_marketingname(data["product"])
-            )
             try:
                 data["ip"], port = licence._parse_environment()
                 data["port"] = str(port)

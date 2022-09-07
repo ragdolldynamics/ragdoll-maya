@@ -1981,7 +1981,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd1)
+        layout.setSpacing(pd2)
         layout.addSpacing(pd4)
         layout.addWidget(widgets["Greet"])
         layout.addWidget(widgets["Assets"])

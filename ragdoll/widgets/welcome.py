@@ -1585,8 +1585,8 @@ class LicenceFloating(_LicencePanelHelper):
             "ProcessBtn": QtWidgets.QPushButton(),
         }
 
-        widgets["ServerIP"].setFixedWidth(px(120))
-        widgets["ServerPort"].setFixedWidth(px(60))
+        widgets["ServerIP"].setFixedWidth(px(320))
+        widgets["ServerPort"].setFixedWidth(px(100))
         widgets["ServerIP"].setReadOnly(True)  # set from env var
         widgets["ServerPort"].setReadOnly(True)  # set from env var
 

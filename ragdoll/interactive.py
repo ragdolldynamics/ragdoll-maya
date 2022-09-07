@@ -1958,7 +1958,8 @@ def create_attach_constraint(selection=None, **opts):
             "Select two markers to constrain."
         )
 
-    con = commands.create_pin_constraint(a, b, transform=selection[1])
+    transform = selection[1] if selection[1].is_a(cmdx.kTransform) else None
+    con = commands.create_pin_constraint(a, b, transform=transform)
     cmds.select(str(con.parent()))
 
     return True

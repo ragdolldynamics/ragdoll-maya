@@ -1726,19 +1726,20 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         if p_.is_floating():
             log.info("Ragdoll is floating")
             self._widgets["Pages"].setCurrentIndex(2)
-
-        elif p_.is_trial():
-            if p_.is_expired():
-                log.info("Ragdoll is expired")
-            else:
-                log.info("Ragdoll is in trial mode")
         else:
-            # node-lock
-            if p_.is_activated():
-                log.info("Ragdoll is activated")
+            if p_.is_trial():
+                if p_.is_expired():
+                    log.info("Ragdoll is expired")
+                else:
+                    log.info("Ragdoll is in trial mode")
             else:
-                log.info("Ragdoll is deactivated")
-            self._widgets["Pages"].setCurrentIndex(not p_.has_internet())
+                # node-lock
+                if p_.is_activated():
+                    log.info("Ragdoll is activated")
+                else:
+                    log.info("Ragdoll is deactivated")
+            index = not p_.has_internet()
+            self._widgets["Pages"].setCurrentIndex(index)
 
         widget = self._widgets["Pages"].currentWidget()
         widget.status_update()

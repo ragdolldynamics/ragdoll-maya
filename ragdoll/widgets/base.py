@@ -1,5 +1,7 @@
 
+import os
 import re
+import json
 import logging
 import traceback
 import shiboken2
@@ -1113,22 +1115,27 @@ class ProductStatus(object):
 
     def release_history(self, refresh=False):
         if not refresh and self._released is not None:
-            return self._released
+            return self._released[:]
 
+        released = []
         if self.has_ragdoll():
             url = "https://learn.ragdolldynamics.com/news"
             with request.urlopen(url) as r:
                 if r.code == 200:
-                    self._released = list(
+                    released = list(
                         self._iter_parsed_versions(r.readlines())
                     )
-                else:
-                    self._released = []
 
-            return self._released[:]
-        else:
-            return []
-            # TODO: read history from distribution cache for offline users
+        if not released:
+            # Try reading history from distribution cache for offline users
+            root = os.path.dirname(constants.__file__)
+            cache = os.path.join(root, "resources", "versioninfo.json")
+            if os.path.isfile(cache):
+                with open(cache) as f:
+                    released = json.load(f)
+
+        self._released = released
+        return self._released[:]
 
     def has_ragdoll(self, refresh=False):
         return self._ping("https://ragdolldynamics.com/version", refresh)

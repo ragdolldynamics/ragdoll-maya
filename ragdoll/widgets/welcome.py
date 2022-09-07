@@ -1058,14 +1058,15 @@ class LicenceStatusPlate(QtWidgets.QWidget):
     def set_product(self):
         p_ = product_status
         name = p_.name()
-
-        self._widgets["Product"].setText(name)
-        self._widgets["BriefDes"].setText(
-            "Expired" if p_.is_expired()
-            else "Non-Commercial" if p_.is_non_commercial()
+        desc = (
+            "Non-Commercial" if p_.is_non_commercial()
             else "Commercial" if not p_.is_floating()
             else "Lease Assigned" if p_.has_lease() else "Lease Dropped"
         )
+        desc += ", Expired" if p_.is_expired() else ""
+
+        self._widgets["Product"].setText(name)
+        self._widgets["BriefDes"].setText(desc)
         self._widgets["Features"].setText(
             "<p style=\"line-height:%d%%\">%s</p>"
             % (140, p_.get_features().replace("\n", "<br>"))

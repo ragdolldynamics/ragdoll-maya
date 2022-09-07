@@ -1101,8 +1101,15 @@ class ProductStatus(object):
         if self.is_trial():
             return None
         else:
-            return datetime.strptime(
-                self.data["annualUpgradeProgram"], "%Y-%m-%d %H:%M:%S")
+            try:
+                return datetime.strptime(
+                    self.data["annualUpgradeProgram"], "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # Sometimes we get invalid date string for reasons, e.g.
+                # licence changed without plugin reload, or floating
+                # server is not available. Here we just return present
+                # time as expired to indicate something went wrong.
+                return datetime.now()
 
     def release_history(self, refresh=False):
         if not refresh and self._released is not None:

@@ -102,7 +102,7 @@ class _ProductStatus(base.ProductStatus):
             "Unlimited": (
                 "The fully-featured, unrestricted version"
             ),
-            "Freelance": (
+            "Freelancer": (
                 "The fully-featured, unrestricted version"
             ),
             "Educational": (

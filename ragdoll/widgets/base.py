@@ -1012,7 +1012,7 @@ class ProductStatus(object):
         return {
             "enterprise": "Unlimited",
             "educational": "Educational",
-            "freelance": "Freelance",
+            "freelancer": "Freelancer",
             "headless": "Batch",
             "personal": "Personal",
             "complete": "Complete",

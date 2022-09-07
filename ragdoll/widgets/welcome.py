@@ -614,6 +614,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._effects = effects
         self._animations = animations
         self._file_path = None
+        self._has_video = False
 
     def init(self, index):
         """
@@ -629,6 +630,7 @@ class AssetCardItem(QtWidgets.QWidget):
             list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._file_path = index.data(AssetCardModel.AssetRole)
+        self._has_video = os.path.isfile(video)
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):
@@ -647,6 +649,8 @@ class AssetCardItem(QtWidgets.QWidget):
             self._widgets["PosterAnim"].hide()
 
     def enterEvent(self, event):
+        if not self._has_video:
+            return
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()
         anim.stop()
@@ -659,6 +663,8 @@ class AssetCardItem(QtWidgets.QWidget):
         self._widgets["Player"].play()
 
     def leaveEvent(self, event):
+        if not self._has_video:
+            return
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()
         anim.stop()

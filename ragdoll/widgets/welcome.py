@@ -724,7 +724,9 @@ class AssetCardModel(QtGui.QStandardItemModel):
             if item.endswith(".rag") and os.path.isfile(path):
                 rag_files.append(path)
 
-        for path in sorted(rag_files, key=lambda p: os.stat(p).st_mtime):
+        for path in sorted(rag_files,
+                           key=lambda p: os.stat(p).st_mtime,
+                           reverse=True):
             with open(path) as _f:
                 rag = json.load(_f)
             _d = rag.get("ui")

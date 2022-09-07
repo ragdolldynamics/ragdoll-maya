@@ -1796,6 +1796,11 @@ class LicencePage(QtWidgets.QWidget):
         return self._widgets["Plate"]
 
 
+class SideBarAnchorLayout(QtWidgets.QVBoxLayout):
+    def invalidate(self):
+        pass  # so we could arrange anchor position freely
+
+
 class SideBar(QtWidgets.QFrame):
     anchor_clicked = QtCore.Signal(str)
 
@@ -1808,7 +1813,7 @@ class SideBar(QtWidgets.QFrame):
 
         self.setFixedWidth(sidebar_width)
 
-        layout = QtWidgets.QVBoxLayout(widgets["Body"])
+        layout = SideBarAnchorLayout(widgets["Body"])
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(pd3)
@@ -1865,9 +1870,28 @@ class SideBar(QtWidgets.QFrame):
             self.anchor_clicked.emit(name)
         anchor.clicked.connect(on_clicked)
 
+        return name
+
     def set_current_anchor(self, index):
-        anchor = self._anchors[index]
-        anchor.setChecked(True)
+        for i, anchor in enumerate(self._anchors):
+            anchor.setChecked(i == index)
+
+    def slide_anchors(self, widget_pos, slider_pos):
+        count = len(self._anchors)
+        view = self.height()  # should be the same as page height
+        for index, pos in enumerate(widget_pos):
+            anchor = self._anchors[index]
+            offset = pos - slider_pos
+            min_pos = pd1 + index * (anchor_size + pd3)
+            max_pos = view - (pd1 + (count - index) * (anchor_size + pd3))
+
+            if offset <= min_pos:
+                anchor.move(anchor.x(), min_pos)
+                self.set_current_anchor(index)
+            elif offset > max_pos:
+                anchor.move(anchor.x(), max_pos)
+            else:
+                anchor.move(anchor.x(), offset)
 
 
 with open(_resource("ui", "style_welcome.css")) as f:
@@ -1948,10 +1972,12 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
 
-        panels["SideBar"].add_anchor(
-            "Greet", "ragdoll_silhouette_white_128.png", "#e5d680")
-        panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680")
-        panels["SideBar"].add_anchor("Licence", "award.svg", "#80e5cc")
+        _ragdoll_logo = "ragdoll_silhouette_white_128.png"
+        anchor_list = [
+            panels["SideBar"].add_anchor("Greet", _ragdoll_logo, "#e5d680"),
+            panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680"),
+            panels["SideBar"].add_anchor("Licence", "award.svg", "#80e5cc"),
+        ]
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1969,6 +1995,8 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         layout.addWidget(panels["Scroll"])
         self.setCentralWidget(panels["Central"])
 
+        panels["Scroll"].verticalScrollBar().valueChanged.connect(
+            self.on_vertical_scrolled)
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
         widgets["Assets"].asset_opened.connect(self.asset_opened)
         widgets["Assets"].asset_browsed.connect(self.asset_browsed)
@@ -1985,6 +2013,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self._panels = panels
         self._widgets = widgets
         self._animations = animations
+        self._anchor_list = anchor_list
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
 
@@ -1996,6 +2025,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
         self._widgets["Body"].layout().invalidate()
         super(WelcomeWindow, self).resizeEvent(event)
+        self._align_anchors()
 
     def on_licence_updated(self, data):
         product_status.data = data
@@ -2020,6 +2050,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self.setWindowOpacity(0)
         super(WelcomeWindow, self).show()
         self.resize(window_width, window_height)
+        self._align_anchors()
         self._animations["FadeIn"].start()
         # init
         self.licence_updated.emit()
@@ -2027,3 +2058,17 @@ class WelcomeWindow(QtWidgets.QMainWindow):
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
         self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - pd1)
+
+    def on_vertical_scrolled(self, value):
+        self._align_anchors(value)
+
+    def _align_anchors(self, slider_pos=None):
+        slider_pos = (
+            self._panels["Scroll"].verticalScrollBar().value()
+            if slider_pos is None
+            else slider_pos
+        )
+        pos = [
+            self._widgets[name].y() for name in self._anchor_list
+        ]
+        self._panels["SideBar"].slide_anchors(pos, slider_pos)

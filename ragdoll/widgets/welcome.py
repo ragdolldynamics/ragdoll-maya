@@ -298,10 +298,9 @@ class GreetingUpdate(QtWidgets.QWidget):
 
     def set_status(self):
         if product_status.is_updatable():
-            current_ver = product_status.current_version()
-            versions = sorted(product_status.release_history())
-
-            if versions:
+            if product_status.has_ragdoll():
+                current_ver = product_status.current_version()
+                versions = sorted(product_status.release_history())
                 latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
                 current = tuple(map(int, current_ver.split(".")[:3]))
                 if latest <= current:
@@ -1738,7 +1737,7 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                     log.info("Ragdoll is activated")
                 else:
                     log.info("Ragdoll is deactivated")
-            index = not p_.has_internet()
+            index = not p_.has_wyday()
             self._widgets["Pages"].setCurrentIndex(index)
 
         widget = self._widgets["Pages"].currentWidget()
@@ -1896,7 +1895,8 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
     @staticmethod
     def preload():
-        product_status.has_internet(refresh=True)
+        product_status.has_wyday(refresh=True)
+        product_status.has_ragdoll(refresh=True)
         product_status.release_history(refresh=True)
 
     def __init__(self, parent=None):

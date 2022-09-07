@@ -993,7 +993,7 @@ class ProductStatus(object):
 
     def __init__(self):
         self._data = dict()
-        self._has_internet = None
+        self._conn = dict()
         self._released = None
 
     @property
@@ -1098,24 +1098,26 @@ class ProductStatus(object):
         if not refresh and self._released is not None:
             return self._released
 
-        with request.urlopen("https://learn.ragdolldynamics.com/news") as r:
-            if r.code == 200:
-                self._released = list(
-                    self._iter_parsed_versions(r.readlines())
-                )
-            else:
-                self._released = []
+        if self.has_ragdoll():
+            url = "https://learn.ragdolldynamics.com/news"
+            with request.urlopen(url) as r:
+                if r.code == 200:
+                    self._released = list(
+                        self._iter_parsed_versions(r.readlines())
+                    )
+                else:
+                    self._released = []
 
-        return self._released[:]
+            return self._released[:]
+        else:
+            return []
+            # TODO: read history from distribution cache for offline users
 
-    def has_internet(self, refresh=False):
-        if not refresh and self._has_internet is not None:
-            return self._has_internet
+    def has_ragdoll(self, refresh=False):
+        return self._ping("https://ragdolldynamics.com/version", refresh)
 
-        with request.urlopen("https://wyday.com") as r:
-            self._has_internet = r.code == 200
-
-        return self._has_internet
+    def has_wyday(self, refresh=False):
+        return self._ping("https://wyday.com", refresh)
 
     def _iter_parsed_versions(self, lines):
         pattern = re.compile(
@@ -1125,3 +1127,13 @@ class ProductStatus(object):
             matched = pattern.match(line)
             if matched:
                 yield matched.group(1).decode()
+
+    def _ping(self, url, refresh):
+        status = self._conn.get(url)
+        if not refresh and status is not None:
+            return status
+
+        with request.urlopen(url) as r:
+            self._conn[url] = r.code == 200
+
+        return self._conn[url]

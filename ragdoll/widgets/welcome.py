@@ -175,6 +175,7 @@ class GreetingSplash(QtWidgets.QLabel):
         self._gradient = tuple(
             map(QtGui.QColor, product_status.get_gradient())
         )
+        self.update()
 
 
 class GreetingUpdate(QtWidgets.QWidget):
@@ -1432,6 +1433,7 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             _temp_key = self.read_temp_key()
             self._widgets["ProductKey"].setText(self.read_temp_key())
             self._widgets["ProductKey"].setReadOnly(False)
+            self._widgets["Response"].setText("")
             self._widgets["ProcessBtn"].setText("Activate")
             self._widgets["ProcessBtn"].setEnabled(False)
             self._widgets["RequestWidget"].show()
@@ -1715,14 +1717,15 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         p_ = product_status
 
         if self._widgets["NodeLockOffline"].is_deactivation_requested():
+            log.info("Ragdoll is offline deactivated")
             # ensure user completed the process before dumping request code
-            self._widgets["Pages"].setCurrentIndex(3)
             _off = self._widgets["NodeLockOffline"]
             _box = self._widgets["DeactivationBox"]
             _box.set_product_key(_off.read_temp_key())
             _box.set_request_code(_off.read_deactivation_request_file())
+            self._widgets["Pages"].setCurrentIndex(3)
 
-        if p_.is_floating():
+        elif p_.is_floating():
             log.info("Ragdoll is floating")
             self._widgets["Pages"].setCurrentIndex(2)
         else:

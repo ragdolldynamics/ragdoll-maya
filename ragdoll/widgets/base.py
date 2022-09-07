@@ -1133,7 +1133,11 @@ class ProductStatus(object):
         if not refresh and status is not None:
             return status
 
-        with request.urlopen(url) as r:
-            self._conn[url] = r.code == 200
+        try:
+            with request.urlopen(url) as r:
+                self._conn[url] = r.code == 200
+        except Exception as e:
+            log.error(e)
+            self._conn[url] = False
 
         return self._conn[url]

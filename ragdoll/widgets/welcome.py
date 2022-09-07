@@ -472,6 +472,10 @@ class AssetVideoPoster(base.OverlayWidget):
         """
         w = self.width()
         h = self.height()
+        # try centering the poster
+        c = self._image.rect().center()
+        x = c.x() - int(w / 2)
+        y = c.y() - int(h / 2)
 
         painter = QtGui.QPainter(self)
         painter.setRenderHint(painter.Antialiasing)
@@ -485,7 +489,7 @@ class AssetVideoPoster(base.OverlayWidget):
         path = QtGui.QPainterPath()
         path.addRoundedRect(rounded_rect, card_rounding, card_rounding)
         painter.setClipPath(path)
-        painter.drawPixmap(card_padding, card_padding, self._image)
+        painter.drawPixmap(card_padding, card_padding, self._image, x, y, w, h)
 
 
 class AssetVideoFooter(base.OverlayWidget):

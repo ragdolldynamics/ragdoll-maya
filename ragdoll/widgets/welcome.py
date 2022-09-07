@@ -44,7 +44,7 @@ sidebar_width = anchor_size + (pd3 * 2)
 splash_width = px(700)
 splash_height = px(125)
 window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
-window_height = px(590)  # just enough to see the first row of videos
+window_height = px(570)  # just enough to see the first 2 rows of assets
 
 
 def _resource(*fname):
@@ -2017,6 +2017,7 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         self._anchor_list = anchor_list
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
+        self.setMinimumHeight(widgets["Greet"].height() + pd4 * 2)
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()

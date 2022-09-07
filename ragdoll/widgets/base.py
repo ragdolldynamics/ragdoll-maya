@@ -14,6 +14,8 @@ try:
 except ImportError:
     import urllib as request  # py2
 
+from .. import constants
+
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
 
@@ -1028,13 +1030,16 @@ class ProductStatus(object):
         return self.data["currentVersion"]
 
     def key(self):
-        return self.data["key"]
+        if self.data["key"] == "HIDDEN":
+            return ""  # this happens when RAGDOLL_FLOATING is set
+        else:
+            return self.data["key"]
 
     def is_non_commercial(self):
         return self.data["isNonCommercial"]
 
     def is_floating(self):
-        return self.data["isFloating"]
+        return self.data["isFloating"] and constants.RAGDOLL_FLOATING
 
     def has_lease(self):
         return self.data["hasLease"]
@@ -1044,8 +1049,8 @@ class ProductStatus(object):
 
     def is_activated(self):
         return (
-            self.data["isActivated"]
-            or (self.data["key"] and self.is_expired())
+            (self.key() and self.data["isActivated"])
+            or (self.key() and self.is_expired())
         )
 
     def is_perpetual(self):

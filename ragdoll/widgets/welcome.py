@@ -489,7 +489,7 @@ class AssetVideoPoster(base.OverlayWidget):
         path = QtGui.QPainterPath()
         path.addRoundedRect(rounded_rect, card_rounding, card_rounding)
         painter.setClipPath(path)
-        painter.drawPixmap(card_padding, card_padding, self._image, x, y, w, h)
+        painter.drawPixmap(0, 0, self._image, x, y, w, h)
 
 
 class AssetVideoFooter(base.OverlayWidget):

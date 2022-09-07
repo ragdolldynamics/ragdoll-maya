@@ -1003,6 +1003,11 @@ class ProductStatus(object):
     @data.setter
     def data(self, data):
         self._data = data.copy()
+        # In case any licencing issue,
+        # run log.setLevel(logging.DEBUG) to print out
+        log.debug("Licencing data:")
+        for k, v in self._data.items():
+            log.debug("|    %s: %s" % (k, v))
 
     def name(self):
         name = self.data["product"]

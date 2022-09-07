@@ -8,7 +8,6 @@ dedump(dump)
 
 """
 
-import re
 import os
 import json
 import copy
@@ -29,6 +28,9 @@ def load(fname, opts=None):
 
     """
 
+    # Prefer merging with the first found existing solver
+    existingSolver = str(next(iter(cmdx.ls(type="rdSolver")), ""))
+
     opts = dict(opts or {}, **{
 
         # No hierarchy here, it's cleeeean
@@ -36,6 +38,8 @@ def load(fname, opts=None):
 
         # No need to retarget, we're targeting the inputs
         "retarget": False,
+
+        "overrideSolver": existingSolver,
     })
 
     loader = Loader(opts)
@@ -420,7 +424,8 @@ class Loader(object):
         with cmdx.DagModifier() as mod:
             skeleton_grp = assembly | "skeleton_grp"
 
-            for entity in self._registry.view("RigidComponent", "MarkerUIComponent"):
+            for entity in self._registry.view("RigidComponent",
+                                              "MarkerUIComponent"):
                 recursive_create(mod, entity, skeleton_grp)
 
             for entity, joint in created.items():
@@ -522,16 +527,19 @@ class Loader(object):
 
                 # For some reason, we can't set inMesh.
                 # So instead, we use the above meshes_to_mobj to generate a
-                # new shape from scratch and change its name. A bit of a bummer..
+                # new shape from scratch and change its name.
+                # A bit of a bummer..
                 mesh = cmdx.Node(mobj)
                 mod.rename_node(mesh, name + "Shape")
 
                 mod.do_it()
 
-                cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+                cmds.polySoftEdge(
+                    mesh.path(), angle=0, constructionHistory=True
+                )
 
             else:
-                raise ValueError("Unsupported shape type: %s" % shape_type)
+                raise ValueError("Unsupported shape type: %s" % Desc["type"])
 
             cmdx.encode("initialShadingGroup").add(mesh)
 
@@ -551,12 +559,13 @@ class Loader(object):
 
         with cmdx.DagModifier() as mod:
             assembly = mod.create_node("transform", name)
-            geometry_grp = mod.create_node("transform", "geometry_grp", assembly)
-            skeleton_grp = mod.create_node("transform", "skeleton_grp", assembly)
+            mod.create_node("transform", "geometry_grp", assembly)
+            mod.create_node("transform", "skeleton_grp", assembly)
 
         try:
             created = self.create(assembly)
             out = self.reinterpret()
+            geometry_grp = assembly | "geometry_grp"
 
             # Create meshes last, to avoid name conflict
             joint_to_mesh = {}

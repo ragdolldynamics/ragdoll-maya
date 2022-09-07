@@ -1940,7 +1940,9 @@ class WelcomeWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
+        _ragdoll_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
+        self.setWindowIcon(QtGui.QIcon(_resource("ui", _ragdoll_logo)))
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         # Makes Maya perform magic which makes the window stay
         # on top in OS X and Linux. As an added bonus, it'll
@@ -1972,7 +1974,6 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
 
-        _ragdoll_logo = "ragdoll_silhouette_white_128.png"
         anchor_list = [
             panels["SideBar"].add_anchor("Greet", _ragdoll_logo, "#e5d680"),
             panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680"),

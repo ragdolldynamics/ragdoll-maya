@@ -1958,6 +1958,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         else:
             self.__hidden = False
         self._animations["FadeIn"].start()
+        # init
+        self.licence_updated.emit()
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
@@ -1972,7 +1974,8 @@ class WelcomeWindow(base.SingletonMainWindow):
     def refresh(self):
         self._widgets["Assets"].reset()
         self._panels["SideBar"].set_current_anchor(0)
-        self.licence_updated.emit()
+        if self.isVisible():
+            self.licence_updated.emit()
 
     def on_licence_updated(self, data):
         product_status.data = data

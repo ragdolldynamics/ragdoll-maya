@@ -2015,9 +2015,24 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets = widgets
         self._animations = animations
         self._anchor_list = anchor_list
+        self.__hidden = False
         self.setStyleSheet(_scaled_stylesheet(stylesheet))
         self.setMinimumWidth(window_width)
         self.setMinimumHeight(widgets["Greet"].height() + pd4 * 2)
+
+    def hide(self):
+        self.__hidden = True
+        super(WelcomeWindow, self).hide()
+
+    def show(self):
+        self.setWindowOpacity(0)
+        super(WelcomeWindow, self).show()
+        if not self.__hidden:
+            self.resize(window_width, window_height)
+            self._align_anchors()
+        else:
+            self.__hidden = False
+        self._animations["FadeIn"].start()
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
@@ -2028,6 +2043,12 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Body"].layout().invalidate()
         super(WelcomeWindow, self).resizeEvent(event)
         self._align_anchors()
+
+    def refresh(self, extra_assets_path):
+        self._widgets["Assets"].set_extra_assets(extra_assets_path)
+        self._widgets["Assets"].reset()
+        self._panels["SideBar"].set_current_anchor(0)
+        self.licence_updated.emit()
 
     def on_licence_updated(self, data):
         product_status.data = data
@@ -2044,18 +2065,6 @@ class WelcomeWindow(base.SingletonMainWindow):
     def on_offline_deactivate_requested(self):
         w = self._widgets["Licence"].input_widget()
         w.on_offline_deactivate_requested()
-
-    def show(self, extra_assets_path=""):
-        self._widgets["Assets"].set_extra_assets(extra_assets_path)
-        self._widgets["Assets"].reset()
-        self._panels["SideBar"].set_current_anchor(0)
-        self.setWindowOpacity(0)
-        super(WelcomeWindow, self).show()
-        self.resize(window_width, window_height)
-        self._align_anchors()
-        self._animations["FadeIn"].start()
-        # init
-        self.licence_updated.emit()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)

@@ -3371,7 +3371,7 @@ def welcome_user(*args):
 
         parent = ui.MayaWindow()
         win = LegacyWindow(parent)
-        show_kwargs = {}
+
     else:
         if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
             LegacyWindow.instance.close()
@@ -3432,7 +3432,7 @@ def welcome_user(*args):
 
         def on_asset_opened(file_path):
             _open_physics(file_path)
-            win.close()
+            win.hide()
 
         def on_asset_browsed(extra_assets_path):
             options.write("extraAssets", extra_assets_path)
@@ -3449,11 +3449,10 @@ def welcome_user(*args):
         win.asset_opened.connect(on_asset_opened)
         win.asset_browsed.connect(on_asset_browsed)
 
-        show_kwargs = {"extra_assets_path": options.read("extraAssets")}
+        win.refresh(extra_assets_path=options.read("extraAssets"))
 
-    win.show(**show_kwargs)
+    win.show()
     win.activateWindow()
-
     # Maya automatically centers new windows,
     # sometimes. On some platforms. Trust no one.
     ui.center_window(win)

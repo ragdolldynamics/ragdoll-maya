@@ -16,7 +16,7 @@ try:
 except ImportError:
     import urllib as request  # py2
 
-from .. import constants
+from .. import __, constants
 
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
@@ -457,6 +457,17 @@ class OverlayWidget(QtWidgets.QWidget):
         elif event.type() == event.ParentChange:
             self.new_parent()
         return super(OverlayWidget, self).event(event)
+
+
+class SingletonMainWindow(QtWidgets.QMainWindow):
+    instance = None
+
+    def __init__(self, parent=None):
+        super(SingletonMainWindow, self).__init__(parent=parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        # For uninstall
+        self.__class__.instance = self
+        __.widgets[self.__class__.__name__] = self
 
 
 class Thread(QtCore.QThread):

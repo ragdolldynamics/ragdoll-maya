@@ -1921,7 +1921,7 @@ def _scaled_stylesheet(style):
     return result
 
 
-class WelcomeWindow(QtWidgets.QMainWindow):
+class WelcomeWindow(base.SingletonMainWindow):
     asset_opened = QtCore.Signal(str)
     asset_browsed = QtCore.Signal(str)
     licence_updated = QtCore.Signal()
@@ -1943,7 +1943,6 @@ class WelcomeWindow(QtWidgets.QMainWindow):
         _ragdoll_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
         self.setWindowIcon(QtGui.QIcon(_resource("ui", _ragdoll_logo)))
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         # Makes Maya perform magic which makes the window stay
         # on top in OS X and Linux. As an added bonus, it'll
         # make Maya remember the window position

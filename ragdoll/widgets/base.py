@@ -1194,53 +1194,71 @@ class AssetLibrary(object):
         return options.read("extraAssets")
 
     def set_user_path(self, path):
+        if not any(self.iter_rag_files(path)):
+            path = ""
         options.write("extraAssets", path)
         self.reload()
 
     def reload(self):
+        self._tags.clear()
+        self._assets.clear()
+        seen = set()
+
         paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
         paths.append(self.get_user_path())
-        for lib_path in paths:
-            if os.path.exists(lib_path):
-                self._load_one(lib_path)
 
-    def _load_one(self, lib_path):
-        log.info("Loading assets from %r" % lib_path)
+        for lib_path in reversed(paths):
+            if not os.path.exists(lib_path):
+                continue
 
-        rag_files = []
-        for item in os.listdir(lib_path):
-            path = os.path.join(lib_path, item)
-            if item.endswith(".rag") and os.path.isfile(path):
-                rag_files.append(path)
+            log.info("Loading assets from %r" % lib_path)
+            rag_files = list(self.iter_rag_files(lib_path))
 
-        for path in sorted(rag_files,
-                           key=lambda p: os.stat(p).st_mtime,
-                           reverse=True):
-            with open(path) as _f:
-                rag = json.load(_f)
-            _d = rag.get("ui")
-            _fname = os.path.basename(path)
+            for path in rag_files:
+                with open(path) as _f:
+                    rag = json.load(_f)
+                _d = rag.get("ui")
+                _fname = os.path.basename(path)
 
-            name = rag.get("name") or _fname.rsplit(".", 1)[0]
-            video = _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm"
-            video = self.resource(video, lib_path)
-            poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
-            tags = _d.get("tags") or []
+                name = rag.get("name") or _fname.rsplit(".", 1)[0]
+                if name in seen:
+                    continue
 
-            self._assets.append({
-                "path": path,
-                "name": name,
-                "video": video,
-                "poster": poster,
-                "tags": tags,
-            })
-            self._tags.update(tags)
+                video = _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm"
+                video = self.resource(video, lib_path)
+                poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
+                tags = _d.get("tags") or []
+
+                self._assets.append({
+                    "path": path,
+                    "name": name,
+                    "video": video,
+                    "poster": poster,
+                    "tags": tags,
+                })
+                self._tags.update(tags)
+
+                seen.add(name)
+
+        # sort assets by modified time
+        self._assets.sort(key=lambda d: os.stat(d["path"]).st_mtime,
+                          reverse=True)
+        log.info("Assets loaded.")
 
     def get_manifest(self):
         return {
             "assets": self._assets.copy(),
             "tags": self._tags.copy(),
         }
+
+    @staticmethod
+    def iter_rag_files(lib_path):
+        if not os.path.isdir(lib_path):
+            return
+        for item in os.listdir(lib_path):
+            path = os.path.join(lib_path, item)
+            if item.endswith(".rag") and os.path.isfile(path):
+                yield path
 
     @staticmethod
     def is_net_location(url):

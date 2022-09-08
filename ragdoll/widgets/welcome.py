@@ -1859,10 +1859,13 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     @staticmethod
     def preload():
+        log.info("Checking internet connections..")
         product_status.has_wyday(refresh=True)
         product_status.has_ragdoll(refresh=True)
+        log.info("Loading resources..")
         product_status.release_history(refresh=True)
         asset_library.reload()
+        log.info("Done.")
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)

@@ -16,7 +16,12 @@ try:
 except ImportError:
     import urllib as request  # py2
 
-from .. import __, constants
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse  # py2
+
+from .. import __, constants, options, ui
 
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
@@ -1177,3 +1182,76 @@ class ProductStatus(object):
             self._conn[url] = False
 
         return self._conn[url]
+
+
+class AssetLibrary(object):
+
+    def __init__(self):
+        self._tags = set()
+        self._assets = list()
+
+    def get_user_path(self):
+        return options.read("extraAssets")
+
+    def set_user_path(self, path):
+        options.write("extraAssets", path)
+        self.reload()
+
+    def reload(self):
+        paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
+        paths.append(self.get_user_path())
+        for lib_path in paths:
+            if os.path.exists(lib_path):
+                self._load_one(lib_path)
+
+    def _load_one(self, lib_path):
+        log.info("Loading assets from %r" % lib_path)
+
+        rag_files = []
+        for item in os.listdir(lib_path):
+            path = os.path.join(lib_path, item)
+            if item.endswith(".rag") and os.path.isfile(path):
+                rag_files.append(path)
+
+        for path in sorted(rag_files,
+                           key=lambda p: os.stat(p).st_mtime,
+                           reverse=True):
+            with open(path) as _f:
+                rag = json.load(_f)
+            _d = rag.get("ui")
+            _fname = os.path.basename(path)
+
+            name = rag.get("name") or _fname.rsplit(".", 1)[0]
+            video = _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm"
+            video = self.resource(video, lib_path)
+            poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
+            tags = _d.get("tags") or []
+
+            self._assets.append({
+                "path": path,
+                "name": name,
+                "video": video,
+                "poster": poster,
+                "tags": tags,
+            })
+            self._tags.update(tags)
+
+    def get_manifest(self):
+        return {
+            "assets": self._assets.copy(),
+            "tags": self._tags.copy(),
+        }
+
+    @staticmethod
+    def is_net_location(url):
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except AttributeError:
+            return False
+
+    def resource(self, path, lib_path):
+        if self.is_net_location(path):
+            return path
+        else:
+            return os.path.join(lib_path, path)

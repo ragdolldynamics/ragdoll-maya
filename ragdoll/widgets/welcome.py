@@ -1,20 +1,13 @@
 
 import os
 import math
-import json
 import logging
 import tempfile
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2 import QtWebEngineWidgets
 
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse  # py2
-
 from . import base
-from .. import ui
 
 
 __throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
@@ -115,6 +108,7 @@ class _ProductStatus(base.ProductStatus):
 
 
 product_status = _ProductStatus()
+asset_library = base.AssetLibrary()
 
 
 class GreetingSplash(QtWidgets.QLabel):
@@ -693,85 +687,24 @@ class AssetCardModel(QtGui.QStandardItemModel):
     #   <tag name>: <tag color>
     TagsRole = QtCore.Qt.UserRole + 14
 
-    def is_net_location(self, url):
-        try:
-            result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except AttributeError:
-            return False
-
-    def resource(self, path, lib_path):
-        if self.is_net_location(path):
-            return path
-        else:
-            return os.path.join(lib_path, path)
-
-    def refresh(self, extra_assets_path=""):
+    def refresh(self):
         self.clear()
-        self.load_assets(extra_assets_path)
-        self.load_assets(os.getenv("RAGDOLL_ASSETS", ""))
 
-    @staticmethod
-    def get_manifest(lib_path):
-        manifest = {
-            "assets": list(),
-            "tags": set(),
-        }
-
-        rag_files = []
-        for item in os.listdir(lib_path):
-            path = os.path.join(lib_path, item)
-            if item.endswith(".rag") and os.path.isfile(path):
-                rag_files.append(path)
-
-        for path in sorted(rag_files,
-                           key=lambda p: os.stat(p).st_mtime,
-                           reverse=True):
-            with open(path) as _f:
-                rag = json.load(_f)
-            _d = rag.get("ui")
-            _fname = os.path.basename(path)
-
-            manifest["assets"].append({
-                "path": path,
-                "name": rag.get("name") or _fname.rsplit(".", 1)[0],
-                "video": _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm",
-                "poster": _d["thumbnail"],
-                "tags": _d.get("tags") or [],
-            })
-
-            manifest["tags"].update(
-                _d.get("tags") or []
-            )
-
-        return manifest
-
-    def load_assets(self, lib_path):
-        if not lib_path:
-            return
-
-        log.info("Loading assets from %r" % lib_path)
-        manifest = self.get_manifest(lib_path)
+        manifest = asset_library.get_manifest()
 
         all_dots = {
             tag: _text_to_color(tag) for tag in manifest["tags"]
         }
         for data in manifest.get("assets") or []:
             item = QtGui.QStandardItem()
-            name = data["name"]
-            asset = data["path"]
-            poster = ui.base64_to_pixmap(data["poster"].encode("ascii"))
-            video = self.resource(data["video"], lib_path)
-
             tags = {
                 tag_name: all_dots.get(tag_name, "black")
                 for tag_name in set(data["tags"])
             }
-
-            item.setData(name, AssetCardModel.NameRole)
-            item.setData(asset, AssetCardModel.AssetRole)
-            item.setData(poster, AssetCardModel.PosterRole)
-            item.setData(video, AssetCardModel.VideoRole)
+            item.setData(data["name"], AssetCardModel.NameRole)
+            item.setData(data["path"], AssetCardModel.AssetRole)
+            item.setData(data["poster"], AssetCardModel.PosterRole)
+            item.setData(data["video"], AssetCardModel.VideoRole)
             item.setData(tags, AssetCardModel.TagsRole)
 
             self.appendRow(item)
@@ -890,7 +823,6 @@ class AssetTagList(QtWidgets.QWidget):
 
 class AssetListPage(QtWidgets.QWidget):
     asset_opened = QtCore.Signal(str)
-    asset_browsed = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(AssetListPage, self).__init__(parent=parent)
@@ -914,6 +846,8 @@ class AssetListPage(QtWidgets.QWidget):
         widgets["Empty"].setAlignment(QtCore.Qt.AlignHCenter)
         widgets["Empty"].setVisible(False)
         widgets["Browse"].setIcon(QtGui.QIcon(_resource("ui", "folder.svg")))
+        widgets["Path"].setReadOnly(True)
+        widgets["Path"].setText(asset_library.get_user_path())
 
         models["Proxy"].setSourceModel(models["Source"])
         widgets["List"].setModel(models["Proxy"])
@@ -936,7 +870,6 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(_path_row)
 
         widgets["Tags"].tagged.connect(self.on_tag_changed)
-        widgets["Path"].textEdited.connect(lambda _: self.reset())
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
 
         self._models = models
@@ -963,22 +896,15 @@ class AssetListPage(QtWidgets.QWidget):
         dialog.setOptions(dialog.DontUseNativeDialog | dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
         if dialog.exec_():
-            paths = dialog.selectedFiles()
-            extra_assets_path = paths[0]
-            self._widgets["Path"].setText(extra_assets_path)
+            asset_library.set_user_path(dialog.selectedFiles()[0])
+            self._widgets["Path"].setText(asset_library.get_user_path())
             self.reset()
-
-    def set_extra_assets(self, extra_assets_path):
-        self._widgets["Path"].setText(extra_assets_path)
 
     def reset(self):
         self._widgets["Tags"].clear()
 
-        extra_assets_path = self._widgets["Path"].text()
-        self.asset_browsed.emit(extra_assets_path)
-
         model = self._models["Source"]
-        model.refresh(extra_assets_path)
+        model.refresh()
 
         for row in range(model.rowCount()):
             index = model.index(row, 0)
@@ -1923,7 +1849,6 @@ def _scaled_stylesheet(style):
 
 class WelcomeWindow(base.SingletonMainWindow):
     asset_opened = QtCore.Signal(str)
-    asset_browsed = QtCore.Signal(str)
     licence_updated = QtCore.Signal()
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
@@ -1937,6 +1862,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         product_status.has_wyday(refresh=True)
         product_status.has_ragdoll(refresh=True)
         product_status.release_history(refresh=True)
+        asset_library.reload()
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
@@ -2000,7 +1926,6 @@ class WelcomeWindow(base.SingletonMainWindow):
             self.on_vertical_scrolled)
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
         widgets["Assets"].asset_opened.connect(self.asset_opened)
-        widgets["Assets"].asset_browsed.connect(self.asset_browsed)
         lic = widgets["Licence"].input_widget()
         lic.licence_updated.connect(self.licence_updated)
         lic.node_activated.connect(self.node_activated)
@@ -2044,8 +1969,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).resizeEvent(event)
         self._align_anchors()
 
-    def refresh(self, extra_assets_path):
-        self._widgets["Assets"].set_extra_assets(extra_assets_path)
+    def refresh(self):
         self._widgets["Assets"].reset()
         self._panels["SideBar"].set_current_anchor(0)
         self.licence_updated.emit()

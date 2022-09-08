@@ -461,6 +461,7 @@ class OverlayWidget(QtWidgets.QWidget):
 
 class SingletonMainWindow(QtWidgets.QMainWindow):
     instance = None
+    protected = False  # set to True if only closed on plugin unloaded
 
     def __init__(self, parent=None):
         super(SingletonMainWindow, self).__init__(parent=parent)

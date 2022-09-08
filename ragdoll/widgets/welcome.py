@@ -1940,6 +1940,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
+        self.protected = True
         _ragdoll_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
         self.setWindowIcon(QtGui.QIcon(_resource("ui", _ragdoll_logo)))

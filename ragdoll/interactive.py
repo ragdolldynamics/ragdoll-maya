@@ -260,7 +260,7 @@ def uninstall():
     uninstall_telemetry() if c.RAGDOLL_TELEMETRY else None
     uninstall_logger()
     uninstall_menu()
-    uninstall_ui()
+    uninstall_ui(force=True)
     options.uninstall()
     cmdx.uninstall()
     licence.uninstall()
@@ -737,8 +737,13 @@ def uninstall_plugin(force=True):
     )
 
 
-def uninstall_ui():
+def uninstall_ui(force=False):
+    protected = {}
     for title, widget in __.widgets.items():
+        if not force and getattr(widget, "protected"):
+            protected[title] = widget
+            continue
+
         try:
             widget.close()
 
@@ -753,6 +758,7 @@ def uninstall_ui():
             )
 
     __.widgets.clear()
+    __.widgets.update(protected)
 
 
 def install_menu():

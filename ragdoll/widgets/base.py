@@ -4,6 +4,7 @@ import re
 import json
 import logging
 import traceback
+import threading
 import shiboken2
 import webbrowser
 from datetime import datetime, timedelta
@@ -22,6 +23,9 @@ except ImportError:
     from urlparse import urlparse  # py2
 
 from .. import __, constants, options, ui
+
+RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
+WYDAY_URL = "https://wyday.com"
 
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
@@ -1129,35 +1133,14 @@ class ProductStatus(object):
                 # time as expired to indicate something went wrong.
                 return datetime.now()
 
-    def release_history(self, refresh=False):
-        if not refresh and self._released is not None:
-            return self._released[:]
-
-        released = []
-        if self.has_ragdoll():
-            url = "https://learn.ragdolldynamics.com/news"
-            with request.urlopen(url) as r:
-                if r.code == 200:
-                    released = list(
-                        self._iter_parsed_versions(r.readlines())
-                    )
-
-        if not released:
-            # Try reading history from distribution cache for offline users
-            root = os.path.dirname(constants.__file__)
-            cache = os.path.join(root, "resources", "versioninfo.json")
-            if os.path.isfile(cache):
-                with open(cache) as f:
-                    released = json.load(f)
-
-        self._released = released
+    def release_history(self):
         return self._released[:]
 
     def has_ragdoll(self, refresh=False):
-        return self._ping("https://ragdolldynamics.com/version", refresh)
+        return self._ping(RAGDOLL_DYNAMICS_VERSIONS_URL, refresh)
 
     def has_wyday(self, refresh=False):
-        return self._ping("https://wyday.com", refresh)
+        return self._ping(WYDAY_URL, refresh)
 
     def _iter_parsed_versions(self, lines):
         pattern = re.compile(
@@ -1169,22 +1152,38 @@ class ProductStatus(object):
                 yield matched.group(1).decode()
 
     def _ping(self, url, refresh):
-        status = self._conn.get(url)
-        if not refresh and status is not None:
-            return status
+        return self._conn.get(url)
 
-        try:
-            with request.urlopen(url) as r:
-                self._conn[url] = r.code == 200
-        except Exception as e:
-            log.error(e)
-            self._conn[url] = False
+    def _refresh_release_history(self):
+        def _thread():
+            if self._released is None:
+                released = []
+                root = os.path.dirname(constants.__file__)
+                cache = os.path.join(root, "resources", "versioninfo.json")
+                if os.path.isfile(cache):
+                    with open(cache) as f:
+                        released = json.load(f)
 
-        return self._conn[url]
+            self._released = released
+
+        threading.Thread(target=_thread).start()
+
+    def _refresh_internet_connectivity(self):
+        def _thread(url):
+            try:
+                with request.urlopen(url) as r:
+                    self._conn[url] = r.code == 200
+            except Exception as e:
+                log.debug(e)
+                self._conn[url] = False
+
+        # Fire and forget, we don't need to wait for this
+        for url in (RAGDOLL_DYNAMICS_VERSIONS_URL,
+                    WYDAY_URL):
+            threading.Thread(target=_thread, args=[url]).start()
 
 
 class AssetLibrary(object):
-
     def __init__(self):
         self._tags = set()
         self._assets = list()
@@ -1205,9 +1204,11 @@ class AssetLibrary(object):
 
         paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
         paths.append(self.get_user_path())
+        paths = list(filter(None, paths))
 
         for lib_path in reversed(paths):
             if not os.path.exists(lib_path):
+                log.warning("Asset library path '%s' did not exist" % lib_path)
                 continue
 
             log.info("Loading assets from %r" % lib_path)
@@ -1232,7 +1233,11 @@ class AssetLibrary(object):
                     "path": path,
                     "name": name,
                     "video": video,
-                    "poster": poster,
+                    "poster": poster.scaled(
+                        px(217), px(122),
+                        QtCore.Qt.KeepAspectRatioByExpanding,
+                        QtCore.Qt.SmoothTransformation
+                    ),
                     "tags": tags,
                 })
                 self._tags.update(tags)
@@ -1242,7 +1247,7 @@ class AssetLibrary(object):
         # sort assets by modified time
         self._assets.sort(key=lambda d: os.stat(d["path"]).st_mtime,
                           reverse=True)
-        log.info("Assets loaded.")
+        log.info("Assets loaded")
 
     def get_manifest(self):
         return {

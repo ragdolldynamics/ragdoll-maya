@@ -218,7 +218,8 @@ def install():
 
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
-        cmds.evalDeferred(widgets.WelcomeWindow.preload)
+
+        widgets.WelcomeWindow.preload()
 
         # 2018 and consolidation doesn't play nicely without animated shaders
         if cmdx.__maya_version__ < 2019:
@@ -246,7 +247,6 @@ def install():
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
-
 
     __.installed = True
 
@@ -740,7 +740,7 @@ def uninstall_plugin(force=True):
 def uninstall_ui(force=False):
     protected = {}
     for title, widget in __.widgets.items():
-        if not force and getattr(widget, "protected"):
+        if not force and getattr(widget, "protected", False):
             protected[title] = widget
             continue
 
@@ -3449,6 +3449,7 @@ def welcome_user(*args):
 
     win.show()
     win.activateWindow()
+
     # Maya automatically centers new windows,
     # sometimes. On some platforms. Trust no one.
     ui.center_window(win)

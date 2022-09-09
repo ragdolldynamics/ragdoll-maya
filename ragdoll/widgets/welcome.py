@@ -1,4 +1,3 @@
-
 import os
 import math
 import logging
@@ -8,6 +7,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2 import QtWebEngineWidgets
 
 from . import base
+from .. import ui, internal
 
 
 __throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
@@ -19,32 +19,28 @@ __throwaway = datetime.strptime("2012-01-01", "%Y-%m-%d")
 log = logging.getLogger("ragdoll")
 px = base.px
 
+with open(ui._resource("ui", "style_welcome.css")) as f:
+    stylesheet = f.read()
+
 # padding levels
-pd1 = px(20)
-pd2 = px(14)
-pd3 = px(10)
-pd4 = px(6)
-scroll_width = px(18)
+PD1 = px(20)
+PD2 = px(14)
+PD3 = px(10)
+PD4 = px(6)
+SCROLL_WIDTH = px(18)
 
-video_width, video_height = px(217), px(122)
-card_padding = px(3)
-card_rounding = px(8)
-card_width = video_width + (card_padding * 2)
-card_height = video_height + (card_padding * 2)
+VIDEO_WIDTH, VIDEO_HEIGHT = px(217), px(122)
+CARD_PADDING = px(3)
+CARD_ROUNDING = px(8)
+CARD_WIDTH = VIDEO_WIDTH + (CARD_PADDING * 2)
+CARD_HEIGHT = VIDEO_HEIGHT + (CARD_PADDING * 2)
 
-anchor_size = px(42)
-sidebar_width = anchor_size + (pd3 * 2)
-splash_width = px(700)
-splash_height = px(125)
-window_width = sidebar_width + splash_width + (pd4 * 2) + scroll_width
-window_height = px(570)  # just enough to see the first 2 rows of assets
-
-
-def _resource(*fname):
-    dirname = os.path.dirname(__file__)
-    dirname = os.path.dirname(dirname)
-    resdir = os.path.join(dirname, "resources")
-    return os.path.normpath(os.path.join(resdir, *fname)).replace("\\", "/")
+ANCHOR_SIZE = px(42)
+SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
+SPLASH_WIDTH = px(700)
+SPLASH_HEIGHT = px(125)
+WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD4 * 2) + SCROLL_WIDTH
+WINDOW_HEIGHT = px(570)  # just enough to see the first 2 rows of assets
 
 
 def _tint_color(pixmap, color):
@@ -115,15 +111,15 @@ class GreetingSplash(QtWidgets.QLabel):
 
     def __init__(self, parent=None):
         super(GreetingSplash, self).__init__(parent)
-        pixmap = QtGui.QPixmap(_resource("ui", "welcome-banner.png"))
+        pixmap = QtGui.QPixmap(ui._resource("ui", "welcome-banner.png"))
         pixmap = pixmap.scaled(
-            splash_width,
-            splash_height,
+            SPLASH_WIDTH,
+            SPLASH_HEIGHT,
             QtCore.Qt.KeepAspectRatioByExpanding,
             QtCore.Qt.SmoothTransformation
         )
-        self.setMinimumWidth(splash_width)
-        self.setFixedHeight(splash_height)
+        self.setMinimumWidth(SPLASH_WIDTH)
+        self.setFixedHeight(SPLASH_HEIGHT)
         self._image = pixmap
         self._gradient = (QtGui.QColor("black"), QtGui.QColor("gray"))
 
@@ -233,8 +229,7 @@ class GreetingUpdate(QtWidgets.QWidget):
             ("/ AUP " + aup) if perpetual else expiry,
         )
 
-        w = self._widgets
-        w["ExpiryDate"].setText(status)
+        self._widgets["ExpiryDate"].setText(status)
 
     def _product(self, status):
         if status == "update":
@@ -247,7 +242,7 @@ class GreetingUpdate(QtWidgets.QWidget):
         widgets = self._widgets
         widgets["UpdateIcon"].hide()
 
-        icon = _resource("ui", {
+        icon = ui._resource("ui", {
             "update": "cloud-arrow-down-fill.svg",
             "uptodate": "cloud-check-fill.svg",
             "offline": "cloud-slash.svg",
@@ -322,7 +317,7 @@ class GreetingInteract(QtWidgets.QWidget):
             "Timeline": base.ProductTimelineWidget(),
         }
 
-        widgets["Timeline"].setMinimumWidth(splash_width)
+        widgets["Timeline"].setMinimumWidth(SPLASH_WIDTH)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -331,8 +326,8 @@ class GreetingInteract(QtWidgets.QWidget):
         layout.addWidget(widgets["Timeline"])
 
         self.setFixedHeight(
-            splash_height
-            + widgets["Timeline"].minimumHeight()
+            SPLASH_HEIGHT +
+            widgets["Timeline"].minimumHeight()
         )
         self._widgets = widgets
 
@@ -371,13 +366,13 @@ class GreetingPage(QtWidgets.QWidget):
         overlay = base.OverlayWidget(parent=self)  # for overlay
         overlay.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
         layout = QtWidgets.QVBoxLayout(overlay)
-        layout.setContentsMargins(pd4, 0, pd4, 0)
+        layout.setContentsMargins(PD4, 0, PD4, 0)
         layout.addStretch(1)  # for overlay
         layout.addWidget(widgets["Interact"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(pd4, 0, pd4, 0)
-        layout.setSpacing(pd3)
+        layout.setContentsMargins(PD4, 0, PD4, 0)
+        layout.setSpacing(PD3)
         layout.addWidget(widgets["Splash"])
         layout.addStretch(1)
 
@@ -427,15 +422,15 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
                 <p>HTML5 Video element not supported.</p></video>
 
         </div></body></html>
-        """.format(video=video, r=card_rounding)
+        """.format(video=video, r=CARD_ROUNDING)
         self.setHtml(html_code, baseUrl=QtCore.QUrl("file://"))
 
         if QtCore.__version_info__ < (5, 13):
             # The web-engine (Chromium 73) that shipped with Qt 5.13 and
             #   before somehow cannot render border-radius properly.
-            rounded_rect = QtCore.QRectF(0, 0, video_width, video_height)
+            rounded_rect = QtCore.QRectF(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT)
             path = QtGui.QPainterPath()
-            path.addRoundedRect(rounded_rect, card_rounding, card_rounding)
+            path.addRoundedRect(rounded_rect, CARD_ROUNDING, CARD_ROUNDING)
 
             region = QtGui.QRegion(path.toFillPolygon().toPolygon())
             self.setMask(region)
@@ -453,19 +448,19 @@ class AssetVideoPoster(base.OverlayWidget):
         Args:
             poster (QtGui.QPixmap):
         """
-        self._image = poster.scaled(
-            video_width,
-            video_height,
-            QtCore.Qt.KeepAspectRatioByExpanding,
-            QtCore.Qt.SmoothTransformation,
-        )
+        self._image = poster
 
     def paintEvent(self, event):
         """
         :param QtGui.QPaintEvent event:
         """
+
+        if self._image is None:
+            return
+
         w = self.width()
         h = self.height()
+
         # try centering the poster
         c = self._image.rect().center()
         x = c.x() - int(w / 2)
@@ -475,13 +470,13 @@ class AssetVideoPoster(base.OverlayWidget):
         painter.setRenderHint(painter.Antialiasing)
 
         rounded_rect = QtCore.QRectF(
-            card_padding,
-            card_padding,
-            w - (card_padding * 2),
-            h - (card_padding * 2),
+            CARD_PADDING,
+            CARD_PADDING,
+            w - (CARD_PADDING * 2),
+            h - (CARD_PADDING * 2),
         )
         path = QtGui.QPainterPath()
-        path.addRoundedRect(rounded_rect, card_rounding, card_rounding)
+        path.addRoundedRect(rounded_rect, CARD_ROUNDING, CARD_ROUNDING)
         painter.setClipPath(path)
         painter.drawPixmap(0, 0, self._image, x, y, w, h)
 
@@ -523,26 +518,26 @@ class AssetVideoFooter(base.OverlayWidget):
         #   no glitchy rounding corner after overlay.
         #
         footer_rect = QtCore.QRectF(
-            card_padding - 1,
-            h - footer_h - card_padding + 1,
-            w - (card_padding * 2) + 2,  # +2 because both left and right
+            CARD_PADDING - 1,
+            h - footer_h - CARD_PADDING + 1,
+            w - (CARD_PADDING * 2) + 2,  # +2 because both left and right
             footer_h,
         )
         footer_top_left = QtCore.QRectF(
-            card_padding - 1,
-            h - footer_h - card_padding + 1,
-            card_rounding,
-            card_rounding,
+            CARD_PADDING - 1,
+            h - footer_h - CARD_PADDING + 1,
+            CARD_ROUNDING,
+            CARD_ROUNDING,
         )
         footer_top_right = QtCore.QRectF(
-            w - card_padding - card_rounding + 1,
-            h - footer_h - card_padding + 1,
-            card_rounding,
-            card_rounding,
+            w - CARD_PADDING - CARD_ROUNDING + 1,
+            h - footer_h - CARD_PADDING + 1,
+            CARD_ROUNDING,
+            CARD_ROUNDING,
         )
         path = QtGui.QPainterPath()
         path.setFillRule(QtCore.Qt.WindingFill)
-        path.addRoundedRect(footer_rect, card_rounding, card_rounding)
+        path.addRoundedRect(footer_rect, CARD_ROUNDING, CARD_ROUNDING)
         path.addRect(footer_top_left)
         path.addRect(footer_top_right)
         painter.setClipPath(path.simplified())
@@ -591,14 +586,14 @@ class AssetCardItem(QtWidgets.QWidget):
 
         widgets["PosterAnim"].setAttribute(QtCore.Qt.WA_StyledBackground)
         widgets["PosterAnim"].setGraphicsEffect(effects["Poster"])
-        widgets["Player"].setFixedWidth(video_width)
-        widgets["Player"].setFixedHeight(video_height)
+        widgets["Player"].setFixedWidth(VIDEO_WIDTH)
+        widgets["Player"].setFixedHeight(VIDEO_HEIGHT)
 
         effects["Poster"].setOpacity(1)
         animations["Poster"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(*(card_padding, ) * 4)
+        layout.setContentsMargins(*(CARD_PADDING, ) * 4)
         layout.addWidget(widgets["Player"])
 
         animations["Poster"].finished.connect(self.on_transition_end)
@@ -738,11 +733,11 @@ class AssetCardView(QtWidgets.QListView):
         self.setBatchSize(50)
         self.setFlow(self.LeftToRight)
         self.setWrapping(True)
-        self.setGridSize(QtCore.QSize(card_width, card_height))
+        self.setGridSize(QtCore.QSize(CARD_WIDTH, CARD_HEIGHT))
         self.setUniformItemSizes(True)
         self.setSelectionRectVisible(False)
-        self.setMinimumWidth(card_width)
-        self.viewport().setMinimumWidth(card_width)
+        self.setMinimumWidth(CARD_WIDTH)
+        self.viewport().setMinimumWidth(CARD_WIDTH)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
@@ -754,9 +749,9 @@ class AssetCardView(QtWidgets.QListView):
         width = viewport.width()
         item_count = self.model().rowCount()
         # expand view to show all items
-        column_count = math.floor(width / card_width)
+        column_count = math.floor(width / CARD_WIDTH)
         row_count = math.ceil(item_count / column_count)
-        viewport_height = row_count * card_height
+        viewport_height = row_count * CARD_HEIGHT
         viewport.setFixedHeight(viewport_height)
         self.setFixedHeight(viewport_height)
 
@@ -800,7 +795,7 @@ class AssetTagList(QtWidgets.QWidget):
             return
         self._tags.add(tag_name)
         button = AssetTag(tag_name, tag_color)
-        button.setIcon(QtGui.QIcon(_resource("ui", "tag-fill.svg")))
+        button.setIcon(QtGui.QIcon(ui._resource("ui", "tag-fill.svg")))
         button.setCheckable(True)
         button.toggled.connect(self.on_tag_toggled)
         self.layout().addWidget(button)
@@ -828,10 +823,9 @@ class AssetListPage(QtWidgets.QWidget):
         super(AssetListPage, self).__init__(parent=parent)
 
         widgets = {
-            "Head": QtWidgets.QLabel("Assets"),
             "Tags": AssetTagList(),
             "List": AssetCardView(),
-            "Empty": QtWidgets.QLabel("No Asset Found."),
+            "Empty": QtWidgets.QLabel("No Asset Found"),
             "Path": QtWidgets.QLineEdit(),
             "Browse": QtWidgets.QPushButton(),
         }
@@ -841,11 +835,11 @@ class AssetListPage(QtWidgets.QWidget):
             "Proxy": AssetCardProxyModel(),
         }
 
-        widgets["Head"].setObjectName("Heading1")
         widgets["Empty"].setFixedHeight(px(40))
         widgets["Empty"].setAlignment(QtCore.Qt.AlignHCenter)
         widgets["Empty"].setVisible(False)
-        widgets["Browse"].setIcon(QtGui.QIcon(_resource("ui", "folder.svg")))
+        widgets["Browse"].setIcon(QtGui.QIcon(
+            ui._resource("ui", "folder.svg")))
         widgets["Path"].setReadOnly(True)
         widgets["Path"].setText(asset_library.get_user_path())
 
@@ -856,14 +850,13 @@ class AssetListPage(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout(_path_row)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(QtWidgets.QLabel("Extra Assets"))
-        layout.addSpacing(pd4)
+        layout.addSpacing(PD4)
         layout.addWidget(widgets["Path"])
         layout.addWidget(widgets["Browse"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(pd1, 0, pd1, 0)
-        layout.setSpacing(pd3)
-        layout.addWidget(widgets["Head"])
+        layout.setContentsMargins(PD1, 0, PD1, 0)
+        layout.setSpacing(PD3)
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
         layout.addWidget(widgets["Empty"])
@@ -879,6 +872,7 @@ class AssetListPage(QtWidgets.QWidget):
         super(AssetListPage, self).resizeEvent(event)
         self._widgets["List"].adjust_viewport()
 
+    @internal.with_timing
     def on_tag_changed(self, tags):
         _view = self._widgets["List"]
         _proxy = self._models["Proxy"]
@@ -887,9 +881,10 @@ class AssetListPage(QtWidgets.QWidget):
         for row in range(_proxy.rowCount()):
             index = _proxy.index(row, 0)
             if _view.indexWidget(index) is None:
-                self.init_widget(_proxy.mapToSource(index))
+                self._init_widget(_proxy.mapToSource(index))
         _view.adjust_viewport()
 
+    @internal.with_timing
     def on_asset_browse_clicked(self):
         dialog = QtWidgets.QFileDialog()
         dialog.setFileMode(dialog.DirectoryOnly)
@@ -900,6 +895,7 @@ class AssetListPage(QtWidgets.QWidget):
             self._widgets["Path"].setText(asset_library.get_user_path())
             self.reset()
 
+    @internal.with_timing
     def reset(self):
         self._widgets["Tags"].clear()
 
@@ -908,7 +904,8 @@ class AssetListPage(QtWidgets.QWidget):
 
         for row in range(model.rowCount()):
             index = model.index(row, 0)
-            self.init_widget(index)
+            self._init_widget(index)
+
             for name, color in model.data(index, model.TagsRole).items():
                 self._widgets["Tags"].add_tag(name, color)
 
@@ -917,7 +914,7 @@ class AssetListPage(QtWidgets.QWidget):
         self._widgets["List"].setVisible(asset_loaded)
         self._widgets["List"].adjust_viewport()
 
-    def init_widget(self, index):
+    def _init_widget(self, index):
         widget = AssetCardItem()
         widget.init(index)
         item = self._models["Source"].itemFromIndex(index)
@@ -971,7 +968,7 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(panels["Product"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addSpacing(pd4)
+        layout.addSpacing(PD4)
         layout.addWidget(widgets["Product"], alignment=QtCore.Qt.AlignRight)
         layout.addWidget(widgets["BriefDes"], alignment=QtCore.Qt.AlignRight)
         layout.addStretch(1)
@@ -979,10 +976,10 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(panels["Features"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addSpacing(pd4)
+        layout.addSpacing(PD4)
         layout.addWidget(widgets["Features"], alignment=QtCore.Qt.AlignLeft)
         layout.addStretch(1)
-        layout.addSpacing(pd4)
+        layout.addSpacing(PD4)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(px(12), px(6), px(6), px(6))
@@ -1037,8 +1034,8 @@ class _LicencePanelHelper(QtWidgets.QWidget):
         icon_label = self._widgets["Icon"]
         icon_label.setFixedSize(QtCore.QSize(px(64), px(64)))
         icon_label.setStyleSheet("""
-        image: url({image});
-        """.format(image=_resource("ui", icon_file)))
+            image: url({image});
+        """.format(image=ui._resource("ui", icon_file)))
 
         title_label = self._widgets["Title"]
         title_label.setObjectName("Heading2")
@@ -1049,7 +1046,7 @@ class _LicencePanelHelper(QtWidgets.QWidget):
         label = QtWidgets.QLabel(label_text)
         _layout = QtWidgets.QVBoxLayout(c)
         _layout.setContentsMargins(0, 0, 0, 0)
-        _layout.setSpacing(pd3)
+        _layout.setSpacing(PD3)
         _layout.addWidget(label)
         _layout.addWidget(widget)
         return c
@@ -1075,7 +1072,7 @@ class LicenceNodeLock(_LicencePanelHelper):
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Title"])
         layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
         layout.addWidget(widgets["ProcessBtn"], alignment=QtCore.Qt.AlignRight)
@@ -1083,7 +1080,7 @@ class LicenceNodeLock(_LicencePanelHelper):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
 
@@ -1190,7 +1187,7 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         widgets["CopyHint"].setGraphicsEffect(effects["CopyHint"])
         widgets["CopyRequest"].setText("Copy Request Code")
         widgets["CopyRequest"].setIcon(
-            QtGui.QIcon(_resource("ui", "clipboard.svg"))
+            QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
         )
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
@@ -1198,7 +1195,7 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         widgets["WebsiteURL"].setText(
             """
             <style> p {color: #8c8c8c;} a:link {color: #80e5cc;}</style>
-            <p>And paste the code to </p> 
+            <p>And paste the code to </p>
             <a href=\"https://ragdolldynamics.com/offline\">
             https://ragdolldynamics.com/offline</a>
             """
@@ -1210,28 +1207,28 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         _request_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_request_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(widgets["CopyRequest"])
         layout.addWidget(widgets["WebsiteURL"])
 
         _request_label = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_request_label)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(QtWidgets.QLabel("Request Code"))
         layout.addWidget(widgets["CopyHint"])
         layout.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(widgets["RequestWidget"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(_request_label)
         layout.addWidget(_request_row)
 
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Title"])
         layout.addWidget(widgets["OfflineHint"])
         layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
@@ -1242,7 +1239,7 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
 
@@ -1432,7 +1429,7 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
         widgets["CopyHint"].setGraphicsEffect(effects["CopyHint"])
         widgets["CopyRequest"].setText("Copy Request Code")
         widgets["CopyRequest"].setIcon(
-            QtGui.QIcon(_resource("ui", "clipboard.svg"))
+            QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
         )
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
@@ -1440,7 +1437,7 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
         widgets["WebsiteURL"].setText(
             """
             <style> p {color: #8c8c8c;} a:link {color: #80e5cc;}</style>
-            <p>And paste the code to </p> 
+            <p>And paste the code to </p>
             <a href=\"https://ragdolldynamics.com/offline\">
             https://ragdolldynamics.com/offline</a>
             """
@@ -1449,28 +1446,28 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
         _request_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_request_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(widgets["CopyRequest"])
         layout.addWidget(widgets["WebsiteURL"])
 
         _request_label = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_request_label)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(QtWidgets.QLabel("Request Code"))
         layout.addWidget(widgets["CopyHint"])
         layout.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(widgets["RequestWidget"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
+        layout.setSpacing(PD3)
         layout.addWidget(_request_label)
         layout.addWidget(_request_row)
 
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Title"])
         layout.addWidget(self.labeling(widgets["OfflineHint"], "Important"))
         layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
@@ -1480,7 +1477,7 @@ class LicenceOfflineDeactivationBox(_LicencePanelHelper):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
         layout.addStretch(1)
@@ -1531,14 +1528,14 @@ class LicenceFloating(_LicencePanelHelper):
         _server_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_server_row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(self.labeling(widgets["ServerIP"], "Server IP"))
         layout.addWidget(self.labeling(widgets["ServerPort"], "Server Port"))
 
         _body = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(_body)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Title"])
         layout.addWidget(_server_row)
         layout.addWidget(widgets["ProcessBtn"], alignment=QtCore.Qt.AlignRight)
@@ -1546,7 +1543,7 @@ class LicenceFloating(_LicencePanelHelper):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
         layout.addWidget(_body)
         layout.addStretch(1)
@@ -1623,7 +1620,7 @@ class LicenceSetupPanel(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Pages"])
 
         widgets["DeactivationBox"].dismissed.connect(self.on_box_dismissed)
@@ -1678,7 +1675,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                     log.info("Ragdoll is activated")
                 else:
                     log.info("Ragdoll is deactivated")
-            index = not p_.has_wyday()
+            # index = not p_.has_wyday()
+            index = 0
             self._widgets["Pages"].setCurrentIndex(index)
 
         widget = self._widgets["Pages"].currentWidget()
@@ -1691,17 +1689,13 @@ class LicencePage(QtWidgets.QWidget):
         super(LicencePage, self).__init__(parent=parent)
 
         widgets = {
-            "Title": QtWidgets.QLabel("Licence"),
             "Plate": LicenceStatusPlate(),
             "Body": LicenceSetupPanel(),
         }
 
-        widgets["Title"].setObjectName("Heading1")
-
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(pd1, 0, pd1, 0)
-        layout.setSpacing(pd2)
-        layout.addWidget(widgets["Title"])
+        layout.setContentsMargins(PD1, 0, PD1, 0)
+        layout.setSpacing(PD2)
         layout.addWidget(widgets["Plate"])
         layout.addWidget(widgets["Body"])
 
@@ -1737,13 +1731,13 @@ class SideBar(QtWidgets.QFrame):
             "Body": QtWidgets.QWidget(),
         }
 
-        self.setFixedWidth(sidebar_width)
+        self.setFixedWidth(SIDEBAR_WIDTH)
 
         layout = SideBarAnchorLayout(widgets["Body"])
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd3)
-        layout.addSpacing(pd1)
+        layout.setSpacing(PD3)
+        layout.addSpacing(PD1)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1755,10 +1749,10 @@ class SideBar(QtWidgets.QFrame):
         self._anchors = []
 
     def add_anchor(self, name, image, color):
-        icon_size = int(anchor_size * 0.6)
+        icon_size = int(ANCHOR_SIZE * 0.6)
         icon_size = QtCore.QSize(icon_size, icon_size)
 
-        unchecked_icon = QtGui.QIcon(_resource("ui", image))
+        unchecked_icon = QtGui.QIcon(ui._resource("ui", image))
         pixmap = unchecked_icon.pixmap(icon_size)
         _tint_color(pixmap, QtGui.QColor("#333333"))
         checked_icon = QtGui.QIcon(pixmap)
@@ -1784,7 +1778,7 @@ class SideBar(QtWidgets.QFrame):
         QPushButton:checked {{
             background: {color};
         }}
-        """.format(color=color, size=anchor_size, radius=int(anchor_size / 2)))
+        """.format(color=color, size=ANCHOR_SIZE, radius=int(ANCHOR_SIZE / 2)))
 
         self._widgets["Body"].layout().addWidget(anchor)
         self._anchors.append(anchor)
@@ -1808,8 +1802,8 @@ class SideBar(QtWidgets.QFrame):
         for index, pos in enumerate(widget_pos):
             anchor = self._anchors[index]
             offset = pos - slider_pos
-            min_pos = pd1 + index * (anchor_size + pd3)
-            max_pos = view - (pd1 + (count - index) * (anchor_size + pd3))
+            min_pos = PD1 + index * (ANCHOR_SIZE + PD3)
+            max_pos = view - (PD1 + (count - index) * (ANCHOR_SIZE + PD3))
 
             if offset <= min_pos:
                 anchor.move(anchor.x(), min_pos)
@@ -1818,10 +1812,6 @@ class SideBar(QtWidgets.QFrame):
                 anchor.move(anchor.x(), max_pos)
             else:
                 anchor.move(anchor.x(), offset)
-
-
-with open(_resource("ui", "style_welcome.css")) as f:
-    stylesheet = f.read()
 
 
 def _scaled_stylesheet(style):
@@ -1842,7 +1832,7 @@ def _scaled_stylesheet(style):
         output += [line]
     result = "\n".join(output)
     result = result % dict(
-        res=_resource().replace("\\", "/"),
+        res=ui._resource().replace("\\", "/"),
     )
     return result
 
@@ -1859,20 +1849,19 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     @staticmethod
     def preload():
-        log.info("Checking internet connections..")
-        product_status.has_wyday(refresh=True)
-        product_status.has_ragdoll(refresh=True)
-        log.info("Loading resources..")
-        product_status.release_history(refresh=True)
+
+        # These run in a separate thread
+        product_status._refresh_internet_connectivity()
+        product_status._refresh_release_history()
+
         asset_library.reload()
-        log.info("Done.")
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
         _ragdoll_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
-        self.setWindowIcon(QtGui.QIcon(_resource("ui", _ragdoll_logo)))
+        self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _ragdoll_logo)))
         # Makes Maya perform magic which makes the window stay
         # on top in OS X and Linux. As an added bonus, it'll
         # make Maya remember the window position
@@ -1889,16 +1878,11 @@ class WelcomeWindow(base.SingletonMainWindow):
             "Greet": GreetingPage(),
             "Assets": AssetListPage(),
             "Licence": LicencePage(),
-            "VirtualSpace": QtWidgets.QSpacerItem(pd1, pd1),
+            "VirtualSpace": QtWidgets.QSpacerItem(PD1, PD1),
         }
 
         animations = {
-            "FadeIn": QtCore.QPropertyAnimation(self, b"windowOpacity")
         }
-
-        animations["FadeIn"].setDuration(150)
-        animations["FadeIn"].setStartValue(0.0)
-        animations["FadeIn"].setEndValue(1.0)
 
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
@@ -1911,8 +1895,8 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(pd2)
-        layout.addSpacing(pd4)
+        layout.setSpacing(PD2)
+        layout.addSpacing(PD4)
         layout.addWidget(widgets["Greet"])
         layout.addWidget(widgets["Assets"])
         layout.addWidget(widgets["Licence"])
@@ -1944,31 +1928,33 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._animations = animations
         self._anchor_list = anchor_list
         self.__hidden = False
-        self.setStyleSheet(_scaled_stylesheet(stylesheet))
-        self.setMinimumWidth(window_width)
-        self.setMinimumHeight(widgets["Greet"].height() + pd4 * 2)
+
+        with internal.Timer("stylesheet", verbose=True):
+            self.setStyleSheet(_scaled_stylesheet(stylesheet))
+
+        self.setMinimumWidth(WINDOW_WIDTH)
+        self.setMinimumHeight(widgets["Greet"].height() + PD4 * 2)
 
     def hide(self):
         self.__hidden = True
         super(WelcomeWindow, self).hide()
 
     def show(self):
-        self.setWindowOpacity(0)
         super(WelcomeWindow, self).show()
+
         if not self.__hidden:
-            self.resize(window_width, window_height)
+            self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
             self._align_anchors()
         else:
             self.__hidden = False
-        self._animations["FadeIn"].start()
-        # init
+
         self.licence_updated.emit()
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
 
         virtual_space = height - self._widgets["Licence"].height()
-        self._widgets["VirtualSpace"].changeSize(pd1, virtual_space)
+        self._widgets["VirtualSpace"].changeSize(PD1, virtual_space)
 
         self._widgets["Body"].layout().invalidate()
         super(WelcomeWindow, self).resizeEvent(event)
@@ -1976,6 +1962,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def refresh(self):
         self._widgets["Assets"].reset()
+
         self._panels["SideBar"].set_current_anchor(0)
         if self.isVisible():
             self.licence_updated.emit()
@@ -1998,7 +1985,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
-        self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - pd1)
+        self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - PD1)
 
     def on_vertical_scrolled(self, value):
         self._align_anchors(value)

@@ -219,6 +219,8 @@ def install():
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
 
+        widgets.WelcomeWindow.preload()
+
         # 2018 and consolidation doesn't play nicely without animated shaders
         if cmdx.__maya_version__ < 2019:
             def no_consolidate():
@@ -246,7 +248,6 @@ def install():
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
 
-
     __.installed = True
 
 
@@ -259,7 +260,7 @@ def uninstall():
     uninstall_telemetry() if c.RAGDOLL_TELEMETRY else None
     uninstall_logger()
     uninstall_menu()
-    uninstall_ui()
+    uninstall_ui(force=True)
     options.uninstall()
     cmdx.uninstall()
     licence.uninstall()
@@ -736,8 +737,13 @@ def uninstall_plugin(force=True):
     )
 
 
-def uninstall_ui():
+def uninstall_ui(force=False):
+    protected = {}
     for title, widget in __.widgets.items():
+        if not force and getattr(widget, "protected", False):
+            protected[title] = widget
+            continue
+
         try:
             widget.close()
 
@@ -752,6 +758,7 @@ def uninstall_ui():
             )
 
     __.widgets.clear()
+    __.widgets.update(protected)
 
 
 def install_menu():
@@ -3352,12 +3359,95 @@ def repeatable(func):
     return repeatable_wrapper
 
 
+@i__.with_timing
 def welcome_user(*args):
-    if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):
-        return ui.SplashScreen.instance.show()
+    LegacyWindow = ui.SplashScreen
+    WelcomeWindow = widgets.WelcomeWindow
 
-    parent = ui.MayaWindow()
-    win = ui.SplashScreen(parent)
+    if os.getenv("RAGDOLL_LEGACY_GREETS"):
+        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
+            WelcomeWindow.instance.close()
+        if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
+            return LegacyWindow.instance.show()
+
+        parent = ui.MayaWindow()
+        win = LegacyWindow(parent)
+
+    else:
+        if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
+            LegacyWindow.instance.close()
+        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
+            return WelcomeWindow.instance.show()
+
+        parent = ui.MayaWindow()
+        win = widgets.WelcomeWindow(parent)
+
+        def on_licence_updated():
+            licence.uninstall()
+            licence.install()
+
+            data = licence.data()
+            data["currentVersion"] = ".".join(__.version_str.split(".")[:3])
+            try:
+                data["ip"], port = licence._parse_environment()
+                data["port"] = str(port)
+            except AttributeError:
+                data["ip"], data["port"] = "", ""  # env not set
+            except ValueError as e:
+                data["ip"], data["port"] = "", ""
+                log.error(e)
+
+            win.on_licence_updated(data)
+
+        def _is_succeed(status):
+            if status != licence.STATUS_OK:
+                log.warning("Failed, see Script Editor")
+                return False
+            return True
+
+        def on_node_activated(key_or_fname):
+            is_file = os.path.isfile(key_or_fname)
+            func = licence.activate_from_file if is_file else licence.activate
+            _is_succeed(func(key_or_fname))
+            win.licence_updated.emit()
+
+        def on_node_deactivated():
+            _is_succeed(licence.deactivate())
+            win.licence_updated.emit()
+
+        def on_float_requested():
+            _is_succeed(licence.request_lease())
+            win.licence_updated.emit()
+
+        def on_float_dropped():
+            _is_succeed(licence.drop_lease())
+            win.licence_updated.emit()
+
+        def on_offline_activate_requested(key, fname):
+            if _is_succeed(licence.activation_request_to_file(key, fname)):
+                win.on_offline_activate_requested()
+
+        def on_offline_deactivate_requested(fname):
+            if _is_succeed(licence.deactivation_request_to_file(fname)):
+                win.on_offline_deactivate_requested()
+
+        def on_asset_opened(file_path):
+            _open_physics(file_path)
+            win.hide()
+
+        win.licence_updated.connect(on_licence_updated)
+        win.node_activated.connect(on_node_activated)
+        win.node_deactivated.connect(on_node_deactivated)
+        win.float_requested.connect(on_float_requested)
+        win.float_dropped.connect(on_float_dropped)
+        win.offline_activate_requested.connect(on_offline_activate_requested)
+        win.offline_deactivate_requested.connect(
+            on_offline_deactivate_requested
+        )
+        win.asset_opened.connect(on_asset_opened)
+
+        win.refresh()
+
     win.show()
     win.activateWindow()
 
@@ -3669,6 +3759,21 @@ def _export_physics_wrapper(thumbnail=None):
     return True
 
 
+def _open_physics(path):
+    with i__.Timer("openPhysics") as duration:
+        created = dump.load(path)
+
+    log.info("Successfully opened %s.." % path)
+    log.info("..in %.1f ms" % duration.ms)
+
+    stats = (len(created["markers"]), duration.ms)
+    cmds.inViewMessage(
+        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+
 def open_physics(selection=None, **opts):
     from PySide2 import QtWidgets
     path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -3685,19 +3790,7 @@ def open_physics(selection=None, **opts):
         path += ".rag"
 
     path = os.path.normpath(path)
-
-    with i__.Timer("openPhysics") as duration:
-        created = dump.load(path)
-
-    log.info("Successfully opened %s.." % path)
-    log.info("..in %.1f ms" % duration.ms)
-
-    stats = (len(created["markers"]), duration.ms)
-    cmds.inViewMessage(
-        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
-        pos="topCenter",
-        fade=True
-    )
+    _open_physics(path)
 
     return kSuccess
 

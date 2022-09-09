@@ -1503,5 +1503,12 @@
         "items": ["World X", "World Y", "World Z", "Pose X", "Pose Y", "Pose Z"],
         "default": 3,
         "help": "The axis across which symmetry should look for the selected marker."
+    },
+    "extraAssets": {
+        "name": "extraAssets",
+        "label": "Extra Asset",
+        "type": "String",
+        "default": "",
+        "help": "Directory path to load extra assets from Welcome UI."
     }
 }

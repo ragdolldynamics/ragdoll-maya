@@ -49,8 +49,9 @@ AssetCardView {
     border: none;
     outline: none; /* Disable dotted border on focus */
 }
-AssetCardView::item:hovered {
-    background-color: transparent; /* no highlight on hovered */
+
+AssetCardView::item:hover {
+    border: 4px solid #eee;
 }
 
 #GreetingStartupChk {

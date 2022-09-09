@@ -866,12 +866,11 @@ class ProductReleasedView(ProductTimelineBase):
         it.setData(it.VersionRole, tx.strip())
         it.enable_hover("#a4a4a4", "#1c1c1c")
         if date == self._current:
-            it.set_message("Current Ragdoll version.")
+            it.set_message("Your current Ragdoll version (click to read more)")
         elif date == self._latest_update:
-            it.set_message("Latest updatable Ragdoll version. Go get it!")
+            it.set_message("Latest Ragdoll version (click to read more)")
         else:
-            it.set_message("Old Ragdoll release, click to open release note "
-                           "in web browser.")
+            it.set_message("Previous Ragdoll version (click to read more)")
         return it
 
     def draw_time(self, date, color):

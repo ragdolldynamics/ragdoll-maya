@@ -37,9 +37,9 @@ CARD_HEIGHT = VIDEO_HEIGHT + (CARD_PADDING * 2)
 
 ANCHOR_SIZE = px(42)
 SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
-SPLASH_WIDTH = px(700)
+SPLASH_WIDTH = px(650)
 SPLASH_HEIGHT = px(125)
-WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD4 * 2) + SCROLL_WIDTH
+WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
 WINDOW_HEIGHT = px(570)  # just enough to see the first 2 rows of assets
 
 
@@ -855,7 +855,7 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Browse"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(PD1, 0, PD1, 0)
+        layout.setContentsMargins(PD4 - CARD_PADDING, 0, PD4 - CARD_PADDING, 0)
         layout.setSpacing(PD3)
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
@@ -1765,19 +1765,19 @@ class SideBar(QtWidgets.QFrame):
         anchor.set_unchecked_icon(unchecked_icon)
 
         anchor.setStyleSheet("""
-        QPushButton {{
-            height: {size}px;
-            width: {size}px;
-            border-radius: {radius}px;
-            background: transparent;
-            padding: 0px;
-        }}
-        QPushButton:hover {{
-            background: #454545;
-        }}
-        QPushButton:checked {{
-            background: {color};
-        }}
+            QPushButton {{
+                height: {size}px;
+                width: {size}px;
+                border-radius: {radius}px;
+                background: transparent;
+                padding: 0px;
+            }}
+            QPushButton:hover {{
+                background: #454545;
+            }}
+            QPushButton:checked {{
+                background: {color};
+            }}
         """.format(color=color, size=ANCHOR_SIZE, radius=int(ANCHOR_SIZE / 2)))
 
         self._widgets["Body"].layout().addWidget(anchor)
@@ -1903,7 +1903,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         layout.addSpacerItem(widgets["VirtualSpace"])
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
-        layout.setContentsMargins(0, 0, px(2), 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(panels["SideBar"])
         layout.addWidget(panels["Scroll"])

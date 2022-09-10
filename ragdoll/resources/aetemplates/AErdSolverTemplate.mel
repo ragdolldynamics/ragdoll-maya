@@ -4,7 +4,11 @@ global proc AErdSolverTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "General" -collapse false;
-            editorTemplate -addControl "enabled";
+            editorTemplate -beginNoOptimize;
+                editorTemplate -addControl "enabled";
+                editorTemplate -addControl "export";
+            editorTemplate -endNoOptimize;
+
             editorTemplate -addControl "cache";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "startTimeCustom";

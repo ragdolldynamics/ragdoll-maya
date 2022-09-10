@@ -5,8 +5,9 @@ global proc AErdGroupTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Input" -collapse false;
             editorTemplate -beginNoOptimize;
-            editorTemplate -addControl "enabled";
-            editorTemplate -addControl "selfCollide";
+                editorTemplate -addControl "enabled";
+                editorTemplate -addControl "export";
+                editorTemplate -addControl "selfCollide";
             editorTemplate -endNoOptimize;
 
             editorTemplate -addControl "inputType";

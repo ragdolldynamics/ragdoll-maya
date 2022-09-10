@@ -5,6 +5,7 @@ global proc AErdDistanceConstraintTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "General" -collapse false;
             editorTemplate -addControl "enabled";
+            editorTemplate -addControl "export";
             editorTemplate -addControl "method";
             editorTemplate -addControl "minimum";
             editorTemplate -addControl "maximum";

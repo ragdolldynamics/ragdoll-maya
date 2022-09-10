@@ -4,7 +4,10 @@ global proc AErdFixedConstraintTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "General" -collapse false;
-            editorTemplate -addControl "enabled";
+            editorTemplate -beginNoOptimize;
+                editorTemplate -addControl "enabled";
+                editorTemplate -addControl "export";
+            editorTemplate -endNoOptimize;
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

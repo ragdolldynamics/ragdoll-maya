@@ -825,7 +825,9 @@ class AssetListPage(QtWidgets.QWidget):
         widgets = {
             "Tags": AssetTagList(),
             "List": AssetCardView(),
-            "Empty": QtWidgets.QLabel("No Asset Found"),
+            "Empty": QtWidgets.QLabel(
+                "No assets found, try adding a path in Extra Assets below"
+            ),
             "Path": QtWidgets.QLineEdit(),
             "Browse": QtWidgets.QPushButton(),
         }

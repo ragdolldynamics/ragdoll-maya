@@ -214,8 +214,12 @@ class Registry(object):
             )
 
         except KeyError as e:
-            Name = self.get(entity, "NameComponent")
-            name = Name["path"] or Name["value"]
+            if self.has(entity, "NameComponent"):
+                Name = self.get(entity, "NameComponent")
+                name = Name["path"] or Name["value"]
+            else:
+                name = "Entity: %d" % entity
+
             raise KeyError("%s did not have '%s' (%s)" % (name, component, e))
 
     def components(self, entity):

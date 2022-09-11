@@ -204,6 +204,8 @@ def install():
     if __.installed:
         return
 
+    __.installed = True
+
     options.install()
     install_logger()
     install_plugin()
@@ -247,8 +249,6 @@ def install():
             # Keep this, to avoid pestering the user with the splash dialog
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
-
-    __.installed = True
 
 
 def uninstall():

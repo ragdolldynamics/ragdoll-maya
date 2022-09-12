@@ -411,6 +411,19 @@ class Loader(object):
             mod.set_attr(joint["jointOrient"], tm.rotation())
             mod.set_attr(joint["scale"], Scale["value"])
 
+            # Synchronise locked Maya channels with limits
+            Subs = self._registry.get(entity, "SubEntitiesComponent")
+            Limit = self._registry.get(Subs["relative"], "LimitComponent")
+
+            if Limit["enabled"] and Limit["twist"] < 0:
+                mod.set_locked(joint["rotateX"])
+
+            if Limit["enabled"] and Limit["swing1"] < 0:
+                mod.set_locked(joint["rotateY"])
+
+            if Limit["enabled"] and Limit["swing2"] < 0:
+                mod.set_locked(joint["rotateZ"])
+
             created[entity] = joint
 
         def extend_tip(mod, entity, joint):

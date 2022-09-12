@@ -1839,9 +1839,14 @@ def assign_plan(body, feet, opts=None):
 
         else:
             mod.set_attr(rdplan["targets"][0], body_tm.as_matrix())
+            mod.set_attr(rdplan["timings"][0], 1)
+            mod.set_attr(rdplan["hards"][0], 1)
             mod.do_it()
             body_tm.translateBy(end_offset, cmdx.sTransform)
             mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
+            mod.set_attr(rdplan["timings"][1], duration)
+            mod.set_attr(rdplan["hards"][1], 1)
+            mod.do_it()
 
         mod.do_it()
 
@@ -1935,7 +1940,11 @@ def assign_plan(body, feet, opts=None):
                 end_mtx = tm.as_matrix() * rdplan["targets"][1].as_matrix()
 
                 dgmod.set_attr(rdfoot["targets"][0], start_mtx)
+                dgmod.set_attr(rdfoot["timings"][0], 1)
+                dgmod.set_attr(rdfoot["hards"][0], 1)
                 dgmod.set_attr(rdfoot["targets"][1], end_mtx)
+                dgmod.set_attr(rdfoot["timings"][1], duration)
+                dgmod.set_attr(rdfoot["hards"][1], 1)
 
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])

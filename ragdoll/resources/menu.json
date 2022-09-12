@@ -264,6 +264,15 @@
         ]
     },
 
+    "addTarget": {
+        "label": "Add Target",
+        "icon": "plan.png",
+        "summary": "Add another target to selected plan.",
+        "description": "Add new target to the plan.",
+        "options": [
+        ]
+    },
+
     "updatePlan": {
         "label": "Update Plan",
         "icon": "reset.png",

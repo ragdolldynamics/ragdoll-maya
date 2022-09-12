@@ -8,7 +8,7 @@ dedump(dump)
 
 """
 
-import re
+import os
 import json
 import copy
 import logging
@@ -27,6 +27,20 @@ def load(fname, opts=None):
     New transforms are generated and then assigned Markers.
 
     """
+
+    # Prefer merging with the first found existing solver
+    existingSolver = str(next(iter(cmdx.ls(type="rdSolver")), ""))
+
+    opts = dict(opts or {}, **{
+
+        # No hierarchy here, it's cleeeean
+        "matchBy": constants.MatchByName,
+
+        # No need to retarget, we're targeting the inputs
+        "retarget": False,
+
+        "overrideSolver": existingSolver,
+    })
 
     loader = Loader(opts)
     loader.read(fname)
@@ -115,6 +129,24 @@ def Component(comp):
         elif value["type"] == "Quaternion":
             value = cmdx.Quaternion(*value["values"])
 
+        elif value["type"] == "PointArray":
+            values = []
+
+            # Values are stored flat; every 3 values represent an Point
+            stride = 0
+            for _ in range(len(value["values"]) // 3):
+                values.append(cmdx.Point(
+                    value["values"][stride + 0],
+                    value["values"][stride + 1],
+                    value["values"][stride + 2],
+                ))
+
+                stride += 3
+            value = values
+
+        elif value["type"] == "UintArray":
+            value = value["values"]
+
         else:
             raise TypeError("Unsupported type: %s" % value)
 
@@ -181,10 +213,10 @@ class Registry(object):
                 self._dump["entities"][entity]["components"][component]
             )
 
-        except KeyError:
+        except KeyError as e:
             Name = self.get(entity, "NameComponent")
             name = Name["path"] or Name["value"]
-            raise KeyError("%s did not have '%s'" % (name, component))
+            raise KeyError("%s did not have '%s' (%s)" % (name, component, e))
 
     def components(self, entity):
         """Return *all* components for `entity`"""
@@ -257,6 +289,7 @@ class Loader(object):
             "searchAndReplace": ["", ""],
             "namespace": None,
             "preserveAttributes": True,
+            "retarget": True,
 
             "overrideSolver": "",
             "createMissingTransforms": False,
@@ -278,7 +311,8 @@ class Loader(object):
         # Original dump
         self._dump = None
 
-        self._current_fname = ""
+        # Default, in case data is passed in directly rather than a file
+        self._current_fname = "character"
 
     def count(self):
         return len(self._state["entityToTransform"])
@@ -331,6 +365,73 @@ class Loader(object):
     def invalid_reasons(self):
         """Return reasons for failure, useful for reporting"""
         return self._invalid_reasons[:]
+
+    def create(self, assembly):
+        seen = {}
+        created = {}
+
+        def recursive_create(mod, entity, group):
+            if entity in seen:
+                return
+
+            # Avoid cycles
+            seen[entity] = True
+
+            Rigid = self._registry.get(entity, "RigidComponent")
+            MarkerUi = self._registry.get(entity, "MarkerUIComponent")
+            Rest = self._registry.get(entity, "RestComponent")
+            Scale = self._registry.get(entity, "ScaleComponent")
+
+            parent = Rigid["parentRigid"]
+
+            # Ensure we've created the parent already
+            if parent and parent not in created:
+                recursive_create(mod, parent, group)
+
+            path = MarkerUi["sourceTransform"]
+            name = path.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+            parent_transform = created.get(parent) or group
+            joint = mod.create_node("joint",
+                                    name=name,
+                                    parent=parent_transform)
+
+            mtx = Rest["matrix"]
+
+            if parent:
+                ParentRest = self._registry.get(parent, "RestComponent")
+                mtx *= ParentRest["matrix"].inverse()
+
+            tm = cmdx.Tm(mtx)
+
+            mod.set_attr(joint["translate"], tm.translation())
+            mod.set_attr(joint["jointOrient"], tm.rotation())
+            mod.set_attr(joint["scale"], Scale["value"])
+
+            created[entity] = joint
+
+        def extend_tip(mod, entity, joint):
+            child = joint.child()
+
+            if child:
+                return
+
+            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+            offset = Desc["offset"]
+            name = joint.name() + "_tip"
+            joint = mod.create_node("joint", name=name, parent=joint)
+            mod.set_attr(joint["translate"], offset * 2)
+
+        with cmdx.DagModifier() as mod:
+            skeleton_grp = assembly | "skeleton_grp"
+
+            for entity in self._registry.view("RigidComponent",
+                                              "MarkerUIComponent"):
+                recursive_create(mod, entity, skeleton_grp)
+
+            for entity, joint in created.items():
+                extend_tip(mod, entity, joint)
+
+        return created
 
     def analyse(self):
         """Fill internal state from dump with something we can use"""
@@ -391,6 +492,100 @@ class Loader(object):
 
         if not any([solvers, groups, constraints, markers]):
             log.warning("Dump was empty")
+
+    @internal.with_undo_chunk
+    @internal.maintain_selection
+    def load(self):
+        def create_mesh(mod, entity, name, parent):
+            Desc = self._registry.get(entity, "GeometryDescriptionComponent")
+            offset = cmdx.Tm(
+                translate=Desc["offset"],
+                rotate=Desc["rotation"]
+            ).as_matrix()
+
+            if Desc["type"] == "Box":
+                mesh, _ = commands._polycube(parent,
+                                             Desc["extents"].x,
+                                             Desc["extents"].y,
+                                             Desc["extents"].z,
+                                             offset=offset)
+
+            elif Desc["type"] == "Sphere":
+                mesh, _ = commands._polysphere(parent,
+                                               Desc["radius"],
+                                               offset=offset)
+
+            elif Desc["type"] == "Capsule":
+                mesh, _ = commands._polycapsule(parent,
+                                                Desc["length"],
+                                                Desc["radius"],
+                                                offset=offset)
+
+            elif Desc["type"] == "ConvexHull":
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+                mobj = meshes_to_mobj(Meshes, parent.object())
+
+                # For some reason, we can't set inMesh.
+                # So instead, we use the above meshes_to_mobj to generate a
+                # new shape from scratch and change its name.
+                # A bit of a bummer..
+                mesh = cmdx.Node(mobj)
+                mod.rename_node(mesh, name + "Shape")
+
+                mod.do_it()
+
+                cmds.polySoftEdge(
+                    mesh.path(), angle=0, constructionHistory=True
+                )
+
+            else:
+                raise ValueError("Unsupported shape type: %s" % Desc["type"])
+
+            cmdx.encode("initialShadingGroup").add(mesh)
+
+            return mesh
+
+        name = os.path.basename(self._current_fname)
+        name, _ = os.path.splitext(name)
+
+        namespace = "%s" % name
+        namespace = internal.unique_namespace(namespace)
+
+        previous = cmds.namespaceInfo(currentNamespace=True)
+        cmds.namespace(add=namespace)
+        cmds.namespace(set=namespace)
+
+        self._opts["namespace"] = namespace
+
+        with cmdx.DagModifier() as mod:
+            assembly = mod.create_node("transform", name)
+            mod.create_node("transform", "geometry_grp", assembly)
+            mod.create_node("transform", "skeleton_grp", assembly)
+
+        try:
+            created = self.create(assembly)
+            out = self.reinterpret()
+            geometry_grp = assembly | "geometry_grp"
+
+            # Create meshes last, to avoid name conflict
+            joint_to_mesh = {}
+            with cmdx.DagModifier() as mod:
+                for entity, joint in created.items():
+                    name = joint.name()
+                    parent = mod.create_node("transform", name, geometry_grp)
+                    mesh = create_mesh(mod, entity, name, parent)
+                    joint_to_mesh[joint] = parent
+
+            for joint, mesh in joint_to_mesh.items():
+                cmds.parentConstraint(str(joint), str(mesh),
+                                      maintainOffset=False)
+                cmds.scaleConstraint(str(joint), str(mesh),
+                                     maintainOffset=False)
+
+        finally:
+            cmds.namespace(set=previous)
+
+        return out
 
     @internal.with_undo_chunk
     def reinterpret(self, dry_run=False):
@@ -636,19 +831,19 @@ class Loader(object):
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
 
-                # Get this information from the file
-                for marker in rdmarkers.values():
-                    mod.disconnect(marker["dst"][0])
+                if self._opts["retarget"]:
+                    # Get this information from the file
+                    for marker in rdmarkers.values():
+                        mod.disconnect(marker["dst"][0])
 
-                mod.do_it()
+                    mod.do_it()
 
                 for entity, rdmarker in rdmarkers.items():
                     try:
                         self._apply_marker(mod, entity, rdmarker)
                     except KeyError as e:
                         # Don't let poorly formatted JSON get in the way
-                        log.warning("Could not restore attribute: %s.%s"
-                                    % (rdmarker, e))
+                        log.warning("Could not restore attribute: %s" % e)
 
         log.info("Adding to group(s)..")
         with cmdx.DagModifier() as mod:
@@ -899,6 +1094,12 @@ class Loader(object):
 
         # In case of double || characters
         path = path.replace("||", "|")
+
+        # Support wildcard names
+        # E.g. :manikin:L_arm -> :manikin:*L_arm
+        if self._opts["matchBy"] == constants.MatchByName:
+            if ":" in path and "|" not in path:
+                path = "{0}:*{1}".format(*path.rsplit(":", 1))
 
         return path
 
@@ -1208,9 +1409,11 @@ class Loader(object):
                 mod.do_it()
 
         # There will be *no* destinations per default
-        for dest in MarkerUi["destinationTransforms"]:
-            retarget(dest)
+        if self._opts["retarget"]:
+            for dest in MarkerUi["destinationTransforms"]:
+                retarget(dest)
 
+        mesh_replaced = False
         if MarkerUi["inputGeometryPath"]:
             path = MarkerUi["inputGeometryPath"]
             path = self._pre_process_path(path)
@@ -1219,24 +1422,78 @@ class Loader(object):
                 shape = cmdx.encode(path)
 
             except cmdx.ExistError:
-                if shape_type == constants.MeshShape:
-                    # No mesh? Resort to a plain capsule
-                    mod.set_attr(marker["shapeType"], constants.CapsuleShape)
-                    log.warning(
-                        "%s.%s=%s could not be found, reverting "
-                        "to a capsule shape" % (
-                            marker, "inputGeometry", path
+
+                # Backwards compatibility, before meshes were exported
+                if not self._registry.has(entity, "ConvexMeshComponents"):
+                    if shape_type == constants.MeshShape:
+                        # No mesh? Resort to a plain capsule
+                        shape_type = constants.CapsuleShape
+                        log.warning(
+                            "%s.%s=%s could not be found, reverting "
+                            "to a capsule shape" % (
+                                marker, "inputGeometry", path
+                            )
                         )
-                    )
 
             else:
                 commands.replace_mesh(
                     marker, shape, opts={"maintainOffset": False}
                 )
+                mesh_replaced = True
 
-                mod.set_attr(marker["inputGeometryMatrix"],
-                             MarkerUi["inputGeometryMatrix"])
+            mod.set_attr(marker["inputGeometryMatrix"],
+                         MarkerUi["inputGeometryMatrix"])
+
+        if self._registry.has(entity, "ConvexMeshComponents"):
+            if not mesh_replaced:
+                if marker["inputGeometry"].connected:
+                    mod.disconnect(marker["inputGeometry"])
+                    mod.do_it()
+
+                Meshes = self._registry.get(entity, "ConvexMeshComponents")
+
+                # May be empty
+                if Meshes["vertices"]:
+                    mobj = meshes_to_mobj(Meshes)
+                    mod.set_attr(marker["inputGeometry"], mobj)
+
+                    # Matrix is baked into the exported vertices
+                    mod.set_attr(marker["inputGeometryMatrix"],
+                                 cmdx.Matrix4())
 
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
         mod.set_attr(marker["shapeType"], shape_type)
+
+
+def meshes_to_mobj(Meshes, parent=None):
+    vertices = cmdx.om.MFloatPointArray()
+    polygon_connects = cmdx.om.MIntArray()
+    polygon_counts = cmdx.om.MIntArray()
+
+    for vertex in Meshes["vertices"]:
+        vertices.append(vertex)
+
+    for index in Meshes["indices"]:
+        polygon_connects.append(index)
+
+    if len(vertices) == 0:
+        return cmdx.om.MObject.kNullObj
+
+    # It's all triangles, 3 points each
+    for index in range(len(polygon_connects) // 3):
+        polygon_counts.append(3)
+
+    mobj = parent
+
+    if parent is None:
+        data = cmdx.om.MFnMeshData()
+        mobj = data.create()
+
+    fn = cmdx.om.MFnMesh()
+    out = fn.create(vertices,
+                    polygon_counts,
+                    polygon_connects,
+                    [], [], mobj)
+
+    return mobj if parent is None else out

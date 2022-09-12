@@ -219,6 +219,8 @@ def install():
         # Give Maya's GUI a chance to boot up
         cmds.evalDeferred(install_menu)
 
+        widgets.WelcomeWindow.preload()
+
         # 2018 and consolidation doesn't play nicely without animated shaders
         if cmdx.__maya_version__ < 2019:
             def no_consolidate():
@@ -246,7 +248,6 @@ def install():
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
 
-
     __.installed = True
 
 
@@ -259,7 +260,7 @@ def uninstall():
     uninstall_telemetry() if c.RAGDOLL_TELEMETRY else None
     uninstall_logger()
     uninstall_menu()
-    uninstall_ui()
+    uninstall_ui(force=True)
     options.uninstall()
     cmdx.uninstall()
     licence.uninstall()
@@ -592,6 +593,12 @@ def _on_manipulator_exited(clientData=None):
     if options.read("manipulatorFitToViewOverride"):
         _uninstall_fit_to_view()
 
+    # For recording.transfer_live()
+    for marker in cmdx.ls(type="rdMarker"):
+        marker.data.pop("previousMatrix", None)
+        marker.data.pop("previousTranslate", None)
+        marker.data.pop("previousRotate", None)
+
 
 def _on_plan_complete(clientData=None):
     """User has exited the manipulator, restore viewport HUD"""
@@ -730,8 +737,13 @@ def uninstall_plugin(force=True):
     )
 
 
-def uninstall_ui():
+def uninstall_ui(force=False):
+    protected = {}
     for title, widget in __.widgets.items():
+        if not force and getattr(widget, "protected", False):
+            protected[title] = widget
+            continue
+
         try:
             widget.close()
 
@@ -746,6 +758,7 @@ def uninstall_ui():
             )
 
     __.widgets.clear()
+    __.widgets.update(protected)
 
 
 def install_menu():
@@ -863,6 +876,8 @@ def install_menu():
 
     item("exportPhysics", export_physics, export_physics_options)
     item("importPhysics", import_physics, import_physics_options)
+    item("openPhysics", open_physics, open_physics_options)
+    item("updatePhysics", open_physics, open_physics_options)
 
     divider("Manipulate")
 
@@ -871,11 +886,8 @@ def install_menu():
              create_distance_constraint, label="Distance")
         item("pinConstraint",
              create_pin_constraint, create_pin_constraint_options, label="Pin")
-
-        if c.RAGDOLL_DEVELOPER:
-            item("attachConstraint",
-                 create_attach_constraint, label="Attach")
-
+        item("attachConstraint",
+             create_attach_constraint, label="Attach")
         item("fixedConstraint",
              create_fixed_constraint, label="Weld")
 
@@ -944,6 +956,9 @@ def install_menu():
         item("markerReplaceMesh",
              replace_marker_mesh,
              replace_marker_mesh_options)
+
+        item("convertMesh", convert_to_mesh, convert_to_mesh_options)
+        item("bakeMesh", bake_mesh, bake_mesh_options)
 
         divider()
 
@@ -1941,6 +1956,7 @@ def create_pin_constraint(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def create_attach_constraint(selection=None, **opts):
+    selection = selection or cmdx.sl()
 
     try:
         a, b = markers_from_selection(selection)
@@ -1950,7 +1966,8 @@ def create_attach_constraint(selection=None, **opts):
             "Select two markers to constrain."
         )
 
-    con = commands.create_pin_constraint(a, b)
+    transform = selection[1] if selection[1].is_a(cmdx.kTransform) else None
+    con = commands.create_pin_constraint(a, b, transform=transform)
     cmds.select(str(con.parent()))
 
     return True
@@ -2216,6 +2233,22 @@ def extract_markers(selection=None, **opts):
     return kSuccess
 
 
+def transfer_live(selection=None, **opts):
+    manip = json.loads(cmds.ragdollDump(manipulator=True))
+
+    if not manip["solverPath"]:
+        return kFailure
+
+    solver = cmdx.encode(manip["solverPath"])
+
+    with i__.Timer("transfer") as duration:
+        recording.transfer_live(solver)
+
+    log.info("Transferred animation in %.1f ms" % duration.ms)
+
+    return kSuccess
+
+
 @i__.with_undo_chunk
 @with_exception_handling
 def retarget_marker(selection=None, **opts):
@@ -2264,70 +2297,37 @@ def retarget_marker(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reparent_marker(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
     try:
-        a, b = selection or cmdx.sl()
+        children, parent = markers[:-1], markers[-1]
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
-            "Select a child marker along with "
-            "the marker to make the new parent."
+            "Select any number of child markers "
+            "along with the new parent."
         )
 
-    if a.isA(cmdx.kDagNode):
-        a = a["message"].output(type="rdMarker")
+    for child in children:
+        commands.reparent_marker(child, parent)
+        log.info("Parented %s -> %s" % (child, parent))
 
-    if b.isA(cmdx.kDagNode):
-        b = b["message"].output(type="rdMarker")
-
-    if not (a and a.type() == "rdMarker"):
-        raise i__.UserWarning(
-            "No child marker found",
-            "The first selection should be a child marker."
-        )
-
-    if not (b and b.type() == "rdMarker"):
-        raise i__.UserWarning(
-            "No parent marker found",
-            "The second selection should be the new parent."
-        )
-
-    commands.reparent_marker(a, b)
-
-    log.info("Parented %s -> %s" % (a, b))
     return kSuccess
 
 
 @i__.with_undo_chunk
 @with_exception_handling
 def unparent_marker(selection=None, **opts):
-    selection = selection or cmdx.sl()
+    markers = markers_from_selection(selection)
 
-    if not selection:
+    if not markers:
         raise i__.UserWarning(
-            "Selection Problem",
-            "Select a marker to unparent."
+            "No markers found",
+            "Select one or more markers to unparent."
         )
 
-    for node in selection:
-        marker = node
-
-        if marker.isA(cmdx.kDagNode):
-            marker = marker["message"].output(type="rdMarker")
-
-        if not marker:
-            raise i__.UserWarning(
-                "No marker found",
-                "Select a marker to unparent."
-            )
-
-        if marker.type() != "rdMarker":
-            raise i__.UserWarning(
-                "No marker found",
-                "%s was not a marker." % node
-            )
-
+    for marker in markers:
         commands.unparent_marker(marker)
-
         log.info("Unparented %s" % (marker))
 
     return kSuccess
@@ -2336,7 +2336,6 @@ def unparent_marker(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
-    selection = selection or cmdx.sl()
     markers = markers_from_selection(selection)
 
     if not markers:
@@ -2577,6 +2576,7 @@ def auto_limit(selection=None, **opts):
     return kSuccess
 
 
+@i__.with_refresh_suspended
 def cache_all(selection=None, **opts):
     solvers = _filtered_selection("rdSolver", selection)
     solvers = solvers or cmdx.ls(type="rdSolver")
@@ -2721,6 +2721,7 @@ def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": _opt("planNativeTargets", opts),
         "preset": _opt("planPreset", opts),
+        "duration": _opt("planDuration", opts),
     }, **(opts or {}))
 
     sel = selection or cmdx.selection()
@@ -3127,6 +3128,39 @@ def isolate_select(nodes):
 
 
 @with_exception_handling
+def bake_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    for marker in markers:
+        commands.bake_mesh(marker)
+
+    log.info("Successfully baked %d markers" % len(markers))
+    return kSuccess
+
+
+def bake_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
+def convert_to_mesh(selection=None, **opts):
+    markers = markers_from_selection(selection)
+
+    meshes = []
+    for marker in markers:
+        meshes += [commands.marker_to_mesh(marker)]
+
+    cmds.select(list(str(mesh.parent()) for mesh in meshes))
+    log.info("Successfully converted %d markers" % len(meshes))
+
+    return kSuccess
+
+
+def convert_to_mesh_options(selection=None, **opts):
+    pass
+
+
+@with_exception_handling
 def replace_marker_mesh(selection=None, **opts):
     opts = {
         "exclusive": _opt("replaceMeshExclusive", opts),
@@ -3140,15 +3174,7 @@ def replace_marker_mesh(selection=None, **opts):
         _filtered_selection("nurbsSurface", selection)
     )
 
-    markers = []
-    for node in selection or cmdx.selection():
-        if node.isA("rdMarker"):
-            markers.append(node)
-
-        elif node.isA(cmdx.kDagNode):
-            marker = node["message"].output(type="rdMarker")
-            if marker is not None:
-                markers.append(marker)
+    markers = markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3187,10 +3213,6 @@ def replace_marker_mesh(selection=None, **opts):
             )
 
     commands.replace_mesh(markers[0], meshes[0], opts=opts)
-
-    # Make life easier for the user
-    with cmdx.DagModifier() as mod:
-        mod.set_attr(markers[0]["shapeType"], c.MeshShape)
 
     return kSuccess
 
@@ -3411,12 +3433,95 @@ def repeatable(func):
     return repeatable_wrapper
 
 
+@i__.with_timing
 def welcome_user(*args):
-    if ui.SplashScreen.instance and ui.isValid(ui.SplashScreen.instance):
-        return ui.SplashScreen.instance.show()
+    LegacyWindow = ui.SplashScreen
+    WelcomeWindow = widgets.WelcomeWindow
 
-    parent = ui.MayaWindow()
-    win = ui.SplashScreen(parent)
+    if os.getenv("RAGDOLL_LEGACY_GREETS"):
+        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
+            WelcomeWindow.instance.close()
+        if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
+            return LegacyWindow.instance.show()
+
+        parent = ui.MayaWindow()
+        win = LegacyWindow(parent)
+
+    else:
+        if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
+            LegacyWindow.instance.close()
+        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
+            return WelcomeWindow.instance.show()
+
+        parent = ui.MayaWindow()
+        win = widgets.WelcomeWindow(parent)
+
+        def on_licence_updated():
+            licence.uninstall()
+            licence.install()
+
+            data = licence.data()
+            data["currentVersion"] = ".".join(__.version_str.split(".")[:3])
+            try:
+                data["ip"], port = licence._parse_environment()
+                data["port"] = str(port)
+            except AttributeError:
+                data["ip"], data["port"] = "", ""  # env not set
+            except ValueError as e:
+                data["ip"], data["port"] = "", ""
+                log.error(e)
+
+            win.on_licence_updated(data)
+
+        def _is_succeed(status):
+            if status != licence.STATUS_OK:
+                log.warning("Failed, see Script Editor")
+                return False
+            return True
+
+        def on_node_activated(key_or_fname):
+            is_file = os.path.isfile(key_or_fname)
+            func = licence.activate_from_file if is_file else licence.activate
+            _is_succeed(func(key_or_fname))
+            win.licence_updated.emit()
+
+        def on_node_deactivated():
+            _is_succeed(licence.deactivate())
+            win.licence_updated.emit()
+
+        def on_float_requested():
+            _is_succeed(licence.request_lease())
+            win.licence_updated.emit()
+
+        def on_float_dropped():
+            _is_succeed(licence.drop_lease())
+            win.licence_updated.emit()
+
+        def on_offline_activate_requested(key, fname):
+            if _is_succeed(licence.activation_request_to_file(key, fname)):
+                win.on_offline_activate_requested()
+
+        def on_offline_deactivate_requested(fname):
+            if _is_succeed(licence.deactivation_request_to_file(fname)):
+                win.on_offline_deactivate_requested()
+
+        def on_asset_opened(file_path):
+            _open_physics(file_path)
+            win.hide()
+
+        win.licence_updated.connect(on_licence_updated)
+        win.node_activated.connect(on_node_activated)
+        win.node_deactivated.connect(on_node_deactivated)
+        win.float_requested.connect(on_float_requested)
+        win.float_dropped.connect(on_float_dropped)
+        win.offline_activate_requested.connect(on_offline_activate_requested)
+        win.offline_deactivate_requested.connect(
+            on_offline_deactivate_requested
+        )
+        win.asset_opened.connect(on_asset_opened)
+
+        win.refresh()
+
     win.show()
     win.activateWindow()
 
@@ -3726,6 +3831,46 @@ def _export_physics_wrapper(thumbnail=None):
     )
 
     return True
+
+
+def _open_physics(path):
+    with i__.Timer("openPhysics") as duration:
+        created = dump.load(path)
+
+    log.info("Successfully opened %s.." % path)
+    log.info("..in %.1f ms" % duration.ms)
+
+    stats = (len(created["markers"]), duration.ms)
+    cmds.inViewMessage(
+        amg="Opened %d markers in <hl>%.2f ms</hl>" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+
+def open_physics(selection=None, **opts):
+    from PySide2 import QtWidgets
+    path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        ui.MayaWindow(),
+        "Open Ragdoll File",
+        options.read("lastVisitedPath"),
+        "Ragdoll scene files (*.rag)"
+    )
+
+    if not path:
+        return log.debug("Cancelled")
+
+    if not path.endswith(".rag"):
+        path += ".rag"
+
+    path = os.path.normpath(path)
+    _open_physics(path)
+
+    return kSuccess
+
+
+def open_physics_options(*args):
+    return open_physics(*args)
 
 
 def import_physics(selection=None, **opts):

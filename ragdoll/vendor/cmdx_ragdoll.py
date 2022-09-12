@@ -1517,12 +1517,17 @@ class DagNode(Node):
             >>> parent | "child"
             |parent|child
 
-            # Stacklable too
+            # Stackable too
             >>> grand =  createNode("transform", "grand", child)
             >>> parent | "child" | "grand"
             |parent|child|grand
 
         """
+
+        # Handle cases where self has a namespace
+        # and no namespace is provided.
+        if ":" not in other:
+            other = "%s:%s" % (self.namespace(), other)
 
         return encode("%s|%s" % (self.path(), other))
 
@@ -4755,12 +4760,16 @@ class Quaternion(om.MQuaternion):
     def asMatrix(self):
         return Matrix4(super(Quaternion, self).asMatrix())
 
+    def isEquivalent(self, other, tolerance=om.MQuaternion.kTolerance):
+        return super(Quaternion, self).isEquivalent(other, tolerance)
+
     if ENABLE_PEP8:
         as_matrix = asMatrix
         is_normalised = isNormalised
         length_squared = lengthSquared
         as_euler_rotation = asEulerRotation
         as_euler = asEulerRotation
+        is_equivalent = isEquivalent
 
 
 # Alias

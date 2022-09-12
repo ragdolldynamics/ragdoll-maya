@@ -445,6 +445,18 @@ def with_undo_chunk(func):
     return _undo_chunk
 
 
+def maintain_selection(func):
+    @functools.wraps(func)
+    def _maintain_selection(*args, **kwargs):
+        try:
+            selection = cmds.ls(selection=True)
+            return func(*args, **kwargs)
+        finally:
+            cmds.select(selection)
+
+    return _maintain_selection
+
+
 def sort_filenames(fnames, suffix=".rag"):
     """Sort by numbered suffix
 
@@ -494,6 +506,17 @@ def unique_name(name):
     if cmdx.exists(name, strict=False):
         index = 1
         while cmdx.exists("%s%d" % (name, index), strict=False):
+            index += 1
+        name = "%s%d" % (name, index)
+
+    return name
+
+
+def unique_namespace(name):
+    """Internal utility function"""
+    if cmds.namespace(exists=name):
+        index = 1
+        while cmds.namespace(exists="%s%d" % (name, index)):
             index += 1
         name = "%s%d" % (name, index)
 
@@ -670,6 +693,25 @@ def sort_by_evaluation_order(nodes, minimal=False):
     # Turn back into objects
     items = sorted(nodes.items(), key=lambda item: item[1])
     return list(keys[item[0]] for item in items)
+
+
+def markers_from_solver(solver):
+    markers = []
+
+    for entity in (el.input() for el in solver["inputStart"]):
+        if entity is None:
+            continue
+
+        if entity.isA("rdMarker"):
+            markers.append(entity)
+
+        elif entity.isA("rdGroup"):
+            markers.extend(markers_from_solver(entity))
+
+        elif entity.isA("rdSolver"):
+            markers.extend(markers_from_solver(entity))
+
+    return markers
 
 
 def sort_by_hierarchy(dagnodes):

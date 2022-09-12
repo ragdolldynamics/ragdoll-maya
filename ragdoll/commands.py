@@ -878,7 +878,7 @@ def create_fixed_constraint(parent, child, opts=None):
     assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
-        "%s and %s not part of the same solver"
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
@@ -951,11 +951,15 @@ def create_pose_constraint(parent, child, opts=None):
 
 
 @internal.with_undo_chunk
-def create_pin_constraint(child, parent=None, opts=None):
+def create_pin_constraint(child, parent=None, transform=None, opts=None):
     """Create a new pin constraint for `parent` and optionally `parent`"""
     assert child.isA("rdMarker"), "%s was not a marker" % child.type()
     assert not parent or parent.isA("rdMarker"), (
         "%s was not a marker" % parent.type()
+    )
+
+    assert parent is None or _same_solver(parent, child), (
+        "%s and %s not part of the same solver" % (parent, child)
     )
 
     opts = dict({
@@ -989,14 +993,27 @@ def create_pin_constraint(child, parent=None, opts=None):
             else:
                 source_tm = cmdx.Tm(child["outputMatrix"].as_matrix())
 
-    # Glue Constraint
+    # Attach Constraint
     else:
         name = internal.unique_name("%s_rAttach" % source_name)
-        parent_transform = parent["src"].input(type=cmdx.kDagNode)
-        pin_parent = parent_transform
+        pin_parent = transform
+
+        if pin_parent is None:
+            # Prefer attaching to the destination transform, which
+            # has a greater odds of being the control a user expects.
+            # As opposed to a potential # joint that was originally assigned.
+            try:
+                parent_transform = parent["dst"][0].input(type=cmdx.kDagNode)
+
+            except AttributeError:
+                # Fallback to the originally assigned node
+                parent_transform = parent["src"].input(type=cmdx.kDagNode)
+
+            pin_parent = parent_transform
+
         source_tm = cmdx.Tm(
             source_transform["worldMatrix"][0].as_matrix() *
-            parent_transform["worldInverseMatrix"][0].as_matrix()
+            pin_parent["worldInverseMatrix"][0].as_matrix()
         )
 
     with cmdx.DagModifier() as mod:
@@ -1288,6 +1305,9 @@ def replace_mesh(marker, mesh, opts=None):
             mesh_matrix = mesh["worldMatrix"][0].as_matrix()
             mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
             mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
+
+        # Display the newly replaced mesh
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
 
 
 def toggle_channel_box_attributes(markers, opts=None):
@@ -1613,6 +1633,7 @@ def delete_all_physics(dry_run=False):
 def assign_plan(body, feet, opts=None):
     opts = dict({
         "useTransform": False,
+        "duration": 100,
     }, **(opts or {}))
 
     assert (
@@ -1708,9 +1729,8 @@ def assign_plan(body, feet, opts=None):
         elif limits[axis] > 1:
             limits[axis] = int(limits[axis] * 10) * 0.1
 
-    duration = int((cmdx.max_time() - cmdx.min_time()).value) - 9
+    duration = opts["duration"]
     duration = max(duration, 50)  # Minimum 2 seconds
-    duration = min(duration, 100)
 
     WalkPreset = 0
     HopPreset = 1
@@ -2365,7 +2385,6 @@ def _infer_geometry(root,
 
     geometry = geometry or internal.Geometry()
     original = root
-    inverted = False
 
     # Automatically find children
     if children is constants.Auto:
@@ -2386,7 +2405,6 @@ def _infer_geometry(root,
         children = [root]
         root = parent
         parent = None
-        inverted = True
 
     all_joints = all(child.is_a(cmdx.kJoint) for child in children)
 
@@ -2721,6 +2739,172 @@ def merge_solvers(a, b):
         )
 
     return True
+
+
+def _polycube(parent, width=1, height=1, depth=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polyCube")
+        dgmod.set_attr(gen["width"], width)
+        dgmod.set_attr(gen["height"], height)
+        dgmod.set_attr(gen["depth"], depth)
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
+def _polysphere(parent, radius=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polySphere")
+        dgmod.set_attr(gen["radius"], radius)
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
+def _polycapsule(parent, height=1, radius=1, offset=None):
+    name = parent.name(namespace=False)
+
+    with cmdx.DGModifier(interesting=False) as dgmod:
+        gen = dgmod.create_node("polyCylinder")
+        dgmod.set_attr(gen["roundCap"], True)
+        dgmod.set_attr(gen["subdivisionsCaps"], 5)
+        dgmod.set_attr(gen["radius"], radius)
+        dgmod.set_attr(gen["height"], height)
+        dgmod.set_attr(gen["axis"], cmdx.Vector(1, 0, 0))
+
+        output = gen["output"]
+
+        if offset is not None:
+            tm = dgmod.create_node("transformGeometry")
+            dgmod.connect(gen["output"], tm["inputGeometry"])
+            dgmod.set_attr(tm["transform"], offset)
+            output = tm["outputGeometry"]
+
+    with cmdx.DagModifier() as mod:
+        mesh = mod.create_node("mesh", name + "Shape", parent)
+        mod.connect(output, mesh["inMesh"])
+
+    return mesh, gen
+
+
+def marker_to_mesh(marker):
+    """Convert the geometry of any marker into Maya geometry"""
+
+    shape_type = marker["shapeType"].read()
+
+    if shape_type == constants.BoxShape:
+        mesh, gen = cmds.polyCube()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeExtentsX"], gen["width"])
+            mod.connect(marker["shapeExtentsY"], gen["height"])
+            mod.connect(marker["shapeExtentsZ"], gen["depth"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.SphereShape:
+        mesh, gen = cmds.polySphere()
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.CapsuleShape:
+        mesh, gen = cmds.polyCylinder(axis=(1, 0, 0),
+                                      roundCap=True,
+                                      subdivisionsCaps=10)
+
+        with cmdx.DagModifier() as mod:
+            gen = cmdx.encode(gen)
+            mod.connect(marker["shapeRadius"], gen["radius"])
+            mod.connect(marker["shapeLength"], gen["height"])
+
+        mesh = cmdx.encode(mesh)
+        mesh = mesh.shape(type="mesh")
+
+    elif shape_type == constants.MeshShape:
+        with cmdx.DagModifier() as mod:
+            parent = mod.create_node("transform", marker.name() + "Mesh")
+            mesh = mod.create_node("mesh", marker.name() + "MeshShape", parent)
+            mod.connect(marker["outputGeometry"], mesh["inMesh"])
+
+        cmds.polySoftEdge(mesh.path(), angle=0, constructionHistory=True)
+
+    else:
+        raise ValueError("Unsupported shape type: %s" % shape_type)
+
+    with cmdx.DagModifier() as mod:
+        mtx = marker["inputMatrix"].as_matrix()
+
+        if shape_type != constants.MeshShape:
+            parent = mesh.parent()
+            shape_offset = marker["shapeOffset"].as_vector()
+            shape_rotation = cmdx.Euler(marker["shapeRotation"].as_vector())
+            shape_tm = cmdx.Tm(translate=shape_offset, rotate=shape_rotation)
+            mtx = shape_tm.as_matrix() * mtx
+
+        tm = cmdx.Tm(mtx)
+        mod.set_attr(parent["translate"], tm.translation())
+        mod.set_attr(parent["rotate"], tm.rotation())
+        mod.set_attr(parent["scale"], tm.scale())
+
+    cmdx.encode("initialShadingGroup").add(mesh)
+
+    return mesh
+
+
+def bake_mesh(marker):
+    """Convert automatically generated convex hulls into islands
+
+    Islands are much faster to compute and is also deterministic
+    across each file-open.
+
+    """
+
+    mesh = marker_to_mesh(marker)
+
+    with cmdx.DagModifier() as mod:
+        mod.connect(mesh["outMesh"], marker["inputGeometry"])
+        mod.set_attr(marker["convexDecomposition"],
+                     constants.DecompositionIslands)
+        mod.do_it()
+
+        # Pass data into the node
+        marker["inputGeometry"].pull()
+
+        # Then get rid of it!
+        mod.delete(mesh)
 
 
 def _add_to_group(mod, marker, group):

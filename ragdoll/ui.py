@@ -1316,7 +1316,7 @@ def MessageBox(title, text, buttons=None, icon=QuestionIcon):
     return message.exec_() == QtWidgets.QMessageBox.Yes
 
 
-def product_to_marketingname(product):
+def product_to_marketingname(product):  # TODO: Deprecate this.
     return {
         "enterprise": "Unlimited",
         "headless": "Batch",

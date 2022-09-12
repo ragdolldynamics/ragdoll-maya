@@ -468,6 +468,16 @@
     "#": " Planning       ",
     "#": "----------------",
 
+    "planDuration": {
+        "name": "planDuration",
+        "label": "Duration",
+        "type": "Integer",
+        "default": 100,
+        "min": 50,
+        "max": 500,
+        "help": "How long to make the default plan."
+    },
+
     "planForceUpdate": {
         "name": "planForceUpdate",
         "label": "Force Update",
@@ -963,7 +973,7 @@
         "name": "markersRecordAutoCache",
         "label": "Auto Cache",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Leave the simulation cached upon completing the record. This can help compare the recorded result to the simulation, as any subsequent simulation would use the newly recorded animation as input."
     },
 
@@ -1493,5 +1503,12 @@
         "items": ["World X", "World Y", "World Z", "Pose X", "Pose Y", "Pose Z"],
         "default": 3,
         "help": "The axis across which symmetry should look for the selected marker."
+    },
+    "extraAssets": {
+        "name": "extraAssets",
+        "label": "Extra Asset",
+        "type": "String",
+        "default": "",
+        "help": "Directory path to load extra assets from Welcome UI."
     }
 }

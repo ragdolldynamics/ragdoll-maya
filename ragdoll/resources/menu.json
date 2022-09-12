@@ -45,9 +45,18 @@
     "openPhysics": {
         "label": "Open Physics",
         "icon": "physics.png",
-        "enable": false,
         "summary": "Generate new Maya scene from .rag file",
         "description": "Be rid of all native Maya nodes and work with pure physics at optimal performance. Export and apply the baked keyframes onto your original, heavy character rig once finished tinkering.",
+        "options": [
+        ]
+    },
+
+    "updatePhysics": {
+        "label": "Update Physics",
+        "icon": "physics.png",
+        "enable": false,
+        "summary": "Update changed physics parameters and add new Markers to existing Maya scene",
+        "description": "Use this to update the .rag file whilst preserving your edited and animated attributes. Should save you from having to re-import or redo your work!",
         "options": [
         ]
     },
@@ -62,14 +71,20 @@
         ]
     },
 
-    "replaceMesh": {
-        "label": "Replace Mesh",
-        "icon": "replace.png",
-        "summary": "Replace input of the 'Mesh' shape type with another polygonal or NURBS mesh.",
-        "description": "Substitute the current input of the 'Mesh' shape type with another. Also taking worldspace into account, so the mesh can be anywhere in the scene, under any group or voodoo magic.",
+    "bakeMesh": {
+        "label": "Bake Mesh",
+        "icon": "bake.png",
+        "summary": "Store geometry inside of the Marker, disconnecting it from its source mesh.",
+        "description": "When replacing a mesh, or automatically decomposing it into many smaller convex hulls, the connection typically remains between the Marker and mesh. This command persistently stores the mesh inside of the Marker such that the original can be deleted.",
         "options": [
-            "replaceMeshExclusive",
-            "replaceMeshMaintainOffset"
+        ]
+    },
+    "convertMesh": {
+        "label": "Convert to Mesh",
+        "icon": "source.png",
+        "summary": "Convert the Marker geometry into a Maya mesh.",
+        "description": "Sometimes you want whatever Ragdoll uses for collisions as a Maya mesh that you can further manipulate using normal Maya tools.",
+        "options": [
         ]
     },
     "editConstraintFrames": {
@@ -264,6 +279,7 @@
         "summary": "Recompute locomotion for all or selected plans.",
         "description": "Compute a new locomotion.",
         "options": [
+            "planDuration",
             "planForceUpdate",
             "planAutoUpdate",
             "planParallelUpdate"
@@ -569,7 +585,7 @@
     },
 
     "selectMarkers": {
-        "label": "Select Markers",
+        "label": "Markers",
         "icon": "marker.png",
         "summary": "Select all markers in the scene.",
         "description": "Select all markers in the scene.",
@@ -578,7 +594,7 @@
     },
 
     "selectGroups": {
-        "label": "Select Groups",
+        "label": "Groups",
         "icon": "suit.png",
         "summary": "Select all groups in the scene.",
         "description": "Select all groups in the scene.",
@@ -587,7 +603,7 @@
     },
 
     "selectGroupMembers": {
-        "label": "Select Group Members",
+        "label": "Group Members",
         "icon": "suit.png",
         "summary": "Select members of selected groups",
         "description": "Select all members of the currently selected groups.",
@@ -596,7 +612,7 @@
     },
 
     "selectSolvers": {
-        "label": "Select Solvers",
+        "label": "Solvers",
         "icon": "solver.png",
         "summary": "Select all solvers in the scene.",
         "description": "Select all solvers in the scene.",

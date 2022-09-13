@@ -405,6 +405,10 @@ class Loader(object):
                 ParentRest = self._registry.get(parent, "RestComponent")
                 mtx *= ParentRest["matrix"].inverse()
 
+                mod.set_locked(joint["translateX"])
+                mod.set_locked(joint["translateY"])
+                mod.set_locked(joint["translateZ"])
+
             tm = cmdx.Tm(mtx)
 
             mod.set_attr(joint["translate"], tm.translation())
@@ -415,14 +419,15 @@ class Loader(object):
             Subs = self._registry.get(entity, "SubEntitiesComponent")
             Limit = self._registry.get(Subs["relative"], "LimitComponent")
 
-            if Limit["enabled"] and Limit["twist"] < 0:
-                mod.set_locked(joint["rotateX"])
+            if parent and Limit["enabled"]:
+                if Limit["twist"] < 0:
+                    mod.set_locked(joint["rotateX"])
 
-            if Limit["enabled"] and Limit["swing1"] < 0:
-                mod.set_locked(joint["rotateY"])
+                if Limit["swing1"] < 0:
+                    mod.set_locked(joint["rotateY"])
 
-            if Limit["enabled"] and Limit["swing2"] < 0:
-                mod.set_locked(joint["rotateZ"])
+                if Limit["swing2"] < 0:
+                    mod.set_locked(joint["rotateZ"])
 
             created[entity] = joint
 

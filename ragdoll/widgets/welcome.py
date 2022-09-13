@@ -111,6 +111,7 @@ class GreetingSplash(QtWidgets.QLabel):
 
     def __init__(self, parent=None):
         super(GreetingSplash, self).__init__(parent)
+        gradient = QtGui.QColor("#607e7e"), QtGui.QColor("#3e5a5e")
         pixmap = QtGui.QPixmap(ui._resource("ui", "welcome-banner.png"))
         pixmap = pixmap.scaled(
             SPLASH_WIDTH,
@@ -121,15 +122,15 @@ class GreetingSplash(QtWidgets.QLabel):
         self.setMinimumWidth(SPLASH_WIDTH)
         self.setFixedHeight(SPLASH_HEIGHT)
         self._image = pixmap
-        self._gradient = (QtGui.QColor("black"), QtGui.QColor("gray"))
+        self._gradient = gradient
 
     def paintEvent(self, event):
         """
           Splash image                 Status
-         .------------------------,-----------.
-        |   RAGDOLL              /             |
-        |      DYNAMICS         /              |
-        |______________________/_______________|
+         .---------------------.--------------.
+        |   RAGDOLL            |               |
+        |      DYNAMICS        |               |
+        |______________________|_______________|
 
         """
         painter = QtGui.QPainter(self)
@@ -145,27 +146,15 @@ class GreetingSplash(QtWidgets.QLabel):
         clip_path.addRect(0, h - r, w, r)
         painter.setClipPath(clip_path.simplified())
 
-        painter.drawPixmap(0, 0, self._image)
-
         spacing = px(400)
-        path = QtGui.QPainterPath()
-        path.moveTo(spacing + px(75), 0)
-        path.lineTo(spacing, h)
-        path.lineTo(w, h)
-        path.lineTo(w, 0)
-
         gradient = QtGui.QLinearGradient()
         gradient.setStart(spacing, h)
         gradient.setFinalStop(w, 0)
         gradient.setColorAt(0, self._gradient[0])
         gradient.setColorAt(1, self._gradient[1])
-        painter.fillPath(path, QtGui.QBrush(gradient))
 
-    def set_color(self):
-        self._gradient = tuple(
-            map(QtGui.QColor, product_status.get_gradient())
-        )
-        self.update()
+        painter.fillRect(spacing, 0, w - spacing, h, gradient)
+        painter.drawPixmap(0, 0, self._image)
 
 
 class GreetingUpdate(QtWidgets.QWidget):
@@ -1974,7 +1963,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         product_status.data = data
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Licence"].status_widget().set_product()
-        self._widgets["Greet"].splash_widget().set_color()
         self._widgets["Greet"].status_widget().set_status()
         self._widgets["Greet"].timeline_widget().set_timeline()
 

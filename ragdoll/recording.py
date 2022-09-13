@@ -90,13 +90,24 @@ def transfer_live(solver):
 
         parent = marker["parentMarker"].input(type="rdMarker")
 
-        if parent is not None:
+        if parent:
             mtx *= parent["outputMatrix"].as_matrix().inverse()
             mtx *= (
                 marker["originMatrix"].as_matrix() *
                 parent["originMatrix"].as_matrix().inverse()
             ).inverse()
+
         else:
+            # Account for the root joint orient here
+            if dst.is_a(cmdx.kJoint):
+                joint_orient = dst["jointOrient"].as_quaternion()
+                tm = cmdx.Tm(mtx)
+                rotation = tm.rotation(asQuaternion=True)
+                rotation *= joint_orient.inverse()
+                tm.set_rotation(rotation)
+                mtx = tm.as_matrix()
+
+            # Marker may not have a parent, but the Maya transform may yet
             mtx *= dst["parentInverseMatrix"][0].as_matrix()
 
         tm = cmdx.Tm(mtx)

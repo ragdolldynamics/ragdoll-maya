@@ -283,6 +283,7 @@ class GreetingUpdate(QtWidgets.QWidget):
                 "font-size: %dpx;" % px(10)
             )
 
+        icon = icon.replace("\\", "/")  # for stylesheet
         widgets["UpdateIcon"].setStyleSheet("image: url(%s);" % icon)
         widgets["UpdateIcon"].show()
 

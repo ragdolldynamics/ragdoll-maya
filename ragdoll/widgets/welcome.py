@@ -157,144 +157,87 @@ class GreetingSplash(QtWidgets.QLabel):
         painter.drawPixmap(0, 0, self._image)
 
 
-class GreetingUpdate(QtWidgets.QWidget):
+class GreetingTopRight(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingUpdate, self).__init__(parent)
+        super(GreetingTopRight, self).__init__(parent)
 
         widgets = {
+            "NoInternet": QtWidgets.QWidget(),
+            "NoInternetIcon": QtWidgets.QLabel(),
+            "NoInternetText": QtWidgets.QLabel(),
+            "Expiry": QtWidgets.QWidget(),
+            "ExpiryIcon": QtWidgets.QLabel(),
             "ExpiryDate": QtWidgets.QLabel(),
-            "ProductName": QtWidgets.QLabel(),
-            "UpdateIcon": QtWidgets.QLabel(),
-            "UpdateLink": QtWidgets.QLabel("checking update..."),
         }
 
-        widgets["UpdateIcon"].setFixedSize(px(20), px(20))
-        widgets["ProductName"].setStyleSheet("font-size: %dpx" % px(30))
+        widgets["NoInternetIcon"].setFixedSize(px(16), px(16))
+        _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
+        widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
+        widgets["NoInternetText"].setText("No internet for checking update")
+        widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
+        widgets["NoInternet"].setStyleSheet("background: transparent;")
 
-        expiry = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(expiry)
+        widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
+        widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
+        widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
+
+        layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
         layout.addStretch(1)
+        layout.addWidget(widgets["NoInternetIcon"])
+        layout.addSpacing(px(2))
+        layout.addWidget(widgets["NoInternetText"])
+
+        layout = QtWidgets.QHBoxLayout(widgets["Expiry"])
+        layout.setContentsMargins(px(5), px(5), px(10), px(5))
+        layout.addStretch(1)
+        layout.addWidget(widgets["ExpiryIcon"])
+        layout.addSpacing(px(2))
         layout.addWidget(widgets["ExpiryDate"])
 
-        update = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(update)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addStretch(1)
-        layout.addWidget(widgets["UpdateIcon"])
-        layout.addSpacing(px(2))
-        layout.addWidget(widgets["UpdateLink"])
-
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, px(4), px(14), px(4))
-        layout.addWidget(expiry)
+        layout.setContentsMargins(0, px(6), px(14), px(4))
+        layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
-        layout.addWidget(widgets["ProductName"], 0, QtCore.Qt.AlignRight)
-        layout.addWidget(update)
+        layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
 
-        self.setStyleSheet("""
-        border: none;
-        outline: none;
-        color: #fefefe;
-        font-family: Sora;
-        background: transparent;
-        """)
         self._widgets = widgets
 
     def _expiry(self):
         p_ = product_status
         perpetual = p_.is_perpetual()
         expiry_date = p_.expiry_date()
-        expiry = expiry_date.strftime("%b.%d.%Y") if expiry_date else None
-        expired = p_.is_expired()
+        expiry = expiry_date.strftime("%Y.%m.%d") if expiry_date else None
         aup_date = p_.aup_date()
-        aup = aup_date.strftime("%b.%d.%Y") if aup_date else None
+        aup = aup_date.strftime("%Y.%m.%d") if aup_date else None
+        expired = p_.is_expired()
 
-        status = "%s %s" % (
-            "Perpetual" if perpetual else "Expired" if expired else "Expiry",
-            ("/ AUP " + aup) if perpetual else expiry,
+        status = "%s  %s" % (
+            "AUP" if perpetual else "Expiry", aup if perpetual else expiry,
         )
-
         self._widgets["ExpiryDate"].setText(status)
 
-    def _product(self, status):
-        if status == "update":
-            self._widgets["ProductName"].hide()
+        if expired:
+            icon = ui._resource("ui", "exclamation-circle-fill.svg")
+            self._widgets["Expiry"].setStyleSheet(
+                "border-radius: %dpx; background: #FF000000;" % px(13))
         else:
-            self._widgets["ProductName"].setText(product_status.name())
-            self._widgets["ProductName"].show()
+            icon = ui._resource("ui", "check-circle-fill.svg")
+            self._widgets["Expiry"].setStyleSheet(
+                "border-radius: %dpx; background: #44000000;" % px(13))
 
-    def _update(self, status, latest):
-        widgets = self._widgets
-        widgets["UpdateIcon"].hide()
+        icon = icon.replace("\\", "/")
+        self._widgets["ExpiryIcon"].setStyleSheet(
+            "background: transparent; image: url(%s);" % icon)
 
-        icon = ui._resource("ui", {
-            "update": "cloud-arrow-down-fill.svg",
-            "uptodate": "cloud-check-fill.svg",
-            "offline": "cloud-slash.svg",
-            "expired": "cloud-slash.svg",
-        }[status])
-
-        text = {
-            "update": "Update Available<br/>%s" % latest,
-            "uptodate": "Version up to date",
-            "offline": "No internet, can't check update",
-            "expired": "Upgrade plan expired",
-        }[status]
-
-        if status == "update":
-            widgets["UpdateLink"].setOpenExternalLinks(True)
-            widgets["UpdateLink"].setTextInteractionFlags(
-                QtCore.Qt.TextBrowserInteraction
-            )
-            widgets["UpdateLink"].setText("""
-            <p align="right" style="line-height: 82%%;">
-            <style> a:link {color: #fefefe;} </style>
-            <a href=\"https://learn.ragdolldynamics.com/download/\">%s</a>
-            </p>
-            """ % text)
-            widgets["UpdateLink"].setStyleSheet(
-                "background: black;"
-                "padding: 0px 16px 16px 0px;"
-                "border-radius: 24px;"
-                "font-size: %dpx;" % px(20)
-            )
-        else:
-            widgets["UpdateLink"].setOpenExternalLinks(False)
-            widgets["UpdateLink"].setTextInteractionFlags(
-                QtCore.Qt.NoTextInteraction
-            )
-            widgets["UpdateLink"].setText(text)
-            widgets["UpdateLink"].setStyleSheet(
-                "font-size: %dpx;" % px(10)
-            )
-
-        icon = icon.replace("\\", "/")  # for stylesheet
-        widgets["UpdateIcon"].setStyleSheet("image: url(%s);" % icon)
-        widgets["UpdateIcon"].show()
+    def _update(self):
+        offline = not product_status.has_ragdoll()
+        self._widgets["NoInternet"].setVisible(offline)
 
     def set_status(self):
-        if product_status.is_updatable():
-            if product_status.has_ragdoll():
-                current_ver = product_status.current_version()
-                versions = sorted(product_status.release_history())
-                latest = tuple(map(int, versions[-1].split(".", 3)[:3]))
-                current = tuple(map(int, current_ver.split(".")[:3]))
-                if latest <= current:
-                    status, latest = "uptodate", ""
-                else:
-                    status, latest = "update", "%d.%02d.%02d" % latest
-            else:
-                status, latest = "offline", ""
-        else:
-            status, latest = "expired", ""
-
         self._expiry()
-        self._product(status)
-        self._update(status, latest)
+        self._update()
 
 
 class GreetingInteract(QtWidgets.QWidget):
@@ -303,7 +246,7 @@ class GreetingInteract(QtWidgets.QWidget):
         super(GreetingInteract, self).__init__(parent)
 
         widgets = {
-            "Update": GreetingUpdate(),
+            "TopRight": GreetingTopRight(),
             "Timeline": base.ProductTimelineWidget(),
         }
 
@@ -312,7 +255,7 @@ class GreetingInteract(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(widgets["Update"])
+        layout.addWidget(widgets["TopRight"])
         layout.addWidget(widgets["Timeline"])
 
         self.setFixedHeight(
@@ -322,7 +265,7 @@ class GreetingInteract(QtWidgets.QWidget):
         self._widgets = widgets
 
     def status_widget(self):
-        return self._widgets["Update"]
+        return self._widgets["TopRight"]
 
     def timeline_widget(self):
         return self

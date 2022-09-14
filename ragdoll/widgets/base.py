@@ -934,72 +934,6 @@ class ProductReleasedView(ProductTimelineBase):
                         break
 
 
-class ProductTimelineFooter(QtWidgets.QWidget):
-
-    def __init__(self, parent=None):
-        super(ProductTimelineFooter, self).__init__(parent)
-
-        widgets = {
-            "Message": QtWidgets.QLabel(),
-            "Version": QtWidgets.QPushButton(),
-        }
-        widgets["Version"].setFixedHeight(px(20))
-
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(widgets["Message"], stretch=1)
-        layout.addWidget(widgets["Version"])
-
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(container)
-
-        widgets["Message"].setStyleSheet("color: #4a4a4a;")
-
-        self._widgets = widgets
-        self.set_message("")
-
-    def set_message(self, text):
-        if text:
-            self._widgets["Message"].setText(text)
-        else:
-            self._widgets["Message"].setText(
-                "Drag, or scroll with Alt key pressed to navigate.")
-
-    def set_bottom_right(self, model):
-        """
-        Args:
-            model (ProductTimelineModel):
-        """
-        button = self._widgets["Version"]
-
-        if model.latest_update == model.current:
-            tx = "Current Version: %s" % model.current.strftime("%Y.%m.%d")
-            fg = "#ffffff"
-            bg = "#1953be"
-        else:
-            tx = "Click me to download the latest release"
-            fg = "#000000"
-            bg = "#f8d803"
-
-        bgc = QtGui.QColor(bg)
-        button.setText(tx)
-        button.setStyleSheet(
-            """
-            QPushButton {
-                padding: %dpx %dpx %dpx %dpx;
-                border-radius: %dpx;
-                background: %s; color: %s;
-            }
-            QPushButton:hover { background: %s; }
-            QPushButton:pressed { background: %s; }
-            """ %
-            (px(2), px(8), px(2), px(8),
-             px(9.5), bg, fg, bgc.lighter().name(), bgc.darker().name())
-        )
-
-
 class ProductTimelineWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
@@ -1009,8 +943,19 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         widgets = {
             "Timeline": ProductTimelineView(),
             "Released": ProductReleasedView(),
-            "Footer": ProductTimelineFooter(),
+            "Message": QtWidgets.QLabel(),
+            "Update": QtWidgets.QPushButton(),
         }
+        overlays = {
+            "Message": OverlayWidget(parent=widgets["Released"]),
+            "Update": OverlayWidget(parent=widgets["Released"]),
+        }
+        overlays["Update"].setAttribute(
+            QtCore.Qt.WA_TransparentForMouseEvents, False)
+        # set to False for update button click
+
+        widgets["Message"].setStyleSheet("color: #4a4a4a;")
+        widgets["Update"].setFixedHeight(px(20))
 
         # timeline has shadow fx + transparent bg,
         # so we need another container for transparent gradient bg
@@ -1024,11 +969,15 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["Timeline"])
 
-        overlay = OverlayWidget(parent=widgets["Released"])  # for overlay
-        layout = QtWidgets.QVBoxLayout(overlay)
-        layout.setContentsMargins(px(12), 0, px(4), px(4))
-        layout.addStretch(1)  # for overlay
-        layout.addWidget(widgets["Footer"])
+        layout = QtWidgets.QVBoxLayout(overlays["Message"])
+        layout.setContentsMargins(px(12), 0, 0, px(4))
+        layout.addStretch(1)
+        layout.addWidget(widgets["Message"], alignment=QtCore.Qt.AlignLeft)
+
+        layout = QtWidgets.QVBoxLayout(overlays["Update"])
+        layout.setContentsMargins(0, 0, px(4), px(4))
+        layout.addStretch(1)
+        layout.addWidget(widgets["Update"], alignment=QtCore.Qt.AlignRight)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1055,11 +1004,22 @@ class ProductTimelineWidget(QtWidgets.QWidget):
             r_w.view.horizontalScrollBar().rangeChanged.disconnect()
 
         self.destroyed.connect(cleanup)
-        widgets["Timeline"].message_sent.connect(widgets["Footer"].set_message)
-        widgets["Released"].message_sent.connect(widgets["Footer"].set_message)
+        widgets["Timeline"].message_sent.connect(self.on_message_sent)
+        widgets["Released"].message_sent.connect(self.on_message_sent)
+
+        def on_clicked():
+            webbrowser.open("https://learn.ragdolldynamics.com/download/")
+        widgets["Update"].clicked.connect(on_clicked)
 
         self._model = model
         self._widgets = widgets
+        self._overlays = overlays
+        # init
+        self.on_message_sent("")
+
+    def resizeEvent(self, event):
+        super(ProductTimelineWidget, self).resizeEvent(event)
+        self._mask_indicator()
 
     def minimumHeight(self):
         return (
@@ -1067,12 +1027,19 @@ class ProductTimelineWidget(QtWidgets.QWidget):
             + self._widgets["Released"].ViewHeight
         )
 
+    def on_message_sent(self, text):
+        text = text or "Drag, or scroll with Alt key pressed to navigate."
+        self._widgets["Message"].setText(text)
+
     def set_data(self, released_versions, current_ver, expiry_date):
         self._model.set_data(released_versions, current_ver, expiry_date)
 
         self._widgets["Timeline"].set_data_from_model(self._model)
         self._widgets["Released"].set_data_from_model(self._model)
-        self._widgets["Footer"].set_bottom_right(self._model)
+        self._update_button(self._model)
+        # to trigger indicator region masking...
+        #   somehow this is the only known way to update correctly
+        self.resize(self.size() + QtCore.QSize(0, 1))
 
     def draw(self):
         self._widgets["Timeline"].draw()
@@ -1081,6 +1048,36 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         # slide to present day
         bar = self._widgets["Released"].view.horizontalScrollBar()
         bar.setValue(bar.maximum())
+
+    def _mask_indicator(self):
+        # we need to mask out the overlay widget so the underlying timeline
+        # widget can receive mouse events that happened outside the button.
+        w = self._widgets["Update"]
+        over = self._overlays["Update"]
+        p = w.mapTo(over, w.rect().topLeft())
+        over.setMask(QtCore.QRect(p.x(), p.y(), w.width(), w.height()))
+
+    def _update_button(self, model):
+        btn = self._widgets["Update"]
+        up_to_date = model.latest_update == model.current
+        btn.setText(
+            "Current Version: %s" % model.current.strftime("%Y.%m.%d")
+            if up_to_date else "Click me to download the latest release"
+        )
+        fg = "#ffffff" if up_to_date else "#000000"
+        bg = "#1953be" if up_to_date else "#f8d803"
+        bgc = QtGui.QColor(bg)
+        btn.setStyleSheet(
+            """QPushButton {
+                padding: %dpx %dpx;
+                border-radius: %dpx;
+                background: %s; color: %s; }
+            QPushButton:hover { background: %s; }
+            QPushButton:pressed { background: %s; }
+            """ % (px(2), px(8), px(9.5), bg, fg,
+                   bgc.lighter().name(), bgc.darker().name())
+        )
+        btn.setEnabled(not up_to_date)
 
 
 class ProductStatus(object):

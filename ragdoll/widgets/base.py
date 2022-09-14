@@ -520,6 +520,10 @@ class TimelineItem(QtWidgets.QGraphicsItem):
     VersionRole = QtCore.Qt.UserRole + 2
     MessageRole = QtCore.Qt.UserRole + 3
 
+    @staticmethod
+    def compute_fg(bg):
+        return bg.lighter(800) if bg.value() < 200 else bg.darker(800)
+
     def __init__(self, w, h, r, color, text=None):
         super(TimelineItem, self).__init__()
         self.setCursor(QtCore.Qt.ArrowCursor)
@@ -528,11 +532,12 @@ class TimelineItem(QtWidgets.QGraphicsItem):
         self._w = w
         self._h = h
         self._r = r
-        self._color = color
+        self._bg = color
+        self._fg = self.compute_fg(color)
         self._text = text
         self._hovered = False
-        self._color_hov = None
-        self._text_hov = None
+        self._bg_hov = None
+        self._fg_hov = None
 
     def hoverEnterEvent(self, event):
         self._hovered = True
@@ -576,8 +581,8 @@ class TimelineItem(QtWidgets.QGraphicsItem):
         return path
 
     def paint(self, painter, option, widget=None):
-        bg = self._color_hov if self._hovered else self._color
-        fg = self._text_hov if self._hovered else self._color.lighter(800)
+        bg = self._bg_hov if self._hovered else self._bg
+        fg = self._fg_hov if self._hovered else self._fg
 
         painter.setRenderHint(painter.Antialiasing)
         painter.setPen(QtCore.Qt.NoPen)
@@ -601,8 +606,8 @@ class TimelineItem(QtWidgets.QGraphicsItem):
 
     def enable_hover(self, bg_color, fg_color=None):
         self.setAcceptHoverEvents(True)
-        self._color_hov = QtGui.QColor(bg_color)
-        self._text_hov = QtGui.QColor(fg_color or "white")
+        self._bg_hov = QtGui.QColor(bg_color)
+        self._fg_hov = QtGui.QColor(fg_color or "white")
 
 
 class ProductTimelineGraphicsScene(QtWidgets.QGraphicsScene):
@@ -615,6 +620,46 @@ class ProductTimelineGraphicsView(QtWidgets.QGraphicsView):
     def enterEvent(self, event):
         super(ProductTimelineGraphicsView, self).enterEvent(event)
         self.viewport().setCursor(QtCore.Qt.ArrowCursor)
+
+
+class ProductTimelineModel(QtCore.QObject):
+
+    def __init__(self, parent=None):
+        super(ProductTimelineModel, self).__init__(parent)
+        self.expiry_date = None
+        self.current = None
+        self.first = None
+        self.versions = None
+        self.latest_update = None
+
+    def set_data(self, released_versions, current_ver, expiry_date):
+        current_ver = datetime(*map(int, current_ver.split(".")))
+        released_versions = sorted(released_versions)
+        released_dates = [
+            datetime(*map(int, v.split("."))) for v in released_versions
+        ]
+        # merge release if the distance between them gets too close
+        merged_releases = defaultdict(list)
+        unit = ProductTimelineBase.DayWidth
+        dot_r = ProductTimelineView.DotRadius
+        first_date = released_dates[0]
+        threshold = dot_r * 6
+        index = 0
+        previous = 0
+        for date in released_dates:
+            days = (date - first_date).days
+            if previous and unit * (days - previous) > threshold:
+                index += 1
+            merged_releases[index].append(date)
+            previous = days
+
+            if date < expiry_date:
+                self.latest_update = date
+
+        self.expiry_date = expiry_date
+        self.current = current_ver
+        self.first = first_date
+        self.versions = merged_releases
 
 
 class ProductTimelineBase(QtWidgets.QWidget):
@@ -660,29 +705,14 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self._versions = None
         self._latest_update = None
 
-    def set_data(self, released_versions, current_ver, expiry_date):
-        current_ver = datetime(*map(int, current_ver.split(".")))
-        released_versions = sorted(released_versions)
-        released_dates = [
-            datetime(*map(int, v.split("."))) for v in released_versions
-        ]
-        # merge release if the distance between them gets too close
-        merged_releases = defaultdict(list)
-        unit = ProductTimelineBase.DayWidth
-        dot_r = ProductTimelineView.DotRadius
-        first_date = released_dates[0]
-        threshold = dot_r * 6
-        index = 0
-        previous = 0
-        for date in released_dates:
-            days = (date - first_date).days
-            if previous and unit * (days - previous) > threshold:
-                index += 1
-            merged_releases[index].append(date)
-            previous = days
-
-            if date < expiry_date:
-                self._latest_update = date
+    def set_data_from_model(self, model):
+        """
+        Args:
+            model (ProductTimelineModel):
+        """
+        current_ver = model.current
+        first_date = model.first
+        expiry_date = model.expiry_date
 
         self._days = self.DayPadding + (self._today - first_date).days
         self._expiry_days = self.DayPadding + (expiry_date - first_date).days
@@ -691,7 +721,8 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self._view_len = (self._days + self.DayPadding) * self.DayWidth
         self._current = current_ver
         self._first = first_date
-        self._versions = merged_releases
+        self._versions = model.versions
+        self._latest_update = model.latest_update
 
     def compute_x(self, date):
         days_after_v0 = self.DayPadding + (date - self._first).days
@@ -858,8 +889,8 @@ class ProductReleasedView(ProductTimelineBase):
         return prev_items
 
     def _draw_button(self, date, y_base):
-        cl = ("#344527" if date == self._current else
-              "#101010" if date != self._latest_update else "#1953be")
+        cl = ("#1953be" if date == self._current else
+              "#f8d803" if date == self._latest_update else "#101010")
         tx = date.strftime("%Y.%m.%d ")
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
@@ -910,8 +941,9 @@ class ProductTimelineFooter(QtWidgets.QWidget):
 
         widgets = {
             "Message": QtWidgets.QLabel(),
-            "Version": QtWidgets.QLabel(),
+            "Version": QtWidgets.QPushButton(),
         }
+        widgets["Version"].setFixedHeight(px(20))
 
         container = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(container)
@@ -924,7 +956,6 @@ class ProductTimelineFooter(QtWidgets.QWidget):
         layout.addWidget(container)
 
         widgets["Message"].setStyleSheet("color: #4a4a4a;")
-        widgets["Version"].setStyleSheet("color: #8b8b8b;")
 
         self._widgets = widgets
         self.set_message("")
@@ -936,8 +967,37 @@ class ProductTimelineFooter(QtWidgets.QWidget):
             self._widgets["Message"].setText(
                 "Drag, or scroll with Alt key pressed to navigate.")
 
-    def set_version(self, ver_str):
-        self._widgets["Version"].setText("Current Version: %s" % ver_str)
+    def set_bottom_right(self, model):
+        """
+        Args:
+            model (ProductTimelineModel):
+        """
+        button = self._widgets["Version"]
+
+        if model.latest_update == model.current:
+            tx = "Current Version: %s" % model.current.strftime("%Y.%m.%d")
+            fg = "#ffffff"
+            bg = "#1953be"
+        else:
+            tx = "Click me to download the latest release"
+            fg = "#000000"
+            bg = "#f8d803"
+
+        bgc = QtGui.QColor(bg)
+        button.setText(tx)
+        button.setStyleSheet(
+            """
+            QPushButton {
+                padding: %dpx %dpx %dpx %dpx;
+                border-radius: %dpx;
+                background: %s; color: %s;
+            }
+            QPushButton:hover { background: %s; }
+            QPushButton:pressed { background: %s; }
+            """ %
+            (px(2), px(8), px(2), px(8),
+             px(9.5), bg, fg, bgc.lighter().name(), bgc.darker().name())
+        )
 
 
 class ProductTimelineWidget(QtWidgets.QWidget):
@@ -945,6 +1005,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(ProductTimelineWidget, self).__init__(parent)
 
+        model = ProductTimelineModel()
         widgets = {
             "Timeline": ProductTimelineView(),
             "Released": ProductReleasedView(),
@@ -965,7 +1026,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
         overlay = OverlayWidget(parent=widgets["Released"])  # for overlay
         layout = QtWidgets.QVBoxLayout(overlay)
-        layout.setContentsMargins(px(12), 0, px(12), px(4))
+        layout.setContentsMargins(px(12), 0, px(4), px(4))
         layout.addStretch(1)  # for overlay
         layout.addWidget(widgets["Footer"])
 
@@ -997,6 +1058,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         widgets["Timeline"].message_sent.connect(widgets["Footer"].set_message)
         widgets["Released"].message_sent.connect(widgets["Footer"].set_message)
 
+        self._model = model
         self._widgets = widgets
 
     def minimumHeight(self):
@@ -1006,10 +1068,11 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         )
 
     def set_data(self, released_versions, current_ver, expiry_date):
-        _args = released_versions, current_ver, expiry_date
-        self._widgets["Timeline"].set_data(*_args)
-        self._widgets["Released"].set_data(*_args)
-        self._widgets["Footer"].set_version(current_ver)
+        self._model.set_data(released_versions, current_ver, expiry_date)
+
+        self._widgets["Timeline"].set_data_from_model(self._model)
+        self._widgets["Released"].set_data_from_model(self._model)
+        self._widgets["Footer"].set_bottom_right(self._model)
 
     def draw(self):
         self._widgets["Timeline"].draw()

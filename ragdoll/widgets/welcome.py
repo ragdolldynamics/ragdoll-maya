@@ -174,7 +174,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         widgets["NoInternetIcon"].setFixedSize(px(16), px(16))
         _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
         widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
-        widgets["NoInternetText"].setText("No internet for checking update")
+        widgets["NoInternetText"].setText("No internet for checking update  ")
         widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
         widgets["NoInternet"].setStyleSheet("background: transparent;")
 
@@ -197,7 +197,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         layout.addWidget(widgets["ExpiryDate"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, px(6), px(14), px(4))
+        layout.setContentsMargins(0, px(6), px(6), px(4))
         layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
         layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)

@@ -882,7 +882,14 @@ class ProductReleasedView(ProductTimelineBase):
         y1 = self.view.mapToScene(0, 0).y() + 2
         y2 = self.ViewHeight - self.ButtonHeight  # for footer
         line = QtCore.QLineF(x, y1, x, y2)
-        self.scene.addLine(line, QtGui.QPen(QtGui.QColor(color)))
+
+        gradient = QtGui.QLinearGradient()
+        gradient.setStart(0, 0)
+        gradient.setFinalStop(0, y2 - y1)
+        gradient.setColorAt(0.25, color)
+        gradient.setColorAt(0.90, QtGui.QColor("transparent"))
+
+        self.scene.addLine(line, QtGui.QPen(QtGui.QBrush(gradient), 1))
 
     def connect_timeline(self, timeline):
         items = self.scene.items()

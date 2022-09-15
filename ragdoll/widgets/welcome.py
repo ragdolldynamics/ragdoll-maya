@@ -1230,22 +1230,20 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
     def status_update(self):
         self._widgets["ProductName"].set_product()
+        _temp_key = self.read_temp_key()
 
-        if product_status.is_activated() or self.is_deactivation_requested():
-            key = product_status.key() or self.read_temp_key()
-            self._widgets["ProductKey"].setText(key)
+        if self.is_deactivation_requested():
+            self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Dismiss")
             self._widgets["ProcessBtn"].setEnabled(True)
             self._widgets["RequestWidget"].setEnabled(True)
             self._widgets["ResponseWidget"].hide()
             self._widgets["ConfirmWidget"].show()
-            self.remove_temp_key()
 
         else:
             # restore product key for continuing offline activation
-            _temp_key = self.read_temp_key()
-            self._widgets["ProductKey"].setText(self.read_temp_key())
+            self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["Response"].setText("")
             self._widgets["ProcessBtn"].setText("Activate")
@@ -1389,8 +1387,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
     def switch_to_offline_deactivate(self):
         self._widgets["Pages"].setCurrentIndex(1)
         w = self._widgets["NodeLockOffline"]
+        w.set_product_key(product_status.key())
         w.request_offline_deactivate()
-        w.status_update()
 
     def status_update(self):
         p_ = product_status
@@ -1740,6 +1738,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def on_offline_deactivate_requested(self):
         w = self._widgets["Licence"].input_widget()
         w.on_offline_deactivate_requested()
+        self.licence_updated.emit()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)

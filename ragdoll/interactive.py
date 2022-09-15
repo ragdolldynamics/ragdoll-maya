@@ -3529,8 +3529,6 @@ def welcome_user(*args):
         )
         win.asset_opened.connect(on_asset_opened)
 
-        win.refresh()
-
     win.show()
     win.activateWindow()
 

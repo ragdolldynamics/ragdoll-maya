@@ -1646,6 +1646,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).show()
 
         if not self.__hidden:
+            self._widgets["Assets"].reset()
+            self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False
@@ -1661,13 +1663,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Body"].layout().invalidate()
         super(WelcomeWindow, self).resizeEvent(event)
         self._align_anchors()
-
-    def refresh(self):
-        self._widgets["Assets"].reset()
-
-        self._panels["SideBar"].set_current_anchor(0)
-        if self.isVisible():
-            self.licence_updated.emit()
 
     def on_licence_updated(self, data):
         product_status.data = data

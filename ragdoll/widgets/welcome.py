@@ -1541,8 +1541,12 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     @staticmethod
     def preload():
-
-        # These run in a separate thread
+        # These run in a separate thread, on plugin load time.
+        #
+        # Be careful: This Welcome UI may get launched right after plugin
+        #   loaded as a "first launch" welcome, which means some thread
+        #   below may be still running when the UI ask for data.
+        #
         product_status._refresh_internet_connectivity()
         product_status._refresh_release_history()
 

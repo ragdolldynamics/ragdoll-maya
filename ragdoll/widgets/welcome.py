@@ -1675,25 +1675,21 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Greet"].status_widget().set_status()
         self._widgets["Greet"].timeline_widget().set_timeline()
 
-        # align anchors after licence page resized from status update
-        QtWidgets.QApplication.instance().processEvents()
-
-        # to trigger indicator region masking...
-        #   somehow this is the only known way to update correctly
+        # resize window a little bit just to trigger:
+        #   1. anchor aligning and
+        #   2. licence page resize
+        #   after licence status updated.
         self.resize(self.size() + QtCore.QSize(0, 1))
-        # self._widgets["Assets"].adjustSize()
 
     def on_node_activate_inet_returned(self, key):
-        w = self._widgets["Licence"].input_widget()
-        w.switch_to_offline_activate(key)
-
+        self._widgets["Licence"].input_widget().switch_to_offline_activate(key)
+        # don't forget our sidebar anchors after licence widget size changed!
         QtWidgets.QApplication.instance().processEvents()
         self._align_anchors()
 
     def on_node_deactivate_inet_returned(self):
-        w = self._widgets["Licence"].input_widget()
-        w.switch_to_offline_deactivate()
-
+        self._widgets["Licence"].input_widget().switch_to_offline_deactivate()
+        # don't forget our sidebar anchors after licence widget size changed!
         QtWidgets.QApplication.instance().processEvents()
         self._align_anchors()
 

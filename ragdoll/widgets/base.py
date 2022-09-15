@@ -1060,8 +1060,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         self._widgets["Released"].set_data_from_model(self._model)
         self._update_button(self._model)
         # to trigger indicator region masking...
-        #   somehow this is the only known way to update correctly
-        self.resize(self.size() + QtCore.QSize(0, 1))
+        self.adjustSize()
 
     def draw(self):
         self._widgets["Timeline"].draw()

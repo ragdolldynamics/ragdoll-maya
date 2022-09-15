@@ -252,19 +252,28 @@ class GreetingInteract(QtWidgets.QWidget):
         return self
 
     def set_timeline(self):
-        p_ = product_status
+        def fetch():
+            while product_status.release_history() is None:
+                time.sleep(0.5)
 
-        versions = set(p_.release_history())
-        current = p_.current_version()
-        versions.add(current)
-        expiry_date = p_.aup_date() if p_.is_perpetual() else p_.expiry_date()
+        def on_finished():
+            versions = set(product_status.release_history())
+            current = product_status.current_version()
+            versions.add(current)
+            expiry_date = (product_status.aup_date()
+                           if product_status.is_perpetual()
+                           else product_status.expiry_date())
 
-        self._widgets["Timeline"].set_data(
-            released_versions=versions,
-            current_ver=current,
-            expiry_date=expiry_date,
-        )
-        self._widgets["Timeline"].draw()
+            self._widgets["Timeline"].set_data(
+                released_versions=versions,
+                current_ver=current,
+                expiry_date=expiry_date,
+            )
+            self._widgets["Timeline"].draw()
+
+        thread = base.Thread(fetch, parent=self)
+        thread.finished.connect(on_finished)
+        thread.start()
 
 
 class GreetingPage(QtWidgets.QWidget):

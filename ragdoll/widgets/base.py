@@ -25,6 +25,7 @@ except ImportError:
 from .. import __, constants, options, ui
 
 RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
+RAGDOLL_DYNAMICS_RELEASES_URL = "https://learn.ragdolldynamics.com/news"
 WYDAY_URL = "https://wyday.com"
 
 log = logging.getLogger("ragdoll")
@@ -1222,37 +1223,53 @@ class ProductStatus(object):
                 return datetime.now()
 
     def release_history(self):
-        return self._released[:]
+        return self._released[:] if self._released else None
 
-    def has_ragdoll(self, refresh=False):
-        return self._ping(RAGDOLL_DYNAMICS_VERSIONS_URL, refresh)
+    def has_ragdoll(self):
+        return self._ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
 
-    def has_wyday(self, refresh=False):
-        return self._ping(WYDAY_URL, refresh)
+    def has_wyday(self):
+        return self._ping(WYDAY_URL)
 
     def _iter_parsed_versions(self, lines):
         pattern = re.compile(
-            r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            rb'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
         )
         for line in lines:
             matched = pattern.match(line)
             if matched:
                 yield matched.group(1).decode()
 
-    def _ping(self, url, refresh):
+    def _ping(self, url):
         return self._conn.get(url)
 
     def _refresh_release_history(self):
         def _thread():
             if self._released is None:
                 released = []
-                root = os.path.dirname(constants.__file__)
-                cache = os.path.join(root, "resources", "versioninfo.json")
-                if os.path.isfile(cache):
-                    with open(cache) as f:
-                        released = json.load(f)
+                url = RAGDOLL_DYNAMICS_RELEASES_URL
+                try:
+                    with request.urlopen(url) as r:
+                        if r.code == 200:
+                            ln = r.readlines()
+                            released = list(self._iter_parsed_versions(ln))
+                        else:
+                            raise Exception("%s returned: %d" % (url, r.code))
 
-            self._released = released
+                except Exception as e:
+                    log.debug(e)
+                else:
+                    log.debug("Release history fetched from %s" % url)
+
+                if not released:
+                    root = os.path.dirname(constants.__file__)
+                    cache = os.path.join(root, "resources", "versioninfo.json")
+                    if os.path.isfile(cache):
+                        with open(cache) as f:
+                            released = json.load(f)
+                            log.debug("Release history loaded from %s" % cache)
+
+                self._released = released
 
         threading.Thread(target=_thread).start()
 

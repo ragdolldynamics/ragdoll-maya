@@ -1,4 +1,5 @@
 import os
+import re
 import math
 import time
 import logging
@@ -1516,9 +1517,10 @@ def _scaled_stylesheet(style):
     for line in style.splitlines():
         line = line.rstrip()
         if line.endswith("px;"):
-            key, value = line.rsplit(" ", 1)
-            value = px(int(value[:-3]))
-            line = "%s %dpx;" % (key, value)
+            line = "".join([
+                ("%dpx" % px(int(p))) if p.isdigit() else p
+                for p in re.split(r"(\d*)px", line)
+            ])
         output += [line]
     result = "\n".join(output)
     result = result % dict(

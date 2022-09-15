@@ -42,7 +42,7 @@ SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
 SPLASH_HEIGHT = px(125)
 WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
-WINDOW_HEIGHT = px(570)  # just enough to see the first 2 rows of assets
+WINDOW_HEIGHT = px(545)  # just enough to see the first 2 rows of assets
 
 
 def _tint_color(pixmap, color):

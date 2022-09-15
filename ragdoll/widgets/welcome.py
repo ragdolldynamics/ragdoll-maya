@@ -72,36 +72,6 @@ class _ProductStatus(base.ProductStatus):
         else:
             return "#216383", "#71bfbc"
 
-    def get_features(self):
-        return {
-            "Trial": (
-                "Record up to 100 frames\n"
-                "Export up to 10 Markers"
-            ),
-            "Personal": (
-                "Record up to 100 frames\n"
-                "Export up to 10 Markers\n"
-                "Free upgrades forever"
-            ),
-            "Complete": (
-                "Unlimited recording frames\n"
-                "Export up to 10 Markers\n"
-                "High-performance solver"
-            ),
-            "Unlimited": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Freelancer": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Educational": (
-                "The fully-featured, unrestricted version"
-            ),
-            "Batch": (
-                ""
-            ),
-        }.get(self.name(), "Unknown Product")
-
 
 product_status = _ProductStatus()
 asset_library = base.AssetLibrary()
@@ -863,90 +833,35 @@ class AssetListPage(QtWidgets.QWidget):
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
-    """Fancy product banner
-
-    A big pretty banner that honors the product.
-    Which looks like this:
-
-    .---------------------------------------------.
-    |  Complete     Unlimited recording frames    |
-    |    ......     Export up to 10 Markers       |
-    |               Makes you look decent         |
-    `---------------------------------------------`
-
-    """
 
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
         self.setObjectName("LicencePlate")
-        self.setMinimumHeight(px(100))
-
-        panels = {
-            "Product": QtWidgets.QWidget(),
-            "Features": QtWidgets.QWidget(),
-        }
 
         widgets = {
             "Product": QtWidgets.QLabel(),
-            "BriefDes": QtWidgets.QLabel(),
-            "Features": QtWidgets.QLabel(),
         }
 
-        panels["Product"].setFixedWidth(px(180))
-        panels["Product"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        panels["Features"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-
-        widgets["Product"].setObjectName("PlateProduct")
-        widgets["BriefDes"].setObjectName("PlateBriefDes")
-        widgets["Features"].setObjectName("PlateFeatures")
-
-        layout = QtWidgets.QVBoxLayout(panels["Product"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addSpacing(PD4)
-        layout.addWidget(widgets["Product"], alignment=QtCore.Qt.AlignRight)
-        layout.addWidget(widgets["BriefDes"], alignment=QtCore.Qt.AlignRight)
-        layout.addStretch(1)
-
-        layout = QtWidgets.QVBoxLayout(panels["Features"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addSpacing(PD4)
-        layout.addWidget(widgets["Features"], alignment=QtCore.Qt.AlignLeft)
-        layout.addStretch(1)
-        layout.addSpacing(PD4)
-
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(px(12), px(6), px(6), px(6))
-        layout.addWidget(panels["Product"])
-        layout.addSpacing(px(30))
-        layout.addWidget(panels["Features"])
-        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["Product"])
 
         self._widgets = widgets
 
     def set_product(self):
         p_ = product_status
-        name = p_.name()
-        desc = (
-            "Non-Commercial" if p_.is_non_commercial()
-            else "Commercial" if not p_.is_floating()
-            else "Lease Assigned" if p_.has_lease() else "Lease Dropped"
-        )
-        desc += ", Expired" if p_.is_expired() else ""
-
-        self._widgets["Product"].setText(name)
-        self._widgets["BriefDes"].setText(desc)
-        self._widgets["Features"].setText(
-            "<p style=\"line-height:%d%%\">%s</p>"
-            % (140, p_.get_features().replace("\n", "<br>"))
-        )
-        self.setStyleSheet("""
-        #LicencePlate {
+        stop_0, stop_1 = p_.get_gradient()
+        self._widgets["Product"].setText(p_.name())
+        self._widgets["Product"].setStyleSheet("""
+            max-height: %dpx;
+            color: black;
+            font-family: Sora;
+            padding: 0px %dpx;
+            border-radius: %dpx;
             background: qlineargradient(
-            x1:0, y1:0, x2:1, y2:1, stop:0 %s, stop:1 %s
-        );}
-        """ % p_.get_gradient())
+                x1:0, y1:0, x2:1, y2:1, stop:0 %s, stop:1 %s
+            );
+        """ % (px(22), px(6), px(10), stop_0, stop_1))
 
     def paintEvent(self, event):
         # required for applying background styling
@@ -959,35 +874,19 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         super(LicenceStatusPlate, self).paintEvent(event)
 
 
-class _LicencePanelHelper(QtWidgets.QWidget):
-
-    def __init__(self, parent=None):
-        super(_LicencePanelHelper, self).__init__(parent=parent)
-        self.setMaximumWidth(px(540))
-
-    def set_heading(self, title, icon_file):
-        icon_label = self._widgets["Icon"]
-        icon_label.setFixedSize(QtCore.QSize(px(64), px(64)))
-        icon_label.setStyleSheet("""
-            image: url({image});
-        """.format(image=ui._resource("ui", icon_file)))
-
-        title_label = self._widgets["Title"]
-        title_label.setObjectName("Heading2")
-        title_label.setText(title)
-
-    def labeling(self, widget, label_text):
-        c = QtWidgets.QWidget()
-        label = QtWidgets.QLabel(label_text)
-        _layout = QtWidgets.QVBoxLayout(c)
-        _layout.setContentsMargins(0, 0, 0, 0)
-        _layout.setSpacing(PD3)
-        _layout.addWidget(label)
-        _layout.addWidget(widget)
-        return c
+def labeling(widget, label_text, vertical=False, **kwargs):
+    c = QtWidgets.QWidget()
+    label = QtWidgets.QLabel(label_text)
+    _Layout = QtWidgets.QVBoxLayout if vertical else QtWidgets.QHBoxLayout
+    _layout = _Layout(c)
+    _layout.setContentsMargins(0, 0, 0, 0)
+    _layout.setSpacing(PD3)
+    _layout.addWidget(label)
+    _layout.addWidget(widget, **kwargs)
+    return c
 
 
-class LicenceNodeLock(_LicencePanelHelper):
+class LicenceNodeLock(QtWidgets.QWidget):
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
 
@@ -995,8 +894,7 @@ class LicenceNodeLock(_LicencePanelHelper):
         super(LicenceNodeLock, self).__init__(parent=parent)
 
         widgets = {
-            "Icon": QtWidgets.QLabel(),
-            "Title": QtWidgets.QLabel(),
+            "ProductName": LicenceStatusPlate(),
             "ProductKey": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
         }
@@ -1004,26 +902,17 @@ class LicenceNodeLock(_LicencePanelHelper):
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
 
-        _body = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(_body)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Title"])
-        layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
-        layout.addWidget(widgets["ProcessBtn"], alignment=QtCore.Qt.AlignRight)
-        layout.addStretch(1)
-
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
-        layout.addWidget(_body)
+        layout.setSpacing(PD4)
+        layout.addWidget(widgets["ProductName"])
+        layout.addWidget(widgets["ProductKey"], stretch=1)
+        layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
 
         self._widgets = widgets
-        self.set_heading("Node Lock", "pc-display.svg")
 
     def on_product_key_edited(self, text):
         codes = text.split("-")
@@ -1056,6 +945,7 @@ class LicenceNodeLock(_LicencePanelHelper):
             self.node_deactivated.emit()
 
     def status_update(self):
+        self._widgets["ProductName"].set_product()
         if product_status.is_activated():
             self._widgets["ProductKey"].setText(product_status.key())
             self._widgets["ProductKey"].setReadOnly(True)
@@ -1068,8 +958,9 @@ class LicenceNodeLock(_LicencePanelHelper):
             self._widgets["ProcessBtn"].setEnabled(False)
 
 
-class LicenceNodeLockOffline(_LicencePanelHelper):
+class LicenceNodeLockOffline(QtWidgets.QWidget):
     node_activated = QtCore.Signal(str)
+    node_deactivated = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
 
@@ -1077,53 +968,51 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         super(LicenceNodeLockOffline, self).__init__(parent=parent)
 
         widgets = {
-            "Icon": QtWidgets.QLabel(),
-            "Title": QtWidgets.QLabel(),
+            "ProductName": LicenceStatusPlate(),
             "OfflineHint": QtWidgets.QLabel(),
             "ProductKey": QtWidgets.QLineEdit(),
-            "RequestWidget": QtWidgets.QWidget(),
-            "CopyHint": QtWidgets.QLabel(),
+            "RequestRow": QtWidgets.QWidget(),
             "CopyRequest": QtWidgets.QPushButton(),
             "WebsiteURL": QtWidgets.QLabel(),
             "Response": QtWidgets.QLineEdit(),
+            "DeactivateText": QtWidgets.QLabel(),
+            "ConfirmText": QtWidgets.QLabel("  Confirm Deactivated"),
             "ProcessBtn": QtWidgets.QPushButton(),
         }
-        widgets["ResponseWidget"] = self.labeling(widgets["Response"],
-                                                  "Response Code")
+        widgets.update({
+            "RequestWidget": labeling(widgets["RequestRow"], "1."),
+            "ResponseWidget": labeling(widgets["Response"], "2."),
+            "ConfirmWidget": labeling(widgets["ConfirmText"], "2.", stretch=1),
+            "DeactivateHint": labeling(widgets["DeactivateText"], "CAUTION",
+                                       vertical=True)
+        })
 
-        effects = {
-            "CopyHint": QtWidgets.QGraphicsOpacityEffect(widgets["CopyHint"]),
-        }
+        _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
+        widgets["ProductKey"].setPlaceholderText(_)
 
-        animations = {
-            "CopyHint": QtCore.QPropertyAnimation(effects["CopyHint"],
-                                                  b"opacity")
-        }
-
-        effects["CopyHint"].setOpacity(0)
-        animations["CopyHint"].setDuration(3000)
-        animations["CopyHint"].setStartValue(1.0)
-        animations["CopyHint"].setKeyValueAt(0.8, 1.0)
-        animations["CopyHint"].setEndValue(0.0)
-        animations["CopyHint"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
-
+        widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
             "Cannot reach Ragdoll licencing server.\n"
             "Require another internet accessible device to complete "
             "following process."
         )
+        widgets["DeactivateText"].setObjectName("HintMessage")
+        widgets["DeactivateText"].setText(
+            'Only after you have completed the process, press "Dismiss" '
+            'button down right below\nto remove this message.'
+            "\n\n"
+            "If you deactivate Maya without deactivating"
+            "online,\nyour licence will still be considered active "
+            "and cannot be reactivated.\n"
+            "If this happens, contact support@ragdolldynamics.com"
+        )
 
-        _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
-        widgets["ProductKey"].setPlaceholderText(_)
-        widgets["OfflineHint"].setObjectName("HintMessage")
-        widgets["RequestWidget"].setEnabled(False)
-
-        widgets["CopyHint"].setText("Copied to clipboard!")
-        widgets["CopyHint"].setGraphicsEffect(effects["CopyHint"])
-        widgets["CopyRequest"].setText("Copy Request Code")
+        widgets["CopyRequest"].setObjectName("IconTextPushButton")
+        widgets["CopyRequest"].setText(" Copy Request Code")
         widgets["CopyRequest"].setIcon(
             QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
         )
+
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
             QtCore.Qt.TextBrowserInteraction)
@@ -1139,44 +1028,47 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             "Paste response code from https://ragdolldynamics.com/offline"
         )
 
-        _request_row = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(_request_row)
+        layout = QtWidgets.QHBoxLayout(widgets["RequestRow"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD3)
         layout.addWidget(widgets["CopyRequest"])
         layout.addWidget(widgets["WebsiteURL"])
 
-        _request_label = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(_request_label)
+        head = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(head)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(QtWidgets.QLabel("Request Code"))
-        layout.addWidget(widgets["CopyHint"])
-        layout.addStretch(1)
+        layout.addWidget(widgets["ProductName"])
+        layout.addWidget(widgets["ProductKey"])
+        layout.addSpacing(PD2)
 
-        layout = QtWidgets.QVBoxLayout(widgets["RequestWidget"])
+        body = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(body)
+        layout.setContentsMargins(PD1, 0, PD2, 0)
+        layout.setSpacing(PD3)
+        layout.addWidget(widgets["OfflineHint"])
+        layout.addWidget(widgets["DeactivateHint"])
+        layout.addWidget(widgets["RequestWidget"], 0, QtCore.Qt.AlignLeft)
+        layout.addWidget(widgets["ResponseWidget"])
+        layout.addWidget(widgets["ConfirmWidget"])
+
+        body_offset = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(body_offset)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(_request_label)
-        layout.addWidget(_request_row)
+        layout.addSpacing(PD1)
+        layout.addWidget(body, stretch=1)
 
-        _body = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(_body)
+        panel = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD2)
-        layout.addWidget(widgets["Title"])
-        layout.addWidget(widgets["OfflineHint"])
-        layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
-        layout.addWidget(widgets["RequestWidget"])
-        layout.addWidget(widgets["ResponseWidget"])
-        layout.addWidget(widgets["ProcessBtn"], alignment=QtCore.Qt.AlignRight)
-        layout.addStretch(1)
+        layout.addWidget(head)
+        layout.addWidget(body_offset, stretch=1)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
-        layout.addWidget(_body)
+        layout.setSpacing(0)
+        layout.addWidget(panel)
+        layout.addWidget(widgets["ProcessBtn"], 0, QtCore.Qt.AlignBottom)
 
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
@@ -1189,9 +1081,6 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
         self._dreqfname = os.path.join(_temp, "ragdollTempDeRequest.xml")
         self._keyfname = os.path.join(_temp, "ragdollTempProductKey.txt")
         self._widgets = widgets
-        self._animations = animations
-
-        self.set_heading("Node Lock (Offline)", "pc-display.svg")
 
     def on_product_key_edited(self, text):
         codes = text.split("-")
@@ -1224,23 +1113,14 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
                 _f.write(self._widgets["Response"].text())
             self.node_activated.emit(self._resfname)
         else:
-            msgbox = QtWidgets.QMessageBox()
-            msgbox.setWindowTitle("Deactivate Ragdoll")
-            msgbox.setTextFormat(QtCore.Qt.RichText)
-            msgbox.setText(
-                "Do you want me to deactivate Ragdoll on this machine? "
-                "I'll try and revert to a trial licence."
-                "<br><br>"
-                "<b>WARNING</b>: This will close your currently opened file"
-            )
-            msgbox.setStandardButtons(QtWidgets.QMessageBox.Yes |
-                                      QtWidgets.QMessageBox.No)
+            self.node_deactivated.emit()
 
-            if msgbox.exec_() != QtWidgets.QMessageBox.Yes:
-                log.info("Cancelled")
-                return
-            self.offline_deactivate_requested.emit(self._dreqfname)
-            # Also deactivates the node right away.
+    def request_offline_deactivate(self):
+        self.offline_deactivate_requested.emit(self._dreqfname)
+
+    def set_product_key(self, key):
+        self._widgets["ProductKey"].setText(key)
+        self.on_product_key_edited(key)
 
     def set_activation_request(self):
         try:
@@ -1250,8 +1130,6 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             self._widgets["ResponseWidget"].setEnabled(False)
         else:
             base.write_clipboard(request_code)
-            self._animations["CopyHint"].stop()
-            self._animations["CopyHint"].start()
             self._widgets["ResponseWidget"].setEnabled(True)
 
     def is_deactivation_requested(self):
@@ -1289,13 +1167,17 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             pass
 
     def status_update(self):
-        if product_status.is_activated():
-            self._widgets["ProductKey"].setText(product_status.key())
+        self._widgets["ProductName"].set_product()
+
+        if product_status.is_activated() or self.is_deactivation_requested():
+            key = product_status.key() or self.read_temp_key()
+            self._widgets["ProductKey"].setText(key)
             self._widgets["ProductKey"].setReadOnly(True)
-            self._widgets["ProcessBtn"].setText("Deactivate")
+            self._widgets["ProcessBtn"].setText("Dismiss")
             self._widgets["ProcessBtn"].setEnabled(True)
-            self._widgets["RequestWidget"].hide()
+            self._widgets["RequestWidget"].setEnabled(True)
             self._widgets["ResponseWidget"].hide()
+            self._widgets["ConfirmWidget"].show()
             self.remove_temp_key()
 
         else:
@@ -1306,141 +1188,13 @@ class LicenceNodeLockOffline(_LicencePanelHelper):
             self._widgets["Response"].setText("")
             self._widgets["ProcessBtn"].setText("Activate")
             self._widgets["ProcessBtn"].setEnabled(False)
-            self._widgets["RequestWidget"].show()
             self._widgets["ResponseWidget"].show()
+            self._widgets["ConfirmWidget"].hide()
             self._widgets["RequestWidget"].setEnabled(bool(_temp_key))
             self._widgets["ResponseWidget"].setEnabled(bool(_temp_key))
 
 
-class LicenceOfflineDeactivationBox(_LicencePanelHelper):
-    dismissed = QtCore.Signal()
-
-    def __init__(self, parent=None):
-        super(LicenceOfflineDeactivationBox, self).__init__(parent=parent)
-
-        widgets = {
-            "Icon": QtWidgets.QLabel(),
-            "Title": QtWidgets.QLabel(),
-            "OfflineHint": QtWidgets.QLabel(),
-            "ProductKey": QtWidgets.QLineEdit(),
-            "RequestWidget": QtWidgets.QWidget(),
-            "CopyHint": QtWidgets.QLabel(),
-            "CopyRequest": QtWidgets.QPushButton(),
-            "WebsiteURL": QtWidgets.QLabel(),
-            "DismissBtn": QtWidgets.QPushButton("Dismiss"),
-        }
-
-        effects = {
-            "CopyHint": QtWidgets.QGraphicsOpacityEffect(widgets["CopyHint"]),
-        }
-
-        animations = {
-            "CopyHint": QtCore.QPropertyAnimation(effects["CopyHint"],
-                                                  b"opacity")
-        }
-
-        effects["CopyHint"].setOpacity(0)
-        animations["CopyHint"].setDuration(3000)
-        animations["CopyHint"].setStartValue(1.0)
-        animations["CopyHint"].setKeyValueAt(0.8, 1.0)
-        animations["CopyHint"].setEndValue(0.0)
-        animations["CopyHint"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
-
-        widgets["ProductKey"].setReadOnly(True)
-        widgets["OfflineHint"].setObjectName("HintMessage")
-        widgets["OfflineHint"].setText(
-            "Please continue following steps to complete offline deactivation."
-            "\n"
-            'And ONLY after you have completed the process, press "Dismiss" '
-            'button down below\nto remove this message.'
-            "\n\n"
-            "CAUTION: If you deactivate Maya without deactivating"
-            "online,\nyour licence will still be considered active "
-            "and cannot be reactivated.\n"
-            "If this happens, contact support@ragdolldynamics.com"
-        )
-
-        widgets["CopyHint"].setText("Copied to clipboard!")
-        widgets["CopyHint"].setGraphicsEffect(effects["CopyHint"])
-        widgets["CopyRequest"].setText("Copy Request Code")
-        widgets["CopyRequest"].setIcon(
-            QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
-        )
-        widgets["WebsiteURL"].setOpenExternalLinks(True)
-        widgets["WebsiteURL"].setTextInteractionFlags(
-            QtCore.Qt.TextBrowserInteraction)
-        widgets["WebsiteURL"].setText(
-            """
-            <style> p {color: #8c8c8c;} a:link {color: #80e5cc;}</style>
-            <p>And paste the code to </p>
-            <a href=\"https://ragdolldynamics.com/offline\">
-            https://ragdolldynamics.com/offline</a>
-            """
-        )
-
-        _request_row = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(_request_row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(widgets["CopyRequest"])
-        layout.addWidget(widgets["WebsiteURL"])
-
-        _request_label = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(_request_label)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(QtWidgets.QLabel("Request Code"))
-        layout.addWidget(widgets["CopyHint"])
-        layout.addStretch(1)
-
-        layout = QtWidgets.QVBoxLayout(widgets["RequestWidget"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(_request_label)
-        layout.addWidget(_request_row)
-
-        _body = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(_body)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Title"])
-        layout.addWidget(self.labeling(widgets["OfflineHint"], "Important"))
-        layout.addWidget(self.labeling(widgets["ProductKey"], "Product Key"))
-        layout.addWidget(widgets["RequestWidget"])
-        layout.addWidget(widgets["DismissBtn"], alignment=QtCore.Qt.AlignRight)
-        layout.addStretch(1)
-
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
-        layout.addWidget(_body)
-        layout.addStretch(1)
-
-        widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
-        widgets["DismissBtn"].clicked.connect(self.dismissed)
-
-        self._widgets = widgets
-        self._animations = animations
-        self._req_code = None
-        self.set_heading("Node Lock (Offline Deactivating)", "pc-display.svg")
-
-    def on_copy_request_clicked(self):
-        base.write_clipboard(self._req_code)
-        self._animations["CopyHint"].stop()
-        self._animations["CopyHint"].start()
-
-    def set_product_key(self, key):
-        self._widgets["ProductKey"].setText(key)
-
-    def set_request_code(self, code):
-        self._req_code = code
-
-    def status_update(self):
-        return
-
-
-class LicenceFloating(_LicencePanelHelper):
+class LicenceFloating(QtWidgets.QWidget):
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
 
@@ -1448,47 +1202,30 @@ class LicenceFloating(_LicencePanelHelper):
         super(LicenceFloating, self).__init__(parent=parent)
 
         widgets = {
-            "Icon": QtWidgets.QLabel(),
-            "Title": QtWidgets.QLabel(),
+            "ProductName": LicenceStatusPlate(),
             "ServerIP": QtWidgets.QLineEdit(),
             "ServerPort": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
         }
 
-        widgets["ServerIP"].setFixedWidth(px(320))
-        widgets["ServerPort"].setFixedWidth(px(100))
         widgets["ServerIP"].setReadOnly(True)  # set from env var
         widgets["ServerPort"].setReadOnly(True)  # set from env var
 
-        _server_row = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(_server_row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(self.labeling(widgets["ServerIP"], "Server IP"))
-        layout.addWidget(self.labeling(widgets["ServerPort"], "Server Port"))
-
-        _body = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(_body)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Title"])
-        layout.addWidget(_server_row)
-        layout.addWidget(widgets["ProcessBtn"], alignment=QtCore.Qt.AlignRight)
-        layout.addStretch(1)
-
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Icon"], alignment=QtCore.Qt.AlignTop)
-        layout.addWidget(_body)
-        layout.addStretch(1)
+        layout.setSpacing(PD4)
+        layout.addWidget(widgets["ProductName"])
+        layout.addWidget(widgets["ServerIP"], stretch=7)
+        layout.addWidget(widgets["ServerPort"], stretch=3)
+        layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
 
         self._widgets = widgets
-        self.set_heading("Floating", "building.svg")
 
     def status_update(self):
+        self._widgets["ProductName"].set_product()
+
         p_ = product_status
         action = "Drop Lease" if p_.has_lease() else "Request Lease"
         ip, port = p_.licence_server()
@@ -1541,29 +1278,28 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         super(LicenceSetupPanel, self).__init__(parent=parent)
 
         widgets = {
-            "Pages": QtWidgets.QStackedWidget(),
+            "Pages": base.SizeAdjustedStackedWidget(),
             "NodeLock": LicenceNodeLock(),
             "NodeLockOffline": LicenceNodeLockOffline(),
             "Floating": LicenceFloating(),
-            "DeactivationBox": LicenceOfflineDeactivationBox(),
         }
 
         widgets["Pages"].addWidget(widgets["NodeLock"])
         widgets["Pages"].addWidget(widgets["NodeLockOffline"])
         widgets["Pages"].addWidget(widgets["Floating"])
-        widgets["Pages"].addWidget(widgets["DeactivationBox"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
+        layout.setSpacing(0)
         layout.addWidget(widgets["Pages"])
 
-        widgets["DeactivationBox"].dismissed.connect(self.on_box_dismissed)
         widgets["Floating"].float_requested.connect(self.float_requested)
         widgets["Floating"].float_dropped.connect(self.float_dropped)
         widgets["NodeLock"].node_activated.connect(self.node_activated)
         widgets["NodeLock"].node_deactivated.connect(self.node_deactivated)
         widgets["NodeLockOffline"].node_activated.connect(self.node_activated)
+        widgets["NodeLockOffline"].node_deactivated.connect(
+            self.on_offline_deactivated)
         widgets["NodeLockOffline"].offline_activate_requested.connect(
             self.offline_activate_requested)
         widgets["NodeLockOffline"].offline_deactivate_requested.connect(
@@ -1576,28 +1312,38 @@ class LicenceSetupPanel(QtWidgets.QWidget):
 
     def on_offline_deactivate_requested(self):
         self._widgets["NodeLockOffline"].write_temp_key()
-        self.licence_updated.emit()
 
-    def on_box_dismissed(self):
+    def on_offline_deactivated(self):
         self._widgets["NodeLockOffline"].remove_deactivation_request_file()
         self._widgets["NodeLockOffline"].remove_temp_key()
         self.licence_updated.emit()
 
+    def switch_to_offline_activate(self, key):
+        self._widgets["Pages"].setCurrentIndex(1)
+        w = self._widgets["NodeLockOffline"]
+        w.set_product_key(key)
+        w.status_update()
+
+    def switch_to_offline_deactivate(self):
+        self._widgets["Pages"].setCurrentIndex(1)
+        w = self._widgets["NodeLockOffline"]
+        w.request_offline_deactivate()
+        w.status_update()
+
     def status_update(self):
         p_ = product_status
+        pages = self._widgets["Pages"]
 
         if self._widgets["NodeLockOffline"].is_deactivation_requested():
             log.info("Ragdoll is offline deactivated")
             # ensure user completed the process before dumping request code
-            _off = self._widgets["NodeLockOffline"]
-            _box = self._widgets["DeactivationBox"]
-            _box.set_product_key(_off.read_temp_key())
-            _box.set_request_code(_off.read_deactivation_request_file())
-            self._widgets["Pages"].setCurrentIndex(3)
+            pages.setCurrentIndex(1)
 
         elif p_.is_floating():
             log.info("Ragdoll is floating")
-            self._widgets["Pages"].setCurrentIndex(2)
+
+            pages.setCurrentIndex(2)
+
         else:
             if p_.is_trial():
                 if p_.is_expired():
@@ -1610,12 +1356,11 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                     log.info("Ragdoll is activated")
                 else:
                     log.info("Ragdoll is deactivated")
-            # index = not p_.has_wyday()
-            index = 0
-            self._widgets["Pages"].setCurrentIndex(index)
 
-        widget = self._widgets["Pages"].currentWidget()
-        widget.status_update()
+            pages.setCurrentIndex(0)
+
+        current_page = pages.currentWidget()
+        current_page.status_update()
 
 
 class LicencePage(QtWidgets.QWidget):
@@ -1624,14 +1369,11 @@ class LicencePage(QtWidgets.QWidget):
         super(LicencePage, self).__init__(parent=parent)
 
         widgets = {
-            "Plate": LicenceStatusPlate(),
             "Body": LicenceSetupPanel(),
         }
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(PD1, 0, PD1, 0)
-        layout.setSpacing(PD2)
-        layout.addWidget(widgets["Plate"])
+        layout.setContentsMargins(PD4, 0, PD4, 0)
         layout.addWidget(widgets["Body"])
 
         self._widgets = widgets
@@ -1642,13 +1384,6 @@ class LicencePage(QtWidgets.QWidget):
             LicenceSetupPanel
         """
         return self._widgets["Body"]
-
-    def status_widget(self):
-        """Exposed for connecting signals
-        Returns:
-            LicenceStatusPlate
-        """
-        return self._widgets["Plate"]
 
 
 class SideBarAnchorLayout(QtWidgets.QVBoxLayout):
@@ -1775,10 +1510,12 @@ def _scaled_stylesheet(style):
 class WelcomeWindow(base.SingletonMainWindow):
     asset_opened = QtCore.Signal(str)
     licence_updated = QtCore.Signal()
-    node_activated = QtCore.Signal(str)
-    node_deactivated = QtCore.Signal()
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
+    node_activated = QtCore.Signal(str)
+    node_deactivated = QtCore.Signal()
+    node_activate_inet_returned = QtCore.Signal(str)
+    node_deactivate_inet_returned = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
 
@@ -1811,8 +1548,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         widgets = {
             "Body": QtWidgets.QWidget(),
             "Greet": GreetingPage(),
-            "Assets": AssetListPage(),
             "Licence": LicencePage(),
+            "Assets": AssetListPage(),
             "VirtualSpace": QtWidgets.QSpacerItem(PD1, PD1),
         }
 
@@ -1825,16 +1562,17 @@ class WelcomeWindow(base.SingletonMainWindow):
         anchor_list = [
             panels["SideBar"].add_anchor("Greet", _ragdoll_logo, "#e5d680"),
             panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680"),
-            panels["SideBar"].add_anchor("Licence", "award.svg", "#80e5cc"),
         ]
 
         layout = QtWidgets.QVBoxLayout(widgets["Body"])
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD2)
+        layout.setSpacing(0)
         layout.addSpacing(PD4)
         layout.addWidget(widgets["Greet"])
-        layout.addWidget(widgets["Assets"])
+        layout.addSpacing(PD4)
         layout.addWidget(widgets["Licence"])
+        layout.addSpacing(PD3)
+        layout.addWidget(widgets["Assets"])
         layout.addSpacerItem(widgets["VirtualSpace"])
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
@@ -1850,13 +1588,17 @@ class WelcomeWindow(base.SingletonMainWindow):
         widgets["Assets"].asset_opened.connect(self.asset_opened)
         lic = widgets["Licence"].input_widget()
         lic.licence_updated.connect(self.licence_updated)
-        lic.node_activated.connect(self.node_activated)
-        lic.node_deactivated.connect(self.node_deactivated)
         lic.float_requested.connect(self.float_requested)
         lic.float_dropped.connect(self.float_dropped)
+        lic.node_activated.connect(self.node_activated)
+        lic.node_deactivated.connect(self.node_deactivated)
         lic.offline_activate_requested.connect(self.offline_activate_requested)
         lic.offline_deactivate_requested.connect(
             self.offline_deactivate_requested)
+        self.node_activate_inet_returned.connect(
+            self.on_node_activate_inet_returned)
+        self.node_deactivate_inet_returned.connect(
+            self.on_node_deactivate_inet_returned)
 
         self._panels = panels
         self._widgets = widgets
@@ -1879,7 +1621,6 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         if not self.__hidden:
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-            self._align_anchors()
         else:
             self.__hidden = False
 
@@ -1905,9 +1646,30 @@ class WelcomeWindow(base.SingletonMainWindow):
     def on_licence_updated(self, data):
         product_status.data = data
         self._widgets["Licence"].input_widget().status_update()
-        self._widgets["Licence"].status_widget().set_product()
         self._widgets["Greet"].status_widget().set_status()
         self._widgets["Greet"].timeline_widget().set_timeline()
+
+        # align anchors after licence page resized from status update
+        QtWidgets.QApplication.instance().processEvents()
+
+        # to trigger indicator region masking...
+        #   somehow this is the only known way to update correctly
+        self.resize(self.size() + QtCore.QSize(0, 1))
+        # self._widgets["Assets"].adjustSize()
+
+    def on_node_activate_inet_returned(self, key):
+        w = self._widgets["Licence"].input_widget()
+        w.switch_to_offline_activate(key)
+
+        QtWidgets.QApplication.instance().processEvents()
+        self._align_anchors()
+
+    def on_node_deactivate_inet_returned(self):
+        w = self._widgets["Licence"].input_widget()
+        w.switch_to_offline_deactivate()
+
+        QtWidgets.QApplication.instance().processEvents()
+        self._align_anchors()
 
     def on_offline_activate_requested(self):
         w = self._widgets["Licence"].input_widget()
@@ -1919,7 +1681,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)
-        self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - PD1)
+        self._panels["Scroll"].verticalScrollBar().setValue(widget.y() - PD3)
 
     def on_vertical_scrolled(self, value):
         self._align_anchors(value)

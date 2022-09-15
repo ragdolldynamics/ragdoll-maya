@@ -468,6 +468,27 @@ class OverlayWidget(QtWidgets.QWidget):
         return super(OverlayWidget, self).event(event)
 
 
+class SizeAdjustedStackedWidget(QtWidgets.QStackedWidget):
+    SizeIgnored = QtWidgets.QSizePolicy.Ignored
+    SizePreferred = QtWidgets.QSizePolicy.Preferred
+
+    def addWidget(self, w):
+        w.setSizePolicy(self.SizeIgnored, self.SizeIgnored)
+        return super(SizeAdjustedStackedWidget, self).addWidget(w)
+
+    def setCurrentWidget(self, w):
+        self.currentWidget().setSizePolicy(self.SizeIgnored, self.SizeIgnored)
+        w.setSizePolicy(self.SizePreferred, self.SizePreferred)
+        super(SizeAdjustedStackedWidget, self).setCurrentWidget(w)
+        self.adjustSize()
+
+    def setCurrentIndex(self, i):
+        self.currentWidget().setSizePolicy(self.SizeIgnored, self.SizeIgnored)
+        self.widget(i).setSizePolicy(self.SizePreferred, self.SizePreferred)
+        super(SizeAdjustedStackedWidget, self).setCurrentIndex(i)
+        self.adjustSize()
+
+
 class SingletonMainWindow(QtWidgets.QMainWindow):
     instance = None
     protected = False  # set to True if only closed on plugin unloaded

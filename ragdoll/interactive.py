@@ -3482,12 +3482,21 @@ def welcome_user(*args):
         def on_node_activated(key_or_fname):
             is_file = os.path.isfile(key_or_fname)
             func = licence.activate_from_file if is_file else licence.activate
-            _is_succeed(func(key_or_fname))
-            win.licence_updated.emit()
+            status = func(key_or_fname)
+            if status == licence.STATUS_INET:
+                key = key_or_fname  # should be key
+                win.node_activate_inet_returned.emit(key)
+            else:
+                _is_succeed(status)
+                win.licence_updated.emit()
 
         def on_node_deactivated():
-            _is_succeed(licence.deactivate())
-            win.licence_updated.emit()
+            status = licence.deactivate()
+            if status == licence.STATUS_INET:
+                win.node_deactivate_inet_returned.emit()
+            else:
+                _is_succeed(status)
+                win.licence_updated.emit()
 
         def on_float_requested():
             _is_succeed(licence.request_lease())

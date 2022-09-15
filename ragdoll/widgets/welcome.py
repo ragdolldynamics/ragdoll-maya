@@ -1,5 +1,6 @@
 import os
 import math
+import time
 import logging
 import tempfile
 from datetime import datetime
@@ -147,6 +148,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         widgets["NoInternetText"].setText("No internet for checking update  ")
         widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
         widgets["NoInternet"].setStyleSheet("background: transparent;")
+        widgets["NoInternet"].setVisible(False)
 
         widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
@@ -202,8 +204,17 @@ class GreetingTopRight(QtWidgets.QWidget):
             "background: transparent; image: url(%s);" % icon)
 
     def _update(self):
-        offline = not product_status.has_ragdoll()
-        self._widgets["NoInternet"].setVisible(offline)
+        def fetch():
+            while product_status.has_ragdoll() is None:
+                time.sleep(0.5)
+
+        def on_finished():
+            offline = not product_status.has_ragdoll()
+            self._widgets["NoInternet"].setVisible(offline)
+
+        thread = base.Thread(fetch, parent=self)
+        thread.finished.connect(on_finished)
+        thread.start()
 
     def set_status(self):
         self._expiry()

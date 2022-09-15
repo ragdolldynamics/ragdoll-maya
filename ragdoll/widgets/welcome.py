@@ -749,11 +749,10 @@ class AssetListPage(QtWidgets.QWidget):
         widgets = {
             "Tags": AssetTagList(),
             "List": AssetCardView(),
-            "Empty": QtWidgets.QLabel(
-                "No assets found, try adding a path in Extra Assets below"
-            ),
+            "Status": QtWidgets.QLabel(),
             "Path": QtWidgets.QLineEdit(),
             "Browse": QtWidgets.QPushButton(),
+            "Reload": QtWidgets.QPushButton(),
         }
 
         models = {
@@ -761,11 +760,13 @@ class AssetListPage(QtWidgets.QWidget):
             "Proxy": AssetCardProxyModel(),
         }
 
-        widgets["Empty"].setFixedHeight(px(40))
-        widgets["Empty"].setAlignment(QtCore.Qt.AlignHCenter)
-        widgets["Empty"].setVisible(False)
+        widgets["Status"].setFixedHeight(px(40))
+        widgets["Status"].setAlignment(QtCore.Qt.AlignHCenter)
+        widgets["Status"].setVisible(False)
         widgets["Browse"].setIcon(QtGui.QIcon(
             ui._resource("ui", "folder.svg")))
+        widgets["Reload"].setIcon(QtGui.QIcon(
+            ui._resource("ui", "arrow-counterclockwise.svg")))
         widgets["Path"].setReadOnly(True)
         widgets["Path"].setText(asset_library.get_user_path())
 
@@ -774,22 +775,24 @@ class AssetListPage(QtWidgets.QWidget):
 
         _path_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_path_row)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(CARD_PADDING, 0, CARD_PADDING, 0)
         layout.addWidget(QtWidgets.QLabel("Extra Assets"))
         layout.addSpacing(PD4)
         layout.addWidget(widgets["Path"])
         layout.addWidget(widgets["Browse"])
+        layout.addWidget(widgets["Reload"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(PD4 - CARD_PADDING, 0, PD4 - CARD_PADDING, 0)
         layout.setSpacing(PD3)
         layout.addWidget(widgets["Tags"])
         layout.addWidget(widgets["List"])
-        layout.addWidget(widgets["Empty"])
+        layout.addWidget(widgets["Status"])
         layout.addWidget(_path_row)
 
         widgets["Tags"].tagged.connect(self.on_tag_changed)
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
+        widgets["Reload"].clicked.connect(self.on_asset_reload_clicked)
 
         self._models = models
         self._widgets = widgets
@@ -819,10 +822,43 @@ class AssetListPage(QtWidgets.QWidget):
         if dialog.exec_():
             asset_library.set_user_path(dialog.selectedFiles()[0])
             self._widgets["Path"].setText(asset_library.get_user_path())
-            self.reset()
+            self._reload()
 
     @internal.with_timing
-    def reset(self):
+    def on_asset_reload_clicked(self):
+        self._reload()
+
+    def _reload(self):
+        asset_library.reload()
+        self.refresh()
+
+    def close_threads(self):
+        for c in self.findChildren(QtCore.QThread):
+            c.requestInterruption()
+            c.wait()
+            c.deleteLater()
+
+    @internal.with_timing
+    def refresh(self):
+        status = "Loading assets..."
+        self._widgets["Status"].setText(status)
+        self._widgets["Status"].setVisible(True)
+        self._widgets["List"].setVisible(False)
+        self._widgets["Browse"].setEnabled(False)
+        self._widgets["Reload"].setEnabled(False)
+        self.close_threads()
+
+        def _wait():
+            t = base.Thread.currentThread()
+            while (asset_library.is_reloading()
+                   and not t.isInterruptionRequested()):
+                time.sleep(0.02)
+
+        thread = base.Thread(_wait, parent=self)
+        thread.finished.connect(self._refresh)
+        thread.start()
+
+    def _refresh(self):
         self._widgets["Tags"].clear()
 
         model = self._models["Source"]
@@ -836,7 +872,12 @@ class AssetListPage(QtWidgets.QWidget):
                 self._widgets["Tags"].add_tag(name, color)
 
         asset_loaded = bool(model.rowCount())
-        self._widgets["Empty"].setVisible(not asset_loaded)
+
+        status = "No assets found, try adding a path in Extra Assets below"
+        self._widgets["Status"].setText(status)
+        self._widgets["Status"].setVisible(not asset_loaded)
+        self._widgets["Browse"].setEnabled(True)
+        self._widgets["Reload"].setEnabled(True)
         self._widgets["List"].setVisible(asset_loaded)
         self._widgets["List"].adjust_viewport()
 
@@ -1551,7 +1592,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         #
         product_status._refresh_internet_connectivity()
         product_status._refresh_release_history()
-
         asset_library.reload()
 
     def __init__(self, parent=None):
@@ -1646,13 +1686,18 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).show()
 
         if not self.__hidden:
-            self._widgets["Assets"].reset()
+            self._widgets["Assets"].refresh()
             self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False
 
         self.licence_updated.emit()
+
+    def closeEvent(self, event):
+        asset_library.stop_reload()
+        self._widgets["Assets"].close_threads()
+        return super(WelcomeWindow, self).closeEvent(event)
 
     def resizeEvent(self, event):
         width, height = event.size().toTuple()

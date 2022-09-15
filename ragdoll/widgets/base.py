@@ -1288,9 +1288,12 @@ class ProductStatus(object):
 
 
 class AssetLibrary(object):
+
     def __init__(self):
         self._tags = set()
         self._assets = list()
+        self._is_reloading = False
+        self._stop_reload = False
 
     def get_user_path(self):
         return options.read("extraAssets")
@@ -1299,11 +1302,32 @@ class AssetLibrary(object):
         if not any(self.iter_rag_files(path)):
             path = ""
         options.write("extraAssets", path)
-        self.reload()
 
     def reload(self):
+        def _thread():
+            self._is_reloading = True
+            try:
+                self._reload()
+            except Exception as e:
+                log.debug(e)
+            self._is_reloading = False
+
+        threading.Thread(target=_thread).start()
+
+    def is_reloading(self):
+        return self._is_reloading
+
+    def stop_reload(self):
+        if self._is_reloading:
+            self._stop_reload = True
+
+    def _clear(self):
         self._tags.clear()
-        self._assets[:] = []
+        self._assets.clear()
+        self._stop_reload = False
+
+    def _reload(self):
+        self._clear()
         seen = set()
 
         paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
@@ -1311,6 +1335,9 @@ class AssetLibrary(object):
         paths = list(filter(None, paths))
 
         for lib_path in reversed(paths):
+            if self._stop_reload:
+                return self._clear()
+
             if not os.path.exists(lib_path):
                 log.warning("Asset library path '%s' did not exist" % lib_path)
                 continue
@@ -1319,6 +1346,9 @@ class AssetLibrary(object):
             rag_files = list(self.iter_rag_files(lib_path))
 
             for path in rag_files:
+                if self._stop_reload:
+                    return self._clear()
+
                 with open(path) as _f:
                     rag = json.load(_f)
                 _d = rag.get("ui")
@@ -1355,7 +1385,7 @@ class AssetLibrary(object):
 
     def get_manifest(self):
         return {
-            "assets": self._assets[:],
+            "assets": self._assets.copy(),
             "tags": self._tags.copy(),
         }
 

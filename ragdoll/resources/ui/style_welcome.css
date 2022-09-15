@@ -53,6 +53,10 @@ AssetCardView::item:hover {
     border: 4px solid #eee;
 }
 
+AssetCardView::item:!hover:focus {
+    border: none;
+}
+
 #GreetingStartupChk {
     background: transparent;
     padding-right: 16px;

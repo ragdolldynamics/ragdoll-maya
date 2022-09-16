@@ -1048,6 +1048,12 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "DeactivateHint": labeling(widgets["DeactivateText"], "CAUTION",
                                        vertical=True)
         })
+        effects = {
+            "Hint": QtWidgets.QGraphicsOpacityEffect(),
+        }
+        animations = {
+            "Hint": QtCore.QPropertyAnimation(effects["Hint"], b"opacity")
+        }
 
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
@@ -1075,15 +1081,22 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
         )
 
+        effects["Hint"].setOpacity(0)
+        animations["Hint"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
+        animations["Hint"].setDuration(500)
+        animations["Hint"].setStartValue(0)
+        animations["Hint"].setEndValue(1)
+        widgets["WebsiteURL"].setGraphicsEffect(effects["Hint"])
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
             QtCore.Qt.TextBrowserInteraction)
         widgets["WebsiteURL"].setText(
             """
-            <style> p {color: #8c8c8c;} a:link {color: #80e5cc;}</style>
-            <p>And paste the code to </p>
+            <style> p {color: #acacac;} a:link {color: #80e5cc;}</style>
+            <p>Copied! Now paste it to
             <a href=\"https://ragdolldynamics.com/offline\">
-            https://ragdolldynamics.com/offline</a>
+            ragdolldynamics.com/offline</a> (internet required)
+            </p>
             """
         )
         widgets["Response"].setPlaceholderText(
@@ -1130,6 +1143,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
         widgets["Response"].textEdited.connect(self.on_response_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
+        animations["Hint"].finished.connect(
+            lambda: effects["Hint"].setEnabled(False))
 
         _temp = tempfile.gettempdir()
         self._reqfname = os.path.join(_temp, "ragdollTempRequest.xml")
@@ -1137,6 +1152,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         self._dreqfname = os.path.join(_temp, "ragdollTempDeRequest.xml")
         self._keyfname = os.path.join(_temp, "ragdollTempProductKey.txt")
         self._widgets = widgets
+        self._effects = effects
+        self._animations = animations
 
     def on_product_key_edited(self, text):
         codes = text.split("-")
@@ -1157,6 +1174,9 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
     def on_copy_request_clicked(self):
         key = self._widgets["ProductKey"].text()
         self.offline_activate_requested.emit(key, self._reqfname)
+        # show hint
+        self._effects["Hint"].setEnabled(True)
+        self._animations["Hint"].start()
 
     def on_response_edited(self, text):
         is_response = text.strip().endswith("</Response>")

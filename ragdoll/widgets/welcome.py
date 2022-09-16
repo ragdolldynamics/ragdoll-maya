@@ -1038,7 +1038,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "WebsiteURL": QtWidgets.QLabel(),
             "Response": QtWidgets.QLineEdit(),
             "DeactivateText": QtWidgets.QLabel(),
-            "ConfirmText": QtWidgets.QLabel("  Confirm Deactivated"),
+            "ConfirmText": QtWidgets.QLabel(" Confirm Deactivated"),
             "ProcessBtn": QtWidgets.QPushButton(),
         }
         widgets.update({
@@ -1113,18 +1113,12 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.addWidget(widgets["ResponseWidget"])
         layout.addWidget(widgets["ConfirmWidget"])
 
-        body_offset = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(body_offset)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addSpacing(PD1)
-        layout.addWidget(body, stretch=1)
-
         panel = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD2)
         layout.addWidget(head)
-        layout.addWidget(body_offset, stretch=1)
+        layout.addWidget(body, stretch=1)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

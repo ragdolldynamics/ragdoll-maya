@@ -850,8 +850,8 @@ class AssetListPage(QtWidgets.QWidget):
 
         def _wait():
             t = base.Thread.currentThread()
-            while (asset_library.is_reloading()
-                   and not t.isInterruptionRequested()):
+            while (asset_library.is_reloading() and
+                   not t.isInterruptionRequested()):
                 time.sleep(0.02)
 
         thread = base.Thread(_wait, parent=self)
@@ -979,8 +979,8 @@ class LicenceNodeLock(QtWidgets.QWidget):
     def on_product_key_edited(self, text):
         codes = text.split("-")
         is_key = (
-            len(codes) == 7
-            and all(len(c) == 4 and c.isalnum() for c in codes)
+            len(codes) == 7 and
+            all(len(c) == 4 and c.isalnum() for c in codes)
         )
         self._widgets["ProcessBtn"].setEnabled(is_key)
 
@@ -1158,8 +1158,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
     def on_product_key_edited(self, text):
         codes = text.split("-")
         is_key = (
-            len(codes) == 7
-            and all(len(c) == 4 and c.isalnum() for c in codes)
+            len(codes) == 7 and
+            all(len(c) == 4 and c.isalnum() for c in codes)
         )
         # Temporarily save user input key for offline activation
         if is_key:

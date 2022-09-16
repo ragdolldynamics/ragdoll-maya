@@ -1159,14 +1159,14 @@ class ProductStatus(object):
 
     def is_activated(self):
         return (
-            (self.key() and self.data["isActivated"])
-            or (self.key() and self.is_expired())
+            (self.key() and self.data["isActivated"]) or
+            (self.key() and self.is_expired())
         )
 
     def is_perpetual(self):
         return (
-            not self.data["expires"]
-            and not self.is_trial()
+            not self.data["expires"] and
+            not self.is_trial()
         )
 
     def is_subscription(self):

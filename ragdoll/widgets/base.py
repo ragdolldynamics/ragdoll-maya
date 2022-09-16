@@ -1232,7 +1232,7 @@ class ProductStatus(object):
 
     def _iter_parsed_versions(self, lines):
         pattern = re.compile(
-            rb'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
         )
         for line in lines:
             matched = pattern.match(line)
@@ -1323,7 +1323,7 @@ class AssetLibrary(object):
 
     def _clear(self):
         self._tags.clear()
-        self._assets.clear()
+        self._assets[:] = []
         self._stop_reload = False
 
     def _reload(self):
@@ -1379,7 +1379,7 @@ class AssetLibrary(object):
 
     def get_manifest(self):
         return {
-            "assets": self._assets.copy(),
+            "assets": self._assets[:],
             "tags": self._tags.copy(),
         }
 

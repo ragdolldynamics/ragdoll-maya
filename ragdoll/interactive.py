@@ -3515,8 +3515,10 @@ def welcome_user(*args):
                 win.on_offline_deactivate_requested()
 
         def on_asset_opened(file_path):
-            _open_physics(file_path)
             win.hide()
+
+            # Let the UI disappear first
+            cmds.evalDeferred(lambda: _open_physics(file_path))
 
         win.licence_updated.connect(on_licence_updated)
         win.node_activated.connect(on_node_activated)

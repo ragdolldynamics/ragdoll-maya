@@ -1328,7 +1328,6 @@ class AssetLibrary(object):
 
     def _reload(self):
         self._clear()
-        seen = set()
 
         paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
         paths.append(self.get_user_path())
@@ -1355,9 +1354,6 @@ class AssetLibrary(object):
                 _fname = os.path.basename(path)
 
                 name = rag.get("name") or _fname.rsplit(".", 1)[0]
-                if name in seen:
-                    continue
-
                 video = _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm"
                 video = self.resource(video, lib_path)
                 poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
@@ -1375,8 +1371,6 @@ class AssetLibrary(object):
                     "tags": tags,
                 })
                 self._tags.update(tags)
-
-                seen.add(name)
 
         # sort assets by modified time
         self._assets.sort(key=lambda d: os.stat(d["path"]).st_mtime,

@@ -311,16 +311,29 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, parent=None):
         super(AssetVideoPlayer, self).__init__(parent=parent)
         self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        self.page().setBackgroundColor(QtGui.QColor("#353535"))
         self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        self.page().setBackgroundColor(QtGui.QColor("#353535"))
+        self.page().loadFinished.connect(self.on_page_loaded)
+        self._is_loaded = False
+        self._first_play = True
+
+    def on_page_loaded(self, ok):
+        self._is_loaded = ok
+        if self._first_play:
+            self.play()
 
     def play(self):
-        self.page().runJavaScript("""
-        document.getElementById("video").play();
-        """)
-        # todo: add video loading page
+        if self._is_loaded:
+            self._first_play = False
+            self.page().runJavaScript("""
+            document.getElementById("video").play();
+            """)
+        else:
+            self._first_play = True
+            # We cannot play the video until the page is loaded.
 
     def pause(self):
+        self._first_play = False
         self.page().runJavaScript("""
         document.getElementById("video").pause();
         """)
@@ -330,15 +343,18 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
         <html><body style="background:transparent; margin:0px;">
         <div  class="video-mask"
               style="width:100%; height:100%; position:absolute;
-                    overflow:hidden; border-radius: {r}px;">
+                    overflow:hidden; border-radius: {r}px;
+                    font-family:Open Sans; color:white;">
 
             <video id="video" loop preload="none" muted="muted"
                    style="width:100%; position:absolute;"
                 <source src="{video}" type="video/webm">
                 <p>HTML5 Video element not supported.</p></video>
+            
+            <div style="line-height:{h}px; text-align:center;">Loading...</div>
 
         </div></body></html>
-        """.format(video=video, r=CARD_ROUNDING)
+        """.format(video=video, r=CARD_ROUNDING, h=VIDEO_HEIGHT)
         self.setHtml(html_code, baseUrl=QtCore.QUrl("file://"))
 
         if QtCore.__version_info__ < (5, 13):
@@ -352,7 +368,7 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
             self.setMask(region)
 
 
-class AssetVideoPoster(base.OverlayWidget):
+class AssetVideoPoster(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super(AssetVideoPoster, self).__init__(parent=parent)
@@ -487,29 +503,26 @@ class AssetCardItem(QtWidgets.QWidget):
 
         widgets = {
             "Footer": AssetVideoFooter(self),
-            "Poster": AssetVideoPoster(self),
-            "Player": AssetVideoPlayer(self),
+            "Poster": AssetVideoPoster(),
         }
-
         effects = {
             "Poster": QtWidgets.QGraphicsOpacityEffect(widgets["Poster"]),
         }
-
         animations = {
             "Poster": QtCore.QPropertyAnimation(effects["Poster"], b"opacity")
         }
 
         widgets["Poster"].setAttribute(QtCore.Qt.WA_StyledBackground)
         widgets["Poster"].setGraphicsEffect(effects["Poster"])
-        widgets["Player"].setFixedWidth(VIDEO_WIDTH)
-        widgets["Player"].setFixedHeight(VIDEO_HEIGHT)
+        widgets["Poster"].setFixedWidth(CARD_WIDTH)
+        widgets["Poster"].setFixedHeight(CARD_HEIGHT)
 
         effects["Poster"].setOpacity(1)
         animations["Poster"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(*(CARD_PADDING, ) * 4)
-        layout.addWidget(widgets["Player"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["Poster"])
 
         animations["Poster"].finished.connect(self.on_transition_end)
 
@@ -518,7 +531,8 @@ class AssetCardItem(QtWidgets.QWidget):
         self._effects = effects
         self._animations = animations
         self._file_path = None
-        self._has_video = False
+        self._video_link = None
+        self._video_player = None
 
     def init_item(self, index):
         self._widgets["Footer"].set_data(
@@ -533,14 +547,13 @@ class AssetCardItem(QtWidgets.QWidget):
         """
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
-        self._widgets["Player"].set_video(video)
         self._widgets["Poster"].set_poster(poster)
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
             list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._file_path = index.data(AssetCardModel.AssetRole)
-        self._has_video = os.path.isfile(video)
+        self._video_link = video if os.path.isfile(video) else None
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):
@@ -552,10 +565,11 @@ class AssetCardItem(QtWidgets.QWidget):
         leave = self._animations["Poster"].endValue() == 1.0
         if leave:
             self._effects["Poster"].setEnabled(False)
-            self._widgets["Player"].pause()
+            if self._video_player is not None:
+                self._video_player.pause()
 
     def enterEvent(self, event):
-        if not self._has_video:
+        if not self._video_link:
             return
         self._effects["Poster"].setEnabled(True)
         anim = self._animations["Poster"]
@@ -566,10 +580,22 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setEndValue(0.0)
         anim.start()
 
-        self._widgets["Player"].play()
+        if self._video_player is None:
+            player = AssetVideoPlayer(self)
+            player.set_video(self._video_link)
+            player.setFixedWidth(VIDEO_WIDTH)
+            player.setFixedHeight(VIDEO_HEIGHT)
+
+            self._widgets["Poster"].raise_()
+            self._widgets["Footer"].raise_()
+            player.move(CARD_PADDING, CARD_PADDING)
+            player.show()
+
+            self._video_player = player
+        self._video_player.play()
 
     def leaveEvent(self, event):
-        if not self._has_video:
+        if not self._video_link:
             return
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()

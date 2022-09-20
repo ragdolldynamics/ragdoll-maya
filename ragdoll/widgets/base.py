@@ -1365,6 +1365,14 @@ class AssetLibrary(object):
 
         self._send_job("finish", None)
 
+        # report
+        total = 0
+        valid = {k: v for k, v in self._status.items() if v}
+        for p, count in valid.items():
+            log.debug("%d assets were found from: %s" % (count, p))
+            total += count
+        log.debug("Total: %d asset from %d valid dir." % (total, len(valid)))
+
     def _iter_rag_files(self, lib_path):
         status = self._status
 
@@ -1390,6 +1398,13 @@ class AssetLibrary(object):
             return rag.get("ui") or {}
 
     def _load_rag_file_fast(self, file_path):
+        # File read and json.load doesn't release GIL until job done,
+        #   so if the file is big enough, everyone has to wait for it.
+        #
+        # To work around this, we take only what we need from the file,
+        #   which is the "ui" field. So we read the file backward and
+        #   find the keyword and ignore the rest.
+        #
         lines = []
         for line in reverse_readline(file_path):
             lines.append(line)

@@ -487,21 +487,20 @@ class AssetCardItem(QtWidgets.QWidget):
 
         widgets = {
             "Footer": AssetVideoFooter(self),
-            "PosterStill": AssetVideoPoster(self),
-            "PosterAnim": AssetVideoPoster(self),
+            "Poster": AssetVideoPoster(self),
             "Player": AssetVideoPlayer(self),
         }
 
         effects = {
-            "Poster": QtWidgets.QGraphicsOpacityEffect(widgets["PosterAnim"]),
+            "Poster": QtWidgets.QGraphicsOpacityEffect(widgets["Poster"]),
         }
 
         animations = {
             "Poster": QtCore.QPropertyAnimation(effects["Poster"], b"opacity")
         }
 
-        widgets["PosterAnim"].setAttribute(QtCore.Qt.WA_StyledBackground)
-        widgets["PosterAnim"].setGraphicsEffect(effects["Poster"])
+        widgets["Poster"].setAttribute(QtCore.Qt.WA_StyledBackground)
+        widgets["Poster"].setGraphicsEffect(effects["Poster"])
         widgets["Player"].setFixedWidth(VIDEO_WIDTH)
         widgets["Player"].setFixedHeight(VIDEO_HEIGHT)
 
@@ -535,8 +534,7 @@ class AssetCardItem(QtWidgets.QWidget):
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
         self._widgets["Player"].set_video(video)
-        self._widgets["PosterStill"].set_poster(poster)
-        self._widgets["PosterAnim"].set_poster(poster)
+        self._widgets["Poster"].set_poster(poster)
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
             list(index.data(AssetCardModel.TagsRole).values()),
@@ -553,16 +551,13 @@ class AssetCardItem(QtWidgets.QWidget):
     def on_transition_end(self):
         leave = self._animations["Poster"].endValue() == 1.0
         if leave:
-            # Animated poster not able to update/redraw correctly when
-            #   the main page gets scrolled. Use another still poster
-            #   to cover that.
+            self._effects["Poster"].setEnabled(False)
             self._widgets["Player"].pause()
-            self._widgets["PosterStill"].show()
-            self._widgets["PosterAnim"].hide()
 
     def enterEvent(self, event):
         if not self._has_video:
             return
+        self._effects["Poster"].setEnabled(True)
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()
         anim.stop()
@@ -570,8 +565,7 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setStartValue(current)
         anim.setEndValue(0.0)
         anim.start()
-        self._widgets["PosterAnim"].show()
-        self._widgets["PosterStill"].hide()
+
         self._widgets["Player"].play()
 
     def leaveEvent(self, event):

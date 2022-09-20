@@ -6,7 +6,14 @@ import logging
 import tempfile
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
-from PySide2 import QtWebEngineWidgets
+try:
+    from PySide2 import QtWebEngineWidgets
+except ImportError:
+    _QWebEngineView = object
+    _has_webengine = False
+else:
+    _QWebEngineView = QtWebEngineWidgets.QWebEngineView
+    _has_webengine = True
 
 from . import base
 from .. import ui, internal
@@ -306,7 +313,7 @@ class GreetingPage(QtWidgets.QWidget):
         return self._widgets["Splash"]
 
 
-class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
+class AssetVideoPlayer(_QWebEngineView):
 
     def __init__(self, parent=None):
         super(AssetVideoPlayer, self).__init__(parent=parent)
@@ -580,7 +587,7 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setEndValue(0.0)
         anim.start()
 
-        if self._video_player is None:
+        if self._video_player is None and _has_webengine:
             player = AssetVideoPlayer(self)
             player.set_video(self._video_link)
             player.setFixedWidth(VIDEO_WIDTH)

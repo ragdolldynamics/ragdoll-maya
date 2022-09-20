@@ -1345,15 +1345,18 @@ class AssetLibrary(object):
             for rag_path in self._iter_rag_files(lib_path):
                 if self._stop.is_set():
                     return
-                mtime = os.stat(rag_path).st_mtime
+                _stat = os.stat(rag_path)
+                mtime = _stat.st_mtime
                 data = {"path": rag_path, "_mtime": mtime}
                 self._send_job("create", data)
-                rag_files.append((mtime, rag_path))
+                # group by size (5MB) and then sort by mtime
+                fsize = int(_stat.st_size / 1048576 / 5)
+                rag_files.append((-fsize, mtime, rag_path))
 
-        # sort assets by modified time
+        # sort processing order by file size and modified time
         rag_files.sort(reverse=True)
 
-        for mtime, rag_path in rag_files:
+        for _, mtime, rag_path in rag_files:
             if self._stop.is_set():
                 return
             data = self._load_rag_file(rag_path)

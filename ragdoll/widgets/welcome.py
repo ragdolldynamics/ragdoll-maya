@@ -687,6 +687,10 @@ class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
         self.setSortRole(AssetCardModel.SortRole)
         self._tags = set()
 
+    def sort_mtime(self):
+        order = QtCore.Qt.DescendingOrder  # sort assets by modified time
+        self.sort(0, order=order)
+
     def set_tags(self, tags):
         self._tags = set(tags)
         self.invalidate()
@@ -699,10 +703,6 @@ class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
             return True
         item_tags = tags.keys()
         return any(t in self._tags for t in item_tags) if self._tags else True
-
-    def sort(self, column, order=QtCore.Qt.AscendingOrder):
-        order = QtCore.Qt.DescendingOrder  # sort assets by modified time
-        super(AssetCardProxyModel, self).sort(column, order=order)
 
 
 class AssetCardView(QtWidgets.QListView):
@@ -884,7 +884,7 @@ class AssetListPage(QtWidgets.QWidget):
         widget.asset_opened.connect(self.asset_opened)
         # update sorting
         self._widgets["List"].adjust_viewport()
-        self._models["Proxy"].invalidate()
+        self._models["Proxy"].sort_mtime()
 
     def on_card_updated(self, index):
         raw_tags = self._models["Source"].data(index, AssetCardModel.TagsRole)

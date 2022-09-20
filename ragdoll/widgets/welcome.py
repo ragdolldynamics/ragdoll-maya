@@ -52,14 +52,6 @@ def _tint_color(pixmap, color):
     painter.end()
 
 
-def _text_to_color(text):
-    return QtGui.QColor.fromHsv(
-        (hash(text) & 0xFF0000) >> 16,
-        (hash(text) & 0x00FF00) >> 8,
-        180,
-    )
-
-
 class _ProductStatus(base.ProductStatus):
 
     def get_gradient(self):
@@ -529,7 +521,14 @@ class AssetCardItem(QtWidgets.QWidget):
         self._file_path = None
         self._has_video = False
 
-    def init(self, index):
+    def init_item(self, index):
+        self._widgets["Footer"].set_data(
+            index.data(AssetCardModel.NameRole),
+            [],
+        )
+        self._file_path = index.data(AssetCardModel.AssetRole)
+
+    def update_item(self, index):
         """
         :param QtCore.QModelIndex index:
         """
@@ -592,6 +591,11 @@ class AssetCardItem(QtWidgets.QWidget):
 
 
 class AssetCardModel(QtGui.QStandardItemModel):
+    card_created = QtCore.Signal(QtCore.QModelIndex)
+    card_updated = QtCore.Signal(QtCore.QModelIndex)
+    load_finished = QtCore.Signal(int)
+
+    SortRole = QtCore.Qt.UserRole + 20
     # (dict) path data to load asset
     #   "asset": path/url to the asset zip archive
     #   "entry": the name of file in archive to load the asset
@@ -606,33 +610,81 @@ class AssetCardModel(QtGui.QStandardItemModel):
     #   <tag name>: <tag color>
     TagsRole = QtCore.Qt.UserRole + 14
 
-    def refresh(self):
+    def __init__(self, parent=None):
+        super(AssetCardModel, self).__init__(parent=parent)
+        self._worker = None
+        self._row_map = dict()
+
+    def terminate(self):
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker.deleteLater()
+
+    def start(self):
+        if self._worker is not None:
+            self._worker.start()
+
+    def attach(self, queue):
+        if self._worker is not None:
+            return
+        self._worker = base.Thread(self._consume, args=[queue], parent=self)
+
+    def create_item(self, data):
+        if data["path"] in self._row_map:
+            return
+
+        item = QtGui.QStandardItem()
+        item.setData(os.path.basename(data["path"]), AssetCardModel.NameRole)
+        item.setData(data["path"], AssetCardModel.AssetRole)
+        item.setData(data["_mtime"], AssetCardModel.SortRole)
+
+        self._row_map[data["path"]] = self.rowCount()
+        self.appendRow(item)
+        self.card_created.emit(item.index())
+
+    def update_item(self, data):
+        row = self._row_map[data["path"]]
+        index = self.index(row, 0)
+
+        self.setData(index, data["name"], AssetCardModel.NameRole)
+        self.setData(index, data["poster"], AssetCardModel.PosterRole)
+        self.setData(index, data["video"], AssetCardModel.VideoRole)
+        self.setData(index, data["tags"], AssetCardModel.TagsRole)
+
+        self.card_updated.emit(index)
+
+    def _consume(self, queue):
+        while True:
+            job = queue.get()  # this guy blocks!
+
+            if job["type"] == "create":
+                self.create_item(job["payload"])
+            elif job["type"] == "update":
+                self.update_item(job["payload"])
+            elif job["type"] == "finish":
+                self.load_finished.emit(self.rowCount())
+            elif job["type"] == "terminate":
+                queue.task_done()
+                break
+
+            queue.task_done()
+
+    def update_tags(self, index, tags):
+        self.setData(index, tags, AssetCardModel.TagsRole)
+
+    def reload(self):
+        if self._worker is None:
+            return
+        asset_library.stop()
         self.clear()
-
-        manifest = asset_library.get_manifest()
-
-        all_dots = {
-            tag: _text_to_color(tag) for tag in manifest["tags"]
-        }
-        for data in manifest.get("assets") or []:
-            item = QtGui.QStandardItem()
-            tags = {
-                tag_name: all_dots.get(tag_name, "black")
-                for tag_name in set(data["tags"])
-            }
-            item.setData(data["name"], AssetCardModel.NameRole)
-            item.setData(data["path"], AssetCardModel.AssetRole)
-            item.setData(data["poster"], AssetCardModel.PosterRole)
-            item.setData(data["video"], AssetCardModel.VideoRole)
-            item.setData(tags, AssetCardModel.TagsRole)
-
-            self.appendRow(item)
+        asset_library.reload()
 
 
 class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
 
     def __init__(self, parent=None):
         super(AssetCardProxyModel, self).__init__(parent=parent)
+        self.setSortRole(AssetCardModel.SortRole)
         self._tags = set()
 
     def set_tags(self, tags):
@@ -642,8 +694,15 @@ class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()
         index = model.index(source_row, 0, source_parent)
-        item_tags = model.data(index, AssetCardModel.TagsRole).keys()
+        tags = model.data(index, AssetCardModel.TagsRole)
+        if tags is None:  # loading not completed
+            return True
+        item_tags = tags.keys()
         return any(t in self._tags for t in item_tags) if self._tags else True
+
+    def sort(self, column, order=QtCore.Qt.AscendingOrder):
+        order = QtCore.Qt.DescendingOrder  # sort assets by modified time
+        super(AssetCardProxyModel, self).sort(column, order=order)
 
 
 class AssetCardView(QtWidgets.QListView):
@@ -712,17 +771,20 @@ class AssetTagList(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(AssetTagList, self).__init__(parent)
         base.FlowLayout(self)
-        self._tags = set()
+        self._tags = dict()
 
     def add_tag(self, tag_name, tag_color):
         if tag_name in self._tags:
-            return
-        self._tags.add(tag_name)
+            return self._tags[tag_name]
+        self._tags[tag_name] = tag_color
+
         button = AssetTag(tag_name, tag_color)
         button.setIcon(QtGui.QIcon(ui._resource("ui", "tag-fill.svg")))
         button.setCheckable(True)
         button.toggled.connect(self.on_tag_toggled)
         self.layout().addWidget(button)
+
+        return tag_color
 
     def clear(self):
         self._tags.clear()
@@ -772,6 +834,8 @@ class AssetListPage(QtWidgets.QWidget):
 
         models["Proxy"].setSourceModel(models["Source"])
         widgets["List"].setModel(models["Proxy"])
+        widgets["Browse"].setEnabled(False)
+        widgets["Reload"].setEnabled(False)
 
         _path_row = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(_path_row)
@@ -790,6 +854,9 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Status"])
         layout.addWidget(_path_row)
 
+        models["Source"].card_created.connect(self.on_card_created)
+        models["Source"].card_updated.connect(self.on_card_updated)
+        models["Source"].load_finished.connect(self.on_load_finished)
         widgets["Tags"].tagged.connect(self.on_tag_changed)
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
         widgets["Reload"].clicked.connect(self.on_asset_reload_clicked)
@@ -797,8 +864,49 @@ class AssetListPage(QtWidgets.QWidget):
         self._models = models
         self._widgets = widgets
 
+        asset_library.register_model(models["Source"])
+
     def resizeEvent(self, event):
         super(AssetListPage, self).resizeEvent(event)
+        self._widgets["List"].adjust_viewport()
+
+    def on_card_created(self, index):
+        widget = AssetCardItem()
+        item = self._models["Source"].itemFromIndex(index)
+        item.setSizeHint(widget.sizeHint())
+        self._widgets["List"].setIndexWidget(
+            self._models["Proxy"].mapFromSource(index),
+            widget,
+        )
+        widget.init_item(index)
+
+        # connect signal
+        widget.asset_opened.connect(self.asset_opened)
+        # update sorting
+        self._widgets["List"].adjust_viewport()
+        self._models["Proxy"].invalidate()
+
+    def on_card_updated(self, index):
+        raw_tags = self._models["Source"].data(index, AssetCardModel.TagsRole)
+        colored_tags = dict()
+        for name, color in raw_tags.items():
+            color = self._widgets["Tags"].add_tag(name, color)
+            colored_tags[name] = color
+
+        self._models["Source"].update_tags(index, colored_tags)
+        proxy_index = self._models["Proxy"].mapFromSource(index)
+        widget = self._widgets["List"].indexWidget(proxy_index)
+        widget.update_item(index)
+
+    def on_load_finished(self, count):
+        asset_loaded = bool(count)
+
+        status = "No assets found, try adding a path in Extra Assets below"
+        self._widgets["Status"].setText(status)
+        self._widgets["Status"].setVisible(not asset_loaded)
+        self._widgets["Browse"].setEnabled(True)
+        self._widgets["Reload"].setEnabled(True)
+        self._widgets["List"].setVisible(asset_loaded)
         self._widgets["List"].adjust_viewport()
 
     @internal.with_timing
@@ -829,69 +937,17 @@ class AssetListPage(QtWidgets.QWidget):
         self._reload()
 
     def _reload(self):
-        asset_library.reload()
-        self.refresh()
-
-    def close_threads(self):
-        for c in self.findChildren(QtCore.QThread):
-            c.requestInterruption()
-            c.wait()
-            c.deleteLater()
-
-    @internal.with_timing
-    def refresh(self):
-        status = "Loading assets..."
-        self._widgets["Status"].setText(status)
-        self._widgets["Status"].setVisible(True)
-        self._widgets["List"].setVisible(False)
         self._widgets["Browse"].setEnabled(False)
         self._widgets["Reload"].setEnabled(False)
-        self.close_threads()
-
-        def _wait():
-            t = base.Thread.currentThread()
-            while (asset_library.is_reloading() and
-                   not t.isInterruptionRequested()):
-                time.sleep(0.02)
-
-        thread = base.Thread(_wait, parent=self)
-        thread.finished.connect(self._refresh)
-        thread.start()
-
-    def _refresh(self):
         self._widgets["Tags"].clear()
+        self._models["Source"].reload()
 
-        model = self._models["Source"]
-        model.refresh()
+    def start_worker(self):
+        self._models["Source"].start()
+        asset_library.rewind()
 
-        for row in range(model.rowCount()):
-            index = model.index(row, 0)
-            self._init_widget(index)
-
-            for name, color in model.data(index, model.TagsRole).items():
-                self._widgets["Tags"].add_tag(name, color)
-
-        asset_loaded = bool(model.rowCount())
-
-        status = "No assets found, try adding a path in Extra Assets below"
-        self._widgets["Status"].setText(status)
-        self._widgets["Status"].setVisible(not asset_loaded)
-        self._widgets["Browse"].setEnabled(True)
-        self._widgets["Reload"].setEnabled(True)
-        self._widgets["List"].setVisible(asset_loaded)
-        self._widgets["List"].adjust_viewport()
-
-    def _init_widget(self, index):
-        widget = AssetCardItem()
-        widget.init(index)
-        item = self._models["Source"].itemFromIndex(index)
-        item.setSizeHint(widget.sizeHint())
-        self._widgets["List"].setIndexWidget(
-            self._models["Proxy"].mapFromSource(index),
-            widget,
-        )
-        # connect signal
-        widget.asset_opened.connect(self.asset_opened)
+    def terminate_worker(self):
+        self._models["Source"].terminate()
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
@@ -1698,7 +1754,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).show()
 
         if not self.__hidden:
-            self._widgets["Assets"].refresh()
+            self._widgets["Assets"].start_worker()
             self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
@@ -1707,8 +1763,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         self.licence_updated.emit()
 
     def closeEvent(self, event):
-        asset_library.stop_reload()
-        self._widgets["Assets"].close_threads()
+        asset_library.terminate()
+        self._widgets["Assets"].terminate_worker()
         return super(WelcomeWindow, self).closeEvent(event)
 
     def resizeEvent(self, event):

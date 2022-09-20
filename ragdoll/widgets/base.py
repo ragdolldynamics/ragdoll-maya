@@ -13,6 +13,11 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
 try:
+    import queue
+except ImportError:
+    import Queue as queue  # py2
+
+try:
     from urllib import request
 except ImportError:
     import urllib as request  # py2
@@ -505,23 +510,15 @@ class SingletonMainWindow(QtWidgets.QMainWindow):
 class Thread(QtCore.QThread):
     result_ready = QtCore.Signal(tuple)
 
-    def __init__(self, func, parent=None):
+    def __init__(self, func, args=None, kwargs=None, parent=None):
         super(Thread, self).__init__(parent=parent)
         self._func = func
-        self._args = None
-        self._kwargs = None
+        self._args = args or ()
+        self._kwargs = kwargs or {}
 
     def on_quit(self):
         self.requestInterruption()
         self.wait()
-
-    def start(self,
-              args=None,
-              kwargs=None,
-              priority=QtCore.QThread.InheritPriority):
-        self._args = args or ()
-        self._kwargs = kwargs or {}
-        super(Thread, self).start(priority)
 
     def run(self):
         try:
@@ -1290,118 +1287,140 @@ class ProductStatus(object):
 class AssetLibrary(object):
 
     def __init__(self):
-        self._tags = set()
-        self._assets = list()
-        self._is_reloading = False
-        self._stop_reload = False
+        self._status = dict()
+        self._stop = threading.Event()
+        self._queue = queue.Queue()
+        self._cache = []
+        self._worker = None
 
     def get_user_path(self):
         return options.read("extraAssets")
 
     def set_user_path(self, path):
-        if not any(self.iter_rag_files(path)):
+        if not any(self._iter_rag_files(path)):
             path = ""
         options.write("extraAssets", path)
 
-    def reload(self):
-        def _thread():
-            self._is_reloading = True
-            try:
-                self._reload()
-            except Exception as e:
-                log.debug(e)
-            self._is_reloading = False
-
-        threading.Thread(target=_thread).start()
-
-    def is_reloading(self):
-        return self._is_reloading
-
-    def stop_reload(self):
-        if self._is_reloading:
-            self._stop_reload = True
-
-    def _clear(self):
-        self._tags.clear()
-        self._assets[:] = []
-        self._stop_reload = False
-
-    def _reload(self):
-        self._clear()
-
+    def search_paths(self):
         paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
         paths.append(self.get_user_path())
         paths = list(filter(None, paths))
+        return reversed(paths)
 
-        for lib_path in reversed(paths):
-            if self._stop_reload:
-                return self._clear()
+    def register_model(self, model):
+        model.attach(self._queue)
 
-            if not os.path.exists(lib_path):
-                log.warning("Asset library path '%s' did not exist" % lib_path)
-                continue
+    def reload(self):
+        self.stop()
+        self._cache = []
+        self._stop.clear()
+        self._worker = threading.Thread(target=self._produce)
+        self._worker.start()
 
-            log.info("Loading assets from %r" % lib_path)
-            rag_files = list(self.iter_rag_files(lib_path))
+    def stop(self):
+        if self._worker is not None:
+            self._stop.set()
+            self._worker.join()
+        self._queue.queue.clear()
 
-            for path in rag_files:
-                if self._stop_reload:
-                    return self._clear()
+    def terminate(self):
+        self.stop()
+        self._queue.put({"type": "terminate"})
 
-                with open(path) as _f:
-                    rag = json.load(_f)
-                _d = rag.get("ui")
-                _fname = os.path.basename(path)
+    def rewind(self):
+        produced = self._cache and self._cache[-1]["type"] == "finish"
+        if produced and self._queue.empty():
+            for job in self._cache:
+                self._queue.put(job)
 
-                name = rag.get("name") or _fname.rsplit(".", 1)[0]
-                video = _d.get("video") or _fname.rsplit(".", 1)[0] + ".webm"
-                video = self.resource(video, lib_path)
-                poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
-                tags = _d.get("tags") or []
+    def _send_job(self, type_, payload):
+        job = {"type": type_, "payload": payload}
+        self._queue.put(job)
+        self._cache.append(job)
 
-                self._assets.append({
-                    "path": path,
-                    "name": name,
-                    "video": video,
-                    "poster": poster.scaled(
-                        px(217), px(122),
-                        QtCore.Qt.KeepAspectRatioByExpanding,
-                        QtCore.Qt.SmoothTransformation
-                    ),
-                    "tags": tags,
-                })
-                self._tags.update(tags)
+    def _produce(self):
+        rag_files = list()
+        for lib_path in self.search_paths():
+            for rag_path in self._iter_rag_files(lib_path):
+                if self._stop.is_set():
+                    return
+                mtime = os.stat(rag_path).st_mtime
+                data = {"path": rag_path, "_mtime": mtime}
+                self._send_job("create", data)
+                rag_files.append((mtime, rag_path))
 
         # sort assets by modified time
-        self._assets.sort(key=lambda d: os.stat(d["path"]).st_mtime,
-                          reverse=True)
-        log.info("Assets loaded")
+        rag_files.sort(reverse=True)
 
-    def get_manifest(self):
-        return {
-            "assets": self._assets[:],
-            "tags": self._tags.copy(),
-        }
+        for mtime, rag_path in rag_files:
+            if self._stop.is_set():
+                return
+            data = self._load_rag_file(rag_path)
+            data = self._refine_rag_data(rag_path, data)
+            self._send_job("update", data)
 
-    @staticmethod
-    def iter_rag_files(lib_path):
+        self._send_job("finish", None)
+
+    def _iter_rag_files(self, lib_path):
+        status = self._status
+
         if not os.path.isdir(lib_path):
+            status[lib_path] = None
             return
+
+        status[lib_path] = 0
         for item in os.listdir(lib_path):
             path = os.path.join(lib_path, item)
+
             if item.endswith(".rag") and os.path.isfile(path):
+                status[lib_path] += 1
                 yield path
 
-    @staticmethod
-    def is_net_location(url):
-        try:
-            result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except AttributeError:
-            return False
+    def _load_rag_file(self, file_path):
+        with open(file_path) as _f:
+            rag = json.load(_f)
+        return rag.get("ui") or {}
 
-    def resource(self, path, lib_path):
-        if self.is_net_location(path):
-            return path
-        else:
-            return os.path.join(lib_path, path)
+    def _refine_rag_data(self, file_path, data):
+        lib_path, fname = os.path.split(file_path)
+
+        def text_to_color(text):
+            # todo: tag name and color should be defined in .rag
+            return QtGui.QColor.fromHsv(
+                (hash(text) & 0xFF0000) >> 16,
+                (hash(text) & 0x00FF00) >> 8,
+                180,
+            ).name()
+
+        def resource(path):
+            try:
+                result = urlparse(path)
+                is_net_location = all([result.scheme, result.netloc])
+            except AttributeError:
+                is_net_location = False
+
+            if is_net_location:
+                return path
+            else:
+                return os.path.join(lib_path, path)
+
+        name = data.get("name") or fname.rsplit(".", 1)[0]
+        tags = {
+            tag_name: text_to_color(tag_name)
+            for tag_name in set(data.get("tags") or [])
+        }
+        video = data.get("video") or fname.rsplit(".", 1)[0] + ".webm"
+        video = resource(video)
+        poster = ui.base64_to_pixmap(data["thumbnail"].encode("ascii"))
+        poster = poster.scaled(
+            px(217), px(122),
+            QtCore.Qt.KeepAspectRatioByExpanding,
+            QtCore.Qt.SmoothTransformation
+        )
+        return {
+            "path": file_path,
+            "name": name,
+            "video": video,
+            "poster": poster,
+            "tags": tags,
+        }

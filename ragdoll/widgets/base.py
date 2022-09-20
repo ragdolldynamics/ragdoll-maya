@@ -3,6 +3,7 @@ import os
 import re
 import json
 import logging
+import weakref
 import traceback
 import threading
 import shiboken2
@@ -496,14 +497,14 @@ class SizeAdjustedStackedWidget(QtWidgets.QStackedWidget):
 
 
 class SingletonMainWindow(QtWidgets.QMainWindow):
-    instance = None
+    instance_weak = None
     protected = False  # set to True if only closed on plugin unloaded
 
     def __init__(self, parent=None):
         super(SingletonMainWindow, self).__init__(parent=parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.__class__.instance_weak = weakref.ref(self)
         # For uninstall
-        self.__class__.instance = self
         __.widgets[self.__class__.__name__] = self
 
 

@@ -3436,11 +3436,11 @@ def repeatable(func):
 @i__.with_timing
 def welcome_user(*args):
     LegacyWindow = ui.SplashScreen
-    WelcomeWindow = widgets.WelcomeWindow
+    welcome_window_ref = widgets.WelcomeWindow.instance_weak
 
     if os.getenv("RAGDOLL_LEGACY_GREETS"):
-        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
-            WelcomeWindow.instance.close()
+        if welcome_window_ref and ui.isValid(welcome_window_ref()):
+            welcome_window_ref().close()
         if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
             return LegacyWindow.instance.show()
 
@@ -3450,8 +3450,8 @@ def welcome_user(*args):
     else:
         if LegacyWindow.instance and ui.isValid(LegacyWindow.instance):
             LegacyWindow.instance.close()
-        if WelcomeWindow.instance and ui.isValid(WelcomeWindow.instance):
-            return WelcomeWindow.instance.show()
+        if welcome_window_ref and ui.isValid(welcome_window_ref()):
+            return welcome_window_ref().show()
 
         parent = ui.MayaWindow()
         win = widgets.WelcomeWindow(parent)

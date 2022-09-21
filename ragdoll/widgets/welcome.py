@@ -2,18 +2,27 @@ import os
 import re
 import math
 import time
+import types
 import logging
 import tempfile
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
+
 try:
     from PySide2 import QtWebEngineWidgets
-except ImportError:
-    _QWebEngineView = object
-    _has_webengine = False
+except ImportError as e:
+    # In our tests (on mottosso/maya:2020 image), this module could fail
+    # on import because of missing libXss.so.1 object. And if that happens,
+    # video playback feature will be disabled (for playing .webm file in
+    # asset view).
+    def _raise_err(*_, **__): raise e
+    QtWebEngineWidgets = types.ModuleType("QtWebEngineWidgets")
+    setattr(QtWebEngineWidgets, "QWebEngineView", type(
+        "QWebEngineView", (), dict(__init__=_raise_err)
+    ))
+    HAS_QT_WEB_ENGINE = False
 else:
-    _QWebEngineView = QtWebEngineWidgets.QWebEngineView
-    _has_webengine = True
+    HAS_QT_WEB_ENGINE = True
 
 from . import base
 from .. import ui, internal
@@ -313,7 +322,7 @@ class GreetingPage(QtWidgets.QWidget):
         return self._widgets["Splash"]
 
 
-class AssetVideoPlayer(_QWebEngineView):
+class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
 
     def __init__(self, parent=None):
         super(AssetVideoPlayer, self).__init__(parent=parent)
@@ -541,6 +550,9 @@ class AssetCardItem(QtWidgets.QWidget):
         self._video_link = None
         self._video_player = None
 
+    def _playable(self):
+        return self._video_link and HAS_QT_WEB_ENGINE
+
     def init_item(self, index):
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
@@ -576,7 +588,7 @@ class AssetCardItem(QtWidgets.QWidget):
                 self._video_player.pause()
 
     def enterEvent(self, event):
-        if not self._video_link:
+        if not self._playable():
             return
         self._effects["Poster"].setEnabled(True)
         anim = self._animations["Poster"]
@@ -587,7 +599,7 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setEndValue(0.0)
         anim.start()
 
-        if self._video_player is None and _has_webengine:
+        if self._video_player is None:
             player = AssetVideoPlayer(self)
             player.set_video(self._video_link)
             player.setFixedWidth(VIDEO_WIDTH)
@@ -602,7 +614,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._video_player.play()
 
     def leaveEvent(self, event):
-        if not self._video_link:
+        if not self._playable():
             return
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()

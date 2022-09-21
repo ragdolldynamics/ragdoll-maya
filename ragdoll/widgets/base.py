@@ -1,15 +1,18 @@
 
 import os
 import re
+import sys
+import ssl
 import json
 import logging
 import weakref
 import traceback
 import threading
 import shiboken2
+import subprocess
 import webbrowser
-from datetime import datetime, timedelta
 from collections import defaultdict
+from datetime import datetime, timedelta
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
@@ -1103,8 +1106,6 @@ class ProductStatus(object):
 
     def __init__(self):
         self._data = dict()
-        self._conn = dict()
-        self._released = None
 
     @property
     def data(self):
@@ -1219,70 +1220,160 @@ class ProductStatus(object):
                 # time as expired to indicate something went wrong.
                 return datetime.now()
 
-    def release_history(self):
-        return self._released[:] if self._released else None
 
-    def has_ragdoll(self):
-        return self._ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+class InternetRequest(object):
 
-    def has_wyday(self):
-        return self._ping(WYDAY_URL)
+    def __init__(self):
+        self._hooks = defaultdict(set)
+        self._workers = dict()
+        self._defaults = dict()
 
-    def _iter_parsed_versions(self, lines):
-        pattern = re.compile(
-            r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
-        )
-        for line in lines:
-            matched = pattern.match(line)
-            if matched:
-                yield matched.group(1).decode()
+    def _run(self, channel, job):
+        worker = threading.Thread()
+        self._workers[channel] = worker
 
-    def _ping(self, url):
-        return self._conn.get(url)
+        def on_done(result):
+            if result is None:
+                default = self._defaults.get(channel)
+                result = default() if callable(default) else default
 
-    def _refresh_release_history(self):
-        def _thread():
-            if self._released is None:
-                released = []
-                url = RAGDOLL_DYNAMICS_RELEASES_URL
-                try:
-                    with request.urlopen(url) as r:
-                        if r.code == 200:
-                            ln = r.readlines()
-                            released = list(self._iter_parsed_versions(ln))
-                        else:
-                            raise Exception("%s returned: %d" % (url, r.code))
+            setattr(worker, "result", result)  # cache
+            for hook in self._hooks[channel]:
+                hook(result)
 
-                except Exception as e:
-                    log.debug(e)
+        def run():
+            on_done(job())
+
+        worker.run = run
+        worker.start()
+
+    def _default(self, channel, hook=None):
+        default = self._defaults.get(channel)
+        result = default() if callable(default) else default
+
+        Worker = type("Worker", (), dict(result=result))
+        self._workers[channel] = Worker()
+
+        if hook is None:
+            for hook in self._hooks[channel]:
+                hook(result)
+        else:
+            hook(result)
+
+    def process(self):
+        def _preflight():
+            return not self.__has_open_ssl_bug()
+
+        def _run():
+            if _preflight():
+                self._run("ragdoll", self._run_ragdoll)
+                self._run("history", self._run_history)
+            else:
+                self._default("ragdoll")
+                self._default("history")
+
+        threading.Thread(target=_run).start()
+
+    def subscribe_history(self, hook):
+        self._subscribe("history", hook, default=self._default_history)
+
+    def subscribe_ragdoll(self, hook):
+        self._subscribe("ragdoll", hook, default=False)
+
+    def _subscribe(self, channel, hook, default):
+        self._hooks[channel].add(hook)
+        self._defaults[channel] = default
+
+        worker = self._workers.get(channel)
+        if worker and hasattr(worker, "result"):
+            if worker.result is None and default is not None:
+                # Subscription can happen after process(), which means
+                # the default value may not exist at that time being.
+                # So we have to patch up.
+                self._default("ragdoll", hook)
+            else:
+                hook(worker.result)
+
+    def _run_ragdoll(self):
+        return self.__ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+
+    def _run_history(self):
+        released = []
+
+        def parsed_versions(lines):
+            p = r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            p = re.compile(p.encode())
+            return [
+                matched.group(1).decode()
+                for matched in [p.match(ln) for ln in lines] if matched
+            ]
+
+        url = RAGDOLL_DYNAMICS_RELEASES_URL
+        try:
+            with request.urlopen(url) as r:
+                if r.code == 200:
+                    released = parsed_versions(r.readlines())
                 else:
-                    log.debug("Release history fetched from %s" % url)
+                    raise Exception("%s returned: %d" % (url, r.code))
 
-                if not released:
-                    root = os.path.dirname(constants.__file__)
-                    cache = os.path.join(root, "resources", "versioninfo.json")
-                    if os.path.isfile(cache):
-                        with open(cache) as f:
-                            released = json.load(f)
-                            log.debug("Release history loaded from %s" % cache)
+        except Exception as e:
+            log.debug(e)
+        else:
+            log.debug("Release history fetched from %s" % url)
 
-                self._released = released
+        return released or None
 
-        threading.Thread(target=_thread).start()
+    def _default_history(self):
+        released = []
+        root = os.path.dirname(constants.__file__)
+        cache = os.path.join(root, "resources", "versioninfo.json")
+        if os.path.isfile(cache):
+            with open(cache) as f:
+                released = json.load(f)
+                log.debug("Release history loaded from %s" % cache)
+        return released
 
-    def _refresh_internet_connectivity(self):
-        def _thread(url):
-            try:
-                with request.urlopen(url) as r:
-                    self._conn[url] = r.code == 200
-            except Exception as e:
-                log.debug(e)
-                self._conn[url] = False
+    def __ping(self, url):
+        try:
+            with request.urlopen(url) as r:
+                return r.code == 200
+        except Exception as e:
+            log.debug(e)
+            return False
 
-        # Fire and forget, we don't need to wait for this
-        for url in (RAGDOLL_DYNAMICS_VERSIONS_URL,
-                    WYDAY_URL):
-            threading.Thread(target=_thread, args=[url]).start()
+    def __has_open_ssl_bug(self):
+        """Return True if OpenSSL bug found
+        https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+        """
+        if os.name != "nt":
+            return False
+
+        has_ssl_bug = (1, 0, 2, 7) <= ssl.OPENSSL_VERSION_INFO < (1, 0, 2, 9)
+        has_workaround = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
+        cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
+        is_intel = "GenuineIntel" in cpu_ident
+
+        if not (is_intel and has_ssl_bug and not has_workaround):
+            return False
+
+        exe = sys.executable
+        if exe.endswith("maya.exe"):
+            exe = os.path.join(os.path.dirname(exe), "mayapy.exe")
+
+        cmd = "import ssl;ssl.get_server_certificate(('www.google.com',443))"
+        p = subprocess.Popen(
+            [exe, "-c", cmd],
+            stdout=subprocess.PIPE,
+            creationflags=0x08000000  # no window
+        )
+        _, _ = p.communicate()
+        unsafe = p.wait() != 0
+        if unsafe:
+            log.info("OpenSSL connection issue detected, "
+                     "please refer to this article for detail: "
+                     "https://support.foundry.com/hc/en-us/articles/"
+                     "360012750300-Q100573")
+        return unsafe
 
 
 class AssetLibrary(object):

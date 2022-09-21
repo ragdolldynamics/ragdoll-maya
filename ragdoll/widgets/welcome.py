@@ -84,6 +84,7 @@ class _ProductStatus(base.ProductStatus):
 
 
 product_status = _ProductStatus()
+internet_request = base.InternetRequest()
 asset_library = base.AssetLibrary()
 
 
@@ -138,6 +139,7 @@ class GreetingSplash(QtWidgets.QLabel):
 
 
 class GreetingTopRight(QtWidgets.QWidget):
+    connection_checked = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
         super(GreetingTopRight, self).__init__(parent)
@@ -185,7 +187,9 @@ class GreetingTopRight(QtWidgets.QWidget):
 
         self._widgets = widgets
 
-    def _expiry(self):
+        self.connection_checked.connect(self.set_offline_hint)
+
+    def set_expiry(self):
         p_ = product_status
         perpetual = p_.is_perpetual()
         expiry_date = p_.expiry_date()
@@ -212,25 +216,13 @@ class GreetingTopRight(QtWidgets.QWidget):
         self._widgets["ExpiryIcon"].setStyleSheet(
             "background: transparent; image: url(%s);" % icon)
 
-    def _update(self):
-        def fetch():
-            while product_status.has_ragdoll() is None:
-                time.sleep(0.5)
-
-        def on_finished():
-            offline = not product_status.has_ragdoll()
-            self._widgets["NoInternet"].setVisible(offline)
-
-        thread = base.Thread(fetch, parent=self)
-        thread.finished.connect(on_finished)
-        thread.start()
-
-    def set_status(self):
-        self._expiry()
-        self._update()
+    def set_offline_hint(self, can_connect):
+        is_offline = not can_connect
+        self._widgets["NoInternet"].setVisible(is_offline)
 
 
 class GreetingInteract(QtWidgets.QWidget):
+    history_fetched = QtCore.Signal(list)
 
     def __init__(self, parent=None):
         super(GreetingInteract, self).__init__(parent)
@@ -254,35 +246,28 @@ class GreetingInteract(QtWidgets.QWidget):
         )
         self._widgets = widgets
 
+        self.history_fetched.connect(self.set_timeline)
+
     def status_widget(self):
         return self._widgets["TopRight"]
 
     def timeline_widget(self):
         return self
 
-    def set_timeline(self):
-        def fetch():
-            while product_status.release_history() is None:
-                time.sleep(0.5)
+    def set_timeline(self, release_history):
+        versions = set(release_history)
+        current = product_status.current_version()
+        versions.add(current)
+        expiry_date = (product_status.aup_date()
+                       if product_status.is_perpetual()
+                       else product_status.expiry_date())
 
-        def on_finished():
-            versions = set(product_status.release_history())
-            current = product_status.current_version()
-            versions.add(current)
-            expiry_date = (product_status.aup_date()
-                           if product_status.is_perpetual()
-                           else product_status.expiry_date())
-
-            self._widgets["Timeline"].set_data(
-                released_versions=versions,
-                current_ver=current,
-                expiry_date=expiry_date,
-            )
-            self._widgets["Timeline"].draw()
-
-        thread = base.Thread(fetch, parent=self)
-        thread.finished.connect(on_finished)
-        thread.start()
+        self._widgets["Timeline"].set_data(
+            released_versions=versions,
+            current_ver=current,
+            expiry_date=expiry_date,
+        )
+        self._widgets["Timeline"].draw()
 
 
 class GreetingPage(QtWidgets.QWidget):
@@ -1697,8 +1682,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         #   loaded as a "first launch" welcome, which means some thread
         #   below may be still running when the UI ask for data.
         #
-        product_status._refresh_internet_connectivity()
-        product_status._refresh_release_history()
+        internet_request.process()
         asset_library.reload()
 
     def __init__(self, parent=None):
@@ -1818,9 +1802,16 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def on_licence_updated(self, data):
         product_status.data = data
+
         self._widgets["Licence"].input_widget().status_update()
-        self._widgets["Greet"].status_widget().set_status()
-        self._widgets["Greet"].timeline_widget().set_timeline()
+        self._widgets["Greet"].status_widget().set_expiry()
+
+        # these will get result once thread finished.
+        # note: use signal so the result can be processed in main thread.
+        internet_request.subscribe_ragdoll(
+            self._widgets["Greet"].status_widget().connection_checked.emit)
+        internet_request.subscribe_history(
+            self._widgets["Greet"].timeline_widget().history_fetched.emit)
 
         # resize window a little bit just to trigger:
         #   1. anchor aligning and

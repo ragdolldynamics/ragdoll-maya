@@ -689,7 +689,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
     message_sent = QtCore.Signal(str)
 
     DayWidth = px(3)
-    DayPadding = 45
+    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
@@ -843,8 +843,8 @@ class ProductTimelineView(ProductTimelineBase):
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(80)
-    ButtonWidth = px(68)
+    ViewHeight = px(61)
+    ButtonWidth = px(40)
     ButtonHeight = px(18)
 
     def __init__(self, parent=None):
@@ -885,7 +885,7 @@ class ProductReleasedView(ProductTimelineBase):
     def draw_releases(self, dates, prev_items):
         last_row = len(prev_items) - 1
         y_base = -(self.ButtonHeight / 2) + px(4)
-        gap = px(2)
+        gap = px(4)
 
         def get_rightest_row():
             # get row that has the most clearance for overflowed item
@@ -914,21 +914,23 @@ class ProductReleasedView(ProductTimelineBase):
     def _draw_button(self, date, y_base):
         cl = ("#1953be" if date == self._current else
               "#f8d803" if date == self._latest_update else "#101010")
-        tx = date.strftime("%Y.%m.%d ")
+        ver = date.strftime("%Y.%m.%d")
+        tx = date.strftime("%m.%d ")
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)
         y = y_base
         it = self.draw_item(x=x, y=y, z=0, w=w, h=h, r=r, color=cl, text=tx)
         it.setData(it.DateRole, date)
-        it.setData(it.VersionRole, tx.strip())
+        it.setData(it.VersionRole, ver)
         it.enable_hover("#a4a4a4", "#1c1c1c")
+        msg = "Ragdoll version (click to read more) - %s" % ver
         if date == self._current:
-            it.set_message("Your current Ragdoll version (click to read more)")
+            it.set_message("Your current " + msg)
         elif date == self._latest_update:
-            it.set_message("Latest Ragdoll version (click to read more)")
+            it.set_message("Latest " + msg)
         else:
-            it.set_message("Previous Ragdoll version (click to read more)")
+            it.set_message("Previous " + msg)
         return it
 
     def draw_time(self, date, color):
@@ -993,12 +995,12 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         layout.addWidget(widgets["Timeline"])
 
         layout = QtWidgets.QVBoxLayout(overlays["Message"])
-        layout.setContentsMargins(px(12), 0, 0, px(4))
+        layout.setContentsMargins(px(6), 0, 0, px(6))
         layout.addStretch(1)
         layout.addWidget(widgets["Message"], alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(overlays["Update"])
-        layout.setContentsMargins(0, 0, px(4), px(4))
+        layout.setContentsMargins(0, 0, px(6), px(6))
         layout.addStretch(1)
         layout.addWidget(widgets["Update"], alignment=QtCore.Qt.AlignRight)
 

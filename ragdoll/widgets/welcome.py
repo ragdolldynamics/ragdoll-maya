@@ -1,7 +1,6 @@
 import os
 import re
 import math
-import time
 import types
 import logging
 import tempfile
@@ -56,9 +55,9 @@ CARD_HEIGHT = VIDEO_HEIGHT + (CARD_PADDING * 2)
 ANCHOR_SIZE = px(42)
 SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
-SPLASH_HEIGHT = px(125)
+SPLASH_HEIGHT = px(110)
 WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
-WINDOW_HEIGHT = px(545)  # just enough to see the first 2 rows of assets
+WINDOW_HEIGHT = px(511)  # just enough to see the first 2 rows of assets
 
 
 def _tint_color(pixmap, color):
@@ -92,7 +91,7 @@ class GreetingSplash(QtWidgets.QLabel):
 
     def __init__(self, parent=None):
         super(GreetingSplash, self).__init__(parent)
-        gradient = QtGui.QColor("#607e7e"), QtGui.QColor("#3e5a5e")
+        gradient = QtGui.QColor("#3f7e81"), QtGui.QColor("#468f79")
         pixmap = QtGui.QPixmap(ui._resource("ui", "welcome-banner.png"))
         pixmap = pixmap.scaled(
             SPLASH_WIDTH,
@@ -104,6 +103,18 @@ class GreetingSplash(QtWidgets.QLabel):
         self.setFixedHeight(SPLASH_HEIGHT)
         self._image = pixmap
         self._gradient = gradient
+
+    # This color picker is for testing gradient and picking good
+    # color to blend with splash image.
+    #
+    #     c_picker = QtWidgets.QColorDialog(self)
+    #     c_picker.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
+    #     c_picker.currentColorChanged.connect(self.on_color_changed)
+    #     c_picker.show()
+    #
+    # def on_color_changed(self, color):
+    #     self._gradient = (color, self._gradient[1])
+    #     self.repaint()
 
     def paintEvent(self, event):
         """
@@ -153,34 +164,38 @@ class GreetingTopRight(QtWidgets.QWidget):
             "ExpiryDate": QtWidgets.QLabel(),
         }
 
-        widgets["NoInternetIcon"].setFixedSize(px(16), px(16))
+        widgets["NoInternetIcon"].setFixedSize(px(12), px(12))
         _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
         widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
-        widgets["NoInternetText"].setText("No internet for checking update  ")
+        widgets["NoInternetText"].setText("No internet for checking update")
         widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
         widgets["NoInternet"].setStyleSheet("background: transparent;")
         widgets["NoInternet"].setVisible(False)
 
+        widgets["Expiry"].setFixedHeight(base.ProductReleasedView.ButtonHeight)
         widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
+        widgets["ExpiryIcon"].setFixedSize(px(12), px(12))
         widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
 
         layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, px(4), 0)
+        layout.setSpacing(0)
         layout.addStretch(1)
         layout.addWidget(widgets["NoInternetIcon"])
-        layout.addSpacing(px(2))
+        layout.addSpacing(px(4))
         layout.addWidget(widgets["NoInternetText"])
 
         layout = QtWidgets.QHBoxLayout(widgets["Expiry"])
-        layout.setContentsMargins(px(5), px(5), px(10), px(5))
+        layout.setContentsMargins(px(4), 0, px(8), 0)
+        layout.setSpacing(0)
         layout.addStretch(1)
         layout.addWidget(widgets["ExpiryIcon"])
-        layout.addSpacing(px(2))
+        layout.addSpacing(px(6))
         layout.addWidget(widgets["ExpiryDate"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, px(6), px(6), px(4))
+        layout.setContentsMargins(0, PD4, PD4, 0)
+        layout.setSpacing(0)
         layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
         layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
@@ -206,11 +221,11 @@ class GreetingTopRight(QtWidgets.QWidget):
         if expired:
             icon = ui._resource("ui", "exclamation-circle-fill.svg")
             self._widgets["Expiry"].setStyleSheet(
-                "border-radius: %dpx; background: #FF000000;" % px(13))
+                "border-radius: %dpx; background: #FF000000;" % px(9))
         else:
             icon = ui._resource("ui", "check-circle-fill.svg")
             self._widgets["Expiry"].setStyleSheet(
-                "border-radius: %dpx; background: #44000000;" % px(13))
+                "border-radius: %dpx; background: #44000000;" % px(9))
 
         icon = icon.replace("\\", "/")
         self._widgets["ExpiryIcon"].setStyleSheet(
@@ -284,12 +299,12 @@ class GreetingPage(QtWidgets.QWidget):
         overlay.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
         layout = QtWidgets.QVBoxLayout(overlay)
         layout.setContentsMargins(PD4, 0, PD4, 0)
-        layout.addStretch(1)  # for overlay
+        layout.setSpacing(0)
         layout.addWidget(widgets["Interact"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(PD4, 0, PD4, 0)
-        layout.setSpacing(PD3)
+        layout.setSpacing(0)
         layout.addWidget(widgets["Splash"])
         layout.addStretch(1)
 

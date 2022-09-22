@@ -1048,7 +1048,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         )
 
     def on_message_sent(self, text):
-        text = text or "Drag, or scroll with Alt key pressed to navigate."
+        text = text or "Drag to navigate, or scroll with Alt key pressed"
         self._widgets["Message"].setText(text)
 
     def set_data(self, released_versions, current_ver, expiry_date):

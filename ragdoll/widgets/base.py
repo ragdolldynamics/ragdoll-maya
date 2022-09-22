@@ -1262,12 +1262,15 @@ class InternetRequest(object):
             return not self.__has_open_ssl_bug()
 
         def _run():
+            self.__sys_write("Processing internet requests...")
             if _preflight():
                 self._run("ragdoll", self._run_ragdoll)
                 self._run("history", self._run_history)
+                self.__sys_write("Internet requests completed.")
             else:
                 self._default("ragdoll")
                 self._default("history")
+                self.__sys_write("Internet blocked, local resource used.")
 
         threading.Thread(target=_run).start()
 
@@ -1330,6 +1333,14 @@ class InternetRequest(object):
                 log.debug("Release history loaded from %s" % cache)
         return released
 
+    def __sys_write(self, msg):
+        # In worse case, application like Maya can have hard crash without
+        # any hint if OpenSSL bug encountered. So here we print out message
+        # into stdout instead of regular logging which can be captured by
+        # crashing app and went into void.
+        sys.__stdout__.write("Ragdoll: %s\n" % msg)
+        sys.__stdout__.flush()
+
     def __ping(self, url):
         try:
             with request.urlopen(url) as r:
@@ -1352,6 +1363,15 @@ class InternetRequest(object):
 
         if not (is_intel and has_ssl_bug and not has_workaround):
             return False
+
+        # a way to bypass subprocess checking.
+        manual_over = os.getenv("RAGDOLL_OVER_OPENSSL_CHECK", "").lower()
+        if manual_over.isdigit():
+            return int(manual_over)
+        elif manual_over in ["y", "yes"]:
+            return False  # yes, proceed as no-bug.
+        elif manual_over in ["n", "no"]:
+            return True  # no, proceed as bugged and without internet.
 
         exe = sys.executable
         if exe.endswith("maya.exe"):

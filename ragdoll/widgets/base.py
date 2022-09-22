@@ -1396,8 +1396,8 @@ class AssetLibrary(object):
         paths = list(filter(None, paths))
         return reversed(paths)
 
-    def register_model(self, model):
-        model.attach(self._queue)
+    def attach_consumer(self, model):
+        model.attach_library(self._queue)
 
     def reload(self):
         self.stop()

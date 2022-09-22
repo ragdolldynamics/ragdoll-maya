@@ -688,7 +688,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
         if self._worker is not None:
             self._worker.start()
 
-    def attach(self, queue):
+    def attach_library(self, queue):
         if self._worker is not None:
             return
         self._worker = base.Thread(self._consume, args=[queue], parent=self)
@@ -928,7 +928,7 @@ class AssetListPage(QtWidgets.QWidget):
         self._models = models
         self._widgets = widgets
 
-        asset_library.register_model(models["Source"])
+        asset_library.attach_consumer(models["Source"])
 
     def resizeEvent(self, event):
         super(AssetListPage, self).resizeEvent(event)

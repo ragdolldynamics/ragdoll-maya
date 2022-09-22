@@ -1814,7 +1814,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
 
-        virtual_space = height - self._widgets["Licence"].height()
+        virtual_space = int(height / 2)
         self._widgets["VirtualSpace"].changeSize(PD1, virtual_space)
 
         self._widgets["Body"].layout().invalidate()

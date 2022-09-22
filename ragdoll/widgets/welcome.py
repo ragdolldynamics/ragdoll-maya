@@ -1036,6 +1036,38 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         super(LicenceStatusPlate, self).paintEvent(event)
 
 
+class SecretToggle(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(SecretToggle, self).__init__(parent=parent)
+
+        widgets = {
+            "Peek": base.ToggleButton(),
+        }
+        icon_show = ui._resource("ui", "eye-fill.svg")
+        icon_hide = ui._resource("ui", "eye-slash.svg")
+        widgets["Peek"].set_unchecked_icon(QtGui.QIcon(icon_hide))
+        widgets["Peek"].set_checked_icon(QtGui.QIcon(icon_show))
+        widgets["Peek"].setFixedWidth(px(26))
+        widgets["Peek"].setChecked(True)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(PD4)
+        layout.addWidget(widgets["Peek"])
+
+        widgets["Peek"].toggled.connect(self.on_secret_toggled)
+
+        self._widgets = widgets
+
+    def set_secret_shown(self, value):
+        self._widgets["Peek"].setChecked(value)
+
+    def on_secret_toggled(self, value):
+        for line in self.findChildren(QtWidgets.QLineEdit):
+            line.setEchoMode(line.Normal if value else line.Password)
+
+
 def labeling(widget, label_text, vertical=False, **kwargs):
     c = QtWidgets.QWidget()
     label = QtWidgets.QLabel(label_text)
@@ -1059,16 +1091,18 @@ class LicenceNodeLock(QtWidgets.QWidget):
             "ProductName": LicenceStatusPlate(),
             "ProductKey": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
 
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
+        widgets["Secret"].layout().addWidget(widgets["ProductKey"])
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD4)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ProductKey"], stretch=1)
+        layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
@@ -1109,11 +1143,13 @@ class LicenceNodeLock(QtWidgets.QWidget):
     def status_update(self):
         self._widgets["ProductName"].set_product()
         if product_status.is_activated():
+            self._widgets["Secret"].set_secret_shown(False)
             self._widgets["ProductKey"].setText(product_status.key())
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
             self._widgets["ProcessBtn"].setEnabled(True)
         else:
+            self._widgets["Secret"].set_secret_shown(True)
             self._widgets["ProductKey"].setText("")
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["ProcessBtn"].setText("Activate")
@@ -1140,6 +1176,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "DeactivateText": QtWidgets.QLabel(),
             "ConfirmText": QtWidgets.QLabel(" Confirm Deactivated"),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
         widgets.update({
             "RequestWidget": labeling(widgets["RequestRow"], "1."),
@@ -1157,6 +1194,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
+        widgets["Secret"].layout().addWidget(widgets["ProductKey"])
 
         widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
@@ -1213,7 +1251,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout(head)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ProductKey"])
+        layout.addWidget(widgets["Secret"])
         layout.addSpacing(PD2)
 
         body = QtWidgets.QWidget()
@@ -1347,6 +1385,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         _temp_key = self.read_temp_key()
 
         if self.is_deactivation_requested():
+            self._widgets["Secret"].set_secret_shown(False)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Dismiss")
@@ -1357,6 +1396,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         else:
             # restore product key for continuing offline activation
+            self._widgets["Secret"].set_secret_shown(True)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["Response"].setText("")
@@ -1380,17 +1420,20 @@ class LicenceFloating(QtWidgets.QWidget):
             "ServerIP": QtWidgets.QLineEdit(),
             "ServerPort": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
 
         widgets["ServerIP"].setReadOnly(True)  # set from env var
         widgets["ServerPort"].setReadOnly(True)  # set from env var
+        widgets["Secret"].layout().addWidget(widgets["ServerIP"], stretch=7)
+        widgets["Secret"].layout().addWidget(widgets["ServerPort"], stretch=3)
+        widgets["Secret"].set_secret_shown(False)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD4)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ServerIP"], stretch=7)
-        layout.addWidget(widgets["ServerPort"], stretch=3)
+        layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)

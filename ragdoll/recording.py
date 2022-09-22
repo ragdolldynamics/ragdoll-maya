@@ -1133,3 +1133,77 @@ def _find_destinations(markers, opts=None):
             dst_to_offset[dst] = offset.inverse()
 
     return dst_to_marker, dst_to_offset
+
+
+def plan_to_animation(plan):
+    import json
+
+    plan = cmds.ragdollDump(str(plan), plan=True)
+    plan = json.loads(plan)
+    start_frame = plan["startFrame"]
+
+    constraints = []
+    outputs = []
+    destinations = []
+
+    for name, trajectory in plan["trajectories"].items():
+
+        # Convert matrix timeseries into rotate and translate channels
+        tx, ty, tz = {}, {}, {}
+        rx, ry, rz = {}, {}, {}
+
+        for frame, mtx in enumerate(trajectory):
+            tm = cmdx.Tm(cmdx.Mat4(mtx))
+            translate = tm.translation()
+            rotate = tm.rotation()
+
+            tx[start_frame + frame] = translate.x
+            ty[start_frame + frame] = translate.y
+            tz[start_frame + frame] = translate.z
+            rx[start_frame + frame] = rotate.x
+            ry[start_frame + frame] = rotate.y
+            rz[start_frame + frame] = rotate.z
+
+        # Generate output transforms..
+        with cmdx.DagModifier() as mod:
+            out = mod.create_node("transform", name=name + "_out")
+
+            # ..with plan as keyframes
+            mod.set_attr(out["tx"], tx)
+            mod.set_attr(out["ty"], ty)
+            mod.set_attr(out["tz"], tz)
+            mod.set_attr(out["rx"], rx)
+            mod.set_attr(out["ry"], ry)
+            mod.set_attr(out["rz"], rz)
+
+        node = cmdx.encode(name)
+        outputs += [out]
+        for el in node["destinationTransforms"]:
+            dst = el.input()
+            destinations += [dst]
+            constraints += cmds.parentConstraint(str(out), str(dst))
+
+    # Bake it
+    kwargs = {
+        "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
+        "simulation": True,
+        "time": (1, 120),
+        "sampleBy": 1,
+        "oversamplingRate": 1,
+        "disableImplicitControl": True,
+        "preserveOutsideKeys": False,
+        "sparseAnimCurveBake": False,
+        "removeBakedAttributeFromLayer": False,
+        "removeBakedAnimFromLayer": False,
+        "minimizeRotation": False,
+        "bakeOnOverrideLayer": True,
+    }
+
+    # The cheeky little bakeResults changes our selection
+    selection = cmds.ls(selection=True)
+    destinations = list(str(dst) for dst in destinations)
+    cmds.bakeResults(*destinations, **kwargs)
+    cmds.delete(list(str(out) for out in outputs))
+    cmds.select(selection)
+
+    print("Success")

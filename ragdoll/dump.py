@@ -1523,3 +1523,36 @@ def meshes_to_mobj(Meshes, parent=None):
                     [], [], mobj)
 
     return mobj if parent is None else out
+
+
+def animation_to_plan():
+    sources = {
+        source: source["sourceTransform"].input()
+        for source in cmdx.ls(type=("rdFoot", "rdPlan"))
+    }
+
+    # Clear existing attributes
+    for source, transform in sources.items():
+        for attr in ("targets", "timings", "hards"):
+            for el in source[attr]:
+                cmds.removeMultiInstance(str(source) + ".%s" % (el.name()))
+
+    framerange = (1, 54)
+    timing = 4
+    index = 0
+    with cmdx.DagModifier() as mod:
+        for frame in range(*framerange):
+            if (frame - 1) % timing != 0:
+                continue
+
+            cmds.currentTime(frame)
+
+            for source, transform in sources.items():
+                mtx = transform["worldMatrix"][0].as_matrix()
+                mod.set_attr(source["targets"][index], mtx)
+                mod.set_attr(source["hards"][index], False)
+                mod.set_attr(source["timings"][index], frame)
+
+            index += 1
+
+    cmds.currentTime(1)

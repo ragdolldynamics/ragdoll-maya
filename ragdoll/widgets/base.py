@@ -791,10 +791,10 @@ class ProductTimelineView(ProductTimelineBase):
         for index, dates in self._versions.items():
             self.draw_highlight(dates)
         if self._expiry_shown:
-            it = self.draw_incident(self._expiry_date, 2 / 3, "#e96868")
+            it = self.draw_incident(self._expiry_date, 1.2, "#e96868")
             it.set_message("Licence/AUP/Trial expired after: %s"
                            % self._expiry_date.strftime("%b.%d.%Y"))
-        it = self.draw_incident(self._today, 1 / 2, "#dfdfdf")
+        it = self.draw_incident(self._today, 0.5, "#dfdfdf")
         it.set_message("Today: %s" % self._today.strftime("%b.%d.%Y"))
 
     def draw_timeline(self):

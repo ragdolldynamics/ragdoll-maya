@@ -6,8 +6,9 @@ import json
 import time
 import random
 import logging
-import functools
 import tempfile
+import functools
+import contextlib
 
 from maya import cmds
 
@@ -455,6 +456,15 @@ def maintain_selection(func):
             cmds.select(selection)
 
     return _maintain_selection
+
+
+@contextlib.contextmanager
+def maintained_selection():
+    try:
+        selection = cmds.ls(selection=True)
+        yield
+    finally:
+        cmds.select(selection)
 
 
 def sort_filenames(fnames, suffix=".rag"):

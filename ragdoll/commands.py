@@ -1803,6 +1803,8 @@ def assign_plan(body, feet, opts=None):
         mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
         mod.set_attr(rdplan["color"], internal.random_color())
         mod.set_attr(rdplan["version"], internal.version())
+        mod.set_attr(body["message"], rdplan["sourceTransform"])
+        mod.set_attr(body["message"], rdplan["destinationTransforms"][0])
 
         if opts["useTransform"]:
             plan_start_parent = mod.create_node("transform",
@@ -1949,6 +1951,9 @@ def assign_plan(body, feet, opts=None):
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
             dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
+
+            mod.set_attr(foot["message"], rdfoot["sourceTransform"])
+            mod.set_attr(foot["message"], rdfoot["destinationTransforms"][0])
 
             dgmod.set_attr(rdfoot["linearLimit"], limits)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])

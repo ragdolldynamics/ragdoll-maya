@@ -1525,10 +1525,12 @@ def meshes_to_mobj(Meshes, parent=None):
     return mobj if parent is None else out
 
 
-def animation_to_plan():
+@internal.with_undo_chunk
+def animation_to_plan(plan):
+    feet = list(el.input() for el in plan["inputStart"])
     sources = {
         source: source["sourceTransform"].input()
-        for source in cmdx.ls(type=("rdFoot", "rdPlan"))
+        for source in [plan] + feet
     }
 
     # Clear existing attributes
@@ -1537,14 +1539,22 @@ def animation_to_plan():
             for el in source[attr]:
                 cmds.removeMultiInstance(str(source) + ".%s" % (el.name()))
 
-    framerange = (1, 54)
-    timing = 4
-    index = 0
-    with cmdx.DagModifier() as mod:
-        for frame in range(*framerange):
-            if (frame - 1) % timing != 0:
-                continue
+    start_time = plan["startTime"].read()
 
+    if start_time == 0:
+        start = int(cmdx.min_time().value)
+
+    elif start_time == 1:
+        start = int(cmdx.animationStartTime().value)
+
+    else:
+        start = int(plan["startTimeCustom"].read())
+
+    end = start + plan["duration"].read()
+    increment = 4
+
+    with cmdx.DagModifier() as mod:
+        for index, frame in enumerate(range(start, end, increment)):
             cmds.currentTime(frame)
 
             for source, transform in sources.items():
@@ -1553,6 +1563,7 @@ def animation_to_plan():
                 mod.set_attr(source["hards"][index], False)
                 mod.set_attr(source["timings"][index], frame)
 
-            index += 1
+        for source, transform in sources.items():
+            mod.set_attr(source["timings"][index], end)
 
-    cmds.currentTime(1)
+    cmds.currentTime(start)

@@ -264,6 +264,24 @@
         ]
     },
 
+    "bakeTargets": {
+        "label": "Bake Targets",
+        "icon": "bake.png",
+        "summary": "Convert animation into targets for a plan",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "bakePlan": {
+        "label": "Bake Plan",
+        "icon": "bake.png",
+        "summary": "Convert plan into animation",
+        "description": "",
+        "options": [
+        ]
+    },
+
     "addTarget": {
         "label": "Add Target",
         "icon": "plan.png",

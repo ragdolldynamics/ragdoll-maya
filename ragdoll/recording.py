@@ -1135,6 +1135,7 @@ def _find_destinations(markers, opts=None):
     return dst_to_marker, dst_to_offset
 
 
+@internal.with_undo_chunk
 def plan_to_animation(plan):
     import json
 
@@ -1178,6 +1179,7 @@ def plan_to_animation(plan):
 
         node = cmdx.encode(name)
         outputs += [out]
+
         for el in node["destinationTransforms"]:
             dst = el.input()
             destinations += [dst]
@@ -1200,10 +1202,7 @@ def plan_to_animation(plan):
     }
 
     # The cheeky little bakeResults changes our selection
-    selection = cmds.ls(selection=True)
-    destinations = list(str(dst) for dst in destinations)
-    cmds.bakeResults(*destinations, **kwargs)
-    cmds.delete(list(str(out) for out in outputs))
-    cmds.select(selection)
-
-    print("Success")
+    with internal.maintained_selection():
+        destinations = list(str(dst) for dst in destinations)
+        cmds.bakeResults(*destinations, **kwargs)
+        cmds.delete(list(str(out) for out in outputs))

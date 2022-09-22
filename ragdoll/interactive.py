@@ -844,20 +844,22 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
-    divider("Locomotion")
+    divider()
 
-    item("assignPlan", assign_plan, assign_plan_options)
-    item("updatePlan", update_plan, update_plan_options)
-
-    with submenu("More", icon="locomotion.png"):
+    with submenu("Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
+        item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
+
+        divider("Offline")
+
+        item("bakeTargets", animation_to_plan)
+        item("bakePlan", plan_to_animation)
 
         divider("Edit")
 
         item("addTarget", add_target)
         item("resetFoot", reset_foot)
-        item("recordLocomotion")
 
         divider("System")
 
@@ -1710,7 +1712,7 @@ def solvers_from_selection(selection=None):
 
 
 def markers_from_selection(selection=None):
-    """Find solvers from selection
+    """Find markers from selection
 
     Examples:
         >>> ctrl1, _ = cmds.polyCube()
@@ -1743,6 +1745,24 @@ def markers_from_selection(selection=None):
             markers.append(selected)
 
     return tuple(markers)
+
+
+def plans_from_selection(selection=None):
+    """Find plans from selection"""
+
+    plans = list()
+
+    for selected in selection or cmdx.selection():
+        if selected.isA(cmdx.kDagNode):
+            selected = selected.shape(type="rdPlan")
+
+        if selected and selected.isA("rdPlan"):
+            if selected in plans:
+                continue
+
+            plans.append(selected)
+
+    return tuple(plans)
 
 
 @with_exception_handling
@@ -2747,6 +2767,39 @@ def assign_plan(selection=None, **opts):
             cmds.modelEditor(panel, edit=True, handles=True)
 
     return kSuccess
+
+
+@with_exception_handling
+def plan_to_animation(selection=None, **opts):
+    plans = plans_from_selection(selection)
+
+    if not plans:
+        raise i__.UserWarning(
+            "No plan selected",
+            "Select one or more plans to bake"
+        )
+
+    for plan in plans:
+        recording.plan_to_animation(plan)
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+def animation_to_plan(selection=None, **opts):
+    plans = plans_from_selection(selection)
+
+    if not plans:
+        raise i__.UserWarning(
+            "No plan selected",
+            "Select one or more plans to bake"
+        )
+
+    for plan in plans:
+        dump.animation_to_plan(plan)
+
+    return kSuccess
+
 
 @i__.with_undo_chunk
 @with_exception_handling

@@ -1,15 +1,18 @@
 
 import os
 import re
+import sys
+import ssl
 import json
 import logging
 import weakref
 import traceback
 import threading
 import shiboken2
+import subprocess
 import webbrowser
-from datetime import datetime, timedelta
 from collections import defaultdict
+from datetime import datetime, timedelta
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
@@ -22,11 +25,6 @@ try:
     from urllib import request
 except ImportError:
     import urllib as request  # py2
-
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse  # py2
 
 from .. import __, constants, options, ui
 
@@ -686,7 +684,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
     message_sent = QtCore.Signal(str)
 
     DayWidth = px(3)
-    DayPadding = 45
+    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
@@ -793,10 +791,10 @@ class ProductTimelineView(ProductTimelineBase):
         for index, dates in self._versions.items():
             self.draw_highlight(dates)
         if self._expiry_shown:
-            it = self.draw_incident(self._expiry_date, 2 / 3, "#e96868")
+            it = self.draw_incident(self._expiry_date, 1.2, "#e96868")
             it.set_message("Licence/AUP/Trial expired after: %s"
                            % self._expiry_date.strftime("%b.%d.%Y"))
-        it = self.draw_incident(self._today, 1 / 2, "#dfdfdf")
+        it = self.draw_incident(self._today, 0.5, "#dfdfdf")
         it.set_message("Today: %s" % self._today.strftime("%b.%d.%Y"))
 
     def draw_timeline(self):
@@ -840,8 +838,8 @@ class ProductTimelineView(ProductTimelineBase):
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(80)
-    ButtonWidth = px(68)
+    ViewHeight = px(61)
+    ButtonWidth = px(40)
     ButtonHeight = px(18)
 
     def __init__(self, parent=None):
@@ -882,7 +880,7 @@ class ProductReleasedView(ProductTimelineBase):
     def draw_releases(self, dates, prev_items):
         last_row = len(prev_items) - 1
         y_base = -(self.ButtonHeight / 2) + px(4)
-        gap = px(2)
+        gap = px(4)
 
         def get_rightest_row():
             # get row that has the most clearance for overflowed item
@@ -911,21 +909,23 @@ class ProductReleasedView(ProductTimelineBase):
     def _draw_button(self, date, y_base):
         cl = ("#1953be" if date == self._current else
               "#f8d803" if date == self._latest_update else "#101010")
-        tx = date.strftime("%Y.%m.%d ")
+        ver = date.strftime("%Y.%m.%d")
+        tx = date.strftime("%m.%d ")
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)
         y = y_base
         it = self.draw_item(x=x, y=y, z=0, w=w, h=h, r=r, color=cl, text=tx)
         it.setData(it.DateRole, date)
-        it.setData(it.VersionRole, tx.strip())
+        it.setData(it.VersionRole, ver)
         it.enable_hover("#a4a4a4", "#1c1c1c")
+        msg = "Ragdoll version (click to read more) - %s" % ver
         if date == self._current:
-            it.set_message("Your current Ragdoll version (click to read more)")
+            it.set_message("Your current " + msg)
         elif date == self._latest_update:
-            it.set_message("Latest Ragdoll version (click to read more)")
+            it.set_message("Latest " + msg)
         else:
-            it.set_message("Previous Ragdoll version (click to read more)")
+            it.set_message("Previous " + msg)
         return it
 
     def draw_time(self, date, color):
@@ -990,12 +990,12 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         layout.addWidget(widgets["Timeline"])
 
         layout = QtWidgets.QVBoxLayout(overlays["Message"])
-        layout.setContentsMargins(px(12), 0, 0, px(4))
+        layout.setContentsMargins(px(6), 0, 0, px(6))
         layout.addStretch(1)
         layout.addWidget(widgets["Message"], alignment=QtCore.Qt.AlignLeft)
 
         layout = QtWidgets.QVBoxLayout(overlays["Update"])
-        layout.setContentsMargins(0, 0, px(4), px(4))
+        layout.setContentsMargins(0, 0, px(6), px(6))
         layout.addStretch(1)
         layout.addWidget(widgets["Update"], alignment=QtCore.Qt.AlignRight)
 
@@ -1103,8 +1103,6 @@ class ProductStatus(object):
 
     def __init__(self):
         self._data = dict()
-        self._conn = dict()
-        self._released = None
 
     @property
     def data(self):
@@ -1219,70 +1217,180 @@ class ProductStatus(object):
                 # time as expired to indicate something went wrong.
                 return datetime.now()
 
-    def release_history(self):
-        return self._released[:] if self._released else None
 
-    def has_ragdoll(self):
-        return self._ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+class InternetRequest(object):
 
-    def has_wyday(self):
-        return self._ping(WYDAY_URL)
+    def __init__(self):
+        self._hooks = defaultdict(set)
+        self._workers = dict()
+        self._defaults = dict()
 
-    def _iter_parsed_versions(self, lines):
-        pattern = re.compile(
-            r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
-        )
-        for line in lines:
-            matched = pattern.match(line)
-            if matched:
-                yield matched.group(1).decode()
+    def _run(self, channel, job):
+        worker = threading.Thread()
+        self._workers[channel] = worker
 
-    def _ping(self, url):
-        return self._conn.get(url)
+        def on_done(result):
+            if result is None:
+                default = self._defaults.get(channel)
+                result = default() if callable(default) else default
 
-    def _refresh_release_history(self):
-        def _thread():
-            if self._released is None:
-                released = []
-                url = RAGDOLL_DYNAMICS_RELEASES_URL
-                try:
-                    with request.urlopen(url) as r:
-                        if r.code == 200:
-                            ln = r.readlines()
-                            released = list(self._iter_parsed_versions(ln))
-                        else:
-                            raise Exception("%s returned: %d" % (url, r.code))
+            setattr(worker, "result", result)  # cache
+            for hook in self._hooks[channel]:
+                hook(result)
 
-                except Exception as e:
-                    log.debug(e)
+        def run():
+            on_done(job())
+
+        worker.run = run
+        worker.start()
+
+    def _default(self, channel, hook=None):
+        default = self._defaults.get(channel)
+        result = default() if callable(default) else default
+
+        Worker = type("Worker", (), dict(result=result))
+        self._workers[channel] = Worker()
+
+        if hook is None:
+            for hook in self._hooks[channel]:
+                hook(result)
+        else:
+            hook(result)
+
+    def process(self):
+        def _preflight():
+            return not self.__has_open_ssl_bug()
+
+        def _run():
+            self.__sys_write("Processing internet requests...")
+            if _preflight():
+                self._run("ragdoll", self._run_ragdoll)
+                self._run("history", self._run_history)
+                self.__sys_write("Internet requests completed.")
+            else:
+                self._default("ragdoll")
+                self._default("history")
+                self.__sys_write("Internet blocked, local resource used.")
+
+        threading.Thread(target=_run).start()
+
+    def subscribe_history(self, hook):
+        self._subscribe("history", hook, default=self._default_history)
+
+    def subscribe_ragdoll(self, hook):
+        self._subscribe("ragdoll", hook, default=False)
+
+    def _subscribe(self, channel, hook, default):
+        self._hooks[channel].add(hook)
+        self._defaults[channel] = default
+
+        worker = self._workers.get(channel)
+        if worker and hasattr(worker, "result"):
+            if worker.result is None and default is not None:
+                # Subscription can happen after process(), which means
+                # the default value may not exist at that time being.
+                # So we have to patch up.
+                self._default("ragdoll", hook)
+            else:
+                hook(worker.result)
+
+    def _run_ragdoll(self):
+        return self.__ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+
+    def _run_history(self):
+        released = []
+
+        def parsed_versions(lines):
+            p = r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            p = re.compile(p.encode())
+            return [
+                matched.group(1).decode()
+                for matched in [p.match(ln) for ln in lines] if matched
+            ]
+
+        url = RAGDOLL_DYNAMICS_RELEASES_URL
+        try:
+            with request.urlopen(url) as r:
+                if r.code == 200:
+                    released = parsed_versions(r.readlines())
                 else:
-                    log.debug("Release history fetched from %s" % url)
+                    raise Exception("%s returned: %d" % (url, r.code))
 
-                if not released:
-                    root = os.path.dirname(constants.__file__)
-                    cache = os.path.join(root, "resources", "versioninfo.json")
-                    if os.path.isfile(cache):
-                        with open(cache) as f:
-                            released = json.load(f)
-                            log.debug("Release history loaded from %s" % cache)
+        except Exception as e:
+            log.debug(e)
+        else:
+            log.debug("Release history fetched from %s" % url)
 
-                self._released = released
+        return released or None
 
-        threading.Thread(target=_thread).start()
+    def _default_history(self):
+        released = []
+        root = os.path.dirname(constants.__file__)
+        cache = os.path.join(root, "resources", "versioninfo.json")
+        if os.path.isfile(cache):
+            with open(cache) as f:
+                released = json.load(f)
+                log.debug("Release history loaded from %s" % cache)
+        return released
 
-    def _refresh_internet_connectivity(self):
-        def _thread(url):
-            try:
-                with request.urlopen(url) as r:
-                    self._conn[url] = r.code == 200
-            except Exception as e:
-                log.debug(e)
-                self._conn[url] = False
+    def __sys_write(self, msg):
+        # In worse case, application like Maya can have hard crash without
+        # any hint if OpenSSL bug encountered. So here we print out message
+        # into stdout instead of regular logging which can be captured by
+        # crashing app and went into void.
+        sys.__stdout__.write("Ragdoll: %s\n" % msg)
+        sys.__stdout__.flush()
 
-        # Fire and forget, we don't need to wait for this
-        for url in (RAGDOLL_DYNAMICS_VERSIONS_URL,
-                    WYDAY_URL):
-            threading.Thread(target=_thread, args=[url]).start()
+    def __ping(self, url):
+        try:
+            with request.urlopen(url) as r:
+                return r.code == 200
+        except Exception as e:
+            log.debug(e)
+            return False
+
+    def __has_open_ssl_bug(self):
+        """Return True if OpenSSL bug found
+        https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+        """
+        if os.name != "nt":
+            return False
+
+        has_ssl_bug = (1, 0, 2, 7) <= ssl.OPENSSL_VERSION_INFO < (1, 0, 2, 9)
+        has_workaround = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
+        cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
+        is_intel = "GenuineIntel" in cpu_ident
+
+        if not (is_intel and has_ssl_bug and not has_workaround):
+            return False
+
+        # a way to bypass subprocess checking.
+        manual_over = os.getenv("RAGDOLL_OVER_OPENSSL_CHECK", "").lower()
+        if manual_over.isdigit():
+            return int(manual_over)
+        elif manual_over in ["y", "yes"]:
+            return False  # yes, proceed as no-bug.
+        elif manual_over in ["n", "no"]:
+            return True  # no, proceed as bugged and without internet.
+
+        exe = sys.executable
+        if exe.endswith("maya.exe"):
+            exe = os.path.join(os.path.dirname(exe), "mayapy.exe")
+
+        cmd = "import ssl;ssl.get_server_certificate(('www.google.com',443))"
+        p = subprocess.Popen(
+            [exe, "-c", cmd],
+            stdout=subprocess.PIPE,
+            creationflags=0x08000000  # no window
+        )
+        _, _ = p.communicate()
+        unsafe = p.wait() != 0
+        if unsafe:
+            log.info("OpenSSL connection issue detected, "
+                     "please refer to this article for detail: "
+                     "https://support.foundry.com/hc/en-us/articles/"
+                     "360012750300-Q100573")
+        return unsafe
 
 
 class AssetLibrary(object):
@@ -1308,8 +1416,8 @@ class AssetLibrary(object):
         paths = list(filter(None, paths))
         return reversed(paths)
 
-    def register_model(self, model):
-        model.attach(self._queue)
+    def attach_consumer(self, model):
+        model.attach_library(self._queue)
 
     def reload(self):
         self.stop()
@@ -1405,6 +1513,9 @@ class AssetLibrary(object):
         #   which is the "ui" field. So we read the file backward and
         #   find the keyword and ignore the rest.
         #
+        # See link below for detail (it's a work journal)
+        # https://gitlab.ragdolldynamics.com/-/snippets/302
+        #
         lines = []
         for line in reverse_readline(file_path):
             lines.append(line)
@@ -1426,25 +1537,12 @@ class AssetLibrary(object):
                 180,
             ).name()
 
-        def resource(path):
-            try:
-                result = urlparse(path)
-                is_net_location = all([result.scheme, result.netloc])
-            except AttributeError:
-                is_net_location = False
-
-            if is_net_location:
-                return path
-            else:
-                return os.path.join(lib_path, path)
-
         name = data.get("name") or fname.rsplit(".", 1)[0]
         tags = {
             tag_name: text_to_color(tag_name)
             for tag_name in set(data.get("tags") or [])
         }
         video = data.get("video") or fname.rsplit(".", 1)[0] + ".webm"
-        video = resource(video)
         poster = ui.base64_to_pixmap(data["thumbnail"].encode("ascii"))
         poster = poster.scaled(
             px(217), px(122),

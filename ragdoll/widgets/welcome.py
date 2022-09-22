@@ -1,19 +1,32 @@
 import os
 import re
 import math
-import time
+import types
 import logging
 import tempfile
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
+
 try:
     from PySide2 import QtWebEngineWidgets
-except ImportError:
-    _QWebEngineView = object
-    _has_webengine = False
+except ImportError as e:
+    # In our tests (on mottosso/maya:2020 image), this module could fail
+    # on import because of missing libXss.so.1 object. And if that happens,
+    # video playback feature will be disabled (for playing .webm file in
+    # asset view).
+    def _raise_err(*_, **__): raise e
+    QtWebEngineWidgets = types.ModuleType("QtWebEngineWidgets")
+    setattr(QtWebEngineWidgets, "QWebEngineView", type(
+        "QWebEngineView", (), dict(__init__=_raise_err)
+    ))
+    HAS_QT_WEB_ENGINE = False
 else:
-    _QWebEngineView = QtWebEngineWidgets.QWebEngineView
-    _has_webengine = True
+    HAS_QT_WEB_ENGINE = True
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse  # py2
 
 from . import base
 from .. import ui, internal
@@ -31,6 +44,9 @@ px = base.px
 with open(ui._resource("ui", "style_welcome.css")) as f:
     stylesheet = f.read()
 
+
+ENABLE_SIDEBAR = False
+
 # padding levels
 PD1 = px(20)
 PD2 = px(14)
@@ -47,9 +63,11 @@ CARD_HEIGHT = VIDEO_HEIGHT + (CARD_PADDING * 2)
 ANCHOR_SIZE = px(42)
 SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
-SPLASH_HEIGHT = px(125)
-WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
-WINDOW_HEIGHT = px(545)  # just enough to see the first 2 rows of assets
+SPLASH_HEIGHT = px(110)
+WINDOW_WIDTH = SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
+WINDOW_HEIGHT = px(511)  # just enough to see the first 2 rows of assets
+if ENABLE_SIDEBAR:
+    WINDOW_WIDTH += SIDEBAR_WIDTH
 
 
 def _tint_color(pixmap, color):
@@ -75,6 +93,7 @@ class _ProductStatus(base.ProductStatus):
 
 
 product_status = _ProductStatus()
+internet_request = base.InternetRequest()
 asset_library = base.AssetLibrary()
 
 
@@ -82,7 +101,7 @@ class GreetingSplash(QtWidgets.QLabel):
 
     def __init__(self, parent=None):
         super(GreetingSplash, self).__init__(parent)
-        gradient = QtGui.QColor("#607e7e"), QtGui.QColor("#3e5a5e")
+        gradient = QtGui.QColor("#3f7e81"), QtGui.QColor("#468f79")
         pixmap = QtGui.QPixmap(ui._resource("ui", "welcome-banner.png"))
         pixmap = pixmap.scaled(
             SPLASH_WIDTH,
@@ -94,6 +113,18 @@ class GreetingSplash(QtWidgets.QLabel):
         self.setFixedHeight(SPLASH_HEIGHT)
         self._image = pixmap
         self._gradient = gradient
+
+    # This color picker is for testing gradient and picking good
+    # color to blend with splash image.
+    #
+    #     c_picker = QtWidgets.QColorDialog(self)
+    #     c_picker.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
+    #     c_picker.currentColorChanged.connect(self.on_color_changed)
+    #     c_picker.show()
+    #
+    # def on_color_changed(self, color):
+    #     self._gradient = (color, self._gradient[1])
+    #     self.repaint()
 
     def paintEvent(self, event):
         """
@@ -129,6 +160,7 @@ class GreetingSplash(QtWidgets.QLabel):
 
 
 class GreetingTopRight(QtWidgets.QWidget):
+    connection_checked = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
         super(GreetingTopRight, self).__init__(parent)
@@ -142,41 +174,49 @@ class GreetingTopRight(QtWidgets.QWidget):
             "ExpiryDate": QtWidgets.QLabel(),
         }
 
-        widgets["NoInternetIcon"].setFixedSize(px(16), px(16))
+        widgets["NoInternetIcon"].setFixedSize(px(12), px(12))
         _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
         widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
-        widgets["NoInternetText"].setText("No internet for checking update  ")
+        widgets["NoInternetText"].setText("No internet for checking update")
         widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
         widgets["NoInternet"].setStyleSheet("background: transparent;")
         widgets["NoInternet"].setVisible(False)
 
+        widgets["Expiry"].setFixedHeight(base.ProductReleasedView.ButtonHeight)
         widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
-        widgets["ExpiryIcon"].setFixedSize(px(16), px(16))
+        widgets["ExpiryIcon"].setFixedSize(px(12), px(12))
         widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
 
         layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, px(2), 0)
+        layout.setSpacing(0)
         layout.addStretch(1)
         layout.addWidget(widgets["NoInternetIcon"])
-        layout.addSpacing(px(2))
+        layout.addSpacing(px(4))
         layout.addWidget(widgets["NoInternetText"])
 
         layout = QtWidgets.QHBoxLayout(widgets["Expiry"])
-        layout.setContentsMargins(px(5), px(5), px(10), px(5))
+        layout.setContentsMargins(px(4), 0, px(8), 0)
+        layout.setSpacing(0)
         layout.addStretch(1)
         layout.addWidget(widgets["ExpiryIcon"])
-        layout.addSpacing(px(2))
+        layout.addSpacing(px(6))
         layout.addWidget(widgets["ExpiryDate"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, px(6), px(6), px(4))
+        layout.setContentsMargins(0, px(4), PD4, PD4 + px(3))
+        layout.setSpacing(0)
         layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
         layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
 
+        self.setFixedHeight(SPLASH_HEIGHT)
+
         self._widgets = widgets
 
-    def _expiry(self):
+        self.connection_checked.connect(self.set_offline_hint)
+
+    def set_expiry(self):
         p_ = product_status
         perpetual = p_.is_perpetual()
         expiry_date = p_.expiry_date()
@@ -193,35 +233,23 @@ class GreetingTopRight(QtWidgets.QWidget):
         if expired:
             icon = ui._resource("ui", "exclamation-circle-fill.svg")
             self._widgets["Expiry"].setStyleSheet(
-                "border-radius: %dpx; background: #FF000000;" % px(13))
+                "border-radius: %dpx; background: #FF000000;" % px(9))
         else:
             icon = ui._resource("ui", "check-circle-fill.svg")
             self._widgets["Expiry"].setStyleSheet(
-                "border-radius: %dpx; background: #44000000;" % px(13))
+                "border-radius: %dpx; background: #44000000;" % px(9))
 
         icon = icon.replace("\\", "/")
         self._widgets["ExpiryIcon"].setStyleSheet(
             "background: transparent; image: url(%s);" % icon)
 
-    def _update(self):
-        def fetch():
-            while product_status.has_ragdoll() is None:
-                time.sleep(0.5)
-
-        def on_finished():
-            offline = not product_status.has_ragdoll()
-            self._widgets["NoInternet"].setVisible(offline)
-
-        thread = base.Thread(fetch, parent=self)
-        thread.finished.connect(on_finished)
-        thread.start()
-
-    def set_status(self):
-        self._expiry()
-        self._update()
+    def set_offline_hint(self, can_connect):
+        is_offline = not can_connect
+        self._widgets["NoInternet"].setVisible(is_offline)
 
 
 class GreetingInteract(QtWidgets.QWidget):
+    history_fetched = QtCore.Signal(list)
 
     def __init__(self, parent=None):
         super(GreetingInteract, self).__init__(parent)
@@ -233,10 +261,15 @@ class GreetingInteract(QtWidgets.QWidget):
 
         widgets["Timeline"].setMinimumWidth(SPLASH_WIDTH)
 
+        overlay = base.OverlayWidget(self)
+        layout = QtWidgets.QVBoxLayout(overlay)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["TopRight"])
+        layout.addStretch(1)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(widgets["TopRight"])
+        layout.addStretch(1)
         layout.addWidget(widgets["Timeline"])
 
         self.setFixedHeight(
@@ -245,35 +278,28 @@ class GreetingInteract(QtWidgets.QWidget):
         )
         self._widgets = widgets
 
+        self.history_fetched.connect(self.set_timeline)
+
     def status_widget(self):
         return self._widgets["TopRight"]
 
     def timeline_widget(self):
         return self
 
-    def set_timeline(self):
-        def fetch():
-            while product_status.release_history() is None:
-                time.sleep(0.5)
+    def set_timeline(self, release_history):
+        versions = set(release_history)
+        current = product_status.current_version()
+        versions.add(current)
+        expiry_date = (product_status.aup_date()
+                       if product_status.is_perpetual()
+                       else product_status.expiry_date())
 
-        def on_finished():
-            versions = set(product_status.release_history())
-            current = product_status.current_version()
-            versions.add(current)
-            expiry_date = (product_status.aup_date()
-                           if product_status.is_perpetual()
-                           else product_status.expiry_date())
-
-            self._widgets["Timeline"].set_data(
-                released_versions=versions,
-                current_ver=current,
-                expiry_date=expiry_date,
-            )
-            self._widgets["Timeline"].draw()
-
-        thread = base.Thread(fetch, parent=self)
-        thread.finished.connect(on_finished)
-        thread.start()
+        self._widgets["Timeline"].set_data(
+            released_versions=versions,
+            current_ver=current,
+            expiry_date=expiry_date,
+        )
+        self._widgets["Timeline"].draw()
 
 
 class GreetingPage(QtWidgets.QWidget):
@@ -290,12 +316,12 @@ class GreetingPage(QtWidgets.QWidget):
         overlay.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
         layout = QtWidgets.QVBoxLayout(overlay)
         layout.setContentsMargins(PD4, 0, PD4, 0)
-        layout.addStretch(1)  # for overlay
+        layout.setSpacing(0)
         layout.addWidget(widgets["Interact"])
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(PD4, 0, PD4, 0)
-        layout.setSpacing(PD3)
+        layout.setSpacing(0)
         layout.addWidget(widgets["Splash"])
         layout.addStretch(1)
 
@@ -313,7 +339,7 @@ class GreetingPage(QtWidgets.QWidget):
         return self._widgets["Splash"]
 
 
-class AssetVideoPlayer(_QWebEngineView):
+class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
 
     def __init__(self, parent=None):
         super(AssetVideoPlayer, self).__init__(parent=parent)
@@ -541,6 +567,9 @@ class AssetCardItem(QtWidgets.QWidget):
         self._video_link = None
         self._video_player = None
 
+    def _playable(self):
+        return self._video_link and HAS_QT_WEB_ENGINE
+
     def init_item(self, index):
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
@@ -552,6 +581,21 @@ class AssetCardItem(QtWidgets.QWidget):
         """
         :param QtCore.QModelIndex index:
         """
+        file_path = index.data(AssetCardModel.AssetRole)
+        lib_path, fname = os.path.split(file_path)
+
+        def resource(path):
+            try:
+                result = urlparse(path)
+                is_net_location = all([result.scheme, result.netloc])
+            except AttributeError:
+                is_net_location = False
+
+            if is_net_location:
+                return path
+            video_path = os.path.join(lib_path, path)
+            return video_path if os.path.isfile(video_path) else None
+
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
         self._widgets["Poster"].set_poster(poster)
@@ -560,7 +604,7 @@ class AssetCardItem(QtWidgets.QWidget):
             list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._file_path = index.data(AssetCardModel.AssetRole)
-        self._video_link = video if os.path.isfile(video) else None
+        self._video_link = resource(video)
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):
@@ -576,7 +620,7 @@ class AssetCardItem(QtWidgets.QWidget):
                 self._video_player.pause()
 
     def enterEvent(self, event):
-        if not self._video_link:
+        if not self._playable():
             return
         self._effects["Poster"].setEnabled(True)
         anim = self._animations["Poster"]
@@ -587,7 +631,7 @@ class AssetCardItem(QtWidgets.QWidget):
         anim.setEndValue(0.0)
         anim.start()
 
-        if self._video_player is None and _has_webengine:
+        if self._video_player is None:
             player = AssetVideoPlayer(self)
             player.set_video(self._video_link)
             player.setFixedWidth(VIDEO_WIDTH)
@@ -602,7 +646,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self._video_player.play()
 
     def leaveEvent(self, event):
-        if not self._video_link:
+        if not self._playable():
             return
         anim = self._animations["Poster"]
         current = self._effects["Poster"].opacity()
@@ -651,7 +695,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
         if self._worker is not None:
             self._worker.start()
 
-    def attach(self, queue):
+    def attach_library(self, queue):
         if self._worker is not None:
             return
         self._worker = base.Thread(self._consume, args=[queue], parent=self)
@@ -891,7 +935,7 @@ class AssetListPage(QtWidgets.QWidget):
         self._models = models
         self._widgets = widgets
 
-        asset_library.register_model(models["Source"])
+        asset_library.attach_consumer(models["Source"])
 
     def resizeEvent(self, event):
         super(AssetListPage, self).resizeEvent(event)
@@ -1019,6 +1063,38 @@ class LicenceStatusPlate(QtWidgets.QWidget):
         super(LicenceStatusPlate, self).paintEvent(event)
 
 
+class SecretToggle(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super(SecretToggle, self).__init__(parent=parent)
+
+        widgets = {
+            "Peek": base.ToggleButton(),
+        }
+        icon_show = ui._resource("ui", "eye-fill.svg")
+        icon_hide = ui._resource("ui", "eye-slash.svg")
+        widgets["Peek"].set_unchecked_icon(QtGui.QIcon(icon_hide))
+        widgets["Peek"].set_checked_icon(QtGui.QIcon(icon_show))
+        widgets["Peek"].setFixedWidth(px(26))
+        widgets["Peek"].setChecked(True)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(PD4)
+        layout.addWidget(widgets["Peek"])
+
+        widgets["Peek"].toggled.connect(self.on_secret_toggled)
+
+        self._widgets = widgets
+
+    def set_secret_shown(self, value):
+        self._widgets["Peek"].setChecked(value)
+
+    def on_secret_toggled(self, value):
+        for line in self.findChildren(QtWidgets.QLineEdit):
+            line.setEchoMode(line.Normal if value else line.Password)
+
+
 def labeling(widget, label_text, vertical=False, **kwargs):
     c = QtWidgets.QWidget()
     label = QtWidgets.QLabel(label_text)
@@ -1042,16 +1118,18 @@ class LicenceNodeLock(QtWidgets.QWidget):
             "ProductName": LicenceStatusPlate(),
             "ProductKey": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
 
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
+        widgets["Secret"].layout().addWidget(widgets["ProductKey"])
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD4)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ProductKey"], stretch=1)
+        layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
@@ -1092,11 +1170,13 @@ class LicenceNodeLock(QtWidgets.QWidget):
     def status_update(self):
         self._widgets["ProductName"].set_product()
         if product_status.is_activated():
+            self._widgets["Secret"].set_secret_shown(False)
             self._widgets["ProductKey"].setText(product_status.key())
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Deactivate")
             self._widgets["ProcessBtn"].setEnabled(True)
         else:
+            self._widgets["Secret"].set_secret_shown(True)
             self._widgets["ProductKey"].setText("")
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["ProcessBtn"].setText("Activate")
@@ -1123,6 +1203,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "DeactivateText": QtWidgets.QLabel(),
             "ConfirmText": QtWidgets.QLabel(" Confirm Deactivated"),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
         widgets.update({
             "RequestWidget": labeling(widgets["RequestRow"], "1."),
@@ -1140,6 +1221,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
+        widgets["Secret"].layout().addWidget(widgets["ProductKey"])
 
         widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
@@ -1196,7 +1278,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout(head)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ProductKey"])
+        layout.addWidget(widgets["Secret"])
         layout.addSpacing(PD2)
 
         body = QtWidgets.QWidget()
@@ -1330,6 +1412,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         _temp_key = self.read_temp_key()
 
         if self.is_deactivation_requested():
+            self._widgets["Secret"].set_secret_shown(False)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(True)
             self._widgets["ProcessBtn"].setText("Dismiss")
@@ -1340,6 +1423,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         else:
             # restore product key for continuing offline activation
+            self._widgets["Secret"].set_secret_shown(True)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(False)
             self._widgets["Response"].setText("")
@@ -1363,17 +1447,20 @@ class LicenceFloating(QtWidgets.QWidget):
             "ServerIP": QtWidgets.QLineEdit(),
             "ServerPort": QtWidgets.QLineEdit(),
             "ProcessBtn": QtWidgets.QPushButton(),
+            "Secret": SecretToggle(),
         }
 
         widgets["ServerIP"].setReadOnly(True)  # set from env var
         widgets["ServerPort"].setReadOnly(True)  # set from env var
+        widgets["Secret"].layout().addWidget(widgets["ServerIP"], stretch=7)
+        widgets["Secret"].layout().addWidget(widgets["ServerPort"], stretch=3)
+        widgets["Secret"].set_secret_shown(False)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD4)
         layout.addWidget(widgets["ProductName"])
-        layout.addWidget(widgets["ServerIP"], stretch=7)
-        layout.addWidget(widgets["ServerPort"], stretch=3)
+        layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
@@ -1685,8 +1772,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         #   loaded as a "first launch" welcome, which means some thread
         #   below may be still running when the UI ask for data.
         #
-        product_status._refresh_internet_connectivity()
-        product_status._refresh_release_history()
+        internet_request.process()
         asset_library.reload()
 
     def __init__(self, parent=None):
@@ -1714,9 +1800,6 @@ class WelcomeWindow(base.SingletonMainWindow):
             "VirtualSpace": QtWidgets.QSpacerItem(PD1, PD1),
         }
 
-        animations = {
-        }
-
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
 
@@ -1735,6 +1818,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         layout.addSpacing(PD3)
         layout.addWidget(widgets["Assets"])
         layout.addSpacerItem(widgets["VirtualSpace"])
+        layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1763,9 +1847,11 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         self._panels = panels
         self._widgets = widgets
-        self._animations = animations
         self._anchor_list = anchor_list
         self.__hidden = False
+
+        if not ENABLE_SIDEBAR:
+            panels["SideBar"].setVisible(False)
 
         with internal.Timer("stylesheet", verbose=True):
             self.setStyleSheet(_scaled_stylesheet(stylesheet))
@@ -1782,7 +1868,8 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         if not self.__hidden:
             self._widgets["Assets"].start_worker()
-            self._panels["SideBar"].set_current_anchor(0)
+            if ENABLE_SIDEBAR:
+                self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False
@@ -1797,7 +1884,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def resizeEvent(self, event):
         width, height = event.size().toTuple()
 
-        virtual_space = height - self._widgets["Licence"].height()
+        virtual_space = int(height / 2)
         self._widgets["VirtualSpace"].changeSize(PD1, virtual_space)
 
         self._widgets["Body"].layout().invalidate()
@@ -1806,9 +1893,16 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     def on_licence_updated(self, data):
         product_status.data = data
+
         self._widgets["Licence"].input_widget().status_update()
-        self._widgets["Greet"].status_widget().set_status()
-        self._widgets["Greet"].timeline_widget().set_timeline()
+        self._widgets["Greet"].status_widget().set_expiry()
+
+        # these will get result once thread finished.
+        # note: use signal so the result can be processed in main thread.
+        internet_request.subscribe_ragdoll(
+            self._widgets["Greet"].status_widget().connection_checked.emit)
+        internet_request.subscribe_history(
+            self._widgets["Greet"].timeline_widget().history_fetched.emit)
 
         # resize window a little bit just to trigger:
         #   1. anchor aligning and
@@ -1845,6 +1939,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._align_anchors(value)
 
     def _align_anchors(self, slider_pos=None):
+        if not ENABLE_SIDEBAR:
+            return
         slider_pos = (
             self._panels["Scroll"].verticalScrollBar().value()
             if slider_pos is None

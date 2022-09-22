@@ -1493,6 +1493,9 @@ class AssetLibrary(object):
         #   which is the "ui" field. So we read the file backward and
         #   find the keyword and ignore the rest.
         #
+        # See link below for detail (it's a work journal)
+        # https://gitlab.ragdolldynamics.com/-/snippets/302
+        #
         lines = []
         for line in reverse_readline(file_path):
             lines.append(line)

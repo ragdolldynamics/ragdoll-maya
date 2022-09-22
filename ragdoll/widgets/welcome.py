@@ -39,6 +39,9 @@ px = base.px
 with open(ui._resource("ui", "style_welcome.css")) as f:
     stylesheet = f.read()
 
+
+ENABLE_SIDEBAR = False
+
 # padding levels
 PD1 = px(20)
 PD2 = px(14)
@@ -56,8 +59,10 @@ ANCHOR_SIZE = px(42)
 SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
 SPLASH_HEIGHT = px(110)
-WINDOW_WIDTH = SIDEBAR_WIDTH + SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
+WINDOW_WIDTH = SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
 WINDOW_HEIGHT = px(511)  # just enough to see the first 2 rows of assets
+if ENABLE_SIDEBAR:
+    WINDOW_WIDTH += SIDEBAR_WIDTH
 
 
 def _tint_color(pixmap, color):
@@ -1746,6 +1751,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         layout.addSpacing(PD3)
         layout.addWidget(widgets["Assets"])
         layout.addSpacerItem(widgets["VirtualSpace"])
+        layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(panels["Central"])
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1778,6 +1784,9 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._anchor_list = anchor_list
         self.__hidden = False
 
+        if not ENABLE_SIDEBAR:
+            panels["SideBar"].setVisible(False)
+
         with internal.Timer("stylesheet", verbose=True):
             self.setStyleSheet(_scaled_stylesheet(stylesheet))
 
@@ -1793,7 +1802,8 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         if not self.__hidden:
             self._widgets["Assets"].start_worker()
-            self._panels["SideBar"].set_current_anchor(0)
+            if ENABLE_SIDEBAR:
+                self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False
@@ -1863,6 +1873,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._align_anchors(value)
 
     def _align_anchors(self, slider_pos=None):
+        if not ENABLE_SIDEBAR:
+            return
         slider_pos = (
             self._panels["Scroll"].verticalScrollBar().value()
             if slider_pos is None

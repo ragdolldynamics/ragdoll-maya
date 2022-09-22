@@ -1866,6 +1866,9 @@ class WelcomeWindow(base.SingletonMainWindow):
     def show(self):
         super(WelcomeWindow, self).show()
 
+        # Scroll to top, to make sure users always know where they are at
+        self._panels["Scroll"].verticalScrollBar().setValue(0)
+
         if not self.__hidden:
             self._widgets["Assets"].start_worker()
             if ENABLE_SIDEBAR:

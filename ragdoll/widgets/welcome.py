@@ -383,7 +383,7 @@ class AssetVideoPlayer(QtWebEngineWidgets.QWebEngineView):
                    style="width:100%; position:absolute;"
                 <source src="{video}" type="video/webm">
                 <p>HTML5 Video element not supported.</p></video>
-            
+
             <div style="line-height:{h}px; text-align:center;">Loading...</div>
 
         </div></body></html>
@@ -1778,7 +1778,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
-        _ragdoll_logo = "ragdoll_silhouette_white_128.png"
+        _ragdoll_logo = "favicon-32x32.png"
         self.setWindowTitle("Ragdoll Dynamics")
         self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _ragdoll_logo)))
         # Makes Maya perform magic which makes the window stay

@@ -1081,10 +1081,18 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         up_to_date = model.latest_update == model.current
         btn.setText(
             "Current Version: %s" % model.current.strftime("%Y.%m.%d")
-            if up_to_date else "Click me to download the latest release"
+            if up_to_date else "Download Latest"
         )
         fg = "#ffffff" if up_to_date else "#000000"
         bg = "#1953be" if up_to_date else "#f8d803"
+
+        if not up_to_date:
+            icon = ui._resource("icons", "download_black.png")
+            icon = QtGui.QIcon(icon)
+            btn.setIcon(icon)
+        else:
+            btn.setIcon(QtGui.QIcon())
+
         bgc = QtGui.QColor(bg)
         btn.setStyleSheet(
             """QPushButton {

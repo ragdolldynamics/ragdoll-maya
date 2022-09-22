@@ -26,11 +26,6 @@ try:
 except ImportError:
     import urllib as request  # py2
 
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse  # py2
-
 from .. import __, constants, options, ui
 
 RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
@@ -1519,25 +1514,12 @@ class AssetLibrary(object):
                 180,
             ).name()
 
-        def resource(path):
-            try:
-                result = urlparse(path)
-                is_net_location = all([result.scheme, result.netloc])
-            except AttributeError:
-                is_net_location = False
-
-            if is_net_location:
-                return path
-            else:
-                return os.path.join(lib_path, path)
-
         name = data.get("name") or fname.rsplit(".", 1)[0]
         tags = {
             tag_name: text_to_color(tag_name)
             for tag_name in set(data.get("tags") or [])
         }
         video = data.get("video") or fname.rsplit(".", 1)[0] + ".webm"
-        video = resource(video)
         poster = ui.base64_to_pixmap(data["thumbnail"].encode("ascii"))
         poster = poster.scaled(
             px(217), px(122),

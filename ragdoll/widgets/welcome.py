@@ -23,6 +23,11 @@ except ImportError as e:
 else:
     HAS_QT_WEB_ENGINE = True
 
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse  # py2
+
 from . import base
 from .. import ui, internal
 
@@ -569,6 +574,21 @@ class AssetCardItem(QtWidgets.QWidget):
         """
         :param QtCore.QModelIndex index:
         """
+        file_path = index.data(AssetCardModel.AssetRole)
+        lib_path, fname = os.path.split(file_path)
+
+        def resource(path):
+            try:
+                result = urlparse(path)
+                is_net_location = all([result.scheme, result.netloc])
+            except AttributeError:
+                is_net_location = False
+
+            if is_net_location:
+                return path
+            video_path = os.path.join(lib_path, path)
+            return video_path if os.path.isfile(video_path) else None
+
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
         self._widgets["Poster"].set_poster(poster)
@@ -577,7 +597,7 @@ class AssetCardItem(QtWidgets.QWidget):
             list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._file_path = index.data(AssetCardModel.AssetRole)
-        self._video_link = video if os.path.isfile(video) else None
+        self._video_link = resource(video)
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):

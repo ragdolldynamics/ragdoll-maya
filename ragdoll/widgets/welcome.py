@@ -204,11 +204,13 @@ class GreetingTopRight(QtWidgets.QWidget):
         layout.addWidget(widgets["ExpiryDate"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, PD4, PD4, 0)
+        layout.setContentsMargins(0, PD4, PD4, PD4 + px(2))
         layout.setSpacing(0)
         layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
         layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
+
+        self.setFixedHeight(SPLASH_HEIGHT)
 
         self._widgets = widgets
 
@@ -259,10 +261,15 @@ class GreetingInteract(QtWidgets.QWidget):
 
         widgets["Timeline"].setMinimumWidth(SPLASH_WIDTH)
 
+        overlay = base.OverlayWidget(self)
+        layout = QtWidgets.QVBoxLayout(overlay)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(widgets["TopRight"])
+        layout.addStretch(1)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(widgets["TopRight"])
+        layout.addStretch(1)
         layout.addWidget(widgets["Timeline"])
 
         self.setFixedHeight(

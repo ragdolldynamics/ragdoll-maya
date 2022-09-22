@@ -188,7 +188,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
 
         layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
-        layout.setContentsMargins(0, 0, px(4), 0)
+        layout.setContentsMargins(0, 0, px(2), 0)
         layout.setSpacing(0)
         layout.addStretch(1)
         layout.addWidget(widgets["NoInternetIcon"])
@@ -204,7 +204,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         layout.addWidget(widgets["ExpiryDate"])
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, PD4, PD4, PD4 + px(2))
+        layout.setContentsMargins(0, px(4), PD4, PD4 + px(3))
         layout.setSpacing(0)
         layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)

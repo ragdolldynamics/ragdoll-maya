@@ -1419,8 +1419,9 @@ class AssetLibrary(object):
         options.write("extraAssets", path)
 
     def search_paths(self):
-        paths = os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
-        paths.append(self.get_user_path())
+        paths = [ui._resource("assets")]
+        paths += os.getenv("RAGDOLL_ASSETS", "").split(os.pathsep)
+        paths += [self.get_user_path()]
         paths = list(filter(None, paths))
         return reversed(paths)
 

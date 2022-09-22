@@ -1730,9 +1730,6 @@ class WelcomeWindow(base.SingletonMainWindow):
             "VirtualSpace": QtWidgets.QSpacerItem(PD1, PD1),
         }
 
-        animations = {
-        }
-
         panels["Scroll"].setWidgetResizable(True)
         panels["Scroll"].setWidget(widgets["Body"])
 
@@ -1780,7 +1777,6 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         self._panels = panels
         self._widgets = widgets
-        self._animations = animations
         self._anchor_list = anchor_list
         self.__hidden = False
 

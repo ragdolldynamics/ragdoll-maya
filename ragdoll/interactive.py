@@ -844,14 +844,14 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
-    divider()
+    with submenu("Assign Locomotion", icon="locomotion.png"):
+        divider("Locomotion")
 
-    with submenu("Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
         item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
 
-        divider("Offline")
+        divider("Refinement")
 
         item("bakeTargets", animation_to_plan)
         item("bakePlan", plan_to_animation)

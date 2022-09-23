@@ -265,7 +265,7 @@
     },
 
     "bakeTargets": {
-        "label": "Bake Targets",
+        "label": "Animation to Plan",
         "icon": "bake.png",
         "summary": "Convert animation into targets for a plan",
         "description": "",
@@ -274,7 +274,7 @@
     },
 
     "bakePlan": {
-        "label": "Bake Plan",
+        "label": "Plan to Animation",
         "icon": "bake.png",
         "summary": "Convert plan into animation",
         "description": "",

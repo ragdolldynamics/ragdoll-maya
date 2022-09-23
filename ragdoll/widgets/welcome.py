@@ -65,7 +65,7 @@ SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
 SPLASH_HEIGHT = px(110)
 WINDOW_WIDTH = SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
-WINDOW_HEIGHT = px(511)  # just enough to see the first 2 rows of assets
+WINDOW_HEIGHT = px(534)  # just enough to see the first 2 rows of assets
 if ENABLE_SIDEBAR:
     WINDOW_WIDTH += SIDEBAR_WIDTH
 

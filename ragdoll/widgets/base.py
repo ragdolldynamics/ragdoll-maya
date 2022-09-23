@@ -838,8 +838,8 @@ class ProductTimelineView(ProductTimelineBase):
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(61)
-    ButtonWidth = px(40)
+    ViewHeight = px(84)
+    ButtonWidth = px(68)
     ButtonHeight = px(18)
 
     def __init__(self, parent=None):
@@ -910,7 +910,7 @@ class ProductReleasedView(ProductTimelineBase):
         cl = ("#1953be" if date == self._current else
               "#f8d803" if date == self._latest_update else "#101010")
         ver = date.strftime("%Y.%m.%d")
-        tx = date.strftime("%m.%d ")
+        tx = ver + " "  # a trailing space for better width
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)

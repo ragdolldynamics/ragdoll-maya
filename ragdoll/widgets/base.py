@@ -795,7 +795,7 @@ class ProductTimelineView(ProductTimelineBase):
             it.set_message("Licence/AUP/Trial expired after: %s"
                            % self._expiry_date.strftime("%b.%d.%Y"))
         it = self.draw_incident(self._today, 0.5, "#dfdfdf")
-        it.set_message("Today: %s" % self._today.strftime("%b.%d.%Y"))
+        it.set_message("Today: %s" % self._today.strftime("%Y %b %d"))
 
     def draw_timeline(self):
         h = self.LineThick

@@ -1231,39 +1231,27 @@ class InternetRequest(object):
     def __init__(self):
         self._hooks = defaultdict(set)
         self._workers = dict()
-        self._defaults = dict()
 
     def _run(self, channel, job):
         worker = threading.Thread()
         self._workers[channel] = worker
 
-        def on_done(result):
-            if result is None:
-                default = self._defaults.get(channel)
-                result = default() if callable(default) else default
+        def run():
+            result = job()
 
             setattr(worker, "result", result)  # cache
             for hook in self._hooks[channel]:
                 hook(result)
 
-        def run():
-            on_done(job())
-
         worker.run = run
         worker.start()
 
-    def _default(self, channel, hook=None):
-        default = self._defaults.get(channel)
-        result = default() if callable(default) else default
-
-        Worker = type("Worker", (), dict(result=result))
+    def _default(self, channel, default):
+        Worker = type("Worker", (), dict(result=default))
         self._workers[channel] = Worker()
 
-        if hook is None:
-            for hook in self._hooks[channel]:
-                hook(result)
-        else:
-            hook(result)
+        for hook in self._hooks[channel]:
+            hook(default)
 
     def process(self):
         def _preflight():
@@ -1276,31 +1264,24 @@ class InternetRequest(object):
                 self._run("history", self._run_history)
                 self.__sys_write("Internet requests completed.")
             else:
-                self._default("ragdoll")
-                self._default("history")
+                self._default("ragdoll", False)
+                self._default("history", self._default_history())
                 self.__sys_write("Internet blocked, local resource used.")
 
         threading.Thread(target=_run).start()
 
     def subscribe_history(self, hook):
-        self._subscribe("history", hook, default=self._default_history)
+        self._subscribe("history", hook)
 
     def subscribe_ragdoll(self, hook):
-        self._subscribe("ragdoll", hook, default=False)
+        self._subscribe("ragdoll", hook)
 
-    def _subscribe(self, channel, hook, default):
+    def _subscribe(self, channel, hook):
         self._hooks[channel].add(hook)
-        self._defaults[channel] = default
 
         worker = self._workers.get(channel)
         if worker and hasattr(worker, "result"):
-            if worker.result is None and default is not None:
-                # Subscription can happen after process(), which means
-                # the default value may not exist at that time being.
-                # So we have to patch up.
-                self._default("ragdoll", hook)
-            else:
-                hook(worker.result)
+            hook(worker.result)
 
     def _run_ragdoll(self):
         return self.__ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
@@ -1329,7 +1310,7 @@ class InternetRequest(object):
         else:
             log.debug("Release history fetched from %s" % url)
 
-        return released or None
+        return released or self._default_history()
 
     def _default_history(self):
         released = []

@@ -1311,6 +1311,7 @@ def replace_mesh(marker, mesh, opts=None):
 
 
 def toggle_channel_box_attributes(markers, opts=None):
+    markers = list(markers)  # Support passing an iterator
     assert markers, "No markers were passed"
 
     opts = dict({

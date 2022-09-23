@@ -854,6 +854,14 @@ class Loader(object):
             rdmarkers[entity] = rdmarker
             ordered_markers.append((entity, rdmarker))
 
+        # Assume imported files are advanced
+        commands.toggle_channel_box_attributes(rdmarkers.values(), opts={
+            "materialAttributes": True,
+            "shapeAttributes": True,
+            "limitAttributes": True,
+            "advancedPoseAttributes": False,
+        })
+
         if self._opts["preserveAttributes"]:
             with cmdx.DagModifier() as mod:
 

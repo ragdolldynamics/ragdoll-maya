@@ -1413,6 +1413,7 @@ class AssetLibrary(object):
         self.stop()
         self._cache = []
         self._stop.clear()
+        self._status.clear()
         self._worker = threading.Thread(target=self._produce)
         self._worker.start()
 

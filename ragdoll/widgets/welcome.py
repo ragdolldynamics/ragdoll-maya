@@ -686,6 +686,10 @@ class AssetCardModel(QtGui.QStandardItemModel):
         self._worker = None
         self._row_map = dict()
 
+    def clear(self):
+        self._row_map.clear()
+        super(AssetCardModel, self).clear()
+
     def terminate(self):
         if self._worker is not None:
             self._worker.wait()
@@ -900,7 +904,7 @@ class AssetListPage(QtWidgets.QWidget):
             ui._resource("ui", "folder.svg")))
         widgets["Reload"].setIcon(QtGui.QIcon(
             ui._resource("ui", "arrow-counterclockwise.svg")))
-        widgets["Path"].setReadOnly(True)
+        widgets["Path"].setReadOnly(False)
         widgets["Path"].setText(asset_library.get_user_path())
 
         models["Proxy"].setSourceModel(models["Source"])
@@ -931,6 +935,7 @@ class AssetListPage(QtWidgets.QWidget):
         widgets["Tags"].tagged.connect(self.on_tag_changed)
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
         widgets["Reload"].clicked.connect(self.on_asset_reload_clicked)
+        widgets["Path"].textChanged.connect(self.on_asset_extra_changed)
 
         self._models = models
         self._widgets = widgets
@@ -975,6 +980,7 @@ class AssetListPage(QtWidgets.QWidget):
         status = "No assets found, try adding a path in Extra Assets below"
         self._widgets["Status"].setText(status)
         self._widgets["Status"].setVisible(not asset_loaded)
+        self._widgets["Path"].setEnabled(True)
         self._widgets["Browse"].setEnabled(True)
         self._widgets["Reload"].setEnabled(True)
         self._widgets["List"].setVisible(asset_loaded)
@@ -995,19 +1001,24 @@ class AssetListPage(QtWidgets.QWidget):
     @internal.with_timing
     def on_asset_browse_clicked(self):
         dialog = QtWidgets.QFileDialog()
-        dialog.setFileMode(dialog.DirectoryOnly)
+        dialog.setFileMode(dialog.Directory)
+        dialog.setViewMode(dialog.Detail)
         dialog.setOptions(dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
         if dialog.exec_():
-            asset_library.set_user_path(dialog.selectedFiles()[0])
-            self._widgets["Path"].setText(asset_library.get_user_path())
-            self._reload()
+            self._widgets["Path"].setText(dialog.selectedFiles()[0])
 
     @internal.with_timing
     def on_asset_reload_clicked(self):
         self._reload()
 
+    @internal.with_timing
+    def on_asset_extra_changed(self, text):
+        asset_library.set_user_path(text)
+        self._reload()
+
     def _reload(self):
+        self._widgets["Path"].setEnabled(False)
         self._widgets["Browse"].setEnabled(False)
         self._widgets["Reload"].setEnabled(False)
         self._widgets["Tags"].clear()

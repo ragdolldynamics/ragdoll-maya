@@ -996,7 +996,7 @@ class AssetListPage(QtWidgets.QWidget):
     def on_asset_browse_clicked(self):
         dialog = QtWidgets.QFileDialog()
         dialog.setFileMode(dialog.DirectoryOnly)
-        dialog.setOptions(dialog.DontUseNativeDialog | dialog.ReadOnly)
+        dialog.setOptions(dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
         if dialog.exec_():
             asset_library.set_user_path(dialog.selectedFiles()[0])

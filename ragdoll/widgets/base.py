@@ -83,6 +83,17 @@ def write_clipboard(text):
     app.clipboard().setText(text)
 
 
+def open_file_location(fname):
+    if os.path.exists(fname):
+        if os.name == "nt":
+            fname = os.path.normpath(fname)
+            subprocess.Popen("explorer /select,%s" % fname)
+        else:
+            webbrowser.open(os.path.dirname(fname))
+    else:
+        raise OSError("%s did not exist" % fname)
+
+
 class ToggleButton(QtWidgets.QPushButton):
     """A QPushButton subclass that allows to change icon on check state
 
@@ -1493,7 +1504,10 @@ class AssetLibrary(object):
         except Exception as e:
             log.debug(e)
             with open(file_path) as _f:
-                rag = json.load(_f)
+                try:
+                    rag = json.load(_f)
+                except json.JSONDecodeError:
+                    return None
             return rag.get("ui") or {}
 
     def _load_rag_file_fast(self, file_path):
@@ -1514,11 +1528,31 @@ class AssetLibrary(object):
                 lines.append(b"{")
                 break
         lines.reverse()
-        rag = json.loads(b"\n".join(lines))
+        try:
+            rag = json.loads(b"\n".join(lines))
+        except json.JSONDecodeError:
+            return None
         return rag.get("ui") or {}
 
     def _refine_rag_data(self, file_path, data):
         lib_path, fname = os.path.split(file_path)
+        fname = fname.rsplit(".", 1)[0]
+        corrupted = data is None
+        _d = {
+            "name": fname,
+            "video": fname + ".webm",
+            "thumbnail": "",
+            "tags": [],
+        }
+        _d.update({} if corrupted else data)
+
+        poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
+        if not poster.isNull():
+            poster = poster.scaled(
+                px(217), px(122),
+                QtCore.Qt.KeepAspectRatioByExpanding,
+                QtCore.Qt.SmoothTransformation
+            )
 
         def text_to_color(text):
             # todo: tag name and color should be defined in .rag
@@ -1528,25 +1562,14 @@ class AssetLibrary(object):
                 180,
             ).name()
 
-        name = data.get("name") or fname.rsplit(".", 1)[0]
-        tags = {
-            tag_name: text_to_color(tag_name)
-            for tag_name in set(data.get("tags") or [])
-        }
-        video = data.get("video") or fname.rsplit(".", 1)[0] + ".webm"
-        poster = ui.base64_to_pixmap(data["thumbnail"].encode("ascii"))
-        poster = poster.scaled(
-            px(217), px(122),
-            QtCore.Qt.KeepAspectRatioByExpanding,
-            QtCore.Qt.SmoothTransformation
-        )
-        return {
+        _d.update({
             "path": file_path,
-            "name": name,
-            "video": video,
-            "poster": poster,
-            "tags": tags,
-        }
+            "thumbnail": poster,
+            "tags": {tag: text_to_color(tag) for tag in set(_d["tags"])},
+            "isCorrupted": corrupted,
+        })
+
+        return _d
 
 
 def reverse_readline(filename, buf_size=8192):

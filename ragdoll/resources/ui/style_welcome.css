@@ -49,12 +49,12 @@ AssetCardView {
     outline: none; /* Disable dotted border on focus */
 }
 
-AssetCardView::item:hover {
-    border: 4px solid #eee;
+AssetCardView::item {
+    background: transparent;
 }
 
-AssetCardView::item:!hover:focus {
-    border: none;
+AssetCardView::item:hover {
+    border: 4px solid #eee;
 }
 
 #GreetingStartupChk {

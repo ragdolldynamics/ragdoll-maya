@@ -110,7 +110,7 @@ def assign_markers(transforms, solver, opts=None):
         "connect": True,
         "refit": True,
         "preventDuplicateMarker": True,
-        "linearAngularStiffness": False,
+        "linearAngularStiffness": True,
         "defaults": {},
     }, **(opts or {}))
 

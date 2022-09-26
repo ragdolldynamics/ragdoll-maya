@@ -1817,9 +1817,10 @@ class WelcomeWindow(base.SingletonMainWindow):
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
-        _ragdoll_logo = "favicon-32x32.png"
+        _window_logo = "favicon-32x32.png"
+        _sidebar_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
-        self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _ragdoll_logo)))
+        self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _window_logo)))
         # Makes Maya perform magic which makes the window stay
         # on top in OS X and Linux. As an added bonus, it'll
         # make Maya remember the window position
@@ -1843,7 +1844,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         panels["Scroll"].setWidget(widgets["Body"])
 
         anchor_list = [
-            panels["SideBar"].add_anchor("Greet", _ragdoll_logo, "#e5d680"),
+            panels["SideBar"].add_anchor("Greet", _sidebar_logo, "#e5d680"),
             panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680"),
         ]
 
@@ -1910,8 +1911,6 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         if not self.__hidden:
             self._widgets["Assets"].start_worker()
-            if ENABLE_SIDEBAR:
-                self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False

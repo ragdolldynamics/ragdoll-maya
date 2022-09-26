@@ -546,8 +546,8 @@ class AssetVideoFooter(base.OverlayWidget):
             dot_radius,
             dot_radius,
         )
-        for i, color in enumerate(self._dots):  # right to left
-            offset = -(dot_gap + dot_radius) * i
+        offset = -(dot_gap + dot_radius)
+        for color in self._dots:  # right to left
             painter.setBrush(QtGui.QColor(color))
             dot_rect = dot_rect.adjusted(offset, 0, offset, 0)
             painter.drawEllipse(dot_rect)
@@ -865,7 +865,7 @@ class AssetTag(QtWidgets.QPushButton):
             background: {hover};
         }}
         """.format(color=color, hover=hover.name(),
-                   h=px(16), r=px(6), p1=px(5), p2=px(4)))
+                   h=px(16), r=px(6), p1=px(6), p2=px(4)))
 
 
 class AssetTagList(QtWidgets.QWidget):
@@ -949,10 +949,15 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Browse"])
         layout.addWidget(widgets["Reload"])
 
+        _tags = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(_tags)
+        layout.setContentsMargins(CARD_PADDING, 0, CARD_PADDING, 0)
+        layout.addWidget(widgets["Tags"])
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(PD4 - CARD_PADDING, 0, PD4 - CARD_PADDING, 0)
         layout.setSpacing(PD3)
-        layout.addWidget(widgets["Tags"])
+        layout.addWidget(_tags)
         layout.addWidget(widgets["List"])
         layout.addWidget(widgets["Status"])
         layout.addWidget(_path_row)
@@ -1023,7 +1028,9 @@ class AssetListPage(QtWidgets.QWidget):
         for row in range(_proxy.rowCount()):
             index = _proxy.index(row, 0)
             if _view.indexWidget(index) is None:
-                self._init_widget(_proxy.mapToSource(index))
+                src_index = _proxy.mapToSource(index)
+                self.on_card_created(src_index)
+                self.on_card_updated(src_index)
         _view.adjust_viewport()
 
     @internal.with_timing

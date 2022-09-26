@@ -854,6 +854,9 @@ class Loader(object):
             rdmarkers[entity] = rdmarker
             ordered_markers.append((entity, rdmarker))
 
+        if not rdmarkers:
+            return rdmarkers
+
         # Assume imported files are advanced
         commands.toggle_channel_box_attributes(rdmarkers.values(), opts={
             "materialAttributes": True,

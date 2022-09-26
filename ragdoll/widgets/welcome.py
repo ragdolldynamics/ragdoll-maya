@@ -636,10 +636,7 @@ class AssetCardItem(QtWidgets.QWidget):
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):
-            if self._is_corrupted:
-                base.open_file_location(self._file_path)
-            else:
-                self.asset_opened.emit(self._file_path)
+            self.asset_opened.emit(self._file_path)
         else:
             log.error("Asset file missing: %s" % self._file_path)
 

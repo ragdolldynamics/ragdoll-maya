@@ -83,17 +83,6 @@ def write_clipboard(text):
     app.clipboard().setText(text)
 
 
-def open_file_location(fname):
-    if os.path.exists(fname):
-        if os.name == "nt":
-            fname = os.path.normpath(fname)
-            subprocess.Popen("explorer /select,%s" % fname)
-        else:
-            webbrowser.open(os.path.dirname(fname))
-    else:
-        raise OSError("%s did not exist" % fname)
-
-
 class ToggleButton(QtWidgets.QPushButton):
     """A QPushButton subclass that allows to change icon on check state
 

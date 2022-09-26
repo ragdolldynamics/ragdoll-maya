@@ -1266,7 +1266,8 @@ class InternetRequest(object):
 
     def process(self):
         def _preflight():
-            return not self.__has_open_ssl_bug()
+            return (self.__is_ssl_cert_file_exists() and
+                    not self.__has_open_ssl_bug())
 
         def _run():
             self.__sys_write("Processing internet requests...")
@@ -1391,6 +1392,19 @@ class InternetRequest(object):
                      "https://support.foundry.com/hc/en-us/articles/"
                      "360012750300-Q100573")
         return unsafe
+
+    def __is_ssl_cert_file_exists(self):
+        ssl_cert_file = os.getenv("SSL_CERT_FILE")
+        if ssl_cert_file:
+            if os.path.isfile(ssl_cert_file):
+                return True
+            else:
+                log.debug('Invalid SSL certificate file: Environment variable'
+                          '"SSL_CERT_FILE" is set but file path not exists: '
+                          '%s' % ssl_cert_file)
+                return False
+        else:
+            return True  # Env not set, take it as valid setup
 
 
 class AssetLibrary(object):

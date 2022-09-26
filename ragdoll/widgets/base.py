@@ -505,6 +505,11 @@ class SingletonMainWindow(QtWidgets.QMainWindow):
         # For uninstall
         __.widgets[self.__class__.__name__] = self
 
+        # Makes Maya perform magic which makes the window stay
+        # on top in OS X and Linux. As an added bonus, it'll
+        # make Maya remember the window position
+        self.setProperty("saveWindowPref", True)
+
 
 class Thread(QtCore.QThread):
     result_ready = QtCore.Signal(tuple)

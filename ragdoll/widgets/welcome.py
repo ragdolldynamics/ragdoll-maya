@@ -1821,10 +1821,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         _sidebar_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
         self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _window_logo)))
-        # Makes Maya perform magic which makes the window stay
-        # on top in OS X and Linux. As an added bonus, it'll
-        # make Maya remember the window position
-        self.setProperty("saveWindowPref", True)
 
         panels = {
             "Central": QtWidgets.QWidget(),

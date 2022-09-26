@@ -877,6 +877,16 @@ class AssetTagList(QtWidgets.QWidget):
         self._tags = dict()
 
     def add_tag(self, tag_name, tag_color):
+        """Return consistence tag color across assets
+
+        Return and maintaining tag color consistency for color dots in
+        asset item footer.
+
+        Different asset may have the same tag but different color, so we
+        will only take color from the first same named tag. And the first
+        one should be from the asset file that is most recently edited.
+
+        """
         if tag_name in self._tags:
             return self._tags[tag_name]
         self._tags[tag_name] = tag_color

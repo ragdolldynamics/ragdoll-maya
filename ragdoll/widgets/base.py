@@ -1506,7 +1506,7 @@ class AssetLibrary(object):
             with open(file_path) as _f:
                 try:
                     rag = json.load(_f)
-                except json.JSONDecodeError:
+                except ValueError:
                     return None
             return rag.get("ui") or {}
 
@@ -1530,7 +1530,7 @@ class AssetLibrary(object):
         lines.reverse()
         try:
             rag = json.loads(b"\n".join(lines))
-        except json.JSONDecodeError:
+        except ValueError:
             return None
         return rag.get("ui") or {}
 

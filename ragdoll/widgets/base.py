@@ -1300,11 +1300,11 @@ class InternetRequest(object):
 
         url = RAGDOLL_DYNAMICS_RELEASES_URL
         try:
-            with request.urlopen(url) as r:
-                if r.code == 200:
-                    released = parsed_versions(r.readlines())
-                else:
-                    raise Exception("%s returned: %d" % (url, r.code))
+            response = request.urlopen(url)
+            if response.code == 200:
+                released = parsed_versions(response.readlines())
+            else:
+                raise Exception("%s returned: %d" % (url, response.code))
 
         except Exception as e:
             log.debug(e)
@@ -1333,8 +1333,8 @@ class InternetRequest(object):
 
     def __ping(self, url):
         try:
-            with request.urlopen(url) as r:
-                return r.code == 200
+            response = request.urlopen(url)
+            return response.code == 200
         except Exception as e:
             log.debug(e)
             return False

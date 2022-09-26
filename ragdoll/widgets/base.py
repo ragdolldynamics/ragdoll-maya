@@ -6,6 +6,7 @@ import ssl
 import json
 import logging
 import weakref
+import hashlib
 import traceback
 import threading
 import shiboken2
@@ -1401,6 +1402,19 @@ class InternetRequest(object):
             return True  # Env not set, take it as valid setup
 
 
+def text_to_color(text):
+    """Hashing arbitrary string into QColor
+    Same string can be hashed to same color in different Python versions
+    """
+    seed = text.encode("utf-8")
+    code = int(hashlib.sha1(seed).hexdigest(), base=16)
+    return QtGui.QColor.fromHsv(
+        (code & 0xFF0000) >> 16,
+        (code & 0x00FF00) >> 8,
+        180,
+    ).name()
+
+
 class AssetLibrary(object):
 
     def __init__(self):
@@ -1477,6 +1491,7 @@ class AssetLibrary(object):
         for _, mtime, rag_path in rag_files:
             if self._stop.is_set():
                 return
+            log.debug("Loading: %s" % rag_path)
             data = self._load_rag_file(rag_path) or {}
             data = self._refine_rag_data(rag_path, data)
             self._send_job("update", data)
@@ -1551,7 +1566,7 @@ class AssetLibrary(object):
             "name": fname,
             "video": fname + ".webm",
             "thumbnail": "",
-            "tags": [],
+            "tags": {},
         }
         _d.update(data)
 
@@ -1563,18 +1578,23 @@ class AssetLibrary(object):
                 QtCore.Qt.SmoothTransformation
             )
 
-        def text_to_color(text):
-            # todo: tag name and color should be defined in .rag
-            return QtGui.QColor.fromHsv(
-                (hash(text) & 0xFF0000) >> 16,
-                (hash(text) & 0x00FF00) >> 8,
-                180,
-            ).name()
+        if isinstance(_d["tags"], dict):
+            # A dict of name and color pairs.
+            tags = _d["tags"]
+
+        elif isinstance(_d["tags"], list):
+            # A list of tag names. Hashing color from name.
+            tags = {tag: text_to_color(tag) for tag in set(_d["tags"])}
+
+        else:
+            log.debug('Invalid value type: "tags" field should be a list of'
+                      'tag names, or a dict mapping tag name and color.')
+            tags = {}
 
         _d.update({
             "path": file_path,
             "thumbnail": poster,
-            "tags": {tag: text_to_color(tag) for tag in set(_d["tags"])},
+            "tags": tags,
         })
 
         return _d

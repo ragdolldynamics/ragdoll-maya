@@ -1387,10 +1387,10 @@ class InternetRequest(object):
         _, _ = p.communicate()
         unsafe = p.wait() != 0
         if unsafe:
-            log.info("OpenSSL connection issue detected, "
-                     "please refer to this article for detail: "
-                     "https://support.foundry.com/hc/en-us/articles/"
-                     "360012750300-Q100573")
+            log.debug("OpenSSL connection issue detected, "
+                      "please refer to this article for detail: "
+                      "https://support.foundry.com/hc/en-us/articles/"
+                      "360012750300-Q100573")
         return unsafe
 
     def __is_ssl_cert_file_exists(self):

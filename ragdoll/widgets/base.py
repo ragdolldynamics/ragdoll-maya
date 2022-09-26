@@ -1469,7 +1469,7 @@ class AssetLibrary(object):
         for _, mtime, rag_path in rag_files:
             if self._stop.is_set():
                 return
-            data = self._load_rag_file(rag_path)
+            data = self._load_rag_file(rag_path) or {}
             data = self._refine_rag_data(rag_path, data)
             self._send_job("update", data)
 
@@ -1506,7 +1506,8 @@ class AssetLibrary(object):
             with open(file_path) as _f:
                 try:
                     rag = json.load(_f)
-                except ValueError:
+                except ValueError as e:
+                    log.debug(e)
                     return None
             return rag.get("ui") or {}
 
@@ -1530,21 +1531,21 @@ class AssetLibrary(object):
         lines.reverse()
         try:
             rag = json.loads(b"\n".join(lines))
-        except ValueError:
+        except ValueError as e:
+            log.debug(e)
             return None
         return rag.get("ui") or {}
 
     def _refine_rag_data(self, file_path, data):
         lib_path, fname = os.path.split(file_path)
         fname = fname.rsplit(".", 1)[0]
-        corrupted = data is None
         _d = {
             "name": fname,
             "video": fname + ".webm",
             "thumbnail": "",
             "tags": [],
         }
-        _d.update({} if corrupted else data)
+        _d.update(data)
 
         poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
         if not poster.isNull():
@@ -1566,7 +1567,6 @@ class AssetLibrary(object):
             "path": file_path,
             "thumbnail": poster,
             "tags": {tag: text_to_color(tag) for tag in set(_d["tags"])},
-            "isCorrupted": corrupted,
         })
 
         return _d

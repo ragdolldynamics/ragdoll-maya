@@ -407,16 +407,13 @@ class AssetVideoPoster(QtWidgets.QWidget):
         super(AssetVideoPoster, self).__init__(parent=parent)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self._image = None
-        self._is_corrupted = False
 
-    def set_poster(self, poster, is_corrupted):
+    def set_poster(self, poster):
         """
         Args:
             poster (QtGui.QPixmap):
-            is_corrupted (bool):
         """
         self._image = poster
-        self._is_corrupted = is_corrupted
 
     def paintEvent(self, event):
         """
@@ -469,11 +466,7 @@ class AssetVideoPoster(QtWidgets.QWidget):
                 painter.setPen(QtGui.QColor(fg))
                 painter.drawText(fr, text)
 
-            if self._is_corrupted:
-                draw_text("corrupted ", -px(13), "#8c1818", "black")
-                draw_text("( click to browser ) ", px(2), "#8c1818", "black")
-            else:
-                draw_text("No Image ", -px(8), "#181818", "#8a8a8a")
+            draw_text("No Image ", -px(8), "#181818", "#8a8a8a")
         else:
             painter.drawPixmap(0, 0, self._image, x, y, w, h)
 
@@ -598,7 +591,6 @@ class AssetCardItem(QtWidgets.QWidget):
         self._file_path = None
         self._video_link = None
         self._video_player = None
-        self._is_corrupted = False
 
     def _playable(self):
         return self._video_link and HAS_QT_WEB_ENGINE
@@ -632,17 +624,15 @@ class AssetCardItem(QtWidgets.QWidget):
             video_path = os.path.join(lib_path, path)
             return video_path if os.path.isfile(video_path) else None
 
-        is_corrupted = index.data(AssetCardModel.CorruptedRole)
         poster = index.data(AssetCardModel.PosterRole)
         video = index.data(AssetCardModel.VideoRole)
-        self._widgets["Poster"].set_poster(poster, is_corrupted)
+        self._widgets["Poster"].set_poster(poster)
         self._widgets["Footer"].set_data(
             index.data(AssetCardModel.NameRole),
             list(index.data(AssetCardModel.TagsRole).values()),
         )
         self._file_path = index.data(AssetCardModel.AssetRole)
         self._video_link = resource(video)
-        self._is_corrupted = is_corrupted
 
     def on_clicked(self):
         if os.path.isfile(self._file_path):
@@ -721,8 +711,6 @@ class AssetCardModel(QtGui.QStandardItemModel):
     # (dict) tags of the asset
     #   <tag name>: <tag color>
     TagsRole = QtCore.Qt.UserRole + 14
-    # (bool) is rag file corrupted
-    CorruptedRole = QtCore.Qt.UserRole + 15
 
     def __init__(self, parent=None):
         super(AssetCardModel, self).__init__(parent=parent)
@@ -768,7 +756,6 @@ class AssetCardModel(QtGui.QStandardItemModel):
         self.setData(index, data["thumbnail"], AssetCardModel.PosterRole)
         self.setData(index, data["video"], AssetCardModel.VideoRole)
         self.setData(index, data["tags"], AssetCardModel.TagsRole)
-        self.setData(index, data["isCorrupted"], AssetCardModel.CorruptedRole)
 
         self.card_updated.emit(index)
 

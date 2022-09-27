@@ -978,7 +978,7 @@ class AssetListPage(QtWidgets.QWidget):
         widgets["Tags"].tagged.connect(self.on_tag_changed)
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
         widgets["Reload"].clicked.connect(self.on_asset_reload_clicked)
-        widgets["Path"].textChanged.connect(self.on_asset_extra_changed)
+        widgets["Path"].editingFinished.connect(self.on_asset_extra_changed)
 
         self._models = models
         self._widgets = widgets
@@ -1050,16 +1050,19 @@ class AssetListPage(QtWidgets.QWidget):
         dialog.setViewMode(dialog.Detail)
         dialog.setOptions(dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
+
         if dialog.exec_():
             self._widgets["Path"].setText(dialog.selectedFiles()[0])
+            self.on_asset_extra_changed()
 
     @internal.with_timing
     def on_asset_reload_clicked(self):
         self._reload()
 
     @internal.with_timing
-    def on_asset_extra_changed(self, text):
-        asset_library.set_user_path(text)
+    def on_asset_extra_changed(self):
+        path = self._widgets["Path"].text()
+        asset_library.set_user_path(path)
         self._reload()
 
     def _reload(self):

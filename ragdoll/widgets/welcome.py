@@ -65,7 +65,7 @@ SIDEBAR_WIDTH = ANCHOR_SIZE + (PD3 * 2)
 SPLASH_WIDTH = px(650)
 SPLASH_HEIGHT = px(110)
 WINDOW_WIDTH = SPLASH_WIDTH + (PD3 * 2) + SCROLL_WIDTH
-WINDOW_HEIGHT = px(511)  # just enough to see the first 2 rows of assets
+WINDOW_HEIGHT = px(534)  # just enough to see the first 2 rows of assets
 if ENABLE_SIDEBAR:
     WINDOW_WIDTH += SIDEBAR_WIDTH
 
@@ -443,7 +443,32 @@ class AssetVideoPoster(QtWidgets.QWidget):
         path = QtGui.QPainterPath()
         path.addRoundedRect(rounded_rect, CARD_ROUNDING, CARD_ROUNDING)
         painter.setClipPath(path)
-        painter.drawPixmap(0, 0, self._image, x, y, w, h)
+
+        if self._image.isNull():
+            # background
+            painter.setBrush(QtGui.QColor("#404040"))
+            painter.drawRect(event.rect())
+            # big cross X
+            painter.setPen(QtGui.QColor("#8a8a8a"))
+            painter.drawLine(0, 0, w, h)
+            painter.drawLine(0, h, w, 0)
+
+            def draw_text(text, y_offset, bg, fg):
+                fr = painter.fontMetrics().boundingRect(text)
+                pos = event.rect().center()
+                pos.setY(int(h / 2) + y_offset)
+                fr.moveCenter(pos)
+                # backdrop
+                painter.setBrush(QtGui.QColor(bg))
+                painter.setPen(QtCore.Qt.NoPen)
+                painter.drawRect(fr.adjusted(-px(8), -px(1), px(8), px(1)))
+                # text
+                painter.setPen(QtGui.QColor(fg))
+                painter.drawText(fr, text)
+
+            draw_text("No Image ", -px(8), "#181818", "#8a8a8a")
+        else:
+            painter.drawPixmap(0, 0, self._image, x, y, w, h)
 
 
 class AssetVideoFooter(base.OverlayWidget):
@@ -521,8 +546,8 @@ class AssetVideoFooter(base.OverlayWidget):
             dot_radius,
             dot_radius,
         )
-        for i, color in enumerate(self._dots):  # right to left
-            offset = -(dot_gap + dot_radius) * i
+        offset = -(dot_gap + dot_radius)
+        for color in self._dots:  # right to left
             painter.setBrush(QtGui.QColor(color))
             dot_rect = dot_rect.adjusted(offset, 0, offset, 0)
             painter.drawEllipse(dot_rect)
@@ -585,14 +610,17 @@ class AssetCardItem(QtWidgets.QWidget):
         lib_path, fname = os.path.split(file_path)
 
         def resource(path):
+            if os.path.isfile(path):
+                return path
+
             try:
                 result = urlparse(path)
-                is_net_location = all([result.scheme, result.netloc])
             except AttributeError:
-                is_net_location = False
+                pass
+            else:
+                if all([result.scheme, result.netloc]):
+                    return path  # is net location
 
-            if is_net_location:
-                return path
             video_path = os.path.join(lib_path, path)
             return video_path if os.path.isfile(video_path) else None
 
@@ -686,6 +714,10 @@ class AssetCardModel(QtGui.QStandardItemModel):
         self._worker = None
         self._row_map = dict()
 
+    def clear(self):
+        self._row_map.clear()
+        super(AssetCardModel, self).clear()
+
     def terminate(self):
         if self._worker is not None:
             self._worker.wait()
@@ -718,7 +750,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
         index = self.index(row, 0)
 
         self.setData(index, data["name"], AssetCardModel.NameRole)
-        self.setData(index, data["poster"], AssetCardModel.PosterRole)
+        self.setData(index, data["thumbnail"], AssetCardModel.PosterRole)
         self.setData(index, data["video"], AssetCardModel.VideoRole)
         self.setData(index, data["tags"], AssetCardModel.TagsRole)
 
@@ -833,7 +865,7 @@ class AssetTag(QtWidgets.QPushButton):
             background: {hover};
         }}
         """.format(color=color, hover=hover.name(),
-                   h=px(16), r=px(6), p1=px(5), p2=px(4)))
+                   h=px(16), r=px(6), p1=px(6), p2=px(4)))
 
 
 class AssetTagList(QtWidgets.QWidget):
@@ -845,6 +877,16 @@ class AssetTagList(QtWidgets.QWidget):
         self._tags = dict()
 
     def add_tag(self, tag_name, tag_color):
+        """Return consistence tag color across assets
+
+        Return and maintaining tag color consistency for color dots in
+        asset item footer.
+
+        Different asset may have the same tag but different color, so we
+        will only take color from the first same named tag. And the first
+        one should be from the asset file that is most recently edited.
+
+        """
         if tag_name in self._tags:
             return self._tags[tag_name]
         self._tags[tag_name] = tag_color
@@ -900,7 +942,7 @@ class AssetListPage(QtWidgets.QWidget):
             ui._resource("ui", "folder.svg")))
         widgets["Reload"].setIcon(QtGui.QIcon(
             ui._resource("ui", "arrow-counterclockwise.svg")))
-        widgets["Path"].setReadOnly(True)
+        widgets["Path"].setReadOnly(False)
         widgets["Path"].setText(asset_library.get_user_path())
 
         models["Proxy"].setSourceModel(models["Source"])
@@ -917,10 +959,15 @@ class AssetListPage(QtWidgets.QWidget):
         layout.addWidget(widgets["Browse"])
         layout.addWidget(widgets["Reload"])
 
+        _tags = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(_tags)
+        layout.setContentsMargins(CARD_PADDING, 0, CARD_PADDING, 0)
+        layout.addWidget(widgets["Tags"])
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(PD4 - CARD_PADDING, 0, PD4 - CARD_PADDING, 0)
         layout.setSpacing(PD3)
-        layout.addWidget(widgets["Tags"])
+        layout.addWidget(_tags)
         layout.addWidget(widgets["List"])
         layout.addWidget(widgets["Status"])
         layout.addWidget(_path_row)
@@ -931,6 +978,7 @@ class AssetListPage(QtWidgets.QWidget):
         widgets["Tags"].tagged.connect(self.on_tag_changed)
         widgets["Browse"].clicked.connect(self.on_asset_browse_clicked)
         widgets["Reload"].clicked.connect(self.on_asset_reload_clicked)
+        widgets["Path"].textChanged.connect(self.on_asset_extra_changed)
 
         self._models = models
         self._widgets = widgets
@@ -975,6 +1023,7 @@ class AssetListPage(QtWidgets.QWidget):
         status = "No assets found, try adding a path in Extra Assets below"
         self._widgets["Status"].setText(status)
         self._widgets["Status"].setVisible(not asset_loaded)
+        self._widgets["Path"].setEnabled(True)
         self._widgets["Browse"].setEnabled(True)
         self._widgets["Reload"].setEnabled(True)
         self._widgets["List"].setVisible(asset_loaded)
@@ -989,25 +1038,32 @@ class AssetListPage(QtWidgets.QWidget):
         for row in range(_proxy.rowCount()):
             index = _proxy.index(row, 0)
             if _view.indexWidget(index) is None:
-                self._init_widget(_proxy.mapToSource(index))
+                src_index = _proxy.mapToSource(index)
+                self.on_card_created(src_index)
+                self.on_card_updated(src_index)
         _view.adjust_viewport()
 
     @internal.with_timing
     def on_asset_browse_clicked(self):
         dialog = QtWidgets.QFileDialog()
-        dialog.setFileMode(dialog.DirectoryOnly)
-        dialog.setOptions(dialog.DontUseNativeDialog | dialog.ReadOnly)
+        dialog.setFileMode(dialog.Directory)
+        dialog.setViewMode(dialog.Detail)
+        dialog.setOptions(dialog.ReadOnly)
         dialog.setAcceptMode(dialog.AcceptOpen)
         if dialog.exec_():
-            asset_library.set_user_path(dialog.selectedFiles()[0])
-            self._widgets["Path"].setText(asset_library.get_user_path())
-            self._reload()
+            self._widgets["Path"].setText(dialog.selectedFiles()[0])
 
     @internal.with_timing
     def on_asset_reload_clicked(self):
         self._reload()
 
+    @internal.with_timing
+    def on_asset_extra_changed(self, text):
+        asset_library.set_user_path(text)
+        self._reload()
+
     def _reload(self):
+        self._widgets["Path"].setEnabled(False)
         self._widgets["Browse"].setEnabled(False)
         self._widgets["Reload"].setEnabled(False)
         self._widgets["Tags"].clear()
@@ -1778,13 +1834,10 @@ class WelcomeWindow(base.SingletonMainWindow):
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
-        _ragdoll_logo = "favicon-32x32.png"
+        _window_logo = "favicon-32x32.png"
+        _sidebar_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
-        self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _ragdoll_logo)))
-        # Makes Maya perform magic which makes the window stay
-        # on top in OS X and Linux. As an added bonus, it'll
-        # make Maya remember the window position
-        self.setProperty("saveWindowPref", True)
+        self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _window_logo)))
 
         panels = {
             "Central": QtWidgets.QWidget(),
@@ -1804,7 +1857,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         panels["Scroll"].setWidget(widgets["Body"])
 
         anchor_list = [
-            panels["SideBar"].add_anchor("Greet", _ragdoll_logo, "#e5d680"),
+            panels["SideBar"].add_anchor("Greet", _sidebar_logo, "#e5d680"),
             panels["SideBar"].add_anchor("Assets", "boxes.svg", "#e59680"),
         ]
 
@@ -1871,8 +1924,6 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         if not self.__hidden:
             self._widgets["Assets"].start_worker()
-            if ENABLE_SIDEBAR:
-                self._panels["SideBar"].set_current_anchor(0)
             self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         else:
             self.__hidden = False

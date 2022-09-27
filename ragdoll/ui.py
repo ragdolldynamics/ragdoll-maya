@@ -923,6 +923,11 @@ class Options(QtWidgets.QMainWindow):
         self.setMaximumWidth(px(570))
         self.setMinimumHeight(px(395))
 
+        # Makes Maya perform magic which makes the window stay
+        # on top in OS X and Linux. As an added bonus, it'll
+        # make Maya remember the window position
+        self.setProperty("saveWindowPref", True)
+
         # Infer name from command
         command_name = " ".join(command.__name__.split("_")).title()
         self.setWindowTitle(command_name + " options")

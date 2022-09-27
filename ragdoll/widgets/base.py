@@ -6,6 +6,7 @@ import ssl
 import json
 import logging
 import weakref
+import hashlib
 import traceback
 import threading
 import shiboken2
@@ -505,6 +506,11 @@ class SingletonMainWindow(QtWidgets.QMainWindow):
         # For uninstall
         __.widgets[self.__class__.__name__] = self
 
+        # Makes Maya perform magic which makes the window stay
+        # on top in OS X and Linux. As an added bonus, it'll
+        # make Maya remember the window position
+        self.setProperty("saveWindowPref", True)
+
 
 class Thread(QtCore.QThread):
     result_ready = QtCore.Signal(tuple)
@@ -795,7 +801,7 @@ class ProductTimelineView(ProductTimelineBase):
             it.set_message("Licence/AUP/Trial expired after: %s"
                            % self._expiry_date.strftime("%b.%d.%Y"))
         it = self.draw_incident(self._today, 0.5, "#dfdfdf")
-        it.set_message("Today: %s" % self._today.strftime("%b.%d.%Y"))
+        it.set_message("Today: %s" % self._today.strftime("%Y %b %d"))
 
     def draw_timeline(self):
         h = self.LineThick
@@ -838,8 +844,8 @@ class ProductTimelineView(ProductTimelineBase):
 
 
 class ProductReleasedView(ProductTimelineBase):
-    ViewHeight = px(61)
-    ButtonWidth = px(40)
+    ViewHeight = px(84)
+    ButtonWidth = px(68)
     ButtonHeight = px(18)
 
     def __init__(self, parent=None):
@@ -910,7 +916,7 @@ class ProductReleasedView(ProductTimelineBase):
         cl = ("#1953be" if date == self._current else
               "#f8d803" if date == self._latest_update else "#101010")
         ver = date.strftime("%Y.%m.%d")
-        tx = date.strftime("%m.%d ")
+        tx = ver + " "  # a trailing space for better width
         w, h = self.ButtonWidth, self.ButtonHeight
         r = int(h / 2)
         x = self.compute_x(date) - (w / 2)
@@ -1231,43 +1237,32 @@ class InternetRequest(object):
     def __init__(self):
         self._hooks = defaultdict(set)
         self._workers = dict()
-        self._defaults = dict()
 
     def _run(self, channel, job):
         worker = threading.Thread()
         self._workers[channel] = worker
 
-        def on_done(result):
-            if result is None:
-                default = self._defaults.get(channel)
-                result = default() if callable(default) else default
+        def run():
+            result = job()
 
             setattr(worker, "result", result)  # cache
             for hook in self._hooks[channel]:
                 hook(result)
 
-        def run():
-            on_done(job())
-
         worker.run = run
         worker.start()
 
-    def _default(self, channel, hook=None):
-        default = self._defaults.get(channel)
-        result = default() if callable(default) else default
-
-        Worker = type("Worker", (), dict(result=result))
+    def _default(self, channel, default):
+        Worker = type("Worker", (), dict(result=default))
         self._workers[channel] = Worker()
 
-        if hook is None:
-            for hook in self._hooks[channel]:
-                hook(result)
-        else:
-            hook(result)
+        for hook in self._hooks[channel]:
+            hook(default)
 
     def process(self):
         def _preflight():
-            return not self.__has_open_ssl_bug()
+            return (self.__is_ssl_cert_file_exists() and
+                    not self.__has_open_ssl_bug())
 
         def _run():
             self.__sys_write("Processing internet requests...")
@@ -1276,31 +1271,24 @@ class InternetRequest(object):
                 self._run("history", self._run_history)
                 self.__sys_write("Internet requests completed.")
             else:
-                self._default("ragdoll")
-                self._default("history")
+                self._default("ragdoll", False)
+                self._default("history", self._default_history())
                 self.__sys_write("Internet blocked, local resource used.")
 
         threading.Thread(target=_run).start()
 
     def subscribe_history(self, hook):
-        self._subscribe("history", hook, default=self._default_history)
+        self._subscribe("history", hook)
 
     def subscribe_ragdoll(self, hook):
-        self._subscribe("ragdoll", hook, default=False)
+        self._subscribe("ragdoll", hook)
 
-    def _subscribe(self, channel, hook, default):
+    def _subscribe(self, channel, hook):
         self._hooks[channel].add(hook)
-        self._defaults[channel] = default
 
         worker = self._workers.get(channel)
         if worker and hasattr(worker, "result"):
-            if worker.result is None and default is not None:
-                # Subscription can happen after process(), which means
-                # the default value may not exist at that time being.
-                # So we have to patch up.
-                self._default("ragdoll", hook)
-            else:
-                hook(worker.result)
+            hook(worker.result)
 
     def _run_ragdoll(self):
         return self.__ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
@@ -1318,18 +1306,18 @@ class InternetRequest(object):
 
         url = RAGDOLL_DYNAMICS_RELEASES_URL
         try:
-            with request.urlopen(url) as r:
-                if r.code == 200:
-                    released = parsed_versions(r.readlines())
-                else:
-                    raise Exception("%s returned: %d" % (url, r.code))
+            response = request.urlopen(url)
+            if response.code == 200:
+                released = parsed_versions(response.readlines())
+            else:
+                raise Exception("%s returned: %d" % (url, response.code))
 
         except Exception as e:
             log.debug(e)
         else:
             log.debug("Release history fetched from %s" % url)
 
-        return released or None
+        return released or self._default_history()
 
     def _default_history(self):
         released = []
@@ -1351,8 +1339,8 @@ class InternetRequest(object):
 
     def __ping(self, url):
         try:
-            with request.urlopen(url) as r:
-                return r.code == 200
+            response = request.urlopen(url)
+            return response.code == 200
         except Exception as e:
             log.debug(e)
             return False
@@ -1394,11 +1382,37 @@ class InternetRequest(object):
         _, _ = p.communicate()
         unsafe = p.wait() != 0
         if unsafe:
-            log.info("OpenSSL connection issue detected, "
-                     "please refer to this article for detail: "
-                     "https://support.foundry.com/hc/en-us/articles/"
-                     "360012750300-Q100573")
+            log.debug("OpenSSL connection issue detected, "
+                      "please refer to this article for detail: "
+                      "https://support.foundry.com/hc/en-us/articles/"
+                      "360012750300-Q100573")
         return unsafe
+
+    def __is_ssl_cert_file_exists(self):
+        ssl_cert_file = os.getenv("SSL_CERT_FILE")
+        if ssl_cert_file:
+            if os.path.isfile(ssl_cert_file):
+                return True
+            else:
+                log.debug('Invalid SSL certificate file: Environment variable'
+                          '"SSL_CERT_FILE" is set but file path not exists: '
+                          '%s' % ssl_cert_file)
+                return False
+        else:
+            return True  # Env not set, take it as valid setup
+
+
+def text_to_color(text):
+    """Hashing arbitrary string into QColor
+    Same string can be hashed to same color in different Python versions
+    """
+    seed = text.encode("utf-8")
+    code = int(hashlib.sha1(seed).hexdigest(), base=16)
+    return QtGui.QColor.fromHsv(
+        (code & 0xFF0000) >> 16,
+        (code & 0x00FF00) >> 8,
+        180,
+    ).name()
 
 
 class AssetLibrary(object):
@@ -1432,6 +1446,7 @@ class AssetLibrary(object):
         self.stop()
         self._cache = []
         self._stop.clear()
+        self._status.clear()
         self._worker = threading.Thread(target=self._produce)
         self._worker.start()
 
@@ -1476,7 +1491,8 @@ class AssetLibrary(object):
         for _, mtime, rag_path in rag_files:
             if self._stop.is_set():
                 return
-            data = self._load_rag_file(rag_path)
+            log.debug("Loading: %s" % rag_path)
+            data = self._load_rag_file(rag_path) or {}
             data = self._refine_rag_data(rag_path, data)
             self._send_job("update", data)
 
@@ -1511,7 +1527,11 @@ class AssetLibrary(object):
         except Exception as e:
             log.debug(e)
             with open(file_path) as _f:
-                rag = json.load(_f)
+                try:
+                    rag = json.load(_f)
+                except ValueError as e:
+                    log.debug(e)
+                    return None
             return rag.get("ui") or {}
 
     def _load_rag_file_fast(self, file_path):
@@ -1532,39 +1552,52 @@ class AssetLibrary(object):
                 lines.append(b"{")
                 break
         lines.reverse()
-        rag = json.loads(b"\n".join(lines))
+        try:
+            rag = json.loads(b"\n".join(lines))
+        except ValueError as e:
+            log.debug(e)
+            return None
         return rag.get("ui") or {}
 
     def _refine_rag_data(self, file_path, data):
         lib_path, fname = os.path.split(file_path)
-
-        def text_to_color(text):
-            # todo: tag name and color should be defined in .rag
-            return QtGui.QColor.fromHsv(
-                (hash(text) & 0xFF0000) >> 16,
-                (hash(text) & 0x00FF00) >> 8,
-                180,
-            ).name()
-
-        name = data.get("name") or fname.rsplit(".", 1)[0]
-        tags = {
-            tag_name: text_to_color(tag_name)
-            for tag_name in set(data.get("tags") or [])
+        fname = fname.rsplit(".", 1)[0]
+        _d = {
+            "name": fname,
+            "video": fname + ".webm",
+            "thumbnail": "",
+            "tags": {},
         }
-        video = data.get("video") or fname.rsplit(".", 1)[0] + ".webm"
-        poster = ui.base64_to_pixmap(data["thumbnail"].encode("ascii"))
-        poster = poster.scaled(
-            px(217), px(122),
-            QtCore.Qt.KeepAspectRatioByExpanding,
-            QtCore.Qt.SmoothTransformation
-        )
-        return {
+        _d.update(data)
+
+        poster = ui.base64_to_pixmap(_d["thumbnail"].encode("ascii"))
+        if not poster.isNull():
+            poster = poster.scaled(
+                px(217), px(122),
+                QtCore.Qt.KeepAspectRatioByExpanding,
+                QtCore.Qt.SmoothTransformation
+            )
+
+        if isinstance(_d["tags"], dict):
+            # A dict of name and color pairs.
+            tags = _d["tags"]
+
+        elif isinstance(_d["tags"], list):
+            # A list of tag names. Hashing color from name.
+            tags = {tag: text_to_color(tag) for tag in set(_d["tags"])}
+
+        else:
+            log.debug('Invalid value type: "tags" field should be a list of'
+                      'tag names, or a dict mapping tag name and color.')
+            tags = {}
+
+        _d.update({
             "path": file_path,
-            "name": name,
-            "video": video,
-            "poster": poster,
+            "thumbnail": poster,
             "tags": tags,
-        }
+        })
+
+        return _d
 
 
 def reverse_readline(filename, buf_size=8192):

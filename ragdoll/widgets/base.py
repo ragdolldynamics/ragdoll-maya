@@ -2,7 +2,6 @@
 import os
 import re
 import sys
-import ssl
 import json
 import logging
 import weakref
@@ -1352,7 +1351,12 @@ class InternetRequest(object):
         if os.name != "nt":
             return False
 
-        has_ssl_bug = (1, 0, 2, 7) <= ssl.OPENSSL_VERSION_INFO < (1, 0, 2, 9)
+        try:
+            OPENSSL_VERSION_INFO = __import__("ssl").OPENSSL_VERSION_INFO
+        except ImportError:
+            return True  # no ssl, proceed as bugged and without internet.
+
+        has_ssl_bug = (1, 0, 2, 7) <= OPENSSL_VERSION_INFO < (1, 0, 2, 9)
         has_workaround = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
         cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
         is_intel = "GenuineIntel" in cpu_ident

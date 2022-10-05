@@ -1372,11 +1372,12 @@ class Loader(object):
         mod.set_attr(marker["displayType"], display_type)
 
         # Limits
+        min1 = cmdx.radians(-1)
         mod.set_attr(marker["parentFrame"], Joint["parentFrame"])
         mod.set_attr(marker["childFrame"], Joint["childFrame"])
-        mod.set_attr(marker["limitRangeX"], Limit["twist"])
-        mod.set_attr(marker["limitRangeY"], Limit["swing1"])
-        mod.set_attr(marker["limitRangeZ"], Limit["swing2"])
+        mod.set_attr(marker["limitRangeX"], max(min1, Limit["twist"]))
+        mod.set_attr(marker["limitRangeY"], max(min1, Limit["swing1"]))
+        mod.set_attr(marker["limitRangeZ"], max(min1, Limit["swing2"]))
 
         shape_type = {
             "Box": constants.BoxShape,

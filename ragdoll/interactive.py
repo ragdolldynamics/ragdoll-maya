@@ -1952,19 +1952,16 @@ def create_pin_constraint(selection=None, **opts):
         "location": _opt("pinLocation", opts),
     })
 
-    selection = selection or cmdx.sl()
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "Selection Problem",
+            "Select one or more markers to pin"
+        )
 
     cons = []
-    for a in selection:
-        if a.isA(cmdx.kDagNode):
-            a = a["message"].output(type="rdMarker")
-
-        if not (a and a.isA("rdMarker")):
-            raise i__.UserWarning(
-                "Not a marker",
-                "%s wasn't a marker" % selection[0]
-            )
-
+    for a in markers:
         con = commands.create_pin_constraint(a, opts=opts)
         cons += [con.parent().path()]
 

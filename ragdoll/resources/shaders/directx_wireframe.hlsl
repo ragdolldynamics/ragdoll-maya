@@ -57,6 +57,7 @@ vs_out vs_main(vs_in input) {
     output.position = mul(float4(input.in_position, 1), modelMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
+    output.position.z -= 0.002;
     output.color = input.in_color;
     
 	return output;

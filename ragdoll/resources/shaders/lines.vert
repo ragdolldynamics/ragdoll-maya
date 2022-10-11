@@ -18,6 +18,6 @@ void main()
     else
         Color = aColor;
 
-    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(aPosition.xyz, 1.0);
-    gl_Position.z -= 0.0005;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(aPosition.xyz, 1.0);    
+    gl_Position.z -= 0.002;
 }

@@ -14,13 +14,6 @@ void main()
     vec3 worldNormal = normalize(mat3(modelMatrix) * aNormal);
     Normal = vec4(worldNormal, 1.0);
 
-    vec4 pos = vec4(aPosition.xyz, 1.0);
-
-
-  //  pos.z -= 0.01;
-
- // pos *= vec4(vec3(1.,1.,1.)*0.9999995,1);
- 
-    gl_Position = projectionMatrix * viewMatrix * modelMatrix * pos;
-   // gl_Position =  pos;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(aPosition.xyz, 1.0);
+    gl_Position.z -= 0.001;
 }

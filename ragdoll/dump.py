@@ -399,11 +399,22 @@ class Loader(object):
                                     name=name,
                                     parent=parent_transform)
 
-            mtx = Rest["matrix"]
+            # Incorporate scale early, to ensure it
+            # cancels out in case of scaled parents
+            tm = cmdx.Tm(Rest["matrix"])
+            tm.set_scale(Scale["value"])
+            mtx = tm.as_matrix()
 
             if parent:
                 ParentRest = self._registry.get(parent, "RestComponent")
-                mtx *= ParentRest["matrix"].inverse()
+                ParentScale = self._registry.get(parent, "ScaleComponent")
+
+                parent_mtx = ParentRest["matrix"]
+                parent_tm = cmdx.Tm(parent_mtx)
+                parent_tm.set_scale(ParentScale["value"])
+                parent_mtx = parent_tm.as_matrix()
+
+                mtx *= parent_mtx.inverse()
 
                 mod.set_locked(joint["translateX"])
                 mod.set_locked(joint["translateY"])
@@ -431,7 +442,7 @@ class Loader(object):
 
             mod.set_attr(joint["translate"], tm.translation())
             mod.set_attr(joint["jointOrient"], tm.rotation())
-            mod.set_attr(joint["scale"], Scale["value"])
+            mod.set_attr(joint["scale"], tm.scale())
 
             created[entity] = joint
 
@@ -549,7 +560,8 @@ class Loader(object):
 
             elif Desc["type"] == "ConvexHull":
                 Meshes = self._registry.get(entity, "ConvexMeshComponents")
-                mobj = meshes_to_mobj(Meshes, parent.object())
+                Scale = self._registry.get(entity, "ScaleComponent")
+                mobj = meshes_to_mobj(Meshes, Scale["value"], parent.object())
 
                 # For some reason, we can't set inMesh.
                 # So instead, we use the above meshes_to_mobj to generate a
@@ -600,16 +612,26 @@ class Loader(object):
                     name = joint.name()
                     parent = mod.create_node("transform", name, geometry_grp)
                     mesh = create_mesh(mod, entity, name, parent)
-                    joint_to_mesh[joint] = parent
+                    joint_to_mesh[joint] = mesh
 
             for joint, mesh in joint_to_mesh.items():
-                cmds.parentConstraint(str(joint), str(mesh),
+                transform = mesh.parent()
+                cmds.parentConstraint(str(joint), str(transform),
                                       maintainOffset=False)
-                cmds.scaleConstraint(str(joint), str(mesh),
+                cmds.scaleConstraint(str(joint), str(transform),
                                      maintainOffset=False)
 
         finally:
             cmds.namespace(set=previous)
+
+        # Swap out mesh from reinterpretation with
+        # the Maya mesh generated for the user.
+        with cmdx.DagModifier() as mod:
+            for marker in out["markers"]:
+                joint = marker["sourceTransform"].input()
+                mesh = joint_to_mesh[joint]
+
+                mod.connect(mesh["outMesh"], marker["inputGeometry"])
 
         return out
 
@@ -1504,12 +1526,23 @@ class Loader(object):
         mod.set_attr(marker["shapeType"], shape_type)
 
 
-def meshes_to_mobj(Meshes, parent=None):
+def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):
     vertices = cmdx.om.MFloatPointArray()
     polygon_connects = cmdx.om.MIntArray()
     polygon_counts = cmdx.om.MIntArray()
 
-    for vertex in Meshes["vertices"]:
+    # Failsafe
+    if any(abs(axis) < 0.0001 for axis in scale):
+        scale.x = max(0.0001, scale.x)
+        scale.y = max(0.0001, scale.y)
+        scale.z = max(0.0001, scale.z)
+        log.debug("Bad scale during meshes_to_mobj, this is a bug")
+
+    for vertex in Meshes["vertices"].copy():
+        vertex.x /= scale.x
+        vertex.y /= scale.y
+        vertex.z /= scale.z
+
         vertices.append(vertex)
 
     for index in Meshes["indices"]:

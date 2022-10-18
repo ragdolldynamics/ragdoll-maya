@@ -2736,7 +2736,7 @@ def update_plan(selection=None, **opts):
 @with_exception_handling
 def assign_plan(selection=None, **opts):
     opts = dict({
-        "useTransform": _opt("planNativeTargets", opts),
+        "useTransform": False,  # deprecated option
         "preset": _opt("planPreset", opts),
         "duration": _opt("planDuration", opts),
     }, **(opts or {}))

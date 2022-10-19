@@ -2899,6 +2899,59 @@ def add_target(selection=None, at=None, index=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
+def remove_target(selection=None, index=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select plan to remove target"
+        )
+
+    plan = sel[0]
+
+    if plan.is_a(cmdx.kTransform):
+        plan = plan.shape(type="rdPlan")
+
+    if not (plan and plan.is_a("rdPlan")):
+        raise i__.UserWarning(
+            "You need to select a plan",
+            "Select a plan to be able to remove a target."
+        )
+
+    def process(node):
+        with cmdx.DagModifier() as mod:
+            last = node["targets"].count() - 1
+            idx = last if index is None else index
+            # push elements that are behind the deletion index
+            for i in range(idx, last):
+                mod.set_attr(node["targets"][i], node["targets"][i + 1].as_matrix())
+
+            if idx == last:
+                # for timings and constraint level, we would want them to keep the
+                # end value, so we move them ahead.
+                mod.set_attr(node["timings"][idx - 1], node["timings"][idx])
+                mod.set_attr(node["hards"][idx - 1], node["hards"][idx])
+            else:
+                for i in range(idx, last):
+                    mod.set_attr(node["timings"][i], node["timings"][i + 1])
+                    mod.set_attr(node["hards"][i], node["hards"][i + 1])
+
+            mod.do_it()
+
+        cmds.removeMultiInstance(node["targets"][last].path())
+        cmds.removeMultiInstance(node["timings"][last].path())
+        cmds.removeMultiInstance(node["hards"][last].path())
+
+    process(plan)
+    for element in plan["inputStart"]:
+        process(element.input(type="rdFoot"))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
 def assign_terrain(selection=None, **opts):
     sel = selection or cmdx.selection()
 

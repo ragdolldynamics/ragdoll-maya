@@ -2736,7 +2736,7 @@ def update_plan(selection=None, **opts):
 @with_exception_handling
 def assign_plan(selection=None, **opts):
     opts = dict({
-        "useTransform": _opt("planNativeTargets", opts),
+        "useTransform": False,  # deprecated option
         "preset": _opt("planPreset", opts),
         "duration": _opt("planDuration", opts),
     }, **(opts or {}))
@@ -2800,8 +2800,9 @@ def animation_to_plan(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def add_target(selection=None, **opts):
+def add_target(selection=None, at=None, index=None, **opts):
     sel = selection or cmdx.selection()
+    at = cmdx.TransformationMatrix(translate=at).as_matrix() if at else None
 
     if len(sel) < 1:
         raise i__.UserWarning(
@@ -2834,11 +2835,19 @@ def add_target(selection=None, **opts):
     # first do the body
     with cmdx.DagModifier() as mod:
         idx = plan["targets"].count()
-        body_tm = cmdx.Tm(plan["targets"][idx - 1].as_matrix())
-        body_tm.setScale(cmdx.Vector(1, 1, 1))
+        if at:
+            index = idx if index is None else index
+            body_tm = cmdx.Tm(at)
+            # insert new target to index
+            for i in range(idx, index, -1):
+                mod.set_attr(plan["targets"][i], plan["targets"][i - 1].as_matrix())
+            mod.set_attr(plan["targets"][index], body_tm.as_matrix())
+        else:
+            body_tm = cmdx.Tm(plan["targets"][idx - 1].as_matrix())
+            body_tm.setScale(cmdx.Vector(1, 1, 1))
 
-        body_tm.translateBy(p_offset, cmdx.sTransform)
-        mod.set_attr(plan["targets"][idx], body_tm.as_matrix())
+            body_tm.translateBy(p_offset, cmdx.sTransform)
+            mod.set_attr(plan["targets"][idx], body_tm.as_matrix())
 
         prev_t = plan["timings"][idx - 2].as_double()
         t = int(prev_t + (duration - prev_t) / 2.)
@@ -2850,15 +2859,31 @@ def add_target(selection=None, **opts):
         mod.do_it()
 
     # then the feet
+    if at:
+        body_nex_mx = cmdx.Tm(at).as_matrix()
+        orig2new_mx = body_nex_mx * plan["targets"][0].as_matrix().inverse()
+    else:
+        orig2new_mx = None
+
     for element in plan["inputStart"]:
         foot = element.input(type="rdFoot")
 
         with cmdx.DagModifier() as mod:
             idx = foot["targets"].count()
-            foot_tm = cmdx.Tm(foot["targets"][idx - 1].as_matrix())
-            foot_tm.setScale(cmdx.Vector(1, 1, 1))
-            foot_tm.translateBy(p_offset, cmdx.sTransform)
-            mod.set_attr(foot["targets"][idx], foot_tm.as_matrix())
+
+            if at:
+                foot_tm = cmdx.Tm(foot["targets"][0].as_matrix() * orig2new_mx)
+                # insert new target to index
+                for i in range(idx, index, -1):
+                    mod.set_attr(foot["targets"][i], foot["targets"][i - 1].as_matrix())
+                mod.set_attr(foot["targets"][index], foot_tm.as_matrix())
+
+            else:
+                foot_tm = cmdx.Tm(foot["targets"][idx - 1].as_matrix())
+                foot_tm.setScale(cmdx.Vector(1, 1, 1))
+
+                foot_tm.translateBy(p_offset, cmdx.sTransform)
+                mod.set_attr(foot["targets"][idx], foot_tm.as_matrix())
 
             prev_t = foot["timings"][idx - 2].as_double()
             t = int(prev_t + (duration - prev_t) / 2.)
@@ -2868,6 +2893,59 @@ def add_target(selection=None, **opts):
             mod.set_attr(foot["hards"][idx], 1)
             mod.set_attr(foot["timings"][idx - 1], t)
             mod.do_it()
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def remove_target(selection=None, index=None, **opts):
+    sel = selection or cmdx.selection()
+
+    if len(sel) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select plan to remove target"
+        )
+
+    plan = sel[0]
+
+    if plan.is_a(cmdx.kTransform):
+        plan = plan.shape(type="rdPlan")
+
+    if not (plan and plan.is_a("rdPlan")):
+        raise i__.UserWarning(
+            "You need to select a plan",
+            "Select a plan to be able to remove a target."
+        )
+
+    def process(node):
+        with cmdx.DagModifier() as mod:
+            last = node["targets"].count() - 1
+            idx = last if index is None else index
+            # push elements that are behind the deletion index
+            for i in range(idx, last):
+                mod.set_attr(node["targets"][i], node["targets"][i + 1].as_matrix())
+
+            if idx == last:
+                # for timings and constraint level, we would want them to keep the
+                # end value, so we move them ahead.
+                mod.set_attr(node["timings"][idx - 1], node["timings"][idx])
+                mod.set_attr(node["hards"][idx - 1], node["hards"][idx])
+            else:
+                for i in range(idx, last):
+                    mod.set_attr(node["timings"][i], node["timings"][i + 1])
+                    mod.set_attr(node["hards"][i], node["hards"][i + 1])
+
+            mod.do_it()
+
+        cmds.removeMultiInstance(node["targets"][last].path())
+        cmds.removeMultiInstance(node["timings"][last].path())
+        cmds.removeMultiInstance(node["hards"][last].path())
+
+    process(plan)
+    for element in plan["inputStart"]:
+        process(element.input(type="rdFoot"))
 
     return kSuccess
 

@@ -43,7 +43,7 @@
         ]
     },
     "openPhysics": {
-        "label": "Open Physics",
+        "label": "Load Physics",
         "icon": "physics.png",
         "summary": "Generate new Maya scene from .rag file",
         "description": "Be rid of all native Maya nodes and work with pure physics at optimal performance. Export and apply the baked keyframes onto your original, heavy character rig once finished tinkering.",

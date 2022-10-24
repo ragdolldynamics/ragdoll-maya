@@ -62,7 +62,7 @@ def transfer_live(solver):
 
     tolerance = 1e-3
 
-    def _transfer_dst(marker, dst):
+    def _transfer_dst(marker, dst, keyframe=True):
         mtx = marker["outputMatrix"].as_matrix()
 
         world_tm = cmdx.Tm(mtx)
@@ -84,9 +84,9 @@ def transfer_live(solver):
         dst.data["previousTranslate"] = world_translate
         dst.data["previousRotate"] = world_rotate
 
-        # if skip_any:
-        #     print("%s skipped (unchanged)" % marker)
-        #     return
+        if skip_any:
+            print("%s skipped (unchanged)" % marker)
+            return
 
         parent = marker["parentMarker"].input(type="rdMarker")
 
@@ -116,12 +116,22 @@ def transfer_live(solver):
 
         for i, axis in enumerate("XYZ"):
             if dst["rotate" + axis].editable:
-                mod.set_attr(dst["rotate" + axis], rotate[i])
+                value = rotate[i]
+
+                if keyframe:
+                    value = {cmdx.current_frame(): value}
+
+                mod.set_attr(dst["rotate" + axis], value)
 
         if parent is None:
             for i, axis in enumerate("XYZ"):
                 if dst["translate" + axis].editable:
-                    mod.set_attr(dst["translate" + axis], translate[i])
+                    value = translate[i]
+
+                    if keyframe:
+                        value = {cmdx.current_frame(): value}
+
+                    mod.set_attr(dst["translate" + axis], value)
 
     with cmdx.DagModifier() as mod:
         for marker in internal.markers_from_solver(solver):

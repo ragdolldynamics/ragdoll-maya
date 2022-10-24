@@ -1517,17 +1517,12 @@ class DagNode(Node):
             >>> parent | "child"
             |parent|child
 
-            # Stackable too
+            # Stacklable too
             >>> grand =  createNode("transform", "grand", child)
             >>> parent | "child" | "grand"
             |parent|child|grand
 
         """
-
-        # Handle cases where self has a namespace
-        # and no namespace is provided.
-        if ":" not in other:
-            other = "%s:%s" % (self.namespace(), other)
 
         return encode("%s|%s" % (self.path(), other))
 
@@ -6891,6 +6886,17 @@ def currentTime(time=None):
         # we instead rely on the trusty old cmds.currentTime
 
 
+def currentFrame(frame=None):
+    """Set or return current time as an integer"""
+    if frame is None:
+        return int(oma.MAnimControl.currentTime().value)
+    else:
+        if isinstance(time, om.MTime):
+            frame = int(frame.value)
+
+        cmds.currentTime(frame)
+
+
 def selectedTime():
     """Return currently selected time range in MTime format"""
     from maya import mel
@@ -7389,6 +7395,7 @@ if ENABLE_PEP8:
     connect_attr = connectAttr
     obj_exists = objExists
     current_time = currentTime
+    current_frame = currentFrame
     min_time = minTime
     max_time = maxTime
     is_scrubbing = isScrubbing

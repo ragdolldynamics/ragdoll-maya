@@ -2257,11 +2257,15 @@ def transfer_live(selection=None, **opts):
         return kFailure
 
     solver = cmdx.encode(manip["solverPath"])
+    keyframe = opts.get("keyframe", False)
 
     with i__.Timer("transfer") as duration:
-        recording.transfer_live(solver)
+        recording.transfer_live(solver, keyframe=keyframe)
 
-    log.info("Transferred animation in %.1f ms" % duration.ms)
+    if keyframe:
+        log.info("Keyframed animation in %.1f ms" % duration.ms)
+    else:
+        log.info("Transferred animation in %.1f ms" % duration.ms)
 
     return kSuccess
 

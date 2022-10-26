@@ -57,12 +57,12 @@ def extract(solver, opts=None):
         pass
 
 
-def transfer_live(solver):
+def transfer_live(solver, keyframe=False):
     # Only apply changes from Markers that has changed
 
     tolerance = 1e-3
 
-    def _transfer_dst(marker, dst, keyframe=True):
+    def _transfer_dst(marker, dst):
         mtx = marker["outputMatrix"].as_matrix()
 
         world_tm = cmdx.Tm(mtx)

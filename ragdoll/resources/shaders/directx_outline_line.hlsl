@@ -1,5 +1,6 @@
 
-cbuffer VS_CONSTANT_BUFFER : register(b0) {
+cbuffer VS_CONSTANT_BUFFER : register(b0)
+{
     matrix projectionMatrix;
     matrix viewMatrix;
     matrix viewProjectionTranspose;
@@ -7,29 +8,15 @@ cbuffer VS_CONSTANT_BUFFER : register(b0) {
     float2 empty;
 }
 
-cbuffer VS_CONSTANT_BUFFER : register(b1) {
-	matrix modelMatrix;
-    float4 uniformColor;
+cbuffer VS_CONSTANT_BUFFER : register(b1)
+{
+    matrix modelMatrix;
+    float4 constantColor;
     float lineThicknessBROKEN;
-    int useUniformColor;
+    int useConstantColor;
     int usePhongShading;
     float UNUSED;
 }
-
-
-cbuffer VS_CONSTANT_BUFFER : register(b2)
-{
-    float lineThickness;
-    float3 dummy1;
-   // bool useMarkerColor;
-}
-/*
-cbuffer VS_CONSTANT_BUFFER : register(b3)
-{
-    int useMarkerColor;
-    float3 dummy12;
-   // bool useMarkerColor;
-}*/
 
 struct vs_in
 {
@@ -50,53 +37,118 @@ struct gs_out
     float3 color : COLOR;
 };
 
-vs_out vs_main(vs_in input) {
-	
-    vs_out output = (vs_out) 0;
-	
+vs_out vs_main(vs_in input) {	
+    vs_out output = (vs_out) 0;	
     output.position = mul(float4(input.in_position, 1), modelMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
-    output.position.z -= 0.002;
-    output.color = input.in_color;
-    
 	return output;
 }
 
-[maxvertexcount(4)]
-void gs_main(line vs_out input[2] : SV_POSITION, inout TriangleStream<gs_out> OutputStream)
+
+[maxvertexcount(128)]
+void gs_main(triangle vs_out input[3] : SV_POSITION, inout TriangleStream<gs_out> OutputStream)
 {
     gs_out gsout = (gs_out) 0;
-    gsout.color = input[0].color;
     
-    float4 p1 = input[0].position;
-    float4 p2 = input[1].position;
-       
-    float THICC = lineThickness;
+   float pixelWidth = 2.0 / viewportSize.x;
+   float pixelHeight = 2.0 / viewportSize.y;
+   
+    float u_thickness = lineThicknessBROKEN;//   constantColor.x * 10; //   lineThicknessBROKEN + 1; // 20; //    lineThicknessBROKEN;//    4.0f;
     
-    float2 dir = normalize((p2.xy / p2.w - p1.xy / p1.w) * viewportSize);
-    float2 offset = float2(-dir.y, dir.x) * THICC / viewportSize;
+    pixelWidth *= u_thickness;
+    pixelHeight *= u_thickness;
+     
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        gsout.position.x += pixelWidth * gsout.position.w;
+        OutputStream.Append(gsout);
+    }
     
-    gsout.position = p1 + float4(offset.xy * p1.w, 0.0, 0.0);
-  //  gsout.color = input[0].col
-    OutputStream.Append(gsout);
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        gsout.position.x -= pixelWidth * gsout.position.w;
+        gsout.color = float4(0, 1, 0, 1);
+        OutputStream.Append(gsout);
+    }
     
-    gsout.position = p1 - float4(offset.xy * p1.w, 0.0, 0.0);
-    OutputStream.Append(gsout);
+    for (int i = 0; i < 3; i++) {
+        gsout.color = float4(1, 1, 0, 1);
+        gsout.position = input[i].position;
+        gsout.position.y += pixelHeight * gsout.position.w;
+        OutputStream.Append(gsout);
+    }
     
-    gsout.position = p2 + float4(offset.xy * p2.w, 0.0, 0.0);
-    OutputStream.Append(gsout);
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        gsout.position.y -= pixelHeight * gsout.position.w;
+        gsout.color = float4(0, 1, 0, 1);
+        OutputStream.Append(gsout);
+    }
     
-    gsout.position = p2 - float4(offset.xy * p2.w, 0.0, 0.0);
-    OutputStream.Append(gsout);
-       
+    // Bottom right corner cap
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.x += pixelWidth * gsout.position.w;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.y -= pixelHeight * gsout.position.w ;
+        OutputStream.Append(gsout);
+    }
+    
+    // Bottom left corner cap
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.y -= pixelHeight * gsout.position.w;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.x -= pixelWidth * gsout.position.w;
+        OutputStream.Append(gsout);
+    }
+    
+    // Top right corner cap
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.y += pixelHeight * gsout.position.w;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.x += pixelWidth * gsout.position.w;
+        OutputStream.Append(gsout);
+    }
+    
+    // Top left corner cap
+    for (int i = 0; i < 3; i++) {
+        gsout.position = input[i].position;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.y += pixelHeight * gsout.position.w;
+        OutputStream.Append(gsout);
+        gsout.position = input[i].position;
+        gsout.position.x -= pixelWidth * gsout.position.w;
+        OutputStream.Append(gsout);
+    }
+        
     OutputStream.RestartStrip();
 }
 
-float4 ps_main(vs_out input) : SV_TARGET {
-    
-    if (useUniformColor)
-        return uniformColor;
-    else
-        return float4(input.color, 1.0);
+struct ps_out
+{
+    float4 color : SV_Target;
+    float depth : SV_Depth;
+};
+
+
+ps_out ps_main(gs_out input) 
+{
+    ps_out output = (ps_out) 0;
+    output.color = constantColor;
+    output.depth = 0.0;
+    return output;
 }
+

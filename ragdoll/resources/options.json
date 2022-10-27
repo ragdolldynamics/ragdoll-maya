@@ -486,14 +486,6 @@
         "help": "Update a plan, even when nothing has changed."
     },
 
-    "planNativeTargets": {
-        "name": "planNativeTargets",
-        "label": "Use Maya Handles",
-        "type": "Boolean",
-        "default": false,
-        "help": "Use Maya handles to position targets, rather than the built-in Ragdoll gizmos."
-    },
-
     "planPreset": {
         "name": "planPreset",
         "label": "Preset",

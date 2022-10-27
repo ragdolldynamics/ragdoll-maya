@@ -10,26 +10,11 @@ cbuffer VS_CONSTANT_BUFFER : register(b0) {
 cbuffer VS_CONSTANT_BUFFER : register(b1) {
 	matrix modelMatrix;
     float4 uniformColor;
-    float lineThicknessBROKEN;
+    float lineThickness;
     int useUniformColor;
     int usePhongShading;
     float UNUSED;
 }
-
-
-cbuffer VS_CONSTANT_BUFFER : register(b2)
-{
-    float lineThickness;
-    float3 dummy1;
-   // bool useMarkerColor;
-}
-/*
-cbuffer VS_CONSTANT_BUFFER : register(b3)
-{
-    int useMarkerColor;
-    float3 dummy12;
-   // bool useMarkerColor;
-}*/
 
 struct vs_in
 {

@@ -42,6 +42,7 @@ vs_out vs_main(vs_in input) {
     output.position = mul(float4(input.in_position, 1), modelMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
+    output.position.z = 0;
 	return output;
 }
 
@@ -140,7 +141,7 @@ void gs_main(triangle vs_out input[3] : SV_POSITION, inout TriangleStream<gs_out
 struct ps_out
 {
     float4 color : SV_Target;
-    float depth : SV_Depth;
+    //float depth : SV_Depth;
 };
 
 
@@ -148,7 +149,7 @@ ps_out ps_main(gs_out input)
 {
     ps_out output = (ps_out) 0;
     output.color = constantColor;
-    output.depth = 0.0;
+    //output.depth = 0.0;
     return output;
 }
 

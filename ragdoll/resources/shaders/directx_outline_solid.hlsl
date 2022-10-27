@@ -7,6 +7,9 @@
 cbuffer VS_CONSTANT_BUFFER : register(b0) {
 	mat4 projectionMatrix;
 	mat4 viewMatrix;
+    matrix viewProjectionTranspose;
+    float2 viewportSize;
+    float2 empty;
 }
 
 cbuffer VS_CONSTANT_BUFFER : register(b1) {
@@ -28,13 +31,14 @@ vs_out vs_main(vs_in input) {
     output.position = mul(float4(input.in_position, 1), modelMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);  
+    output.position.z = 1;
 	return output;
 }
 
 struct ps_out
 {
     float4 color : SV_Target;
-    float depth : SV_Depth;
+    //float depth : SV_Depth;
 };
 
 
@@ -42,6 +46,6 @@ ps_out ps_main(vs_out input) : SV_TARGET
 {
     ps_out output = (ps_out) 0;
     output.color = float4(1, 1, 1, 0);
-    output.depth = 0.0;
+    //output.depth = 0.0;
     return output;
 }

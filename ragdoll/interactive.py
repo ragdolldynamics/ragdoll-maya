@@ -2738,6 +2738,7 @@ def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": False,  # deprecated option
         "preset": _opt("planPreset", opts),
+        "refinement": _opt("planRefinementMode", opts),
         "duration": _opt("planDuration", opts),
     }, **(opts or {}))
 

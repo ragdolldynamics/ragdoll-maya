@@ -1635,10 +1635,10 @@ def animation_to_plan(plan, increment=0):
 
     # Parse foot movement into step sequences
 
-    feet_dir = [[0] for _ in range(foot_count)]
+    feet_trend = [[0] for _ in range(foot_count)]
     for index, frame in enumerate(range(start + 1, end), 1):
-        for i, foot_dir in enumerate(feet_dir):
-            foot_dir.append(
+        for i, foot_trend in enumerate(feet_trend):
+            foot_trend.append(
                 trend(pos(feet[i], index)[up_index],
                       pos(feet[i], index - 1)[up_index])
             )
@@ -1650,8 +1650,8 @@ def animation_to_plan(plan, increment=0):
         count = 0
         begin = fly_phase = True
 
-        for dir_, _grouped in itertools.groupby(feet_dir[i]):
-            fly_phase = dir_ != 0
+        for trend_, _grouped in itertools.groupby(feet_trend[i]):
+            fly_phase = trend_ != 0
             count = sum(1 for _ in _grouped)
 
             step_sequences[i] += [fly_phase for _ in range(count)]
@@ -1688,18 +1688,18 @@ def animation_to_plan(plan, increment=0):
             # Analyze body movement curves turning points and use as targets
             body_targets = [start]
             target_increment = 5
-            prev_pos_dir = (0, 0, 0)
-            prev_rot_dir = (0, 0, 0)
+            prev_pos_trend = (0, 0, 0)
+            prev_rot_trend = (0, 0, 0)
             for index, frame in enumerate(range(start + 1, end), 1):
-                pos_dir = trend3(pos(plan, index), pos(plan, index - 1))
-                rot_dir = trend3(rot(plan, index), rot(plan, index - 1))
+                pos_trend = trend3(pos(plan, index), pos(plan, index - 1))
+                rot_trend = trend3(rot(plan, index), rot(plan, index - 1))
 
-                if pos_dir != prev_pos_dir or rot_dir != prev_rot_dir:
+                if pos_trend != prev_pos_trend or rot_trend != prev_rot_trend:
                     if frame - body_targets[-1] > target_increment:
                         body_targets.append(frame)
 
-                prev_pos_dir = pos_dir
-                prev_rot_dir = rot_dir
+                prev_pos_trend = pos_trend
+                prev_rot_trend = rot_trend
 
             if last_frame - body_targets[-1] > target_increment:
                 body_targets.append(last_frame)

@@ -270,6 +270,7 @@
         "summary": "Convert animation into targets for a plan",
         "description": "",
         "options": [
+            "planFromAnimIncrementalSampling"
         ]
     },
 

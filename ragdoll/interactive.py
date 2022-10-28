@@ -853,7 +853,7 @@ def install_menu():
 
         divider("Refinement")
 
-        item("bakeTargets", animation_to_plan)
+        item("bakeTargets", animation_to_plan, animation_to_plan_options)
         item("bakePlan", plan_to_animation)
 
         divider("Edit")
@@ -2785,6 +2785,10 @@ def plan_to_animation(selection=None, **opts):
 
 @i__.with_undo_chunk
 def animation_to_plan(selection=None, **opts):
+    opts = dict({
+        "increment": _opt("planFromAnimIncrementalSampling", opts),
+    }, **(opts or {}))
+
     plans = plans_from_selection(selection)
 
     if not plans:
@@ -2794,7 +2798,9 @@ def animation_to_plan(selection=None, **opts):
         )
 
     for plan in plans:
-        dump.animation_to_plan(plan)
+        dump.animation_to_plan(plan, opts["increment"])
+
+    update_plan(plans, forceUpdate=True)
 
     return kSuccess
 
@@ -3768,6 +3774,10 @@ def assign_plan_options(*args):
 
 def update_plan_options(*args):
     return _Window("updatePlan", update_plan)
+
+
+def animation_to_plan_options(*args):
+    return _Window("bakeTargets", animation_to_plan)
 
 
 def replace_marker_mesh_options(*args):

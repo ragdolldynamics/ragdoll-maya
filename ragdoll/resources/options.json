@@ -503,6 +503,14 @@
         "help": "If enabled, plan will not drive body and feet directly and allowing continues animation refinement."
     },
 
+    "planFromAnimIncrementalSampling": {
+        "name": "planFromAnimIncrementalSampling",
+        "label": "Incremental Sampling",
+        "type": "Integer",
+        "default": 0,
+        "help": "If the value is higher than 0, will create target on each frame increments."
+    },
+
     "planAutoUpdate": {
         "name": "planAutoUpdate",
         "label": "Auto Update",

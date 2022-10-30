@@ -1538,7 +1538,7 @@ def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):
         scale.z = max(0.0001, scale.z)
         log.debug("Bad scale during meshes_to_mobj, this is a bug")
 
-    for vertex in Meshes["vertices"].copy():
+    for vertex in Meshes["vertices"][:]:
         vertex.x /= scale.x
         vertex.y /= scale.y
         vertex.z /= scale.z

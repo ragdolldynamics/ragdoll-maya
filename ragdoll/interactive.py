@@ -2264,6 +2264,7 @@ def transfer_live(selection=None, **opts):
 
     if keyframe:
         log.info("Keyframed animation in %.1f ms" % duration.ms)
+
     else:
         log.info("Transferred animation in %.1f ms" % duration.ms)
 

@@ -12,7 +12,7 @@ cbuffer VS_CONSTANT_BUFFER : register(b1)
 {
     matrix modelMatrix;
     float4 constantColor;
-    float lineThicknessBROKEN;
+    float lineThickness;
     int useConstantColor;
     int usePhongShading;
     float UNUSED;
@@ -42,7 +42,7 @@ vs_out vs_main(vs_in input) {
     output.position = mul(float4(input.in_position, 1), modelMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);
-    output.position.z = 0;
+    output.position.z = 0; // * output.position.w; perspective divide not required because DirectX uses 0 for upper clipspace range, not -1 like OpenGL.
 	return output;
 }
 
@@ -55,7 +55,7 @@ void gs_main(triangle vs_out input[3] : SV_POSITION, inout TriangleStream<gs_out
    float pixelWidth = 2.0 / viewportSize.x;
    float pixelHeight = 2.0 / viewportSize.y;
    
-    float u_thickness = lineThicknessBROKEN;//   constantColor.x * 10; //   lineThicknessBROKEN + 1; // 20; //    lineThicknessBROKEN;//    4.0f;
+    float u_thickness = lineThickness;
     
     pixelWidth *= u_thickness;
     pixelHeight *= u_thickness;

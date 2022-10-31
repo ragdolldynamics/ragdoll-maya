@@ -4612,7 +4612,7 @@ class Vector(om.MVector):
     """
 
     def __mul__(self, value):
-        return Vector(super(Vector, self).__mul__(value))
+        return super(Vector, self).__mul__(value)
 
     def __add__(self, value):
         if isinstance(value, (int, float)):
@@ -6891,6 +6891,17 @@ def currentTime(time=None):
         # we instead rely on the trusty old cmds.currentTime
 
 
+def currentFrame(frame=None):
+    """Set or return current time as an integer"""
+    if frame is None:
+        return int(oma.MAnimControl.currentTime().value)
+    else:
+        if isinstance(time, om.MTime):
+            frame = int(frame.value)
+
+        cmds.currentTime(frame)
+
+
 def selectedTime():
     """Return currently selected time range in MTime format"""
     from maya import mel
@@ -7389,6 +7400,7 @@ if ENABLE_PEP8:
     connect_attr = connectAttr
     obj_exists = objExists
     current_time = currentTime
+    current_frame = currentFrame
     min_time = minTime
     max_time = maxTime
     is_scrubbing = isScrubbing

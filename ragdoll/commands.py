@@ -1766,6 +1766,8 @@ def assign_plan(body, feet, opts=None):
     preset = opts.get("preset", 0)
     preset = presets.get(preset, presets.get(WalkPreset))
 
+    palette = internal.random_palette(len(feet) + 1)
+
     time = cmdx.encode("time1")
 
     with cmdx.DagModifier() as mod:
@@ -1803,7 +1805,7 @@ def assign_plan(body, feet, opts=None):
             space_multiplier = 0.1
 
         mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
-        mod.set_attr(rdplan["color"], internal.random_color())
+        mod.set_attr(rdplan["color"], palette.pop(0))
         mod.set_attr(rdplan["version"], internal.version())
 
         mod.connect(body["message"], rdplan["sourceTransform"])
@@ -1962,7 +1964,7 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["linearLimit"], limits)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
 
-            dgmod.set_attr(rdfoot["color"], internal.random_color())
+            dgmod.set_attr(rdfoot["color"], palette.pop(0))
             dgmod.set_attr(rdfoot["version"], internal.version())
 
             # Make step sequence

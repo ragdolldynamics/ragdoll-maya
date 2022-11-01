@@ -577,6 +577,34 @@ def random_color():
     return color
 
 
+def random_palette(size):
+    """Return a `size` color palette that loop over the hue spectrum from a random starting point
+    """
+    if size <= 0:
+        return []
+
+    def next_(_hue):
+        # we are fixed in between 0 - 250 (see random_color above)
+        # and here we use 59 as the step size, which is a prime and
+        # therefore will give us a nice spread of colors (I think)
+        increment = 59
+        _hue += increment
+        return _hue if _hue < 250 else _hue - 250
+
+    colors = [random_color()]
+    for i in range(1, size, 1):
+        previous = colors[i - 1]
+        hue, value, saturation, _ = previous.getColor(cmdx.ColorType.kHSV)
+        print(hue, value, saturation, _)
+        color = cmdx.ColorType()
+        color.setColor((next_(hue), value, saturation),
+                       cmdx.ColorType.kHSV,
+                       cmdx.ColorType.kFloat)
+        colors.append(color)
+
+    return colors
+
+
 def add_to_set(node, name, mod=None):
     try:
         collection = cmdx.encode(name)

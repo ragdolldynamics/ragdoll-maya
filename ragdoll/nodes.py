@@ -10,15 +10,6 @@ def create(typ, mod, name, parent=None):
         name = internal.unique_name(name)
         node = mod.create_node(typ, name=name, parent=parent)
 
-        # Auxilliary node, hidden from view and not relevant to the user
-        canvas = mod.create_node("rdCanvas",
-                                 name="rCanvasShape",
-                                 parent=parent)
-
-        # Hide in outliner and channel box
-        mod.set_attr(canvas["hiddenInOutliner"], True)
-        mod.set_attr(canvas["isHistoricallyInteresting"], 0)
-
         # Defaults
         up = cmdx.up_axis()
         mod.set_attr(node["positionIterations"], 8)
@@ -36,7 +27,6 @@ def create(typ, mod, name, parent=None):
         mod.set_attr(node["startTimeCustom"], cmdx.min_time())
         mod.set_attr(node["maxMassRatio"], 0)  # Off
 
-        mod.connect(node["ragdollId"], canvas["solver"])
         mod.connect(parent["worldMatrix"][0], node["inputMatrix"])
 
     elif typ == "rdMarker":

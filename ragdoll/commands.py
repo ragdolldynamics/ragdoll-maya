@@ -1967,20 +1967,22 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["color"], palette.pop(0))
             dgmod.set_attr(rdfoot["version"], internal.version())
 
-            # Make step sequence
-            foot_index = index % len(preset)
-            foot_preset = preset[foot_index]
-            sequence = (foot_preset * 50)[:duration // 5]
+            if not opts["refinement"]:
+                # Make step sequence
+                foot_index = index % len(preset)
+                foot_preset = preset[foot_index]
+                sequence = (foot_preset * 50)[:duration // 5]
 
-            # Padding around start and end with foot-down
-            sequence = "0" + sequence[:-2] + "0"
+                # Padding around start and end with foot-down
+                sequence = "0" + sequence[:-2] + "0"
 
-            steps = []
-            for step in sequence:
-                for repeat in range(5):
-                    steps.append(bool(int(step)))
+                steps = []
+                for step in sequence:
+                    for repeat in range(5):
+                        steps.append(bool(int(step)))
 
-            dgmod.set_attr(rdfoot["stepSequence"], steps)
+                dgmod.set_attr(rdfoot["stepSequence"], steps)
+
             outputs.append([rdfoot, foot])
 
     # Generate outputs

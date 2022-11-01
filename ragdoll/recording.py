@@ -62,7 +62,7 @@ def transfer_live(solver, keyframe=False):
 
     tolerance = 1e-3
 
-    def _transfer_dst(marker, dst):
+    def _transfer_dst(mod, marker, dst):
         mtx = marker["outputMatrix"].as_matrix()
 
         world_tm = cmdx.Tm(mtx)
@@ -133,6 +133,9 @@ def transfer_live(solver, keyframe=False):
 
                     mod.set_attr(dst["translate" + axis], value)
 
+        if keyframe:
+            cmds.setKeyframe(marker.path(), attribute="liveKeyframe")
+
     with cmdx.DagModifier() as mod:
         for marker in internal.markers_from_solver(solver):
             if cmds.ragdollInfo(str(marker), kinematic=True):
@@ -146,7 +149,7 @@ def transfer_live(solver, keyframe=False):
                     print("%s skipped" % marker)
                     continue
 
-                _transfer_dst(marker, dst)
+                _transfer_dst(mod, marker, dst)
 
 
 class _Recorder(object):

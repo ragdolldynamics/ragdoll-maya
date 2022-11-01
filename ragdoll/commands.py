@@ -1633,7 +1633,8 @@ def delete_all_physics(dry_run=False):
 
 def assign_plan(body, feet, opts=None):
     opts = dict({
-        "useTransform": False,
+        "useTransform": False,  # Using Maya handle, deprecated
+        "refinement": False,
         "duration": 100,
     }, **(opts or {}))
 
@@ -1983,6 +1984,9 @@ def assign_plan(body, feet, opts=None):
     # Generate outputs
     with cmdx.DGModifier(interesting=False) as dgmod:
         for rdoutput, output in outputs:
+            if opts["refinement"]:
+                continue
+
             mult = dgmod.create_node("multMatrix")
             decompose = dgmod.create_node("decomposeMatrix")
             blend = dgmod.create_node("pairBlend")

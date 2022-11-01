@@ -9522,7 +9522,7 @@
                         "linearDriveStiffness": 10000.0,
                         "linearLimitDamping": 10000.0,
                         "linearLimitStiffness": 1000000.0,
-                        "maxMassRatio": 1
+                        "maxMassRatio": 0
                     },
                     "type": "SolverUIComponent"
                 }

@@ -1670,8 +1670,10 @@ def animation_to_plan(plan, increment=0):
 
         min_stance = 5
         # Ensure step sequences have enough stance phase at the beginning.
+        timing_offset = 0
         if min_begin_stance < min_stance:
             patch = min_stance - min_begin_stance
+            timing_offset = patch
             mod.set_attr(plan["startTime"], 2)
             mod.set_attr(plan["startTimeCustom"], cmdx.time(start - patch))
             mod.set_attr(plan["duration"], duration + patch)
@@ -1713,7 +1715,8 @@ def animation_to_plan(plan, increment=0):
                     mtx = matrices[source][frame - start]
                     mod.set_attr(source["targets"][index], mtx)
                     mod.set_attr(source["hards"][index], first_or_last)
-                    mod.set_attr(source["timings"][index], frame)
+                    mod.set_attr(source["timings"][index],
+                                 timing_offset + frame - start + 1)
 
             for i, foot in enumerate(feet):
                 for index, value in enumerate(step_sequences[i]):
@@ -1731,7 +1734,8 @@ def animation_to_plan(plan, increment=0):
                         i = int(index / increment)
                         mod.set_attr(source["targets"][i], mtx)
                         mod.set_attr(source["hards"][i], index == 0)
-                        mod.set_attr(source["timings"][i], frame)
+                        mod.set_attr(source["timings"][i],
+                                     timing_offset + frame - start + 1)
 
                     if source in feet:
                         i = feet.index(source)
@@ -1740,7 +1744,8 @@ def animation_to_plan(plan, increment=0):
 
             for source, transform in sources.items():
                 i = int(index / increment)
-                mod.set_attr(source["timings"][i], last_frame)
                 mod.set_attr(source["hards"][i], True)
+                mod.set_attr(source["timings"][i],
+                             timing_offset + last_frame - start + 1)
 
     cmds.currentTime(start)

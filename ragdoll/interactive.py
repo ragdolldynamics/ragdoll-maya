@@ -2813,6 +2813,18 @@ def animation_to_plan(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def add_target(selection=None, at=None, index=None, **opts):
+    """Add a target to a plan
+
+    Args:
+        selection: If given, the first selected object is used as the plan.
+            If not, will take current active selection from scene.
+        at: A list/tuple of (x, y, z) coordinates to add a target at.
+            If not given, the new target will be at 5 scene unit ahead of previous target.
+        index: The index to add the target at. If not given, will be appended.
+
+    Returns: None
+
+    """
     sel = selection or cmdx.selection()
     at = cmdx.TransformationMatrix(translate=at).as_matrix() if at else None
 
@@ -2833,78 +2845,84 @@ def add_target(selection=None, at=None, index=None, **opts):
             "Select the plan to be able to add a target to it."
         )
 
-    # get up axis
+    plan_target_count = plan["targets"].count()
+    for element in plan["inputStart"]:
+        foot = element.input(type="rdFoot")
+        if foot["targets"].count() != plan_target_count:
+            raise i__.UserWarning(
+                "Bad plan",
+                "Plan has different number of targets for each foot."
+            )
+
+    idx = plan_target_count if index is None else index
+    add_at_start = idx == 0
+    add_at_end = idx == plan_target_count
+    is_hard = add_at_start or add_at_end
+
     up = cmdx.up_axis()
-    if up.y:
-        walk_index = 2
-    else:
-        walk_index = 1
+    walk_index = 2 if up.y else 1
+
     p_offset = [0, 0, 0]
-    p_offset[walk_index] = 5
+    p_offset[walk_index] = 5 * (-1 if add_at_start else 1)
 
-    duration = plan["duration"].as_double()
+    def process(node, new_tm=None):
+        if new_tm is None:
+            i = 0 if add_at_start else (plan_target_count - 1)
+            new_tm = cmdx.Tm(node["targets"][i].as_matrix())
+            new_tm.setScale(cmdx.Vector(1, 1, 1))
+            new_tm.translateBy(p_offset, cmdx.sTransform)
 
-    # first do the body
-    with cmdx.DagModifier() as mod:
-        idx = plan["targets"].count()
-        if at:
-            index = idx if index is None else index
-            body_tm = cmdx.Tm(at)
-            # insert new target to index
-            for i in range(idx, index, -1):
-                mod.set_attr(plan["targets"][i], plan["targets"][i - 1].as_matrix())
-            mod.set_attr(plan["targets"][index], body_tm.as_matrix())
-        else:
-            body_tm = cmdx.Tm(plan["targets"][idx - 1].as_matrix())
-            body_tm.setScale(cmdx.Vector(1, 1, 1))
+        with cmdx.DagModifier() as mod:
+            # insert new one to index
+            for i in range(plan_target_count, idx, -1):
+                # note that we assume same size for targets/timings/hards
+                mod.set_attr(node["targets"][i], node["targets"][i - 1].as_matrix())
+                mod.set_attr(node["hards"][i], node["hards"][i - 1].read())
+                mod.set_attr(node["timings"][i], node["timings"][i - 1].read())
+            mod.set_attr(node["targets"][idx], new_tm.as_matrix())
+            mod.set_attr(node["hards"][idx], is_hard)
 
-            body_tm.translateBy(p_offset, cmdx.sTransform)
-            mod.set_attr(plan["targets"][idx], body_tm.as_matrix())
+            mod.do_it()
 
-        prev_t = plan["timings"][idx - 2].as_double()
-        t = int(prev_t + (duration - prev_t) / 2.)
+            # update timings
+            if add_at_start:
+                start_t = node["timings"][0].as_double()
+                next_t = node["timings"][2].as_double()
+                timing = int(start_t + (next_t - start_t) / 2.)
+                mod.set_attr(node["timings"][1], timing)
 
-        # assume same size for targets/timings/hards
-        mod.set_attr(plan["timings"][idx], duration)
-        mod.set_attr(plan["hards"][idx], 1)
-        mod.set_attr(plan["timings"][idx - 1], t)
-        mod.do_it()
+            elif add_at_end:
+                duration = plan["duration"].as_double()
+                prev_t = node["timings"][idx - 2].as_double()
+                timing = int(prev_t + (duration - prev_t) / 2.)
+                mod.set_attr(node["timings"][idx], duration)
+                mod.set_attr(node["timings"][idx - 1], timing)
 
-    # then the feet
+            else:
+                # add new timing base on the distance between previous and next target
+                prev_pos = cmdx.Point(*node["targets"][idx - 1].as_matrix()(3))
+                next_pos = cmdx.Point(*node["targets"][idx + 1].as_matrix()(3))
+                this_pos = cmdx.Point(*new_tm.as_matrix()(3))
+                ratio = prev_pos.distance_to(this_pos) / prev_pos.distance_to(next_pos)
+                prev_t = node["timings"][idx - 1].as_double()
+                next_t = node["timings"][idx + 1].as_double()
+                timing = int(prev_t + (next_t - prev_t) * ratio)
+                mod.set_attr(node["timings"][idx], timing)
+
+            mod.do_it()
+
+    orig2new_mx = None
     if at:
         body_nex_mx = cmdx.Tm(at).as_matrix()
         orig2new_mx = body_nex_mx * plan["targets"][0].as_matrix().inverse()
-    else:
-        orig2new_mx = None
+
+    body_tm = cmdx.Tm(at) if at else None
+    process(plan, body_tm)
 
     for element in plan["inputStart"]:
         foot = element.input(type="rdFoot")
-
-        with cmdx.DagModifier() as mod:
-            idx = foot["targets"].count()
-
-            if at:
-                foot_tm = cmdx.Tm(foot["targets"][0].as_matrix() * orig2new_mx)
-                # insert new target to index
-                for i in range(idx, index, -1):
-                    mod.set_attr(foot["targets"][i], foot["targets"][i - 1].as_matrix())
-                mod.set_attr(foot["targets"][index], foot_tm.as_matrix())
-
-            else:
-                foot_tm = cmdx.Tm(foot["targets"][idx - 1].as_matrix())
-                foot_tm.setScale(cmdx.Vector(1, 1, 1))
-
-                foot_tm.translateBy(p_offset, cmdx.sTransform)
-                mod.set_attr(foot["targets"][idx], foot_tm.as_matrix())
-
-            prev_t = foot["timings"][idx - 2].as_double()
-            t = int(prev_t + (duration - prev_t) / 2.)
-
-            # assume same size for targets/timings/hards
-            mod.set_attr(foot["timings"][idx], duration)
-            mod.set_attr(foot["hards"][idx], 1)
-            mod.set_attr(foot["timings"][idx - 1], t)
-            mod.do_it()
+        foot_tm = cmdx.Tm(foot["targets"][0].as_matrix() * orig2new_mx) if at else None
+        process(foot, foot_tm)
 
     return kSuccess
 
@@ -2931,10 +2949,20 @@ def remove_target(selection=None, index=None, **opts):
             "Select a plan to be able to remove a target."
         )
 
+    plan_target_count = plan["targets"].count()
+    for element in plan["inputStart"]:
+        foot = element.input(type="rdFoot")
+        if foot["targets"].count() != plan_target_count:
+            raise i__.UserWarning(
+                "Bad plan",
+                "Plan has different number of targets for each foot."
+            )
+
+    last = plan_target_count - 1
+    idx = last if index is None else index
+
     def process(node):
         with cmdx.DagModifier() as mod:
-            last = node["targets"].count() - 1
-            idx = last if index is None else index
             # push elements that are behind the deletion index
             for i in range(idx, last):
                 mod.set_attr(node["targets"][i], node["targets"][i + 1].as_matrix())

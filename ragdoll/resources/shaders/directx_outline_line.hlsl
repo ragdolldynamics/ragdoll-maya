@@ -52,8 +52,8 @@ void gs_main(triangle vs_out input[3] : SV_POSITION, inout TriangleStream<gs_out
 {
     gs_out gsout = (gs_out) 0;
     
-   float pixelWidth = 1.0 / viewportSize.x;
-   float pixelHeight = 1.0 / viewportSize.y;
+   float pixelWidth = 2.0 / viewportSize.x;
+   float pixelHeight = 2.0 / viewportSize.y;
    
     float u_thickness = lineThickness;
     

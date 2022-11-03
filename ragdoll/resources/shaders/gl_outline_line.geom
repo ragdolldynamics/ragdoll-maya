@@ -7,8 +7,8 @@ uniform float u_thickness;
 
 void main()
 {
-    float pixelWidth = 1.0 / u_viewportSize.x;
-    float pixelHeight = 1.0 / u_viewportSize.y;
+    float pixelWidth = 2.0 / u_viewportSize.x;
+    float pixelHeight = 2.0 / u_viewportSize.y;
 
     pixelWidth *= u_thickness;
     pixelHeight *= u_thickness;

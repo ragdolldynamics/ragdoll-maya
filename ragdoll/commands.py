@@ -1991,7 +1991,7 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["version"], internal.version())
 
             if len(sequences) > index:
-                dgmod.set_attr(rdfoot["sequence"], sequences[index])
+                dgmod.set_attr(rdfoot["stepSequence"], sequences[index])
 
             outputs.append([rdfoot, foot])
 

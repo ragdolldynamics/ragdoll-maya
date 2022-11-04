@@ -168,6 +168,10 @@ def solver(node, from_version, to_version):
         _solver_20211024_20211112(node)
         upgraded = True
 
+    if from_version < 20221125:
+        _solver_20211112_20221125(node)
+        upgraded = True
+
     return upgraded
 
 
@@ -223,6 +227,15 @@ def _solver_20211024_20211112(solver):
     log.info("Upgrading %s to 2021.11.12" % solver)
 
     # And has since been deprecated
+
+
+@try_it
+def _solver_20211112_20221125(solver):
+    """Group selection highlighting was updated"""
+    log.info("Upgrading %s to 2022.11.25" % solver)
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(solver["drawGroups"], False)
 
 
 @try_it

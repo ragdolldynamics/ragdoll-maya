@@ -1533,7 +1533,8 @@ def assign_marker(selection=None, **opts):
         root_transform = selection[0]
         name = root_transform.name(namespace=False) + "_rGroup"
         owner = commands.create_group(solver, name, opts={
-            "selfCollide": not opts["connect"]
+            "selfCollide": not opts["connect"],
+            "linearAngularStiffness": opts["linearAngularStiffness"],
         })
 
     if owner is None:

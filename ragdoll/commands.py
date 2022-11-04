@@ -352,7 +352,7 @@ def assign_environment(mesh, solver, opts=None):
     return env
 
 
-def group_markers(markers, name=None):
+def group_markers(markers, name=None, **opts):
     solver = _find_solver(markers[0])
 
     if name is None:
@@ -360,7 +360,7 @@ def group_markers(markers, name=None):
         name = root_transform.name(namespace=False) + "_rGroup"
 
     with cmdx.DagModifier() as mod:
-        group = _create_group(mod, name, solver)
+        group = _create_group(mod, name, solver, opts)
 
         for marker in markers:
             _add_to_group(mod, marker, group)
@@ -2623,7 +2623,13 @@ def create_group(solver, name=None, opts=None):
     }, **(opts or {}))
 
     with cmdx.DagModifier() as mod:
-        group = _create_group(mod, name, solver)
+        # Internal option
+        linear_angular = opts.pop("linearAngularStiffness")
+
+        group = _create_group(
+            mod, name, solver,
+            {"linearAngularStiffness": linear_angular}
+        )
 
         for key, value in opts.items():
             mod.set_attr(group[key], value)
@@ -2631,7 +2637,7 @@ def create_group(solver, name=None, opts=None):
         return group
 
 
-def _create_group(mod, name, solver):
+def _create_group(mod, name, solver, opts=None):
     name = internal.unique_name(name or "rGroup")
     shape_name = internal.shape_name(name)
     group_parent = mod.create_node("transform", name=name)
@@ -2643,6 +2649,18 @@ def _create_group(mod, name, solver):
     mod.connect(group["startState"], solver["inputStart"][index])
     mod.connect(group["currentState"],
                 solver["inputCurrent"][index])
+
+    if opts and opts["linearAngularStiffness"]:
+        mod.set_keyable(group["linearStiffness"], True)
+        mod.set_keyable(group["linearDampingRatio"], True)
+        mod.set_keyable(group["angularStiffness"], True)
+        mod.set_keyable(group["angularDampingRatio"], True)
+
+        mod.set_keyable(group["driveStiffness"], False)
+        mod.set_keyable(group["driveSpace"], False)
+        mod.set_keyable(group["driveSpaceCustom"], False)
+        mod.set_keyable(group["driveDampingRatio"], False)
+        mod.set_channel_box(group["linearMotion"], False)
 
     _take_ownership(mod, group, group_parent)
 

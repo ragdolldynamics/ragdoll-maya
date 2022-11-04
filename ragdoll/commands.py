@@ -1631,6 +1631,58 @@ def delete_all_physics(dry_run=False):
     return delete_physics(all_nodes, dry_run=dry_run)
 
 
+def generate_plan_sequences(preset, foot_count, duration):
+    WalkPreset = 0
+    HopPreset = 1
+    JumpPreset = 2
+    GallopPreset = 3
+    RunPreset = 4
+
+    presets = {
+        WalkPreset: (
+            "001100110011",
+            "110011001100"
+        ),
+        HopPreset: (
+            "010101",
+            "010101"
+        ),
+        JumpPreset: (
+            "00111100",
+            "00111100"
+        ),
+        GallopPreset: (
+            "011011011",
+            "101101101"
+        ),
+        RunPreset: (
+            "01110111",
+            "11011101"
+        ),
+    }
+
+    preset = presets.get(preset, presets.get(WalkPreset))
+    sequences = []
+
+    for index in range(foot_count):
+        # Make step sequence
+        foot_index = index % len(preset)
+        foot_preset = preset[foot_index]
+        steps = (foot_preset * 50)[:duration // 5]
+
+        # Padding around start and end with foot-down
+        steps = "0" + steps[:-2] + "0"
+
+        sequence = []
+        for step in steps:
+            for repeat in range(5):
+                sequence.append(bool(int(step)))
+
+        sequences.append(sequence)
+
+    return sequences
+
+
 def assign_plan(body, feet, opts=None):
     opts = dict({
         "useTransform": False,  # Using Maya handle, deprecated
@@ -1703,11 +1755,11 @@ def assign_plan(body, feet, opts=None):
     outputs = []
 
     if up.y:
-        limits = abs(relative_positions[0].y)
+        limits_scale = abs(relative_positions[0].y)
     else:
-        limits = abs(relative_positions[0].z)
+        limits_scale = abs(relative_positions[0].z)
 
-    limits = cmdx.Vector(1, 1, 1) * limits
+    limits = cmdx.Vector(1, 1, 1) * limits_scale
     limits[walking_axis] *= 2
 
     if len(feet) == 2:
@@ -1734,37 +1786,10 @@ def assign_plan(body, feet, opts=None):
     duration = opts["duration"]
     duration = max(duration, 50)  # Minimum 2 seconds
 
-    WalkPreset = 0
-    HopPreset = 1
-    JumpPreset = 2
-    GallopPreset = 3
-    RunPreset = 4
-
-    presets = {
-        WalkPreset: (
-            "001100110011",
-            "110011001100"
-        ),
-        HopPreset: (
-            "010101",
-            "010101"
-        ),
-        JumpPreset: (
-            "00111100",
-            "00111100"
-        ),
-        GallopPreset: (
-            "011011011",
-            "101101101"
-        ),
-        RunPreset: (
-            "01110111",
-            "11011101"
-        ),
-    }
-
-    preset = opts.get("preset", 0)
-    preset = presets.get(preset, presets.get(WalkPreset))
+    palette = internal.random_palette(len(feet) + 1)
+    sequences = [] if opts["refinement"] else generate_plan_sequences(
+        opts.get("preset", 0), len(feet), duration
+    )
 
     time = cmdx.encode("time1")
 
@@ -1803,7 +1828,7 @@ def assign_plan(body, feet, opts=None):
             space_multiplier = 0.1
 
         mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
-        mod.set_attr(rdplan["color"], internal.random_color())
+        mod.set_attr(rdplan["color"], palette.pop(0))
         mod.set_attr(rdplan["version"], internal.version())
 
         mod.connect(body["message"], rdplan["sourceTransform"])
@@ -1962,23 +1987,12 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["linearLimit"], limits)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])
 
-            dgmod.set_attr(rdfoot["color"], internal.random_color())
+            dgmod.set_attr(rdfoot["color"], palette.pop(0))
             dgmod.set_attr(rdfoot["version"], internal.version())
 
-            # Make step sequence
-            foot_index = index % len(preset)
-            foot_preset = preset[foot_index]
-            sequence = (foot_preset * 50)[:duration // 5]
+            if len(sequences) > index:
+                dgmod.set_attr(rdfoot["stepSequence"], sequences[index])
 
-            # Padding around start and end with foot-down
-            sequence = "0" + sequence[:-2] + "0"
-
-            steps = []
-            for step in sequence:
-                for repeat in range(5):
-                    steps.append(bool(int(step)))
-
-            dgmod.set_attr(rdfoot["stepSequence"], steps)
             outputs.append([rdfoot, foot])
 
     # Generate outputs

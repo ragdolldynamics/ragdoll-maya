@@ -1154,7 +1154,9 @@ def plan_to_animation(plan):
 
     plan = cmds.ragdollDump(str(plan), plan=True)
     plan = json.loads(plan)
+    duration = plan["duration"]
     start_frame = plan["startFrame"]
+    end_frame = start_frame + duration - 1
 
     constraints = []
     outputs = []
@@ -1202,7 +1204,7 @@ def plan_to_animation(plan):
     kwargs = {
         "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
         "simulation": True,
-        "time": (1, 120),
+        "time": (start_frame, end_frame),
         "sampleBy": 1,
         "oversamplingRate": 1,
         "disableImplicitControl": True,

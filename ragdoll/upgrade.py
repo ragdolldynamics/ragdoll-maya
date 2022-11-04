@@ -120,8 +120,9 @@ def has_upgrade(node, from_version):
     if node.type() == "rdGroup":
         return from_version < 20211007
 
+    # The node has been deprecated and is ready to be purged!
     if node.type() == "rdCanvas":
-        return from_version < 20211129
+        return True
 
 
 def marker(node, from_version, to_version):
@@ -173,6 +174,18 @@ def solver(node, from_version, to_version):
 def canvas(node, from_version, to_version):
     upgraded = False
 
+    # Common reasons a node may not be deletable
+    if node.is_referenced() or node.is_locked():
+        return upgraded
+
+    # Not-so-common reasons, the bummer is that
+    # it'll still print an "Error" when failing
+    try:
+        cmds.delete(str(node))
+    except RuntimeError:
+        # Referenced or locked, it's OK
+        pass
+
     return upgraded
 
 
@@ -209,16 +222,7 @@ def _solver_20211024_20211112(solver):
     """rdCanvas node was added"""
     log.info("Upgrading %s to 2021.11.12" % solver)
 
-    with cmdx.DagModifier() as mod:
-        parent = solver.parent()
-        canvas = mod.create_node("rdCanvas",
-                                 name="rCanvasShape",
-                                 parent=parent)
-
-        mod.set_attr(canvas["hiddenInOutliner"], True)
-        mod.set_attr(canvas["isHistoricallyInteresting"], False)
-
-        mod.connect(solver["ragdollId"], canvas["solver"])
+    # And has since been deprecated
 
 
 @try_it

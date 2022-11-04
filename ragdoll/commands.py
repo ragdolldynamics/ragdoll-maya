@@ -244,18 +244,7 @@ def assign_markers(transforms, solver, opts=None):
                 auto_limit(dgmod, marker)
 
             if opts["linearAngularStiffness"]:
-                dgmod.set_attr(marker["useLinearAngularStiffness"], True)
-
-                dgmod.set_keyable(marker["linearStiffness"], True)
-                dgmod.set_keyable(marker["linearDampingRatio"], True)
-                dgmod.set_keyable(marker["angularStiffness"], True)
-                dgmod.set_keyable(marker["angularDampingRatio"], True)
-
-                dgmod.set_keyable(marker["driveStiffness"], False)
-                dgmod.set_keyable(marker["driveSpace"], False)
-                dgmod.set_keyable(marker["driveSpaceCustom"], False)
-                dgmod.set_keyable(marker["driveDampingRatio"], False)
-                dgmod.set_channel_box(marker["linearMotion"], False)
+                _use_linear_angular_stiffness(dgmod, marker)
 
             for key, value in opts["defaults"].items():
                 dgmod.set_attr(marker[key], value)
@@ -366,6 +355,21 @@ def group_markers(markers, name=None, **opts):
             _add_to_group(mod, marker, group)
 
     return group
+
+
+def _use_linear_angular_stiffness(mod, marker):
+    mod.set_keyable(marker["linearStiffness"], True)
+    mod.set_keyable(marker["linearDampingRatio"], True)
+    mod.set_keyable(marker["angularStiffness"], True)
+    mod.set_keyable(marker["angularDampingRatio"], True)
+
+    mod.set_keyable(marker["driveStiffness"], False)
+    mod.set_keyable(marker["driveSpace"], False)
+    mod.set_keyable(marker["driveSpaceCustom"], False)
+    mod.set_keyable(marker["driveDampingRatio"], False)
+    mod.set_channel_box(marker["linearMotion"], False)
+
+    mod.set_attr(marker["useLinearAngularStiffness"], True)
 
 
 def ungroup_markers(markers):
@@ -2651,16 +2655,7 @@ def _create_group(mod, name, solver, opts=None):
                 solver["inputCurrent"][index])
 
     if opts and opts["linearAngularStiffness"]:
-        mod.set_keyable(group["linearStiffness"], True)
-        mod.set_keyable(group["linearDampingRatio"], True)
-        mod.set_keyable(group["angularStiffness"], True)
-        mod.set_keyable(group["angularDampingRatio"], True)
-
-        mod.set_keyable(group["driveStiffness"], False)
-        mod.set_keyable(group["driveSpace"], False)
-        mod.set_keyable(group["driveSpaceCustom"], False)
-        mod.set_keyable(group["driveDampingRatio"], False)
-        mod.set_channel_box(group["linearMotion"], False)
+        _use_linear_angular_stiffness(mod, group)
 
     _take_ownership(mod, group, group_parent)
 

@@ -104,6 +104,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -3385,6 +3386,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -5218,6 +5220,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -6028,6 +6031,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -8809,6 +8813,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -9141,6 +9146,7 @@
                 },
                 "GroupUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,
@@ -10793,6 +10799,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -14968,6 +14975,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -18977,6 +18985,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -20103,6 +20112,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -22180,6 +22190,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -22456,6 +22467,7 @@
                 },
                 "GroupUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,
@@ -23931,6 +23943,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -25927,6 +25940,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -28426,6 +28440,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -30723,6 +30738,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -33004,6 +33020,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
@@ -35035,6 +35052,7 @@
                 },
                 "MarkerUIComponent": {
                     "members": {
+                        "useLinearAngularStiffness": true,
                         "airDensity": 1.0,
                         "childFrame": {
                             "type": "Matrix44",

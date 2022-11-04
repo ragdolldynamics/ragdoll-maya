@@ -1248,6 +1248,10 @@ class Loader(object):
         except KeyError:
             pass
 
+        # Added 2022.11.25
+        if GroupUi["useLinearAngularStiffness"]:
+            commands._use_linear_angular_stiffness(mod, group)
+
     def _apply_constraint(self, mod, entity, con):
         Joint = self._registry.get(entity, "JointComponent")
 
@@ -1525,6 +1529,10 @@ class Loader(object):
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
         mod.set_attr(marker["shapeType"], shape_type)
+
+        # Added 2022.11.25
+        if MarkerUi["useLinearAngularStiffness"]:
+            commands._use_linear_angular_stiffness(mod, marker)
 
 
 def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):

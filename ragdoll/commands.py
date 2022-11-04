@@ -1755,11 +1755,11 @@ def assign_plan(body, feet, opts=None):
     outputs = []
 
     if up.y:
-        limits = abs(relative_positions[0].y)
+        limits_scale = abs(relative_positions[0].y)
     else:
-        limits = abs(relative_positions[0].z)
+        limits_scale = abs(relative_positions[0].z)
 
-    limits = cmdx.Vector(1, 1, 1) * limits
+    limits = cmdx.Vector(1, 1, 1) * limits_scale
     limits[walking_axis] *= 2
 
     if len(feet) == 2:

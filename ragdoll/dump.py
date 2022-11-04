@@ -1572,7 +1572,7 @@ def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):
 
 
 @internal.with_undo_chunk
-def animation_to_plan(plan, increment=0):
+def animation_to_plan(plan, increment=0, fallback_preset=None):
     smart_sampling = increment <= 0
 
     feet = list(el.input() for el in plan["inputStart"])
@@ -1664,6 +1664,20 @@ def animation_to_plan(plan, increment=0):
         if min_end_stance > count:
             min_end_stance = 0 if fly_phase else count
 
+    # Check if the step sequences has any fly phases
+    if not any(any(s) for s in step_sequences) and fallback_preset is not None:
+        # No steps, no animation. Provide with preset
+        step_sequences = commands.generate_plan_sequences(
+            fallback_preset, foot_count, duration
+        )
+
+    # Check if the body has any movement
+    body_moved = False
+    for i in range(1, len(matrices[plan])):
+        if pos(plan, i) != pos(plan, i - 1):
+            body_moved = True
+            break
+
     # DoIt
 
     with cmdx.DagModifier() as mod:
@@ -1747,5 +1761,27 @@ def animation_to_plan(plan, increment=0):
                 mod.set_attr(source["hards"][i], True)
                 mod.set_attr(source["timings"][i],
                              timing_offset + last_frame - start + 1)
+
+        if not body_moved:
+            # Walk a few body lengths per default
+            mod.do_it()
+
+            extents = plan["extents"].as_vector()
+            if cmdx.up_axis().y:
+                extents.y = 0
+            else:
+                extents.z = 0
+
+            longest_value = max(extents)
+            walking_axis = tuple(extents).index(longest_value)
+            walking_distance = longest_value * 3
+
+            end_offset = cmdx.Vector(0, 0, 0)
+            end_offset[walking_axis] = walking_distance
+
+            for source, transform in sources.items():
+                tm = cmdx.Tm(source["targets"][-1].as_matrix())
+                tm.translateBy(end_offset, cmdx.sTransform)
+                mod.set_attr(source["targets"][-1], tm.as_matrix())
 
     cmds.currentTime(start)

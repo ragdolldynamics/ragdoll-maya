@@ -2626,10 +2626,10 @@ def create_group(solver, name=None, opts=None):
         "selfCollide": False,
     }, **(opts or {}))
 
-    with cmdx.DagModifier() as mod:
-        # Internal option
-        linear_angular = opts.pop("linearAngularStiffness")
+    # Internal option
+    linear_angular = opts.pop("linearAngularStiffness")
 
+    with cmdx.DagModifier() as mod:
         group = _create_group(
             mod, name, solver,
             {"linearAngularStiffness": linear_angular}
@@ -2653,6 +2653,11 @@ def _create_group(mod, name, solver, opts=None):
     mod.connect(group["startState"], solver["inputStart"][index])
     mod.connect(group["currentState"],
                 solver["inputCurrent"][index])
+
+    for channel in ("rotate", "translate", "scale"):
+        for axis in "XYZ":
+            mod.set_keyable(group_parent[channel + axis], False)
+            mod.set_locked(group_parent[channel + axis], False)
 
     if opts and opts["linearAngularStiffness"]:
         _use_linear_angular_stiffness(mod, group)

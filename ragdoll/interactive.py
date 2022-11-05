@@ -1480,7 +1480,7 @@ def assign_marker(selection=None, **opts):
         "basicAttributes": _opt("lollipopBasicAttributes", opts),
         "advancedAttributes": _opt("lollipopAdvancedAttributes", opts),
         "groupAttributes": _opt("lollipopGroupAttributes", opts),
-        "linearAngularStiffness": _opt("markersLinearAngularStiffness", opts),
+        "linearAngularStiffness": _opt("markersLinearAngularStiffness2", opts),
 
     }, **(opts or {}))
 

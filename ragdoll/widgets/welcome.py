@@ -739,7 +739,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
         item = QtGui.QStandardItem()
         item.setData(os.path.basename(data["path"]), AssetCardModel.NameRole)
         item.setData(data["path"], AssetCardModel.AssetRole)
-        item.setData(data["_mtime"], AssetCardModel.SortRole)
+        item.setData(data["path"], AssetCardModel.SortRole)
 
         self._row_map[data["path"]] = self.rowCount()
         self.appendRow(item)
@@ -790,8 +790,8 @@ class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
         self.setSortRole(AssetCardModel.SortRole)
         self._tags = set()
 
-    def sort_mtime(self):
-        order = QtCore.Qt.DescendingOrder  # sort assets by modified time
+    def sort_name(self):
+        order = QtCore.Qt.AscendingOrder
         self.sort(0, order=order)
 
     def set_tags(self, tags):
@@ -1003,7 +1003,7 @@ class AssetListPage(QtWidgets.QWidget):
         widget.asset_opened.connect(self.asset_opened)
         # update sorting
         self._widgets["List"].adjust_viewport()
-        self._models["Proxy"].sort_mtime()
+        self._models["Proxy"].sort_name()
 
     def on_card_updated(self, index):
         raw_tags = self._models["Source"].data(index, AssetCardModel.TagsRole)

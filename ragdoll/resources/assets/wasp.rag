@@ -608,6 +608,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -671,7 +673,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 1.2146177291870117,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -697,7 +701,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -1076,6 +1081,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -1139,7 +1146,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.034986868500709534,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -1165,7 +1174,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint16|wasp:joint17|wasp:joint18"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -1860,6 +1870,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -1923,7 +1935,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.02969704009592533,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -1949,7 +1963,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint16|wasp:joint17|wasp:joint18|wasp:joint19"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -2357,6 +2372,8 @@
                 },
                 "GroupUIComponent": {
                     "members": {
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,
@@ -2364,9 +2381,12 @@
                         "driveSpaceCustom": 1.0,
                         "enabled": true,
                         "inputType": "Inherit",
+                        "linearDampingRatio": 1,
                         "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "selfCollide": false,
-                        "stiffness": 1.0
+                        "stiffness": 1.0,
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -3391,6 +3411,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -3454,7 +3476,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.14482292532920837,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -3480,7 +3504,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint63|wasp:joint64"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -4175,6 +4200,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -4238,7 +4265,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.10842981189489365,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -4264,7 +4293,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint63|wasp:joint64|wasp:joint65"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -5125,6 +5155,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -5188,7 +5220,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.09372260421514511,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -5214,7 +5248,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint63|wasp:joint64|wasp:joint65|wasp:joint66"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -5882,6 +5917,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -5945,7 +5982,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.10256285965442657,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -5971,7 +6010,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint58|wasp:joint59"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -6666,6 +6706,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -6729,7 +6771,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.07343097776174545,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -6755,7 +6799,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint58|wasp:joint59|wasp:joint60"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -7600,6 +7645,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -7663,7 +7710,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.062402017414569855,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -7689,7 +7738,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint58|wasp:joint59|wasp:joint60|wasp:joint61"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -8357,6 +8407,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -8420,7 +8472,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.04885776340961456,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -8446,7 +8500,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint53|wasp:joint54"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -9141,6 +9196,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -9204,7 +9261,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.034992825239896774,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -9230,7 +9289,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint53|wasp:joint54|wasp:joint55"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -10528,6 +10588,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -10591,7 +10653,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 2.7614128589630127,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -10617,7 +10681,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint52"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -10996,6 +11061,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -11059,7 +11126,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.02968810312449932,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -11085,7 +11154,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint53|wasp:joint54|wasp:joint55|wasp:joint56"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -12997,6 +13067,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -13060,7 +13132,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 1.7787392139434814,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -13086,7 +13160,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint52|wasp:joint4"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -13808,6 +13883,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 0.5,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -13871,7 +13948,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.19860714673995972,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -13897,7 +13976,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint28"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -14083,6 +14163,8 @@
                 },
                 "GroupUIComponent": {
                     "members": {
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,
@@ -14090,9 +14172,12 @@
                         "driveSpaceCustom": -1.0,
                         "enabled": true,
                         "inputType": "Drive",
+                        "linearDampingRatio": 1,
                         "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "selfCollide": true,
-                        "stiffness": 1.0
+                        "stiffness": 1.0,
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -14782,6 +14867,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -14845,7 +14932,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.5991354584693909,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -14871,7 +14960,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint28|wasp:joint29"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -15611,6 +15701,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 0.5,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -15674,7 +15766,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.16944143176078796,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -15700,7 +15794,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint25"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -16422,6 +16517,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -16485,7 +16582,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.16285023093223572,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -16511,7 +16610,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint25|wasp:joint26"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -16863,6 +16963,8 @@
                 },
                 "GroupUIComponent": {
                     "members": {
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.10000000149011612,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,
@@ -16870,9 +16972,12 @@
                         "driveSpaceCustom": -1.0,
                         "enabled": true,
                         "inputType": "Drive",
+                        "linearDampingRatio": 1,
                         "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "selfCollide": false,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -17288,6 +17393,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 0.5,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -17351,7 +17458,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.19859258830547333,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -17377,7 +17486,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint68"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -18207,6 +18317,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -18270,7 +18382,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.5986363887786865,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -18296,7 +18410,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint68|wasp:joint69"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -19036,6 +19151,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 0.5,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -19099,7 +19216,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.16948024928569794,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -19125,7 +19244,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint71"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -19847,6 +19967,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -19910,7 +20032,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.16289691627025604,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -19936,7 +20060,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint71|wasp:joint72"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -20613,6 +20738,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.0010000000474974513,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -20676,7 +20803,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.007195725571364164,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -20702,7 +20831,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint76"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -21361,6 +21491,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.0010000000474974513,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -21424,7 +21556,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.01667134277522564,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -21450,7 +21584,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint76|wasp:joint77"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -22145,6 +22280,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.019999999552965164,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -22208,7 +22345,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.022000085562467575,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -22234,7 +22373,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint76|wasp:joint77|wasp:joint78"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -22911,6 +23051,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.0010000000474974513,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -22974,7 +23116,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.00719572464004159,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -23000,7 +23144,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint74"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -23659,6 +23804,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.0010000000474974513,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -23722,7 +23869,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.016671525314450264,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -23748,7 +23897,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint74|wasp:joint22"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -24443,6 +24593,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 0.019999999552965164,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -24506,7 +24658,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.021999800577759743,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -24532,7 +24686,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint2|wasp:joint74|wasp:joint22|wasp:joint23"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -25218,6 +25373,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -25281,7 +25438,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.06503424793481827,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -25307,7 +25466,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint53"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -26011,6 +26171,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -26074,7 +26236,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.1090364158153534,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -26100,7 +26264,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint6"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -26822,6 +26987,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -26885,7 +27052,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.11107128858566284,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -26911,7 +27080,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint11"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -28578,6 +28748,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -28641,7 +28813,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 3.1502926349639893,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -28667,7 +28841,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -29037,6 +29212,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -29100,7 +29277,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.06503424048423767,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -29126,7 +29305,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint16"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -29830,6 +30010,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -29893,7 +30075,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.10903830826282501,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -29919,7 +30103,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint63"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -30641,6 +30826,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -30704,7 +30891,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.11102014034986496,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -30730,7 +30919,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint58"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -31398,6 +31588,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -31461,7 +31653,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.14484505355358124,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -31487,7 +31681,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint6|wasp:joint7"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -32348,6 +32543,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -32411,7 +32608,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.10840633511543274,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -32437,7 +32636,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint6|wasp:joint7|wasp:joint8"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -33132,6 +33332,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -33195,7 +33397,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.09369222074747086,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -33221,7 +33425,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint6|wasp:joint7|wasp:joint8|wasp:joint9"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -33889,6 +34094,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -33952,7 +34159,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.10264094918966293,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -33978,7 +34187,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint11|wasp:joint12"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -34823,6 +35033,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -34886,7 +35098,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.07342715561389923,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -34912,7 +35126,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint11|wasp:joint12|wasp:joint13"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -35607,6 +35822,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -35670,7 +35887,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.06238506734371185,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -35696,7 +35915,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint11|wasp:joint12|wasp:joint13|wasp:joint14"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },
@@ -36364,6 +36584,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -36427,7 +36649,9 @@
                         "inputType": "Inherit",
                         "limitDampingRatio": 1.0,
                         "limitStiffness": 1.0,
-                        "linearMotion": "Inherit",
+                        "linearDampingRatio": 1,
+                        "linearMotion": "Locked",
+                        "linearStiffness": -1,
                         "mass": 0.04887658357620239,
                         "parentFrame": {
                             "type": "Matrix44",
@@ -36453,7 +36677,8 @@
                         "sourceTransform": {
                             "type": "Path",
                             "value": "|wasp:wasp|wasp:skeleton_grp|wasp:joint1|wasp:joint16|wasp:joint17"
-                        }
+                        },
+                        "useLinearAngularStiffness": true
                     },
                     "type": "MarkerUIComponent"
                 },

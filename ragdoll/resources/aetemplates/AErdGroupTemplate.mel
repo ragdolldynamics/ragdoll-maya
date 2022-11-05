@@ -4,21 +4,14 @@ global proc AErdGroupTemplate(string $nodeName) {
     editorTemplate -beginScrollLayout;
 
         editorTemplate -beginLayout "Input" -collapse false;
-            editorTemplate -beginNoOptimize;
-                editorTemplate -addControl "enabled";
-                editorTemplate -addControl "export";
-                editorTemplate -addControl "selfCollide";
-            editorTemplate -endNoOptimize;
-
+            editorTemplate -addControl "enabled";
+            editorTemplate -addControl "export";
+            editorTemplate -addControl "selfCollide";
             editorTemplate -addControl "inputType";
-            editorTemplate -addControl "driveSpace";
-            editorTemplate -addControl "driveSpaceCustom";
-            editorTemplate -addControl "driveStiffness";
-            editorTemplate -addControl "driveDampingRatio";
-
-            editorTemplate -addControl "linearMotion";
-            editorTemplate -addControl "driveRelativeLinearStiffness";
-            editorTemplate -addControl "driveRelativeLinearDampingRatio";
+            editorTemplate -addControl "angularStiffness";
+            editorTemplate -addControl "angularDampingRatio";
+            editorTemplate -addControl "linearStiffness";
+            editorTemplate -addControl "linearDampingRatio";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

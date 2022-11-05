@@ -1044,8 +1044,8 @@
         "help": "This will apply the same Parent and Orient constraints onto the assigned controls are Record Simulation, without actually recording anything."
     },
 
-    "markersLinearAngularStiffness": {
-        "name": "markersLinearAngularStiffness",
+    "markersLinearAngularStiffness2": {
+        "name": "markersLinearAngularStiffness2",
         "label": "Use Translate/Rotate Stiffness",
         "type": "Boolean",
         "default": true,

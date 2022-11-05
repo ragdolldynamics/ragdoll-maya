@@ -9,9 +9,10 @@ global proc AErdMarkerTemplate(string $nodeName) {
                 editorTemplate -addControl "export";
             editorTemplate -endNoOptimize;
             editorTemplate -addControl "inputType";
-            editorTemplate -addControl "driveSpace";
-            editorTemplate -addControl "driveStiffness";
-            editorTemplate -addControl "driveDampingRatio";
+            editorTemplate -addControl "angularStiffness";
+            editorTemplate -addControl "angularDampingRatio";
+            editorTemplate -addControl "linearStiffness";
+            editorTemplate -addControl "linearDampingRatio";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Record" -collapse true;
@@ -36,14 +37,9 @@ global proc AErdMarkerTemplate(string $nodeName) {
         editorTemplate -beginLayout "Advanced Pose" -collapse true;
             editorTemplate -addControl "driveInterpolation";
             editorTemplate -addControl "driveSpringType";
-            editorTemplate -addControl "driveSpaceCustom";
             editorTemplate -addControl "driveAngularAmountTwist";
             editorTemplate -addControl "driveAngularAmountSwing";
-            editorTemplate -addControl "driveAbsoluteLinear";
-            editorTemplate -addControl "driveAbsoluteAngular";
-            editorTemplate -addControl "driveAbsoluteLinearAmount";
 
-            editorTemplate -addControl "linearMotion";
             editorTemplate -addControl "driveRelativeLinearStiffness";
             editorTemplate -addControl "driveRelativeLinearDampingRatio";
         editorTemplate -endLayout;

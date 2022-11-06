@@ -2627,7 +2627,7 @@ def create_group(solver, name=None, opts=None):
     }, **(opts or {}))
 
     # Internal option
-    linear_angular = opts.pop("linearAngularStiffness")
+    linear_angular = opts.pop("linearAngularStiffness", True)
 
     with cmdx.DagModifier() as mod:
         group = _create_group(

@@ -1044,6 +1044,14 @@
         "help": "This will apply the same Parent and Orient constraints onto the assigned controls are Record Simulation, without actually recording anything."
     },
 
+    "markersLinearAngularStiffness": {
+        "name": "markersLinearAngularStiffness",
+        "label": "Use Translate/Rotate Stiffness",
+        "type": "Boolean",
+        "default": true,
+        "help": "Instead of Pose Stiffness, use Translate and Rotate Stiffness. This replaces the attributes in the Channel Box with some, potentially more intuitive attributes."
+    },
+
     "markersLinearAngularStiffness2": {
         "name": "markersLinearAngularStiffness2",
         "label": "Use Translate/Rotate Stiffness",

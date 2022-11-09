@@ -846,10 +846,18 @@ class Loader(object):
                     continue
 
                 Name = self._registry.get(entity, "NameComponent")
+                GroupUi = self._registry.get(entity, "GroupUIComponent")
+
+                # Added 2022.11.25
+                opts = {
+                    "linearAngularStiffness": GroupUi.get(
+                        "useLinearAngularStiffness", False)
+                }
 
                 # E.g. |someCtl_rGroup
                 transform_name = Name["path"].rsplit("|", 1)[-1]
-                rdgroup = commands._create_group(mod, transform_name, rdsolver)
+                rdgroup = commands._create_group(
+                    mod, transform_name, rdsolver, opts=opts)
                 rdgroups[entity] = rdgroup
 
             if self._opts["preserveAttributes"]:
@@ -880,14 +888,20 @@ class Loader(object):
                 continue
 
             Scene = self._registry.get(entity, "SceneComponent")
+            MarkerUi = self._registry.get(entity, "MarkerUIComponent")
             rdsolver = rdsolvers.get(Scene["entity"])
 
             if not rdsolver:
                 # Exported marker wasn't part of an exported solver
                 continue
 
-            rdmarker = commands.assign_marker(transform, rdsolver)
+            # Added 2022.11.25
+            opts = {
+                "linearAngularStiffness": MarkerUi.get(
+                    "useLinearAngularStiffness", False)
+            }
 
+            rdmarker = commands.assign_marker(transform, rdsolver, opts=opts)
             rdmarkers[entity] = rdmarker
             ordered_markers.append((entity, rdmarker))
 
@@ -1262,19 +1276,6 @@ class Loader(object):
         except KeyError:
             pass
 
-        # Added 2022.11.25
-        if GroupUi.get("useLinearAngularStiffness", False):
-            commands._use_linear_angular_stiffness(mod, group)
-
-            mod.set_attr(group["linearStiffness"],
-                         GroupUi["linearStiffness"])
-            mod.set_attr(group["linearDampingRatio"],
-                         GroupUi["linearDampingRatio"])
-            mod.set_attr(group["angularStiffness"],
-                         GroupUi["angularStiffness"])
-            mod.set_attr(group["angularDampingRatio"],
-                         GroupUi["angularDampingRatio"])
-
     def _apply_constraint(self, mod, entity, con):
         Joint = self._registry.get(entity, "JointComponent")
 
@@ -1552,19 +1553,6 @@ class Loader(object):
         # Set this after replacing the mesh, as the replaced
         # mesh may not actually be in use.
         mod.set_attr(marker["shapeType"], shape_type)
-
-        # Added 2022.11.25
-        if MarkerUi.get("useLinearAngularStiffness", False):
-            commands._use_linear_angular_stiffness(mod, marker)
-
-            mod.set_attr(marker["linearStiffness"],
-                         MarkerUi["linearStiffness"])
-            mod.set_attr(marker["linearDampingRatio"],
-                         MarkerUi["linearDampingRatio"])
-            mod.set_attr(marker["angularStiffness"],
-                         MarkerUi["angularStiffness"])
-            mod.set_attr(marker["angularDampingRatio"],
-                         MarkerUi["angularDampingRatio"])
 
 
 def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):

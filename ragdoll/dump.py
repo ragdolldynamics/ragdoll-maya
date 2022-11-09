@@ -1610,12 +1610,6 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
         for source in [plan] + feet
     }
 
-    # Clear existing attributes
-    for source, transform in sources.items():
-        for attr in ("targets", "timings", "hards"):
-            for el in source[attr]:
-                cmds.removeMultiInstance(str(source) + ".%s" % (el.name()))
-
     start_time = plan["startTime"].read()
 
     if start_time == 0:
@@ -1725,6 +1719,12 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             mod.set_attr(plan["duration"], duration + patch)
             for i, foot in enumerate(feet):
                 step_sequences[i] += [0] * patch
+
+        # Clear existing attributes
+        for source, transform in sources.items():
+            for attr in ("targets", "timings", "hards"):
+                for el in source[attr]:
+                    cmds.removeMultiInstance(str(source) + ".%s" % (el.name()))
 
         if smart_sampling:
             # Analyze body movement curves turning points and use as targets

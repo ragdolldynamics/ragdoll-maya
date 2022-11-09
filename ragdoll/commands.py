@@ -358,8 +358,6 @@ def group_markers(markers, name=None, **opts):
 
 
 def _use_linear_angular_stiffness(mod, marker):
-    mod.set_keyable(marker["linearStiffness"], True)
-    mod.set_keyable(marker["linearDampingRatio"], True)
     mod.set_keyable(marker["angularStiffness"], True)
     mod.set_keyable(marker["angularDampingRatio"], True)
 
@@ -367,7 +365,6 @@ def _use_linear_angular_stiffness(mod, marker):
     mod.set_keyable(marker["driveSpace"], False)
     mod.set_keyable(marker["driveSpaceCustom"], False)
     mod.set_keyable(marker["driveDampingRatio"], False)
-    mod.set_channel_box(marker["linearMotion"], False)
 
     mod.set_attr(marker["useLinearAngularStiffness"], True)
 

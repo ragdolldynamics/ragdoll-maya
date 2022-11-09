@@ -57,45 +57,92 @@ def extract(solver, opts=None):
         pass
 
 
-def transfer_live(solver, keyframe=False):
-    # Only apply changes from Markers that has changed
+def _reorderRotation(tm, node):
+    locked = {
+        "rotateX": node["rotateX"].locked,
+        "rotateY": node["rotateY"].locked,
+        "rotateZ": node["rotateZ"].locked,
+    }
+
+    if not any(locked.values()):
+        pass
+
+    elif locked["rotateY"] and locked["rotateZ"]:
+        # Already oriented XYZ, which is OK
+        pass
+
+    elif locked["rotateX"] and locked["rotateY"]:
+        tm.reorderRotation(tm.kZXY)
+
+    elif locked["rotateX"] and locked["rotateZ"]:
+        tm.reorderRotation(tm.kYXZ)
+
+    return tm
+
+
+def transfer_live(solver, keyframe=False, opts=None):
+    """Transfer Live Mode simulation into Maya translate/rotate values
+
+    Unlike a normal transfer or record, Live Mode assumes a linear hierarchy
+    with little to no processing like IK or constraints. With this assumption,
+    we can immediately convert a worldspace matrix to a local transform by
+    cancelling out any parent world matrix, which is both fast and safe.
+
+    It does however mean that this cannot work on any non-linear hierarchy.
+
+    """
+
+    opts = dict({
+        "skipUnchanged": False,
+    }, **(opts or {}))
 
     tolerance = 1e-3
 
     def _transfer_dst(mod, marker, dst):
         mtx = marker["outputMatrix"].as_matrix()
 
-        world_tm = cmdx.Tm(mtx)
-        world_translate = world_tm.translation()
-        world_rotate = world_tm.rotation(asQuaternion=True)
+        if opts["skipUnchanged"]:
+            world_tm = cmdx.Tm(mtx)
+            world_translate = world_tm.translation()
+            world_rotate = world_tm.rotation(asQuaternion=True)
 
-        skip_any = False
+            skip_any = False
 
-        if "previousTranslate" in dst.data:
-            previous = dst.data["previousTranslate"]
-            if previous.is_equivalent(world_translate, tolerance):
-                skip_any = True
+            if "previousTranslate" in dst.data:
+                previous = dst.data["previousTranslate"]
+                if previous.is_equivalent(world_translate, tolerance):
+                    skip_any = True
 
-        if "previousRotate" in dst.data and not skip_any:
-            previous = dst.data["previousRotate"]
-            if previous.is_equivalent(world_rotate, tolerance):
-                skip_any = True
+            if "previousRotate" in dst.data and not skip_any:
+                previous = dst.data["previousRotate"]
+                if previous.is_equivalent(world_rotate, tolerance):
+                    skip_any = True
 
-        dst.data["previousTranslate"] = world_translate
-        dst.data["previousRotate"] = world_rotate
+            dst.data["previousTranslate"] = world_translate
+            dst.data["previousRotate"] = world_rotate
 
-        if skip_any:
-            print("%s skipped (unchanged)" % marker)
-            return
+            if skip_any:
+                print("%s skipped (unchanged)" % marker)
+                return
 
         parent = marker["parentMarker"].input(type="rdMarker")
 
+        linear_motion = cmds.ragdollInfo(str(marker), linearMotion=True)
+        free_translate = linear_motion == 2
+
         if parent:
             mtx *= parent["outputMatrix"].as_matrix().inverse()
-            mtx *= (
+
+            # We've got a proper relative matrix now, but for some reason
+            # we need to cancel out the origin matrix between parent and child
+            rotation = cmdx.Tm(mtx * (
                 marker["originMatrix"].as_matrix() *
                 parent["originMatrix"].as_matrix().inverse()
-            ).inverse()
+            ).inverse())
+
+            mtx = cmdx.Tm(mtx)
+            mtx.set_rotation(rotation.rotation(asQuaternion=True))
+            mtx = mtx.as_matrix()
 
         else:
             # Account for the root joint orient here
@@ -111,6 +158,7 @@ def transfer_live(solver, keyframe=False):
             mtx *= dst["parentInverseMatrix"][0].as_matrix()
 
         tm = cmdx.Tm(mtx)
+        tm = _reorderRotation(tm, dst)
         rotate = tm.rotation()
         translate = tm.translation()
 
@@ -123,7 +171,7 @@ def transfer_live(solver, keyframe=False):
 
                 mod.set_attr(dst["rotate" + axis], value)
 
-        if parent is None:
+        if free_translate or parent is None:
             for i, axis in enumerate("XYZ"):
                 if dst["translate" + axis].editable:
                     value = translate[i]

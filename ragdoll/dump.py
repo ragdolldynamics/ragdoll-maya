@@ -417,9 +417,23 @@ class Loader(object):
 
                 mtx *= parent_mtx.inverse()
 
-                mod.set_locked(joint["translateX"])
-                mod.set_locked(joint["translateY"])
-                mod.set_locked(joint["translateZ"])
+                linear_motion = MarkerUi["linearMotion"]
+                if linear_motion == "Inherit":
+                    Group = self._registry.get(entity, "GroupComponent")
+
+                    try:
+                        GroupUi = self._registry.get(
+                            Group["entity"], "GroupUIComponent"
+                        )
+                    except KeyError:
+                        pass
+                    else:
+                        linear_motion = GroupUi["linearMotion"]
+
+                if linear_motion == "Locked":
+                    mod.set_locked(joint["translateX"])
+                    mod.set_locked(joint["translateY"])
+                    mod.set_locked(joint["translateZ"])
 
                 # Synchronise locked Maya channels with limits
                 Subs = self._registry.get(entity, "SubEntitiesComponent")

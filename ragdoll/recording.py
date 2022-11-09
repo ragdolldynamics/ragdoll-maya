@@ -57,6 +57,29 @@ def extract(solver, opts=None):
         pass
 
 
+def _reorderRotation(tm, node):
+    locked = {
+        "rotateX": node["rotateX"].locked,
+        "rotateY": node["rotateY"].locked,
+        "rotateZ": node["rotateZ"].locked,
+    }
+
+    if not any(locked.values()):
+        pass
+
+    elif locked["rotateY"] and locked["rotateZ"]:
+        # Already oriented XYZ, which is OK
+        pass
+
+    elif locked["rotateX"] and locked["rotateY"]:
+        tm.reorderRotation(tm.kZXY)
+
+    elif locked["rotateX"] and locked["rotateZ"]:
+        tm.reorderRotation(tm.kYXZ)
+
+    return tm
+
+
 def transfer_live(solver, keyframe=False, opts=None):
     """Transfer Live Mode simulation into Maya translate/rotate values
 
@@ -125,6 +148,7 @@ def transfer_live(solver, keyframe=False, opts=None):
             mtx *= dst["parentInverseMatrix"][0].as_matrix()
 
         tm = cmdx.Tm(mtx)
+        tm = _reorderRotation(tm, dst)
         rotate = tm.rotation()
         translate = tm.translation()
 

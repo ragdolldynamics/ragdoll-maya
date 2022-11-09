@@ -2251,6 +2251,44 @@ def extract_markers(selection=None, **opts):
     return kSuccess
 
 
+def _last_command():
+    """Store repeatable command at module-level
+
+    This assumes no threading happens.
+
+    """
+
+    _last_command._func()
+
+
+def repeatable(func):
+    """Make `func` repeatable in Maya
+
+    See https://groups.google.com/g/python_inside_maya
+               /c/2GO5PGD6Q6w/m/U-97zyB_DAAJ
+
+    """
+
+    @functools.wraps(func)
+    def repeatable_wrapper(*args, **kwargs):
+        _last_command._func = func
+
+        command = 'python("import {0};{0}._last_command()")'.format(__name__)
+        result = func()
+
+        try:
+            cmds.repeatLast(
+                addCommand=command,
+                addCommandLabel=func.__name__
+            )
+        except Exception:
+            pass
+
+        return result
+    return repeatable_wrapper
+
+
+@repeatable
 def transfer_live(selection=None, **opts):
     manip = json.loads(cmds.ragdollDump(manipulator=True))
 
@@ -3570,43 +3608,6 @@ def show_explorer(selection=None):
     win = ui.Explorer(parent=ui.MayaWindow())
     win.load(get_fresh_dump)
     win.show(dockable=True)
-
-
-def _last_command():
-    """Store repeatable command at module-level
-
-    This assumes no threading happens.
-
-    """
-
-    _last_command._func()
-
-
-def repeatable(func):
-    """Make `func` repeatable in Maya
-
-    See https://groups.google.com/g/python_inside_maya
-               /c/2GO5PGD6Q6w/m/U-97zyB_DAAJ
-
-    """
-
-    @functools.wraps(func)
-    def repeatable_wrapper(*args, **kwargs):
-        _last_command._func = func
-
-        command = 'python("import {0};{0}._last_command()")'.format(__name__)
-        result = func()
-
-        try:
-            cmds.repeatLast(
-                addCommand=command,
-                addCommandLabel=func.__name__
-            )
-        except Exception:
-            pass
-
-        return result
-    return repeatable_wrapper
 
 
 @i__.with_timing

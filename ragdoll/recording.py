@@ -127,12 +127,22 @@ def transfer_live(solver, keyframe=False, opts=None):
 
         parent = marker["parentMarker"].input(type="rdMarker")
 
+        linear_motion = cmds.ragdollInfo(str(marker), linearMotion=True)
+        free_translate = linear_motion == 2
+
         if parent:
             mtx *= parent["outputMatrix"].as_matrix().inverse()
-            mtx *= (
+
+            # We've got a proper relative matrix now, but for some reason
+            # we need to cancel out the origin matrix between parent and child
+            rotation = cmdx.Tm(mtx * (
                 marker["originMatrix"].as_matrix() *
                 parent["originMatrix"].as_matrix().inverse()
-            ).inverse()
+            ).inverse())
+
+            mtx = cmdx.Tm(mtx)
+            mtx.set_rotation(rotation.rotation(asQuaternion=True))
+            mtx = mtx.as_matrix()
 
         else:
             # Account for the root joint orient here
@@ -161,7 +171,7 @@ def transfer_live(solver, keyframe=False, opts=None):
 
                 mod.set_attr(dst["rotate" + axis], value)
 
-        if parent is None:
+        if free_translate or parent is None:
             for i, axis in enumerate("XYZ"):
                 if dst["translate" + axis].editable:
                     value = translate[i]

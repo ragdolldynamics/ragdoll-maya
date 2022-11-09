@@ -2820,12 +2820,12 @@ def assign_plan(selection=None, **opts):
 
 @with_exception_handling
 def plan_to_animation(selection=None, **opts):
-    plans = plans_from_selection(selection)
+    plans = plans_from_selection(selection) or cmdx.ls(type="rdPlan")
 
     if not plans:
         raise i__.UserWarning(
-            "No plan selected",
-            "Select one or more plans to bake"
+            "No plans",
+            "Found no plans to bake"
         )
 
     for plan in plans:

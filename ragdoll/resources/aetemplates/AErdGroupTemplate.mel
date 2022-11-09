@@ -8,10 +8,11 @@ global proc AErdGroupTemplate(string $nodeName) {
             editorTemplate -addControl "export";
             editorTemplate -addControl "selfCollide";
             editorTemplate -addControl "inputType";
-            editorTemplate -addControl "angularStiffness";
-            editorTemplate -addControl "angularDampingRatio";
+            editorTemplate -addControl "linearMotion";
             editorTemplate -addControl "linearStiffness";
             editorTemplate -addControl "linearDampingRatio";
+            editorTemplate -addControl "angularStiffness";
+            editorTemplate -addControl "angularDampingRatio";
         editorTemplate -endLayout;
 
         // Create an "Extras" section and also add controls for any

@@ -27,15 +27,10 @@ for asset in [opts.fname] if opts.fname else os.listdir(assets):
             lin_stiffness = ui["driveRelativeLinearStiffness"]
             lin_damping = ui["driveRelativeLinearDampingRatio"]
 
-            if ui["linearMotion"] in ("Inherit", "Locked"):
-                lin_stiffness = -1
-                lin_damping = 1
-
             ui["angularStiffness"] = ang_stiffness
             ui["angularDampingRatio"] = ang_damping
             ui["linearStiffness"] = lin_stiffness
             ui["linearDampingRatio"] = lin_damping
-            ui["linearMotion"] = "Locked"
 
         if "MarkerUIComponent" in components:
             ui = components["MarkerUIComponent"]["members"]
@@ -46,23 +41,10 @@ for asset in [opts.fname] if opts.fname else os.listdir(assets):
             lin_stiffness = ui["driveRelativeLinearStiffness"]
             lin_damping = ui["driveRelativeLinearDampingRatio"]
 
-            if ui["linearMotion"] == "Inherit":
-                group = components["GroupComponent"]["members"]
-                group_entity = str(group["entity"]["value"])
-                if group_entity != "0":
-                    group_data = content["entities"][group_entity]
-                    group_ui = group_data["components"]["GroupUIComponent"]
-                    ui["linearMotion"] = group_ui["members"]["linearMotion"]
-
-            if ui["linearMotion"] == "Locked":
-                lin_stiffness = -1
-                lin_damping = 1
-
             ui["angularStiffness"] = ang_stiffness
             ui["angularDampingRatio"] = ang_damping
             ui["linearStiffness"] = lin_stiffness
             ui["linearDampingRatio"] = lin_damping
-            ui["linearMotion"] = "Locked"
 
     with open(fname, "w") as f:
         json.dump(content, f, sort_keys=True, indent=4)

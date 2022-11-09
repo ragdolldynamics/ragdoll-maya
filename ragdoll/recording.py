@@ -57,36 +57,50 @@ def extract(solver, opts=None):
         pass
 
 
-def transfer_live(solver, keyframe=False):
-    # Only apply changes from Markers that has changed
+def transfer_live(solver, keyframe=False, opts=None):
+    """Transfer Live Mode simulation into Maya translate/rotate values
+
+    Unlike a normal transfer or record, Live Mode assumes a linear hierarchy
+    with little to no processing like IK or constraints. With this assumption,
+    we can immediately convert a worldspace matrix to a local transform by
+    cancelling out any parent world matrix, which is both fast and safe.
+
+    It does however mean that this cannot work on any non-linear hierarchy.
+
+    """
+
+    opts = dict({
+        "skipUnchanged": False,
+    }, **(opts or {}))
 
     tolerance = 1e-3
 
     def _transfer_dst(mod, marker, dst):
         mtx = marker["outputMatrix"].as_matrix()
 
-        world_tm = cmdx.Tm(mtx)
-        world_translate = world_tm.translation()
-        world_rotate = world_tm.rotation(asQuaternion=True)
+        if opts["skipUnchanged"]:
+            world_tm = cmdx.Tm(mtx)
+            world_translate = world_tm.translation()
+            world_rotate = world_tm.rotation(asQuaternion=True)
 
-        skip_any = False
+            skip_any = False
 
-        if "previousTranslate" in dst.data:
-            previous = dst.data["previousTranslate"]
-            if previous.is_equivalent(world_translate, tolerance):
-                skip_any = True
+            if "previousTranslate" in dst.data:
+                previous = dst.data["previousTranslate"]
+                if previous.is_equivalent(world_translate, tolerance):
+                    skip_any = True
 
-        if "previousRotate" in dst.data and not skip_any:
-            previous = dst.data["previousRotate"]
-            if previous.is_equivalent(world_rotate, tolerance):
-                skip_any = True
+            if "previousRotate" in dst.data and not skip_any:
+                previous = dst.data["previousRotate"]
+                if previous.is_equivalent(world_rotate, tolerance):
+                    skip_any = True
 
-        dst.data["previousTranslate"] = world_translate
-        dst.data["previousRotate"] = world_rotate
+            dst.data["previousTranslate"] = world_translate
+            dst.data["previousRotate"] = world_rotate
 
-        if skip_any:
-            print("%s skipped (unchanged)" % marker)
-            return
+            if skip_any:
+                print("%s skipped (unchanged)" % marker)
+                return
 
         parent = marker["parentMarker"].input(type="rdMarker")
 

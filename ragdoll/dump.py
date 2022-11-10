@@ -1276,6 +1276,20 @@ class Loader(object):
         except KeyError:
             pass
 
+        # Added 2022.11.25
+        try:
+            mod.set_attr(group["linearStiffness"],
+                         GroupUi["linearStiffness"])
+            mod.set_attr(group["linearDampingRatio"],
+                         GroupUi["linearDampingRatio"])
+            mod.set_attr(group["angularStiffness"],
+                         GroupUi["angularStiffness"])
+            mod.set_attr(group["angularDampingRatio"],
+                         GroupUi["angularDampingRatio"])
+
+        except KeyError:
+            pass
+
     def _apply_constraint(self, mod, entity, con):
         Joint = self._registry.get(entity, "JointComponent")
 
@@ -1456,6 +1470,7 @@ class Loader(object):
             mod.set_attr(marker["daas"], Drive["angularAmountSwing"])
             mod.set_attr(marker["ignoreGravity"], Rigid["ignoreGravity"])
             mod.set_attr(marker["ignoreFields"], Rigid["ignoreFields"])
+            mod.set_attr(marker["driveSpringType"], Drive["acceleration"])
         except KeyError:
             pass
 
@@ -1473,6 +1488,20 @@ class Loader(object):
                          MarkerUi["driveRelativeLinearStiffness"])
             mod.set_attr(marker["drld"],
                          MarkerUi["driveRelativeLinearDampingRatio"])
+        except KeyError:
+            pass
+
+        # Added 2022.11.25
+        try:
+            mod.set_attr(marker["linearStiffness"],
+                         MarkerUi["linearStiffness"])
+            mod.set_attr(marker["linearDampingRatio"],
+                         MarkerUi["linearDampingRatio"])
+            mod.set_attr(marker["angularStiffness"],
+                         MarkerUi["angularStiffness"])
+            mod.set_attr(marker["angularDampingRatio"],
+                         MarkerUi["angularDampingRatio"])
+
         except KeyError:
             pass
 

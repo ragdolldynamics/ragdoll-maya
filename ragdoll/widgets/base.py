@@ -654,6 +654,8 @@ class ProductTimelineModel(QtCore.QObject):
         self.first = None
         self.versions = None
         self.latest_update = None
+        self.correction = dict()
+        self.max_gap = 7 * 4  # don't visualize release gap over 4 weeks
 
     def set_data(self, released_versions, current_ver, expiry_date):
         current_ver = datetime(*map(int, current_ver.split(".")))
@@ -669,15 +671,28 @@ class ProductTimelineModel(QtCore.QObject):
         threshold = dot_r * 6
         index = 0
         previous = 0
+
+        def avoid_gap(_days_after_v0):
+            if _days_after_v0 - previous >= self.max_gap:
+                offset = _days_after_v0 - previous - self.max_gap
+                self.correction[_days_after_v0] = offset
+
         for date in released_dates:
-            days = (date - first_date).days
-            if previous and unit * (days - previous) > threshold:
+            if date.year >= 2077:  # current internal version is 2077
+                continue
+
+            days_after_v0 = (date - first_date).days
+            if previous and unit * (days_after_v0 - previous) > threshold:
                 index += 1
+
             merged_releases[index].append(date)
-            previous = days
+            avoid_gap(days_after_v0)
+            previous = days_after_v0
 
             if date < expiry_date:
                 self.latest_update = date
+
+        avoid_gap((datetime.today() - first_date).days)
 
         self.expiry_date = expiry_date
         self.current = current_ver
@@ -727,6 +742,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self._first = None
         self._versions = None
         self._latest_update = None
+        self._correction = None
 
     def set_data_from_model(self, model):
         """
@@ -746,9 +762,20 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self._first = first_date
         self._versions = model.versions
         self._latest_update = model.latest_update
+        self._correction = model.correction
+
+        self._view_len -= sum(self._correction.values()) * self.DayWidth
 
     def compute_x(self, date):
-        days_after_v0 = self.DayPadding + (date - self._first).days
+        days_after_v0 = (date - self._first).days
+
+        total_offset = 0
+        for checkpoint, offset in self._correction.items():
+            if days_after_v0 >= checkpoint:
+                total_offset += offset
+        days_after_v0 -= total_offset
+
+        days_after_v0 += self.DayPadding
         return days_after_v0 * self.DayWidth
 
     def draw_item(self, x, y, w, h, r, color, text=None, z=0):

@@ -2274,7 +2274,7 @@ def repeatable(func):
         _last_command._func = func
 
         command = 'python("import {0};{0}._last_command()")'.format(__name__)
-        result = func()
+        result = func(*args, **kwargs)
 
         try:
             cmds.repeatLast(

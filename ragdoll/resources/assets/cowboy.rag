@@ -138,7 +138,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_0_fk_animRelative"
+                        "value": "cowboy:rMarker_neck_0_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -296,7 +296,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -363,7 +363,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -373,7 +373,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_0_fk_anim"
+                        "value": "cowboy:rMarker_neck_0_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -8887,7 +8887,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim|woody:head_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim|cowboy:head_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -8954,7 +8954,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim|woody:head_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim|cowboy:head_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -8964,7 +8964,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_head_fk_anim"
+                        "value": "cowboy:rMarker_head_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -9254,7 +9254,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_neck_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -9420,7 +9420,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_1_fk_animRelative"
+                        "value": "cowboy:rMarker_neck_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -9586,7 +9586,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_hip_sknJntRelative"
+                        "value": "cowboy:rMarker_L_hip_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -10301,7 +10301,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -10368,7 +10368,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -10378,7 +10378,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_hip_sknJnt"
+                        "value": "cowboy:rMarker_L_hip_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -10668,7 +10668,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_knee_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_knee_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -10818,7 +10818,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_shoulder_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_shoulder_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -10968,7 +10968,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_middle_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -11134,7 +11134,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_3_fk_animRelative"
+                        "value": "cowboy:rMarker_L_pinky_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -11804,7 +11804,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -11871,7 +11871,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -11881,7 +11881,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_wrist_sknJnt"
+                        "value": "cowboy:rMarker_L_wrist_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -12187,7 +12187,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_0_FK_animRelative"
+                        "value": "cowboy:rMarker_R_middle_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -12337,7 +12337,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_pinky_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -12503,7 +12503,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_wrist_sknJntRelative"
+                        "value": "cowboy:rMarker_R_wrist_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -12653,7 +12653,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_middle_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -12803,7 +12803,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_0_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_thumb_0_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -12953,7 +12953,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_R_middle_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -13119,7 +13119,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_2_fk_animRelative"
+                        "value": "cowboy:rMarker_L_anular_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -13277,7 +13277,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim|woody:L_index_2_fk_anim|woody:L_index_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim|cowboy:L_index_2_fk_anim|cowboy:L_index_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -13344,7 +13344,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim|woody:L_index_2_fk_anim|woody:L_index_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim|cowboy:L_index_2_fk_anim|cowboy:L_index_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -13354,7 +13354,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_3_fk_anim"
+                        "value": "cowboy:rMarker_L_index_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -13652,7 +13652,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -13719,7 +13719,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -13729,7 +13729,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_1_fk_anim"
+                        "value": "cowboy:rMarker_R_middle_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -14035,7 +14035,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hips_ikBase_animRelative"
+                        "value": "cowboy:rMarker_hips_ikBase_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -14193,7 +14193,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -14260,7 +14260,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -14270,7 +14270,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_clav_FK_anim"
+                        "value": "cowboy:rMarker_L_clav_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -14568,7 +14568,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -14635,7 +14635,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -14645,7 +14645,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_0_fk_anim"
+                        "value": "cowboy:rMarker_L_thumb_0_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -14951,7 +14951,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_2_fk_animRelative"
+                        "value": "cowboy:rMarker_R_anular_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -15117,7 +15117,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_start_fk_animRelative"
+                        "value": "cowboy:rMarker_start_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -15267,7 +15267,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hips_ikBase_animAbsolute"
+                        "value": "cowboy:rMarker_hips_ikBase_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -15417,7 +15417,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_pinky_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -15583,7 +15583,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_elbow_sknJntRelative"
+                        "value": "cowboy:rMarker_R_elbow_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -15733,7 +15733,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_anular_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -15891,7 +15891,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim|woody:R_thumb_1_fk_anim|woody:R_thumb_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim|cowboy:R_thumb_1_fk_anim|cowboy:R_thumb_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -15958,7 +15958,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim|woody:R_thumb_1_fk_anim|woody:R_thumb_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim|cowboy:R_thumb_1_fk_anim|cowboy:R_thumb_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -15968,7 +15968,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_2_fk_anim"
+                        "value": "cowboy:rMarker_R_thumb_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -16258,7 +16258,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ankle_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_ankle_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -16408,7 +16408,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ball_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_ball_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -16521,9 +16521,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:L_middle_1_fk_anim_to_L_pinky_1_fk_anim",
-                        "shortestPath": "woody:L_middle_1_fk_anim_to_L_pinky_1_fk_anim",
-                        "value": "woody:L_middle_1_fk_anim_to_L_pinky_1_fk_animShape"
+                        "path": "|cowboy:L_middle_1_fk_anim_to_L_pinky_1_fk_anim",
+                        "shortestPath": "cowboy:L_middle_1_fk_anim_to_L_pinky_1_fk_anim",
+                        "value": "cowboy:L_middle_1_fk_anim_to_L_pinky_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -17487,7 +17487,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -17554,7 +17554,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -17564,7 +17564,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_knee_sknJnt"
+                        "value": "cowboy:rMarker_L_knee_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -17854,7 +17854,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_elbow_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_elbow_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -18020,7 +18020,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_0_FK_animRelative"
+                        "value": "cowboy:rMarker_R_index_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -18807,7 +18807,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -18874,7 +18874,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -18884,7 +18884,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_shoulder_sknJnt"
+                        "value": "cowboy:rMarker_L_shoulder_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -19182,7 +19182,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim|woody:L_thumb_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim|cowboy:L_thumb_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -19249,7 +19249,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim|woody:L_thumb_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim|cowboy:L_thumb_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -19259,7 +19259,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_1_fk_anim"
+                        "value": "cowboy:rMarker_L_thumb_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -19557,7 +19557,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim|woody:R_middle_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim|cowboy:R_middle_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -19624,7 +19624,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim|woody:R_middle_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim|cowboy:R_middle_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -19634,7 +19634,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_2_fk_anim"
+                        "value": "cowboy:rMarker_R_middle_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -19924,7 +19924,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_R_index_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -20090,7 +20090,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_2_fk_animRelative"
+                        "value": "cowboy:rMarker_seg_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -20256,7 +20256,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_1_fk_animRelative"
+                        "value": "cowboy:rMarker_L_thumb_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -20422,7 +20422,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_shoulder_sknJntRelative"
+                        "value": "cowboy:rMarker_R_shoulder_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -20480,9 +20480,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:rGround1",
-                        "shortestPath": "woody:rGround1",
-                        "value": "woody:rGroundShape1"
+                        "path": "|cowboy:rGround1",
+                        "shortestPath": "cowboy:rGround1",
+                        "value": "cowboy:rGroundShape1"
                     },
                     "type": "NameComponent"
                 },
@@ -20632,7 +20632,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_shoulder_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_shoulder_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -28976,7 +28976,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -29043,7 +29043,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -29053,7 +29053,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_chest_ik_anim"
+                        "value": "cowboy:rMarker_chest_ik_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -29343,7 +29343,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_middle_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -29501,7 +29501,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -29568,7 +29568,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -29578,7 +29578,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_0_FK_anim"
+                        "value": "cowboy:rMarker_L_pinky_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -29868,7 +29868,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_hip_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_hip_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -32734,7 +32734,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt|woody:R_ankle_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt|cowboy:R_ankle_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -32801,7 +32801,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt|woody:R_ankle_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt|cowboy:R_ankle_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -32811,7 +32811,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ankle_sknJnt"
+                        "value": "cowboy:rMarker_R_ankle_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -33064,9 +33064,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:R_middle_1_fk_anim_to_R_anular_1_fk_anim",
-                        "shortestPath": "woody:R_middle_1_fk_anim_to_R_anular_1_fk_anim",
-                        "value": "woody:R_middle_1_fk_anim_to_R_anular_1_fk_animShape"
+                        "path": "|cowboy:R_middle_1_fk_anim_to_R_anular_1_fk_anim",
+                        "shortestPath": "cowboy:R_middle_1_fk_anim_to_R_anular_1_fk_anim",
+                        "value": "cowboy:R_middle_1_fk_anim_to_R_anular_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -33232,7 +33232,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_head_fk_animRelative"
+                        "value": "cowboy:rMarker_head_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -33382,7 +33382,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_knee_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_knee_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -33495,9 +33495,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:R_pinky_1_fk_anim_to_R_middle_1_fk_anim",
-                        "shortestPath": "woody:R_pinky_1_fk_anim_to_R_middle_1_fk_anim",
-                        "value": "woody:R_pinky_1_fk_anim_to_R_middle_1_fk_animShape"
+                        "path": "|cowboy:R_pinky_1_fk_anim_to_R_middle_1_fk_anim",
+                        "shortestPath": "cowboy:R_pinky_1_fk_anim_to_R_middle_1_fk_anim",
+                        "value": "cowboy:R_pinky_1_fk_anim_to_R_middle_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -33647,7 +33647,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hat_animAbsolute"
+                        "value": "cowboy:rMarker_hat_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -33797,7 +33797,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_index_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -33963,7 +33963,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_0_FK_animRelative"
+                        "value": "cowboy:rMarker_L_pinky_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -34129,7 +34129,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_shoulder_sknJntRelative"
+                        "value": "cowboy:rMarker_L_shoulder_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -34295,7 +34295,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_2_fk_animRelative"
+                        "value": "cowboy:rMarker_L_thumb_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -34461,7 +34461,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_0_FK_animRelative"
+                        "value": "cowboy:rMarker_L_middle_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -34627,7 +34627,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_1_fk_animRelative"
+                        "value": "cowboy:rMarker_L_middle_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -34785,7 +34785,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -34852,7 +34852,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -34862,7 +34862,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_0_FK_anim"
+                        "value": "cowboy:rMarker_R_index_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -35152,7 +35152,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_index_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -35310,7 +35310,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -35377,7 +35377,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -35387,7 +35387,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_1_fk_anim"
+                        "value": "cowboy:rMarker_L_pinky_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -35685,7 +35685,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -35752,7 +35752,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -35762,7 +35762,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_0_FK_anim"
+                        "value": "cowboy:rMarker_L_index_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -36068,7 +36068,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_2_fk_animRelative"
+                        "value": "cowboy:rMarker_R_middle_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -36218,7 +36218,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_R_pinky_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -36368,7 +36368,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_clav_FK_animAbsolute"
+                        "value": "cowboy:rMarker_L_clav_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -36526,7 +36526,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -36593,7 +36593,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -36603,7 +36603,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_0_FK_anim"
+                        "value": "cowboy:rMarker_L_anular_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -36901,7 +36901,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -36968,7 +36968,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -36978,7 +36978,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_1_fk_anim"
+                        "value": "cowboy:rMarker_L_anular_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -38087,9 +38087,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:rSolver",
-                        "shortestPath": "woody:rSolver",
-                        "value": "woody:rSolverShape"
+                        "path": "|cowboy:rSolver",
+                        "shortestPath": "cowboy:rSolver",
+                        "value": "cowboy:rSolverShape"
                     },
                     "type": "NameComponent"
                 },
@@ -38287,9 +38287,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:Head",
-                        "shortestPath": "woody:Head",
-                        "value": "woody:HeadShape"
+                        "path": "|cowboy:Head",
+                        "shortestPath": "cowboy:Head",
+                        "value": "cowboy:HeadShape"
                     },
                     "type": "NameComponent"
                 },
@@ -38455,7 +38455,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_chest_ik_animRelative"
+                        "value": "cowboy:rMarker_chest_ik_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -38621,7 +38621,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_3_fk_animRelative"
+                        "value": "cowboy:rMarker_R_pinky_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -38779,7 +38779,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim|woody:R_anular_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim|cowboy:R_anular_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -38846,7 +38846,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim|woody:R_anular_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim|cowboy:R_anular_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -38856,7 +38856,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_2_fk_anim"
+                        "value": "cowboy:rMarker_R_anular_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -39162,7 +39162,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_1_fk_animRelative"
+                        "value": "cowboy:rMarker_seg_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -39320,7 +39320,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim|woody:R_thumb_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim|cowboy:R_thumb_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -39387,7 +39387,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim|woody:R_thumb_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim|cowboy:R_thumb_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -39397,7 +39397,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_1_fk_anim"
+                        "value": "cowboy:rMarker_R_thumb_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -39703,7 +39703,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_1_fk_animRelative"
+                        "value": "cowboy:rMarker_R_pinky_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -39853,7 +39853,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ball_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_ball_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -40019,7 +40019,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ball_sknJntRelative"
+                        "value": "cowboy:rMarker_L_ball_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -41184,7 +41184,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt|woody:L_ankle_sknJnt|woody:L_ball_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt|cowboy:L_ankle_sknJnt|cowboy:L_ball_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -41251,7 +41251,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt|woody:L_ankle_sknJnt|woody:L_ball_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt|cowboy:L_ankle_sknJnt|cowboy:L_ball_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -41261,7 +41261,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ball_sknJnt"
+                        "value": "cowboy:rMarker_L_ball_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -42365,7 +42365,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -42432,7 +42432,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -42442,7 +42442,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_knee_sknJnt"
+                        "value": "cowboy:rMarker_R_knee_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -42732,7 +42732,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ankle_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_ankle_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -42898,7 +42898,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ankle_sknJntRelative"
+                        "value": "cowboy:rMarker_R_ankle_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -43056,7 +43056,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim|woody:L_thumb_1_fk_anim|woody:L_thumb_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim|cowboy:L_thumb_1_fk_anim|cowboy:L_thumb_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -43123,7 +43123,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_thumb_0_fk_anim|woody:L_thumb_1_fk_anim|woody:L_thumb_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_thumb_0_fk_anim|cowboy:L_thumb_1_fk_anim|cowboy:L_thumb_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -43133,7 +43133,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_2_fk_anim"
+                        "value": "cowboy:rMarker_L_thumb_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -43431,7 +43431,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -43498,7 +43498,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -43508,7 +43508,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_0_FK_anim"
+                        "value": "cowboy:rMarker_R_middle_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -43798,7 +43798,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_0_fk_animAbsolute"
+                        "value": "cowboy:rMarker_neck_0_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -43911,9 +43911,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:L_index_1_fk_anim_to_L_anular_1_fk_anim",
-                        "shortestPath": "woody:L_index_1_fk_anim_to_L_anular_1_fk_anim",
-                        "value": "woody:L_index_1_fk_anim_to_L_anular_1_fk_animShape"
+                        "path": "|cowboy:L_index_1_fk_anim_to_L_anular_1_fk_anim",
+                        "shortestPath": "cowboy:L_index_1_fk_anim_to_L_anular_1_fk_anim",
+                        "value": "cowboy:L_index_1_fk_anim_to_L_anular_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -44071,7 +44071,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim|woody:L_middle_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim|cowboy:L_middle_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -44138,7 +44138,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim|woody:L_middle_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim|cowboy:L_middle_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -44148,7 +44148,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_2_fk_anim"
+                        "value": "cowboy:rMarker_L_middle_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -44454,7 +44454,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_2_fk_animRelative"
+                        "value": "cowboy:rMarker_L_middle_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -44612,7 +44612,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -44679,7 +44679,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -44689,7 +44689,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_0_FK_anim"
+                        "value": "cowboy:rMarker_R_pinky_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -44995,7 +44995,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_0_FK_animRelative"
+                        "value": "cowboy:rMarker_R_pinky_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -45145,7 +45145,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_anular_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -45303,7 +45303,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim|woody:L_anular_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim|cowboy:L_anular_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -45370,7 +45370,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim|woody:L_anular_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim|cowboy:L_anular_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -45380,7 +45380,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_2_fk_anim"
+                        "value": "cowboy:rMarker_L_anular_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -45686,7 +45686,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_clav_FK_animRelative"
+                        "value": "cowboy:rMarker_L_clav_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -51975,7 +51975,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -52042,7 +52042,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -52052,7 +52052,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hips_ikBase_anim"
+                        "value": "cowboy:rMarker_hips_ikBase_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -52342,7 +52342,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_start_fk_animAbsolute"
+                        "value": "cowboy:rMarker_start_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -52500,7 +52500,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim|woody:seg_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim|cowboy:seg_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -52567,7 +52567,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim|woody:seg_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim|cowboy:seg_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -52577,7 +52577,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_1_fk_anim"
+                        "value": "cowboy:rMarker_seg_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -52875,7 +52875,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim|woody:R_pinky_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim|cowboy:R_pinky_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -52942,7 +52942,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim|woody:R_pinky_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim|cowboy:R_pinky_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -52952,7 +52952,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_2_fk_anim"
+                        "value": "cowboy:rMarker_R_pinky_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -53258,7 +53258,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_2_fk_animRelative"
+                        "value": "cowboy:rMarker_R_pinky_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -53973,7 +53973,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -54040,7 +54040,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -54050,7 +54050,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_hip_sknJnt"
+                        "value": "cowboy:rMarker_R_hip_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -54356,7 +54356,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_hip_sknJntRelative"
+                        "value": "cowboy:rMarker_R_hip_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -54522,7 +54522,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_0_FK_animRelative"
+                        "value": "cowboy:rMarker_R_anular_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -54672,7 +54672,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_R_anular_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -54838,7 +54838,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_1_fk_animRelative"
+                        "value": "cowboy:rMarker_L_anular_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -54988,7 +54988,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_anular_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -55154,7 +55154,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_2_fk_animRelative"
+                        "value": "cowboy:rMarker_L_pinky_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -55304,7 +55304,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_pinky_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -60402,7 +60402,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim|woody:head_fk_anim|woody:hat_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim|cowboy:head_fk_anim|cowboy:hat_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -60469,7 +60469,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim|woody:head_fk_anim|woody:hat_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim|cowboy:head_fk_anim|cowboy:hat_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -60479,7 +60479,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hat_anim"
+                        "value": "cowboy:rMarker_hat_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -60785,7 +60785,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_hat_animRelative"
+                        "value": "cowboy:rMarker_hat_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -60943,7 +60943,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -61010,7 +61010,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -61020,7 +61020,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_1_fk_anim"
+                        "value": "cowboy:rMarker_R_index_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -61326,7 +61326,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_1_fk_animRelative"
+                        "value": "cowboy:rMarker_R_index_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -61484,7 +61484,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim|woody:L_index_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim|cowboy:L_index_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -61551,7 +61551,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim|woody:L_index_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim|cowboy:L_index_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -61561,7 +61561,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_2_fk_anim"
+                        "value": "cowboy:rMarker_L_index_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -61867,7 +61867,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_2_fk_animRelative"
+                        "value": "cowboy:rMarker_L_index_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -62025,7 +62025,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -62092,7 +62092,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -62102,7 +62102,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_1_fk_anim"
+                        "value": "cowboy:rMarker_R_anular_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -62408,7 +62408,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_1_fk_animRelative"
+                        "value": "cowboy:rMarker_R_anular_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -63573,7 +63573,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt|woody:R_ankle_sknJnt|woody:R_ball_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt|cowboy:R_ankle_sknJnt|cowboy:R_ball_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -63640,7 +63640,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:R_hip_sknJnt|woody:R_knee_sknJnt|woody:R_ankle_sknJnt|woody:R_ball_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:R_hip_sknJnt|cowboy:R_knee_sknJnt|cowboy:R_ankle_sknJnt|cowboy:R_ball_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -63650,7 +63650,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ball_sknJnt"
+                        "value": "cowboy:rMarker_R_ball_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -66656,7 +66656,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt|woody:L_ankle_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt|cowboy:L_ankle_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -66723,7 +66723,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:L_hip_sknJnt|woody:L_knee_sknJnt|woody:L_ankle_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:L_hip_sknJnt|cowboy:L_knee_sknJnt|cowboy:L_ankle_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -66733,7 +66733,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ankle_sknJnt"
+                        "value": "cowboy:rMarker_L_ankle_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -67031,7 +67031,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -67098,7 +67098,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -67108,7 +67108,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_1_fk_anim"
+                        "value": "cowboy:rMarker_neck_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -67406,7 +67406,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -67473,7 +67473,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:neck_0_fk_anim|woody:neck_1_fk_anim|woody:neck_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:neck_0_fk_anim|cowboy:neck_1_fk_anim|cowboy:neck_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -67483,7 +67483,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_2_fk_anim"
+                        "value": "cowboy:rMarker_neck_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -69925,7 +69925,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -69992,7 +69992,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -70002,7 +70002,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_elbow_sknJnt"
+                        "value": "cowboy:rMarker_L_elbow_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -70292,7 +70292,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_index_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -70458,7 +70458,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_elbow_sknJntRelative"
+                        "value": "cowboy:rMarker_L_elbow_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -70608,7 +70608,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_pinky_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -71278,7 +71278,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -71345,7 +71345,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -71355,7 +71355,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_wrist_sknJnt"
+                        "value": "cowboy:rMarker_R_wrist_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -71653,7 +71653,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -71720,7 +71720,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -71730,7 +71730,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_0_FK_anim"
+                        "value": "cowboy:rMarker_R_anular_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -72036,7 +72036,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_3_fk_animRelative"
+                        "value": "cowboy:rMarker_R_index_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -72194,7 +72194,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim|woody:R_index_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim|cowboy:R_index_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -72261,7 +72261,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim|woody:R_index_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim|cowboy:R_index_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -72271,7 +72271,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_2_fk_anim"
+                        "value": "cowboy:rMarker_R_index_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -72577,7 +72577,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_3_fk_animRelative"
+                        "value": "cowboy:rMarker_R_middle_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -72743,7 +72743,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_3_fk_animRelative"
+                        "value": "cowboy:rMarker_L_index_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -72893,7 +72893,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_thumb_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -73043,7 +73043,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_thumb_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -73101,9 +73101,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:L_Leg",
-                        "shortestPath": "woody:L_Leg",
-                        "value": "woody:L_LegShape"
+                        "path": "|cowboy:L_Leg",
+                        "shortestPath": "cowboy:L_Leg",
+                        "value": "cowboy:L_LegShape"
                     },
                     "type": "NameComponent"
                 },
@@ -73161,9 +73161,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:Body",
-                        "shortestPath": "woody:Body",
-                        "value": "woody:BodyShape"
+                        "path": "|cowboy:Body",
+                        "shortestPath": "cowboy:Body",
+                        "value": "cowboy:BodyShape"
                     },
                     "type": "NameComponent"
                 },
@@ -73905,7 +73905,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -73972,7 +73972,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -73982,7 +73982,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_shoulder_sknJnt"
+                        "value": "cowboy:rMarker_R_shoulder_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -74272,7 +74272,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_elbow_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_elbow_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -74422,7 +74422,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_anular_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -74572,7 +74572,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_anular_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -74730,7 +74730,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -74797,7 +74797,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_index_0_FK_anim|woody:L_index_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_index_0_FK_anim|cowboy:L_index_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -74807,7 +74807,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_1_fk_anim"
+                        "value": "cowboy:rMarker_L_index_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -75113,7 +75113,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_1_fk_animRelative"
+                        "value": "cowboy:rMarker_L_index_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -75263,7 +75263,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_index_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -75429,7 +75429,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_wrist_sknJntRelative"
+                        "value": "cowboy:rMarker_L_wrist_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -75579,7 +75579,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_L_pinky_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -75737,7 +75737,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim|woody:L_pinky_2_fk_anim|woody:L_pinky_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim|cowboy:L_pinky_2_fk_anim|cowboy:L_pinky_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -75804,7 +75804,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim|woody:L_pinky_2_fk_anim|woody:L_pinky_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim|cowboy:L_pinky_2_fk_anim|cowboy:L_pinky_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -75814,7 +75814,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_3_fk_anim"
+                        "value": "cowboy:rMarker_L_pinky_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -76104,7 +76104,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_wrist_sknJntAbsolute"
+                        "value": "cowboy:rMarker_R_wrist_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -76262,7 +76262,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -76329,7 +76329,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -76339,7 +76339,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_0_FK_anim"
+                        "value": "cowboy:rMarker_L_middle_0_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -76645,7 +76645,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_1_fk_animRelative"
+                        "value": "cowboy:rMarker_L_pinky_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -76811,7 +76811,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_2_fk_animRelative"
+                        "value": "cowboy:rMarker_R_index_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -76961,7 +76961,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_index_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -77119,7 +77119,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim|woody:R_index_2_fk_anim|woody:R_index_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim|cowboy:R_index_2_fk_anim|cowboy:R_index_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -77186,7 +77186,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_index_0_FK_anim|woody:R_index_1_fk_anim|woody:R_index_2_fk_anim|woody:R_index_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_index_0_FK_anim|cowboy:R_index_1_fk_anim|cowboy:R_index_2_fk_anim|cowboy:R_index_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -77196,7 +77196,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_3_fk_anim"
+                        "value": "cowboy:rMarker_R_index_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -77502,7 +77502,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_1_fk_animRelative"
+                        "value": "cowboy:rMarker_R_middle_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -77668,7 +77668,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_0_FK_animRelative"
+                        "value": "cowboy:rMarker_L_index_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -77818,7 +77818,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_index_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_L_index_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -77984,7 +77984,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_0_fk_animRelative"
+                        "value": "cowboy:rMarker_L_thumb_0_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -78134,7 +78134,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_thumb_0_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_thumb_0_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -78284,7 +78284,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_chest_ik_animAbsolute"
+                        "value": "cowboy:rMarker_chest_ik_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -78342,9 +78342,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:R_Arm",
-                        "shortestPath": "woody:R_Arm",
-                        "value": "woody:R_ArmShape"
+                        "path": "|cowboy:R_Arm",
+                        "shortestPath": "cowboy:R_Arm",
+                        "value": "cowboy:R_ArmShape"
                     },
                     "type": "NameComponent"
                 },
@@ -78402,9 +78402,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:L_Arm",
-                        "shortestPath": "woody:L_Arm",
-                        "value": "woody:L_ArmShape"
+                        "path": "|cowboy:L_Arm",
+                        "shortestPath": "cowboy:L_Arm",
+                        "value": "cowboy:L_ArmShape"
                     },
                     "type": "NameComponent"
                 },
@@ -78462,9 +78462,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:R_Leg",
-                        "shortestPath": "woody:R_Leg",
-                        "value": "woody:R_LegShape"
+                        "path": "|cowboy:R_Leg",
+                        "shortestPath": "cowboy:R_Leg",
+                        "value": "cowboy:R_LegShape"
                     },
                     "type": "NameComponent"
                 },
@@ -78622,7 +78622,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim|woody:R_anular_2_fk_anim|woody:R_anular_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim|cowboy:R_anular_2_fk_anim|cowboy:R_anular_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -78689,7 +78689,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_anular_0_FK_anim|woody:R_anular_1_fk_anim|woody:R_anular_2_fk_anim|woody:R_anular_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_anular_0_FK_anim|cowboy:R_anular_1_fk_anim|cowboy:R_anular_2_fk_anim|cowboy:R_anular_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -78699,7 +78699,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_3_fk_anim"
+                        "value": "cowboy:rMarker_R_anular_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -78989,7 +78989,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_pinky_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -81291,7 +81291,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -81358,7 +81358,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -81368,7 +81368,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_elbow_sknJnt"
+                        "value": "cowboy:rMarker_R_elbow_sknJnt"
                     },
                     "type": "NameComponent"
                 },
@@ -81674,7 +81674,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_2_fk_animRelative"
+                        "value": "cowboy:rMarker_R_thumb_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -81824,7 +81824,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_thumb_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -81990,7 +81990,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_ball_sknJntRelative"
+                        "value": "cowboy:rMarker_R_ball_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -82156,7 +82156,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_2_fk_animRelative"
+                        "value": "cowboy:rMarker_neck_2_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -82306,7 +82306,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_neck_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_neck_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -82419,9 +82419,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:L_anular_1_fk_anim_to_L_middle_1_fk_anim",
-                        "shortestPath": "woody:L_anular_1_fk_anim_to_L_middle_1_fk_anim",
-                        "value": "woody:L_anular_1_fk_anim_to_L_middle_1_fk_animShape"
+                        "path": "|cowboy:L_anular_1_fk_anim_to_L_middle_1_fk_anim",
+                        "shortestPath": "cowboy:L_anular_1_fk_anim_to_L_middle_1_fk_anim",
+                        "value": "cowboy:L_anular_1_fk_anim_to_L_middle_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -82579,7 +82579,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim|woody:L_middle_2_fk_anim|woody:L_middle_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim|cowboy:L_middle_2_fk_anim|cowboy:L_middle_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -82646,7 +82646,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim|woody:L_middle_2_fk_anim|woody:L_middle_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim|cowboy:L_middle_2_fk_anim|cowboy:L_middle_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -82656,7 +82656,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_3_fk_anim"
+                        "value": "cowboy:rMarker_L_middle_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -82962,7 +82962,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_3_fk_animRelative"
+                        "value": "cowboy:rMarker_L_middle_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -83112,7 +83112,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_thumb_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -83270,7 +83270,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -83337,7 +83337,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_thumb_0_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_thumb_0_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -83347,7 +83347,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_0_fk_anim"
+                        "value": "cowboy:rMarker_R_thumb_0_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -83637,7 +83637,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_middle_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -83803,7 +83803,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_clav_FK_animRelative"
+                        "value": "cowboy:rMarker_R_clav_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -83953,7 +83953,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_clav_FK_animAbsolute"
+                        "value": "cowboy:rMarker_R_clav_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -84111,7 +84111,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim|woody:seg_1_fk_anim|woody:seg_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim|cowboy:seg_1_fk_anim|cowboy:seg_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -84178,7 +84178,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim|woody:seg_1_fk_anim|woody:seg_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim|cowboy:seg_1_fk_anim|cowboy:seg_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -84188,7 +84188,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_2_fk_anim"
+                        "value": "cowboy:rMarker_seg_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -84478,7 +84478,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_spine_segMid_0_ik_animAbsolute"
+                        "value": "cowboy:rMarker_spine_segMid_0_ik_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -84628,7 +84628,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_pinky_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -84786,7 +84786,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim|woody:R_pinky_2_fk_anim|woody:R_pinky_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim|cowboy:R_pinky_2_fk_anim|cowboy:R_pinky_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -84853,7 +84853,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim|woody:R_pinky_2_fk_anim|woody:R_pinky_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim|cowboy:R_pinky_2_fk_anim|cowboy:R_pinky_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -84863,7 +84863,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_3_fk_anim"
+                        "value": "cowboy:rMarker_R_pinky_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -85161,7 +85161,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:rGround"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:rGround"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -85228,7 +85228,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:rGround"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:rGround"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -85238,7 +85238,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_rGround"
+                        "value": "cowboy:rMarker_rGround"
                     },
                     "type": "NameComponent"
                 },
@@ -85544,7 +85544,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_rGroundRelative"
+                        "value": "cowboy:rMarker_rGroundRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -85694,7 +85694,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_L_anular_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -85852,7 +85852,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim|woody:L_anular_2_fk_anim|woody:L_anular_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim|cowboy:L_anular_2_fk_anim|cowboy:L_anular_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -85919,7 +85919,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_anular_0_FK_anim|woody:L_anular_1_fk_anim|woody:L_anular_2_fk_anim|woody:L_anular_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_anular_0_FK_anim|cowboy:L_anular_1_fk_anim|cowboy:L_anular_2_fk_anim|cowboy:L_anular_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -85929,7 +85929,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_3_fk_anim"
+                        "value": "cowboy:rMarker_L_anular_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -86235,7 +86235,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_knee_sknJntRelative"
+                        "value": "cowboy:rMarker_R_knee_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -86385,7 +86385,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_hip_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_hip_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -86551,7 +86551,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_knee_sknJntRelative"
+                        "value": "cowboy:rMarker_L_knee_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -86717,7 +86717,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_ankle_sknJntRelative"
+                        "value": "cowboy:rMarker_L_ankle_sknJntRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -86867,7 +86867,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_head_fk_animAbsolute"
+                        "value": "cowboy:rMarker_head_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -86980,9 +86980,9 @@
                 },
                 "NameComponent": {
                     "members": {
-                        "path": "|woody:R_anular_1_fk_anim_to_R_index_1_fk_anim",
-                        "shortestPath": "woody:R_anular_1_fk_anim_to_R_index_1_fk_anim",
-                        "value": "woody:R_anular_1_fk_anim_to_R_index_1_fk_animShape"
+                        "path": "|cowboy:R_anular_1_fk_anim_to_R_index_1_fk_anim",
+                        "shortestPath": "cowboy:R_anular_1_fk_anim_to_R_index_1_fk_anim",
+                        "value": "cowboy:R_anular_1_fk_anim_to_R_index_1_fk_animShape"
                     },
                     "type": "NameComponent"
                 },
@@ -87132,7 +87132,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_wrist_sknJntAbsolute"
+                        "value": "cowboy:rMarker_L_wrist_sknJntAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -87290,7 +87290,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -87357,7 +87357,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_middle_0_FK_anim|woody:L_middle_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_middle_0_FK_anim|cowboy:L_middle_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -87367,7 +87367,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_1_fk_anim"
+                        "value": "cowboy:rMarker_L_middle_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -87657,7 +87657,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_3_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_middle_3_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -87807,7 +87807,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_middle_0_FK_animAbsolute"
+                        "value": "cowboy:rMarker_L_middle_0_FK_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -87965,7 +87965,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim|woody:L_pinky_2_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim|cowboy:L_pinky_2_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -88032,7 +88032,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:L_clav_FK_anim|woody:L_shoulder_sknJnt|woody:L_elbow_sknJnt|woody:L_wrist_sknJnt|woody:L_pinky_0_FK_anim|woody:L_pinky_1_fk_anim|woody:L_pinky_2_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:L_clav_FK_anim|cowboy:L_shoulder_sknJnt|cowboy:L_elbow_sknJnt|cowboy:L_wrist_sknJnt|cowboy:L_pinky_0_FK_anim|cowboy:L_pinky_1_fk_anim|cowboy:L_pinky_2_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -88042,7 +88042,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_pinky_2_fk_anim"
+                        "value": "cowboy:rMarker_L_pinky_2_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -88340,7 +88340,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim|woody:R_middle_2_fk_anim|woody:R_middle_3_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim|cowboy:R_middle_2_fk_anim|cowboy:R_middle_3_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -88407,7 +88407,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_middle_0_FK_anim|woody:R_middle_1_fk_anim|woody:R_middle_2_fk_anim|woody:R_middle_3_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_middle_0_FK_anim|cowboy:R_middle_1_fk_anim|cowboy:R_middle_2_fk_anim|cowboy:R_middle_3_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -88417,7 +88417,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_3_fk_anim"
+                        "value": "cowboy:rMarker_R_middle_3_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -88707,7 +88707,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_index_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_index_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -88873,7 +88873,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_0_fk_animRelative"
+                        "value": "cowboy:rMarker_R_thumb_0_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -89039,7 +89039,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_thumb_1_fk_animRelative"
+                        "value": "cowboy:rMarker_R_thumb_1_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -89189,7 +89189,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_middle_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_R_middle_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -89339,7 +89339,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_L_anular_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -89505,7 +89505,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_3_fk_animRelative"
+                        "value": "cowboy:rMarker_L_anular_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -89671,7 +89671,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_L_anular_0_FK_animRelative"
+                        "value": "cowboy:rMarker_L_anular_0_FK_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -89837,7 +89837,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_spine_segMid_0_ik_animRelative"
+                        "value": "cowboy:rMarker_spine_segMid_0_ik_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -90615,7 +90615,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -90682,7 +90682,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -90692,7 +90692,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_spine_segMid_0_ik_anim"
+                        "value": "cowboy:rMarker_spine_segMid_0_ik_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -90982,7 +90982,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_rGroundAbsolute"
+                        "value": "cowboy:rMarker_rGroundAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -91140,7 +91140,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -91207,7 +91207,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:start_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:start_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -91217,7 +91217,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_start_fk_anim"
+                        "value": "cowboy:rMarker_start_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -91515,7 +91515,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -91582,7 +91582,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -91592,7 +91592,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_clav_FK_anim"
+                        "value": "cowboy:rMarker_R_clav_FK_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -91898,7 +91898,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_anular_3_fk_animRelative"
+                        "value": "cowboy:rMarker_R_anular_3_fk_animRelative"
                     },
                     "type": "NameComponent"
                 },
@@ -92056,7 +92056,7 @@
                         },
                         "collisionGroup": 0,
                         "destinationTransforms": [
-                            "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim"
+                            "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim"
                         ],
                         "drawDrive": true,
                         "drawLimit": true,
@@ -92123,7 +92123,7 @@
                         },
                         "sourceTransform": {
                             "type": "Path",
-                            "value": "|woody:woody|woody:skeleton_grp|woody:hips_ikBase_anim|woody:spine_segMid_0_ik_anim|woody:chest_ik_anim|woody:R_clav_FK_anim|woody:R_shoulder_sknJnt|woody:R_elbow_sknJnt|woody:R_wrist_sknJnt|woody:R_pinky_0_FK_anim|woody:R_pinky_1_fk_anim"
+                            "value": "|cowboy:cowboy|cowboy:skeleton_grp|cowboy:hips_ikBase_anim|cowboy:spine_segMid_0_ik_anim|cowboy:chest_ik_anim|cowboy:R_clav_FK_anim|cowboy:R_shoulder_sknJnt|cowboy:R_elbow_sknJnt|cowboy:R_wrist_sknJnt|cowboy:R_pinky_0_FK_anim|cowboy:R_pinky_1_fk_anim"
                         },
                         "useLinearAngularStiffness": true
                     },
@@ -92133,7 +92133,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_R_pinky_1_fk_anim"
+                        "value": "cowboy:rMarker_R_pinky_1_fk_anim"
                     },
                     "type": "NameComponent"
                 },
@@ -92423,7 +92423,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_2_fk_animAbsolute"
+                        "value": "cowboy:rMarker_seg_2_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -92573,7 +92573,7 @@
                     "members": {
                         "path": "",
                         "shortestPath": "",
-                        "value": "woody:rMarker_seg_1_fk_animAbsolute"
+                        "value": "cowboy:rMarker_seg_1_fk_animAbsolute"
                     },
                     "type": "NameComponent"
                 },
@@ -92613,7 +92613,7 @@
     },
     "schema": "ragdoll-1.0",
     "ui": {
-        "filename": "C:/Users/marcus/Documents/maya/projects/default/scenes/demo/woody.rag",
+        "filename": "C:/Users/marcus/Documents/maya/projects/default/scenes/demo/cowboy.rag",
         "thumbnail": "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"
     }
 }

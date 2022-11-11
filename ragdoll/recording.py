@@ -24,6 +24,8 @@ def record(solver, opts=None):
 
     """
 
+    assert solver and solver.is_a("rdSolver"), "%s was not a solver" % solver
+
     recorder = _Recorder(solver, opts)
     for message, progress in recorder.record():
         log.info(message)
@@ -38,6 +40,8 @@ def snap(solver, opts=None, _force=False):
 
     """
 
+    assert solver and solver.is_a("rdSolver"), "%s was not a solver" % solver
+
     recorder = _Recorder(solver, opts)
     recorder.snap(_force)
 
@@ -51,10 +55,14 @@ def extract(solver, opts=None):
 
     """
 
+    assert solver and solver.is_a("rdSolver"), "%s was not a solver" % solver
+
     recorder = _Recorder(solver, opts)
 
     for message, progress in recorder.extract():
         pass
+
+    return list(recorder._skeleton)
 
 
 def _reorderRotation(tm, node):
@@ -297,6 +305,7 @@ class _Recorder(object):
 
         self._solver = solver
         self._markers = markers
+        self._skeleton = []
 
         self._opts = opts
 
@@ -435,6 +444,8 @@ class _Recorder(object):
 
         if self._opts["extractAndAttach"]:
             self._attach(marker_to_dagnode)
+
+        self._skeleton = list(marker_to_dagnode.values())
 
     def snap(self, _force=False):
         if self._opts["maintainOffset"] == constants.FromStart:

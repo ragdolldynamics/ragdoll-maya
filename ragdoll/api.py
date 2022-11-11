@@ -290,6 +290,13 @@ def reinterpret_physics(fname, opts=None):
     return _dump.reinterpret(fname, opts)
 
 
+@_wraps(_recording.extract)
+def extract_physics(solver, opts=None):
+    _assert_is_a(solver, "rdSolver")
+    solver = _cmdx.encode(solver)
+    return list(map(str, _recording.extract(solver, opts)))
+
+
 #
 # Internals
 #
@@ -356,6 +363,7 @@ retargetMarker = retarget_marker
 untargetMarker = untarget_marker
 replaceMesh = replace_mesh
 exportPhysics = export_physics
+extractPhysics = extract_physics
 recordPhysics = record_physics
 reinterpretPhysics = reinterpret_physics
 deletePhysics = delete_physics
@@ -429,6 +437,7 @@ __all__ = [
     "exportPhysics",
     "recordPhysics",
     "reinterpretPhysics",
+    "extractPhysics",
 
     "deletePhysics",
     "deleteAllPhysics",

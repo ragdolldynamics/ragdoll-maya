@@ -1801,6 +1801,11 @@ def assign_plan(body, feet, opts=None):
                                 name=name + "Shape",
                                 parent=plan_parent)
 
+        for channel in ("rotate", "translate", "scale"):
+            for axis in "XYZ":
+                mod.set_keyable(plan_parent[channel + axis], False)
+                mod.set_locked(plan_parent[channel + axis], False)
+
         mod.connect(time["outTime"], rdplan["currentTime"])
 
         mod.set_attr(rdplan["gravity"], up * -982)

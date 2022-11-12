@@ -344,6 +344,9 @@ def assign_environment(mesh, solver, opts=None):
 def group_markers(markers, name=None, **opts):
     solver = _find_solver(markers[0])
 
+    if markers[0]["useLinearAngularStiffness"].read():
+        opts["linearAngularStiffness"] = True
+
     if name is None:
         root_transform = markers[0]["src"].input()
         name = root_transform.name(namespace=False) + "_rGroup"

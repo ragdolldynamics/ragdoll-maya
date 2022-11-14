@@ -851,10 +851,12 @@ def install_menu():
         item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
 
-        divider("Refinement")
+        if c.RAGDOLL_DEVELOPER:
+            divider("Refinement")
 
-        item("bakeTargets", animation_to_plan, animation_to_plan_options)
-        item("bakePlan", plan_to_animation)
+            item("assignRefinePlan", assign_refine_plan, assign_refine_plan_options)
+            item("bakeTargets", animation_to_plan, animation_to_plan_options)
+            item("bakePlan", plan_to_animation)
 
         divider("Edit")
 
@@ -2778,6 +2780,15 @@ def update_plan(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
+def assign_refine_plan(selection=None, **opts):
+    if c.RAGDOLL_DEVELOPER:
+        opts["refinement"] = True
+        return assign_plan(selection, **opts)
+    return kFailure
+
+
+@i__.with_undo_chunk
+@with_exception_handling
 def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": False,  # deprecated option
@@ -2785,6 +2796,9 @@ def assign_plan(selection=None, **opts):
         "refinement": _opt("planRefinementMode", opts),
         "duration": _opt("planDuration", opts),
     }, **(opts or {}))
+
+    if not c.RAGDOLL_DEVELOPER:
+        opts["refinement"] = False
 
     sel = selection or cmdx.selection()
 
@@ -3816,6 +3830,10 @@ def assign_plan_options(*args):
 
 def update_plan_options(*args):
     return _Window("updatePlan", update_plan)
+
+
+def assign_refine_plan_options(*args):
+    return _Window("assignRefinePlan", assign_refine_plan)
 
 
 def animation_to_plan_options(*args):

@@ -873,6 +873,9 @@ def create_distance_constraint(parent, child, opts=None):
         # compatibility and have no other reason for ever being False
         mod.set_attr(con["useScale"], True)
 
+        # Added in 2022.11.26
+        mod.set_attr(con["useScaleForDistance"], True)
+
     return con
 
 

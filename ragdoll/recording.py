@@ -101,7 +101,7 @@ def transfer_live(solver, keyframe=False, opts=None):
     """
 
     opts = dict({
-        "skipUnchanged": False,
+        "skipUnchanged": True,
     }, **(opts or {}))
 
     tolerance = 1e-3
@@ -134,9 +134,6 @@ def transfer_live(solver, keyframe=False, opts=None):
                 return
 
         parent = marker["parentMarker"].input(type="rdMarker")
-
-        linear_motion = cmds.ragdollInfo(str(marker), linearMotion=True)
-        free_translate = linear_motion == 2
 
         if parent:
             mtx *= parent["outputMatrix"].as_matrix().inverse()
@@ -179,6 +176,9 @@ def transfer_live(solver, keyframe=False, opts=None):
 
                 mod.set_attr(dst["rotate" + axis], value)
 
+        linear_motion = cmds.ragdollInfo(str(marker), linearMotion=True)
+        free_translate = linear_motion == 2
+
         if free_translate or parent is None:
             for i, axis in enumerate("XYZ"):
                 if dst["translate" + axis].editable:
@@ -195,14 +195,14 @@ def transfer_live(solver, keyframe=False, opts=None):
     with cmdx.DagModifier() as mod:
         for marker in internal.markers_from_solver(solver):
             if cmds.ragdollInfo(str(marker), kinematic=True):
-                print("%s skipped (kinematic)" % marker)
+                log.info("%s skipped (kinematic)" % marker)
                 continue
 
             for el in marker["dst"]:
                 dst = el.input()
 
                 if dst is None:
-                    print("%s skipped" % marker)
+                    log.info("%s skipped" % marker)
                     continue
 
                 _transfer_dst(mod, marker, dst)

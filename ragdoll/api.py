@@ -297,6 +297,13 @@ def extract_physics(solver, opts=None):
     return list(map(str, _recording.extract(solver, opts)))
 
 
+@_wraps(_recording.transfer_live)
+def transfer_live(solver, keyframe=False, opts=None):
+    _assert_is_a(solver, "rdSolver")
+    solver = _cmdx.encode(solver)
+    return _recording.transfer_live(solver, keyframe, opts)
+
+
 #
 # Internals
 #

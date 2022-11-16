@@ -1075,8 +1075,8 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
     def minimumHeight(self):
         return (
-            self._widgets["Timeline"].ViewHeight
-            + self._widgets["Released"].ViewHeight
+            self._widgets["Timeline"].ViewHeight +
+            self._widgets["Released"].ViewHeight
         )
 
     def on_message_sent(self, text):
@@ -1291,15 +1291,15 @@ class InternetRequest(object):
                     not self.__has_open_ssl_bug())
 
         def _run():
-            self.__sys_write("Processing internet requests...")
+            log.debug("Processing internet requests...")
             if _preflight():
                 self._run("ragdoll", self._run_ragdoll)
                 self._run("history", self._run_history)
-                self.__sys_write("Internet requests completed.")
+                log.debug("Internet requests completed.")
             else:
                 self._default("ragdoll", False)
                 self._default("history", self._default_history())
-                self.__sys_write("Internet blocked, local resource used.")
+                log.debug("Internet blocked, local resource used.")
 
         threading.Thread(target=_run).start()
 
@@ -1354,14 +1354,6 @@ class InternetRequest(object):
                 released = json.load(f)
                 log.debug("Release history loaded from %s" % cache)
         return released
-
-    def __sys_write(self, msg):
-        # In worse case, application like Maya can have hard crash without
-        # any hint if OpenSSL bug encountered. So here we print out message
-        # into stdout instead of regular logging which can be captured by
-        # crashing app and went into void.
-        sys.__stdout__.write("Ragdoll: %s\n" % msg)
-        sys.__stdout__.flush()
 
     def __ping(self, url):
         try:

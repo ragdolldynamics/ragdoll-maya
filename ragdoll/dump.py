@@ -417,7 +417,7 @@ class Loader(object):
 
                 mtx *= parent_mtx.inverse()
 
-                linear_motion = MarkerUi["linearMotion"]
+                linear_motion = MarkerUi.get("linearMotion", "Locked")
                 if linear_motion == "Inherit":
                     Group = self._registry.get(entity, "GroupComponent")
 
@@ -428,7 +428,7 @@ class Loader(object):
                     except KeyError:
                         pass
                     else:
-                        linear_motion = GroupUi["linearMotion"]
+                        linear_motion = GroupUi.get("linearMotion", "Locked")
 
                 if linear_motion == "Locked":
                     mod.set_locked(joint["translateX"])
@@ -574,22 +574,31 @@ class Loader(object):
                                                 offset=offset)
 
             elif Desc["type"] == "ConvexHull":
-                Meshes = self._registry.get(entity, "ConvexMeshComponents")
-                Scale = self._registry.get(entity, "ScaleComponent")
-                mobj = meshes_to_mobj(Meshes, Scale["value"], parent.object())
+                # Added in 2022.07.20
+                if self._registry.has(entity, "ConvexMeshComponents"):
+                    Meshes = self._registry.get(entity, "ConvexMeshComponents")
+                    Scale = self._registry.get(entity, "ScaleComponent")
+                    mobj = meshes_to_mobj(Meshes,
+                                          Scale["value"],
+                                          parent.object())
 
-                # For some reason, we can't set inMesh.
-                # So instead, we use the above meshes_to_mobj to generate a
-                # new shape from scratch and change its name.
-                # A bit of a bummer..
-                mesh = cmdx.Node(mobj)
-                mod.rename_node(mesh, name + "Shape")
+                    # For some reason, we can't set inMesh.
+                    # So instead, we use the above meshes_to_mobj to generate a
+                    # new shape from scratch and change its name.
+                    # A bit of a bummer..
+                    mesh = cmdx.Node(mobj)
+                    mod.rename_node(mesh, name + "Shape")
 
-                mod.do_it()
+                    mod.do_it()
 
-                cmds.polySoftEdge(
-                    mesh.path(), angle=0, constructionHistory=True
-                )
+                    cmds.polySoftEdge(
+                        mesh.path(), angle=0, constructionHistory=True
+                    )
+                else:
+                    mesh, _ = commands._polycapsule(parent,
+                                                    Desc["length"],
+                                                    Desc["radius"],
+                                                    offset=offset)
 
             else:
                 raise ValueError("Unsupported shape type: %s" % Desc["type"])

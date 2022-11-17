@@ -114,23 +114,24 @@ def transfer_live(solver, keyframe=False, opts=None):
             world_translate = world_tm.translation()
             world_rotate = world_tm.rotation(asQuaternion=True)
 
-            skip_any = False
+            translate_changed = True
+            rotate_changed = True
 
             if "previousTranslate" in dst.data:
                 previous = dst.data["previousTranslate"]
                 if previous.is_equivalent(world_translate, tolerance):
-                    skip_any = True
+                    translate_changed = False
 
-            if "previousRotate" in dst.data and not skip_any:
+            if "previousRotate" in dst.data and not translate_changed:
                 previous = dst.data["previousRotate"]
                 if previous.is_equivalent(world_rotate, tolerance):
-                    skip_any = True
+                    rotate_changed = False
 
             dst.data["previousTranslate"] = world_translate
             dst.data["previousRotate"] = world_rotate
 
-            if skip_any:
-                print("%s skipped (unchanged)" % marker)
+            if not (translate_changed or rotate_changed):
+                log.info("%s skipped (unchanged)" % marker)
                 return
 
         parent = marker["parentMarker"].input(type="rdMarker")

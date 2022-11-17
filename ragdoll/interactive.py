@@ -2301,7 +2301,7 @@ def transfer_live(selection=None, **opts):
     keyframe = opts.get("keyframe", False)
 
     with i__.Timer("transfer") as duration:
-        recording.transfer_live(solver, keyframe=keyframe)
+        recording.transfer_live(solver, keyframe=keyframe, opts=opts)
 
     if keyframe:
         log.info("Keyframed animation in %.1f ms" % duration.ms)

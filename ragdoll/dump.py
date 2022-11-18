@@ -462,11 +462,6 @@ class Loader(object):
             created[entity] = joint
 
         def extend_tip(mod, entity, joint):
-            child = joint.child()
-
-            if child:
-                return
-
             Desc = self._registry.get(entity, "GeometryDescriptionComponent")
             offset = Desc["offset"]
             name = joint.name() + "_tip"
@@ -481,6 +476,12 @@ class Loader(object):
                 recursive_create(mod, entity, skeleton_grp)
 
             for entity, joint in created.items():
+                if joint.child(type="joint"):
+                    continue
+
+                if not joint.parent(type="joint"):
+                    continue
+
                 extend_tip(mod, entity, joint)
 
         return created
@@ -1042,12 +1043,14 @@ class Loader(object):
                         "Pin constraint without a child, this is a bug."
                     )
 
+                rdparent = rdmarkers.get(parent_entity)
                 rdchild = rdmarkers.get(child_entity)
 
                 if not rdchild:
                     continue
 
-                rdconstraint = commands.create_pin_constraint(rdchild)
+                rdconstraint = commands.create_pin_constraint(
+                    rdchild, rdparent)
                 rdconstraints[entity] = rdconstraint
 
         if self._opts["preserveAttributes"]:

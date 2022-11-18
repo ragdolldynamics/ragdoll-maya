@@ -386,7 +386,19 @@ def _on_cycle(clientData=None):
 def _on_licence_expired(clientData=None):
     # Careful not to immediately call Qt,
     # as it may put Maya into an infinite sleep.
-    cmds.evalDeferred(welcome_user)
+
+    # This event is triggered many times, but we're only really
+    # interested in notifying the user about it once.
+    if not hasattr(__, "expiry_timer"):
+        from PySide2 import QtCore
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.setInterval(300)
+        timer.timeout.connect(welcome_user)
+
+        __.expiry_timer = timer
+
+    __.expiry_timer.start()
 
 
 def _on_nonkeyable_keyed(clientData=None):

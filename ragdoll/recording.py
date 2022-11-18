@@ -85,6 +85,12 @@ def _reorderRotation(tm, node):
     elif locked["rotateX"] and locked["rotateZ"]:
         tm.reorderRotation(tm.kYXZ)
 
+    elif locked["rotateY"]:
+        tm.reorderRotation(tm.kXZY)
+
+    elif locked["rotateX"]:
+        tm.reorderRotation(tm.kYZX)
+
     return tm
 
 
@@ -101,7 +107,7 @@ def transfer_live(solver, keyframe=False, opts=None):
     """
 
     opts = dict({
-        "skipUnchanged": True,
+        "skipUnchanged": False,
     }, **(opts or {}))
 
     tolerance = 1e-3
@@ -172,10 +178,11 @@ def transfer_live(solver, keyframe=False, opts=None):
             if dst["rotate" + axis].editable:
                 value = rotate[i]
 
-                if keyframe:
-                    value = {cmdx.current_frame(): value}
-
                 mod.set_attr(dst["rotate" + axis], value)
+
+                if keyframe:
+                    cmds.setKeyframe(dst.path(),
+                                     attribute="rotate" + axis)
 
         linear_motion = cmds.ragdollInfo(str(marker), linearMotion=True)
         free_translate = linear_motion == 2
@@ -185,13 +192,11 @@ def transfer_live(solver, keyframe=False, opts=None):
                 if dst["translate" + axis].editable:
                     value = translate[i]
 
-                    if keyframe:
-                        value = {cmdx.current_frame(): value}
-
                     mod.set_attr(dst["translate" + axis], value)
 
-        if keyframe:
-            cmds.setKeyframe(marker.path(), attribute="liveKeyframe")
+                    if keyframe:
+                        cmds.setKeyframe(dst.path(),
+                                         attribute="translate" + axis)
 
     with cmdx.DagModifier() as mod:
         for marker in internal.markers_from_solver(solver):

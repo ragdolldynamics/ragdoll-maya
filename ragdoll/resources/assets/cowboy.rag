@@ -10,7 +10,7 @@
                 },
                 "GroupUIComponent": {
                     "members": {
-                        "angularDampingRatio": 1.0,
+                        "angularDampingRatio": 0.5,
                         "angularStiffness": 1.0,
                         "dampingRatio": 0.5,
                         "driveRelativeLinearDampingRatio": 1.0,
@@ -21,10 +21,10 @@
                         "inputType": "Drive",
                         "linearDampingRatio": 1.0,
                         "linearMotion": "Locked",
-                        "linearStiffness": -1.0,
+                        "linearStiffness": 1.0,
                         "selfCollide": true,
                         "stiffness": 1.0,
-                        "useLinearAngularStiffness": false
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -140,7 +140,7 @@
                         "linearStiffness": 1.0,
                         "selfCollide": false,
                         "stiffness": 1.0,
-                        "useLinearAngularStiffness": false
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -19661,10 +19661,10 @@
                         "inputType": "Drive",
                         "linearDampingRatio": 1.0,
                         "linearMotion": "Locked",
-                        "linearStiffness": -1.0,
+                        "linearStiffness": 1.0,
                         "selfCollide": false,
                         "stiffness": 1.0,
-                        "useLinearAngularStiffness": false
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -79512,16 +79512,16 @@
                         "method": "FromStart",
                         "minimum": 0.030649326741695404,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },
@@ -79629,16 +79629,16 @@
                         "method": "FromStart",
                         "minimum": 0.038483697921037674,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },
@@ -79746,16 +79746,16 @@
                         "method": "FromStart",
                         "minimum": 0.030623970553278923,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },
@@ -79863,16 +79863,16 @@
                         "method": "FromStart",
                         "minimum": 0.076788991689682,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },
@@ -79980,16 +79980,16 @@
                         "method": "FromStart",
                         "minimum": 0.038472119718790054,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },
@@ -80097,16 +80097,16 @@
                         "method": "FromStart",
                         "minimum": 0.07722274214029312,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0,
-                        "useScale": true,
-                        "useScaleForDistance": true
+                        "tolerance": 0.0
                     },
                     "type": "DistanceJointComponent"
                 },
                 "DistanceJointUIComponent": {
                     "members": {
                         "dampingRatio": 0.009999999776482582,
-                        "stiffness": 0.10000000149011612
+                        "stiffness": 0.10000000149011612,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointUIComponent"
                 },

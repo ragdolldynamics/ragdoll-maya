@@ -11,7 +11,7 @@
                 "GroupUIComponent": {
                     "members": {
                         "angularDampingRatio": 1.0,
-                        "angularStiffness": 1.0,
+                        "angularStiffness": 0.009999999776482582,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 0.10000000149011612,
                         "driveRelativeLinearStiffness": 50.0,
@@ -21,7 +21,7 @@
                         "inputType": "Drive",
                         "linearDampingRatio": 0.10000000149011612,
                         "linearMotion": "Free",
-                        "linearStiffness": 10.0,
+                        "linearStiffness": 50.0,
                         "selfCollide": true,
                         "stiffness": 0.009999999776482582,
                         "useLinearAngularStiffness": true
@@ -2323,7 +2323,7 @@
                         "linearStiffness": 1.0,
                         "selfCollide": false,
                         "stiffness": 1.0,
-                        "useLinearAngularStiffness": false
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },

@@ -46,12 +46,12 @@ for asset in [opts.fname] if opts.fname else os.listdir(assets):
             ui["linearStiffness"] = lin_stiffness
             ui["linearDampingRatio"] = lin_damping
 
-        if "PinJointComponent" in components:
-            con = components["DriveComponent"]["members"]
+        if "PinJointUIComponent" in components:
+            con = components["PinJointUIComponent"]["members"]
             con["useScale"] = True
 
-        if "DistanceJointComponent" in components:
-            con = components["DistanceJointComponent"]["members"]
+        if "DistanceJointUIComponent" in components:
+            con = components["DistanceJointUIComponent"]["members"]
             con["useScale"] = True
             con["useScaleForDistance"] = True
 

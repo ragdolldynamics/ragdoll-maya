@@ -9432,8 +9432,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -10689,8 +10689,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -11991,8 +11991,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -13230,8 +13230,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -14406,8 +14406,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -15564,8 +15564,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -16965,8 +16965,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -18141,8 +18141,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.800000011920929,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -23688,8 +23688,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 10.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -26337,8 +26337,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 10.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -27477,8 +27477,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 20.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -29748,8 +29748,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 10.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -30888,8 +30888,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 20.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -34866,8 +34866,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -39687,8 +39687,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 10.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -40845,8 +40845,8 @@
                 "MarkerUIComponent": {
                     "members": {
                         "airDensity": 1.0,
-                        "angularDampingRatio": 0.5,
-                        "angularStiffness": 2.0,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "childFrame": {
                             "type": "Matrix44",
                             "values": [
@@ -62615,7 +62615,7 @@
                         "linearStiffness": 1.0,
                         "selfCollide": false,
                         "stiffness": 1.0,
-                        "useLinearAngularStiffness": false
+                        "useLinearAngularStiffness": true
                     },
                     "type": "GroupUIComponent"
                 },
@@ -63280,8 +63280,8 @@
                 },
                 "GroupUIComponent": {
                     "members": {
-                        "angularDampingRatio": 0.699999988079071,
-                        "angularStiffness": 0.05000000074505806,
+                        "angularDampingRatio": 1.0,
+                        "angularStiffness": 1.0,
                         "dampingRatio": 1.0,
                         "driveRelativeLinearDampingRatio": 1.0,
                         "driveRelativeLinearStiffness": 1.0,

@@ -11695,7 +11695,6 @@
                                 1.0
                             ]
                         },
-                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"
@@ -11780,7 +11779,8 @@
                         "angularDampingRatio": 0.10000000149011612,
                         "angularStiffness": 0.019999999552965164,
                         "linearDampingRatio": 0.10000000149011612,
-                        "linearStiffness": 0.009999999776482582
+                        "linearStiffness": 0.009999999776482582,
+                        "useScale": true
                     },
                     "type": "PinJointUIComponent"
                 },

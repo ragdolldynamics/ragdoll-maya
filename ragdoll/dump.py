@@ -1335,13 +1335,22 @@ class Loader(object):
             mod.set_attr(con["parentOffset"], parent_offset)
             mod.set_attr(con["childOffset"], child_offset)
 
+            # Added in 2022.11.26
+            mod.set_attr(con["useScale"], Con.get("useScale", False))
+            mod.set_attr(con["useScaleForDistance"],
+                         Con.get("useScaleForDistance", False))
+
         elif self._registry.has(entity, "PinJointComponent"):
             Ui = self._registry.get(entity, "PinJointUIComponent")
+            Drive = self._registry.get(entity, "DriveComponent")
 
             mod.set_attr(con["linearStiffness"], Ui["linearStiffness"])
             mod.set_attr(con["linearDampingRatio"], Ui["linearDampingRatio"])
             mod.set_attr(con["angularStiffness"], Ui["angularStiffness"])
             mod.set_attr(con["angularDampingRatio"], Ui["angularDampingRatio"])
+
+            # Added in 2022.11.26
+            mod.set_attr(con["useScale"], Drive.get("useScale", False))
 
         else:
             log.warning("Could not apply unsupported constraint: %s" % con)

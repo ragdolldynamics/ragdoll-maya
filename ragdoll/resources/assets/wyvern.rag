@@ -60886,7 +60886,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61001,7 +61003,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61116,7 +61120,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61231,7 +61237,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61346,7 +61354,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61461,7 +61471,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61576,7 +61588,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61691,7 +61705,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -61806,7 +61822,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -62808,7 +62826,9 @@
                         "method": "Maximum",
                         "minimum": 0.0,
                         "stiffness": 1000.0,
-                        "tolerance": 0.0
+                        "tolerance": 0.0,
+                        "useScale": true,
+                        "useScaleForDistance": true
                     },
                     "type": "DistanceJointComponent"
                 },
@@ -62962,6 +62982,7 @@
                                 1.0
                             ]
                         },
+                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"
@@ -63116,6 +63137,7 @@
                                 1.0
                             ]
                         },
+                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"
@@ -63270,6 +63292,7 @@
                                 1.0
                             ]
                         },
+                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"
@@ -63424,6 +63447,7 @@
                                 1.0
                             ]
                         },
+                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"

@@ -46,6 +46,15 @@ for asset in [opts.fname] if opts.fname else os.listdir(assets):
             ui["linearStiffness"] = lin_stiffness
             ui["linearDampingRatio"] = lin_damping
 
+        if "PinJointComponent" in components:
+            con = components["DriveComponent"]["members"]
+            con["useScale"] = True
+
+        if "DistanceJointComponent" in components:
+            con = components["DistanceJointComponent"]["members"]
+            con["useScale"] = True
+            con["useScaleForDistance"] = True
+
     with open(fname, "w") as f:
         json.dump(content, f, sort_keys=True, indent=4)
 

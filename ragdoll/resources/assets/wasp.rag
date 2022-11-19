@@ -11695,6 +11695,7 @@
                                 1.0
                             ]
                         },
+                        "useScale": true,
                         "worldspace": true
                     },
                     "type": "DriveComponent"

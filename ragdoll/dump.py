@@ -634,7 +634,7 @@ class Loader(object):
             joint_to_mesh = {}
             with cmdx.DagModifier() as mod:
                 for entity, joint in created.items():
-                    name = joint.name()
+                    name = joint.name() + "_geo"
                     parent = mod.create_node("transform", name, geometry_grp)
                     mesh = create_mesh(mod, entity, name, parent)
                     joint_to_mesh[joint] = mesh

@@ -1041,6 +1041,9 @@ def create_pin_constraint(child, parent=None, transform=None, opts=None):
         # Temporary means of viewport selection
         mod.set_attr(transform["displayHandle"], True)
 
+        # Added in 2022.11.26
+        mod.set_attr(con["useScale"], True)
+
         mod.connect(child["ragdollId"], con["childMarker"])
 
         if parent:

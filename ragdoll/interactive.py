@@ -866,13 +866,14 @@ def install_menu():
         if c.RAGDOLL_DEVELOPER:
             divider("Refinement")
 
-            item("assignRefinePlan", assign_refine_plan, assign_refine_plan_options)
+            item("assignRefinePlan",
+                 assign_refine_plan,
+                 assign_refine_plan_options)
             item("bakeTargets", animation_to_plan, animation_to_plan_options)
             item("bakePlan", plan_to_animation)
 
         divider("Edit")
 
-        item("addTarget", add_target)
         item("resetFoot", reset_foot)
 
         divider("System")

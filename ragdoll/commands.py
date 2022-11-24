@@ -813,6 +813,9 @@ def create_ground(solver, options=None):
         _take_ownership(mod, marker, plane)
         _take_ownership(mod, marker, gen)
 
+    # Expose e.g. friction
+    toggle_channel_box_attributes([marker])
+
     return marker
 
 

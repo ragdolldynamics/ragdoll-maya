@@ -264,10 +264,10 @@
     },
 
     "assignRefinePlan": {
-        "label": "Assign Refine Plan",
+        "label": "Assign Refinement Plan",
         "icon": "plan.png",
         "summary": "Assign a refinement plan to selected body and feet.",
-        "description": "Create a new plan for the selected body and 1 or more feet, the plan will drive the translate and rotate channels.",
+        "description": "Create a new plan for the selected body and 1 or more feet, the plan can be recorded onto the translate and rotate channels.",
         "options": [
             "planPreset"
         ]

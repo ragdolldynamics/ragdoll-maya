@@ -49,13 +49,7 @@ vs_out vs_main(vs_in input) {
 
 float4 ps_main(vs_out input) : SV_TARGET
 {
-    // Solid color
-    if (!usePhongShading)
-    {
-        return uniformColor;
-    }
-    // Phong shading
-    else {
+    if (usePhongShading) {
         float colorAmount = 0.8;
         float diffuseAmount = 0.2;
         float specularAmount = 0.1;
@@ -65,7 +59,7 @@ float4 ps_main(vs_out input) : SV_TARGET
         vec3 gLightDir = vec3(0.07, -0.26, 1.0);
         mat4 gWorldView = viewProjectionTranspose;
         float4 gColor = uniformColor;
-    
+
         // Diffuse
         vec3 lightColor = vec3(1, 1, 1);
         vec3 norm = normalize(input.normal.xyz);
@@ -81,7 +75,10 @@ float4 ps_main(vs_out input) : SV_TARGET
 
         vec3 objectColor = gColor * colorAmount;
         vec3 result = objectColor + diffuse + specular;
-    
+
         return vec4(result, 1);
+    }
+    else {
+        return uniformColor;
     }
 }

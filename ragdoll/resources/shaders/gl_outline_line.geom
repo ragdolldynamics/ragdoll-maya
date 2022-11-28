@@ -13,25 +13,25 @@ void main()
     pixelWidth *= u_thickness;
     pixelHeight *= u_thickness;
 
-   for(int i = 0; i < 3; ++i) {
+   for (int i = 0; i < 3; ++i) {
       gl_Position = gl_in[i].gl_Position;
       gl_Position.x += pixelWidth * gl_Position.w;
       EmitVertex();
    }
    EndPrimitive();
-      for(int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 3; ++i) {
       gl_Position = gl_in[i].gl_Position;
       gl_Position.x -= pixelWidth * gl_Position.w;
       EmitVertex();
    }
    EndPrimitive();
-      for(int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 3; ++i) {
       gl_Position = gl_in[i].gl_Position;
       gl_Position.y -= pixelHeight * gl_Position.w;
       EmitVertex();
    }
    EndPrimitive();
-      for(int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 3; ++i) {
       gl_Position = gl_in[i].gl_Position;
       gl_Position.y += pixelHeight * gl_Position.w;
       EmitVertex();
@@ -39,7 +39,7 @@ void main()
    EndPrimitive();
 
     // Caps
-    for(int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
         gl_Position = gl_in[i].gl_Position;
@@ -51,7 +51,7 @@ void main()
     }
     EndPrimitive();
 
-    for(int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
         gl_Position = gl_in[i].gl_Position;
@@ -63,7 +63,7 @@ void main()
     }
     EndPrimitive();
     
-    for(int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
         gl_Position = gl_in[i].gl_Position;
@@ -75,7 +75,7 @@ void main()
     }
     EndPrimitive();
     
-    for(int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
         gl_Position = gl_in[i].gl_Position;

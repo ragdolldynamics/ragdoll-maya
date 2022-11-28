@@ -13,10 +13,12 @@ out vec3 Color;
 
 void main()
 {
-    if (useUniformColor == 1)
+    if (useUniformColor == 1) {
         Color = uniformColor;
-    else
+    }
+    else {
         Color = aColor;
+    }
 
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(aPosition.xyz, 1.0);    
     gl_Position.z -= 0.002;

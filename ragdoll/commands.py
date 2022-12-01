@@ -1654,8 +1654,8 @@ def generate_plan_sequences(preset, foot_count, duration):
             "110011001100"
         ),
         HopPreset: (
-            "010101",
-            "010101"
+            "001100110011",
+            "001100110011",
         ),
         JumpPreset: (
             "00111100",
@@ -1846,9 +1846,6 @@ def assign_plan(body, feet, opts=None):
         mod.set_attr(rdplan["color"], palette.pop(0))
         mod.set_attr(rdplan["version"], internal.version())
 
-        mod.connect(body["message"], rdplan["sourceTransform"])
-        mod.connect(body["message"], rdplan["destinationTransforms"][0])
-
         if opts["useTransform"]:
             plan_start_parent = mod.create_node("transform",
                                                 name=body.name() + "_rStart")
@@ -1889,10 +1886,6 @@ def assign_plan(body, feet, opts=None):
             mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
             mod.do_it()
 
-        mod.set_attr(rdplan["timings"][0], 1)
-        mod.set_attr(rdplan["hards"][0], 1)
-        mod.set_attr(rdplan["timings"][1], duration)
-        mod.set_attr(rdplan["hards"][1], 1)
         mod.do_it()
 
         outputs.append([rdplan, body])
@@ -1987,17 +1980,9 @@ def assign_plan(body, feet, opts=None):
                 dgmod.set_attr(rdfoot["targets"][0], start_mtx)
                 dgmod.set_attr(rdfoot["targets"][1], end_mtx)
 
-            dgmod.set_attr(rdfoot["timings"][0], 1)
-            dgmod.set_attr(rdfoot["hards"][0], 1)
-            dgmod.set_attr(rdfoot["timings"][1], duration)
-            dgmod.set_attr(rdfoot["hards"][1], 1)
-
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
             dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
-
-            dgmod.connect(foot["message"], rdfoot["sourceTransform"])
-            dgmod.connect(foot["message"], rdfoot["destinationTransforms"][0])
 
             dgmod.set_attr(rdfoot["linearLimit"], limits)
             dgmod.connect(time["outTime"], rdfoot["currentTime"])

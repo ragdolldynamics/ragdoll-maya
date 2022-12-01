@@ -578,8 +578,13 @@ def random_color():
 
 
 def random_palette(size):
-    """Return a `size` color palette that loop over the hue spectrum from a random starting point
+    """Return `size` amount of colors
+
+    The palette loops over the hue spectrum from a random starting point
+    and avoid duplicates too similar in hue.
+
     """
+
     if size <= 0:
         return []
 
@@ -595,7 +600,6 @@ def random_palette(size):
     for i in range(1, size, 1):
         previous = colors[i - 1]
         hue, value, saturation, _ = previous.getColor(cmdx.ColorType.kHSV)
-        print(hue, value, saturation, _)
         color = cmdx.ColorType()
         color.setColor((next_(hue), value, saturation),
                        cmdx.ColorType.kHSV,

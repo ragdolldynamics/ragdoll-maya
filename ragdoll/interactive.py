@@ -863,14 +863,13 @@ def install_menu():
         item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
 
-        if c.RAGDOLL_DEVELOPER:
-            divider("Refinement")
+        divider("Refinement")
 
-            item("assignRefinePlan",
-                 assign_refine_plan,
-                 assign_refine_plan_options)
-            item("bakeTargets", animation_to_plan, animation_to_plan_options)
-            item("bakePlan", plan_to_animation)
+        item("assignRefinePlan",
+             assign_refine_plan,
+             assign_refine_plan_options)
+        item("bakeTargets", animation_to_plan, animation_to_plan_options)
+        item("bakePlan", plan_to_animation)
 
         divider("Edit")
 
@@ -2794,10 +2793,8 @@ def update_plan(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def assign_refine_plan(selection=None, **opts):
-    if c.RAGDOLL_DEVELOPER:
-        opts["refinement"] = True
-        return assign_plan(selection, **opts)
-    return kFailure
+    opts["refinement"] = True
+    return assign_plan(selection, **opts)
 
 
 @i__.with_undo_chunk
@@ -2809,9 +2806,6 @@ def assign_plan(selection=None, **opts):
         "refinement": _opt("planRefinementMode", opts),
         "duration": _opt("planDuration", opts),
     }, **(opts or {}))
-
-    if not c.RAGDOLL_DEVELOPER:
-        opts["refinement"] = False
 
     sel = selection or cmdx.selection()
 

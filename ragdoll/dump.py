@@ -1749,10 +1749,16 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             body_moved = True
             break
 
-    # DoIt
+    # Clear existing attributes
+    for attr in ("targets", "timings", "hards"):
+        for el in plan[attr]:
+            cmds.removeMultiInstance(el.path())
+
+    for foot in feet:
+        for el in foot["targets"]:
+            cmds.removeMultiInstance(el.path())
 
     with cmdx.DagModifier() as mod:
-
         min_stance = 5
         # Ensure step sequences have enough stance phase at the beginning.
         timing_offset = 0
@@ -1770,12 +1776,6 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             mod.set_attr(plan["duration"], duration + patch)
             for i, foot in enumerate(feet):
                 step_sequences[i] += [0] * patch
-
-        # Clear existing attributes
-        for source, transform in sources.items():
-            for attr in ("targets", "timings", "hards"):
-                for el in source[attr]:
-                    cmds.removeMultiInstance(str(source) + ".%s" % (el.name()))
 
         if smart_sampling:
             # Analyze body movement curves turning points and use as targets
@@ -1805,9 +1805,13 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                 for source, transform in sources.items():
                     mtx = matrices[source][frame - start]
                     mod.set_attr(source["targets"][index], mtx)
-                    mod.set_attr(source["hards"][index], first_or_last)
-                    mod.set_attr(source["timings"][index],
-                                 timing_offset + frame - start + 1)
+
+                    if source.has_attr("hards"):
+                        mod.set_attr(source["hards"][index], first_or_last)
+
+                    if source.has_attr("timings"):
+                        mod.set_attr(source["timings"][index],
+                                     timing_offset + frame - start + 1)
 
             for i, foot in enumerate(feet):
                 for index, value in enumerate(step_sequences[i]):
@@ -1824,9 +1828,12 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                     if index % increment == 0:
                         i = int(index / increment)
                         mod.set_attr(source["targets"][i], mtx)
-                        mod.set_attr(source["hards"][i], index == 0)
-                        mod.set_attr(source["timings"][i],
-                                     timing_offset + frame - start + 1)
+
+                        if source.has_attr("hards"):
+                            mod.set_attr(source["hards"][i], index == 0)
+                        if source.has_attr("timings"):
+                            mod.set_attr(source["timings"][i],
+                                         timing_offset + frame - start + 1)
 
                     if source in feet:
                         i = feet.index(source)
@@ -1835,9 +1842,13 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
 
             for source, transform in sources.items():
                 i = int(index / increment)
-                mod.set_attr(source["hards"][i], True)
-                mod.set_attr(source["timings"][i],
-                             timing_offset + last_frame - start + 1)
+
+                if source.has_attr("hards"):
+                    mod.set_attr(source["hards"][i], True)
+
+                if source.has_attr("timings"):
+                    mod.set_attr(source["timings"][i],
+                                 timing_offset + last_frame - start + 1)
 
         if not body_moved:
             # Walk a few body lengths per default

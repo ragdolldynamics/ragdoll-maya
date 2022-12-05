@@ -1657,8 +1657,8 @@ def generate_plan_sequences(preset, foot_count, duration):
             "110011001100"
         ),
         HopPreset: (
-            "010101",
-            "010101"
+            "01100110011",
+            "01100110011",
         ),
         JumpPreset: (
             "00111100",
@@ -1698,7 +1698,6 @@ def generate_plan_sequences(preset, foot_count, duration):
 
 def assign_plan(body, feet, opts=None):
     opts = dict({
-        "useTransform": False,  # Using Maya handle, deprecated
         "refinement": False,
         "duration": 100,
     }, **(opts or {}))
@@ -1819,6 +1818,7 @@ def assign_plan(body, feet, opts=None):
                 mod.set_locked(plan_parent[channel + axis], False)
 
         mod.connect(time["outTime"], rdplan["currentTime"])
+        mod.connect(plan_parent["worldMatrix"][0], rdplan["inputMatrix"])
 
         mod.set_attr(rdplan["gravity"], up * -982)
         mod.set_attr(rdplan["duration"], duration)
@@ -1852,49 +1852,15 @@ def assign_plan(body, feet, opts=None):
         mod.connect(body["message"], rdplan["sourceTransform"])
         mod.connect(body["message"], rdplan["destinationTransforms"][0])
 
-        if opts["useTransform"]:
-            plan_start_parent = mod.create_node("transform",
-                                                name=body.name() + "_rStart")
-            plan_end_parent = mod.create_node("transform",
-                                              name=body.name() + "_rEnd")
+        mod.set_attr(rdplan["targets"][0], body_tm.as_matrix())
+        mod.do_it()
+        body_tm.translateBy(end_offset, cmdx.sTransform)
+        mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
+        mod.do_it()
 
-            mod.set_attr(plan_start_parent["translate"], body_tm.translation())
-            mod.set_attr(plan_start_parent["rotate"], body_tm.rotation())
-            mod.set_attr(plan_start_parent["displayHandle"], True)
-            mod.set_attr(plan_end_parent["displayHandle"], True)
-
-            body_tm.translateBy(end_offset, cmdx.sTransform)
-            mod.set_attr(plan_end_parent["translate"], body_tm.translation())
-            mod.set_attr(plan_end_parent["rotate"], body_tm.rotation())
-
-            # Make some nice icons
-            plan_start = mod.create_node("rdTrajectory",
-                                         name=body.name() + "_rTrajShape",
-                                         parent=plan_start_parent)
-            plan_end = mod.create_node("rdTrajectory",
-                                       name=body.name() + "_rTrajShape",
-                                       parent=plan_end_parent)
-
-            mod.connect(plan_start_parent["worldMatrix"][0],
-                        rdplan["targets"][0])
-            mod.connect(plan_end_parent["worldMatrix"][0],
-                        rdplan["targets"][1])
-
-            _take_ownership(mod, rdplan, plan_start)
-            _take_ownership(mod, rdplan, plan_end)
-            _take_ownership(mod, rdplan, plan_start_parent)
-            _take_ownership(mod, rdplan, plan_end_parent)
-
-        else:
-            mod.set_attr(rdplan["targets"][0], body_tm.as_matrix())
-            mod.do_it()
-            body_tm.translateBy(end_offset, cmdx.sTransform)
-            mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
-            mod.do_it()
-
-        mod.set_attr(rdplan["timings"][0], 1)
+        mod.set_attr(rdplan["timings"][0], 0)
         mod.set_attr(rdplan["hards"][0], 1)
-        mod.set_attr(rdplan["timings"][1], duration)
+        mod.set_attr(rdplan["timings"][1], duration - 1)
         mod.set_attr(rdplan["hards"][1], 1)
         mod.do_it()
 
@@ -1949,51 +1915,11 @@ def assign_plan(body, feet, opts=None):
 
             dgmod.set_attr(rdfoot["nominalMatrix"], tm.as_matrix())
 
-            if opts["useTransform"]:
-                with cmdx.DagModifier() as mod2:
-                    start_parent = mod2.create_node(
-                        "transform",
-                        name=foot.name() + "_rStart",
-                        parent=plan_start_parent
-                    )
-                    end_parent = mod2.create_node(
-                        "transform",
-                        name=foot.name() + "_rEnd",
-                        parent=plan_end_parent
-                    )
+            start_mtx = tm.as_matrix() * rdplan["targets"][0].as_matrix()
+            end_mtx = tm.as_matrix() * rdplan["targets"][1].as_matrix()
 
-                    mod2.set_attr(start_parent["translate"], tm.translation())
-                    mod2.set_attr(start_parent["rotate"], tm.rotation())
-                    mod2.set_attr(end_parent["translate"], tm.translation())
-                    mod2.set_attr(end_parent["rotate"], tm.rotation())
-
-                    mod2.set_attr(start_parent["displayHandle"], True)
-                    mod2.set_attr(end_parent["displayHandle"], True)
-
-                    # Nice icons
-                    mod2.create_node("rdTrajectory",
-                                     name=start_parent.name() + "Shape",
-                                     parent=start_parent)
-                    mod2.create_node("rdTrajectory",
-                                     name=end_parent.name() + "Shape",
-                                     parent=end_parent)
-
-                    mod2.connect(start_parent["worldMatrix"][0],
-                                 rdfoot["targets"][0])
-                    mod2.connect(end_parent["worldMatrix"][0],
-                                 rdfoot["targets"][1])
-
-            else:
-                start_mtx = tm.as_matrix() * rdplan["targets"][0].as_matrix()
-                end_mtx = tm.as_matrix() * rdplan["targets"][1].as_matrix()
-
-                dgmod.set_attr(rdfoot["targets"][0], start_mtx)
-                dgmod.set_attr(rdfoot["targets"][1], end_mtx)
-
-            dgmod.set_attr(rdfoot["timings"][0], 1)
-            dgmod.set_attr(rdfoot["hards"][0], 1)
-            dgmod.set_attr(rdfoot["timings"][1], duration)
-            dgmod.set_attr(rdfoot["hards"][1], 1)
+            dgmod.set_attr(rdfoot["targets"][0], start_mtx)
+            dgmod.set_attr(rdfoot["targets"][1], end_mtx)
 
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
@@ -2066,10 +1992,6 @@ def assign_plan(body, feet, opts=None):
             _take_ownership(dgmod, rdoutput, mult)
             _take_ownership(dgmod, rdoutput, blend)
             _take_ownership(dgmod, rdoutput, decompose)
-
-    # Compute initial plan
-    rdplan["startState"].read()
-    rdplan["outputMatrix"].as_matrix()
 
     return rdplan
 

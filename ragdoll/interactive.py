@@ -2834,7 +2834,9 @@ def assign_plan(selection=None, **opts):
             plan, increment=0, fallback_preset=opts["preset"]
         )
         plan["enabled"] = True  # ensure plan is enabled
-        update_plan([plan], forceUpdate=True)
+
+    # Compute initial plan
+    update_plan([plan], forceUpdate=True)
 
     return kSuccess
 

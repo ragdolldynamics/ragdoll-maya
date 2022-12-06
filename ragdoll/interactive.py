@@ -464,7 +464,7 @@ def _on_recording_limit(clientData=None):
 
         def buy():
             webbrowser.open(
-                "https://ragdolldynamics.com/pricing-commercial"
+                "https://ragdolldynamics.com/pricing"
             )
             return False
 
@@ -507,7 +507,7 @@ def _on_locomotion_limit(clientData=None):
 
         def buy():
             webbrowser.open(
-                "https://ragdolldynamics.com/pricing-commercial"
+                "https://ragdolldynamics.com/pricing"
             )
             return False
 

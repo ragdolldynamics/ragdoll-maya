@@ -898,3 +898,16 @@ def promote_linked_solvers(solvers):
             promoted.add(solver)
 
     return tuple(promoted)
+
+
+def shrink_array_attribute(attr, size):
+    if isinstance(attr, str):
+        node, attr = attr.rsplit(".", 1)
+        attr = cmdx.encode(node)[attr]
+
+    assert isinstance(attr, cmdx.Plug), "%r was not a cmdx.Plug" % attr
+    assert attr.is_array, "%s was not an array" % attr.path()
+
+    for index, el in enumerate(attr):
+        if index >= size:
+            cmds.removeMultiInstance(el.path())

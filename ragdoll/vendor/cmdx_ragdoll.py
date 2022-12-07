@@ -4249,6 +4249,8 @@ class Plug(object):
         type_class = typeClass
         next_available_index = nextAvailableIndex
         find_animated_plug = findAnimatedPlug
+        is_array = isArray
+        is_compound = isCompound
 
 
 class TransformationMatrix(om.MTransformationMatrix):
@@ -4608,13 +4610,18 @@ class Vector(om.MVector):
         0.0
         >>> vec ^ Vector(0, 1, 0)  # Cross product
         maya.api.OpenMaya.MVector(0, 0, 1)
+        >>> Vector(0, 1, 0) * 2    # Scale
+        maya.api.OpenMaya.MVector(0, 2, 0)
 
     """
 
     def __mul__(self, value):
         if isinstance(value, om.MVector):
+            # Dot product
             return super(Vector, self).__mul__(value)
-        return Vector(super(Vector, self).__mul__(value))
+        else:
+            # Scaling
+            return Vector(super(Vector, self).__mul__(value))
 
     def __add__(self, value):
         if isinstance(value, (int, float)):

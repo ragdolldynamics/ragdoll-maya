@@ -1750,7 +1750,7 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             break
 
     # Clear existing attributes
-    for attr in ("targets", "timings", "hardness"):
+    for attr in ("targets", "targetsTime", "targetsHard"):
         for el in plan[attr]:
             cmds.removeMultiInstance(el.path())
 
@@ -1806,11 +1806,12 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                     mtx = matrices[source][frame - start]
                     mod.set_attr(source["targets"][index], mtx)
 
-                    if source.has_attr("hardness"):
-                        mod.set_attr(source["hardness"][index], first_or_last)
+                    if source.has_attr("targetsHard"):
+                        mod.set_attr(source["targetsHard"][index],
+                                     first_or_last)
 
-                    if source.has_attr("timings"):
-                        mod.set_attr(source["timings"][index],
+                    if source.has_attr("targetsTime"):
+                        mod.set_attr(source["targetsTime"][index],
                                      timing_offset + frame - start + 1)
 
             for i, foot in enumerate(feet):
@@ -1829,10 +1830,10 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                         i = int(index / increment)
                         mod.set_attr(source["targets"][i], mtx)
 
-                        if source.has_attr("hardness"):
-                            mod.set_attr(source["hardness"][i], index == 0)
-                        if source.has_attr("timings"):
-                            mod.set_attr(source["timings"][i],
+                        if source.has_attr("targetsHard"):
+                            mod.set_attr(source["targetsHard"][i], index == 0)
+                        if source.has_attr("targetsTime"):
+                            mod.set_attr(source["targetsTime"][i],
                                          timing_offset + frame - start + 1)
 
                     if source in feet:
@@ -1843,11 +1844,11 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             for source, transform in sources.items():
                 i = int(index / increment)
 
-                if source.has_attr("hardness"):
-                    mod.set_attr(source["hardness"][i], True)
+                if source.has_attr("targetsHard"):
+                    mod.set_attr(source["targetsHard"][i], True)
 
-                if source.has_attr("timings"):
-                    mod.set_attr(source["timings"][i],
+                if source.has_attr("targetsTime"):
+                    mod.set_attr(source["targetsTime"][i],
                                  timing_offset + last_frame - start + 1)
 
         if not body_moved:

@@ -1858,10 +1858,10 @@ def assign_plan(body, feet, opts=None):
         mod.set_attr(rdplan["targets"][1], body_tm.as_matrix())
         mod.do_it()
 
-        mod.set_attr(rdplan["timings"][0], 0)
-        mod.set_attr(rdplan["hardness"][0], 1)
-        mod.set_attr(rdplan["timings"][1], duration - 1)
-        mod.set_attr(rdplan["hardness"][1], 1)
+        mod.set_attr(rdplan["targetsTime"][0], 0)
+        mod.set_attr(rdplan["targetsHard"][0], 1)
+        mod.set_attr(rdplan["targetsTime"][1], duration - 1)
+        mod.set_attr(rdplan["targetsHard"][1], 1)
         mod.do_it()
 
         outputs.append([rdplan, body])

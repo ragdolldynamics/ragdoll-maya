@@ -33,6 +33,8 @@ global proc AErdPlanTemplate(string $nodeName) {
 
         editorTemplate -beginLayout "Targets" -collapse true;
             editorTemplate -addControl "targets";
+            editorTemplate -addControl "targetsTime";
+            editorTemplate -addControl "targetsHard";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse true;

@@ -1750,7 +1750,7 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             break
 
     # Clear existing attributes
-    for attr in ("targets", "timings", "hards"):
+    for attr in ("targets", "timings", "hardness"):
         for el in plan[attr]:
             cmds.removeMultiInstance(el.path())
 
@@ -1806,8 +1806,8 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                     mtx = matrices[source][frame - start]
                     mod.set_attr(source["targets"][index], mtx)
 
-                    if source.has_attr("hards"):
-                        mod.set_attr(source["hards"][index], first_or_last)
+                    if source.has_attr("hardness"):
+                        mod.set_attr(source["hardness"][index], first_or_last)
 
                     if source.has_attr("timings"):
                         mod.set_attr(source["timings"][index],
@@ -1829,8 +1829,8 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
                         i = int(index / increment)
                         mod.set_attr(source["targets"][i], mtx)
 
-                        if source.has_attr("hards"):
-                            mod.set_attr(source["hards"][i], index == 0)
+                        if source.has_attr("hardness"):
+                            mod.set_attr(source["hardness"][i], index == 0)
                         if source.has_attr("timings"):
                             mod.set_attr(source["timings"][i],
                                          timing_offset + frame - start + 1)
@@ -1843,8 +1843,8 @@ def animation_to_plan(plan, increment=0, fallback_preset=None):
             for source, transform in sources.items():
                 i = int(index / increment)
 
-                if source.has_attr("hards"):
-                    mod.set_attr(source["hards"][i], True)
+                if source.has_attr("hardness"):
+                    mod.set_attr(source["hardness"][i], True)
 
                 if source.has_attr("timings"):
                     mod.set_attr(source["timings"][i],

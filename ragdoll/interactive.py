@@ -2944,12 +2944,12 @@ def add_target(selection=None, at=None, index=None, **opts):
         with cmdx.DagModifier() as mod:
             # insert new one to index
             for i in range(plan_target_count, idx, -1):
-                # note that we assume same size for targets/timings/hards
+                # note that we assume same size for targets/timings/hardness
                 mod.set_attr(node["targets"][i], node["targets"][i - 1].as_matrix())
-                mod.set_attr(node["hards"][i], node["hards"][i - 1].read())
+                mod.set_attr(node["hardness"][i], node["hardness"][i - 1].read())
                 mod.set_attr(node["timings"][i], node["timings"][i - 1].read())
             mod.set_attr(node["targets"][idx], new_tm.as_matrix())
-            mod.set_attr(node["hards"][idx], is_hard)
+            mod.set_attr(node["hardness"][idx], is_hard)
 
             mod.do_it()
 
@@ -3040,17 +3040,17 @@ def remove_target(selection=None, index=None, **opts):
                 # for timings and constraint level, we would want them to keep the
                 # end value, so we move them ahead.
                 mod.set_attr(node["timings"][idx - 1], node["timings"][idx])
-                mod.set_attr(node["hards"][idx - 1], node["hards"][idx])
+                mod.set_attr(node["hardness"][idx - 1], node["hardness"][idx])
             else:
                 for i in range(idx, last):
                     mod.set_attr(node["timings"][i], node["timings"][i + 1])
-                    mod.set_attr(node["hards"][i], node["hards"][i + 1])
+                    mod.set_attr(node["hardness"][i], node["hardness"][i + 1])
 
             mod.do_it()
 
         cmds.removeMultiInstance(node["targets"][last].path())
         cmds.removeMultiInstance(node["timings"][last].path())
-        cmds.removeMultiInstance(node["hards"][last].path())
+        cmds.removeMultiInstance(node["hardness"][last].path())
 
     process(plan)
     for element in plan["inputStart"]:

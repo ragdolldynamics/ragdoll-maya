@@ -1859,9 +1859,9 @@ def assign_plan(body, feet, opts=None):
         mod.do_it()
 
         mod.set_attr(rdplan["timings"][0], 0)
-        mod.set_attr(rdplan["hards"][0], 1)
+        mod.set_attr(rdplan["hardness"][0], 1)
         mod.set_attr(rdplan["timings"][1], duration - 1)
-        mod.set_attr(rdplan["hards"][1], 1)
+        mod.set_attr(rdplan["hardness"][1], 1)
         mod.do_it()
 
         outputs.append([rdplan, body])

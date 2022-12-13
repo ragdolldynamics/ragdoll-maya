@@ -12,7 +12,7 @@ import tempfile
 from maya.api import OpenMaya as om, OpenMayaUI as omui
 from maya.OpenMayaUI import MQtUtil
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
-from PySide2 import QtCore, QtWidgets, QtGui
+from PySide2 import QtCore, QtWidgets, QtGui, QtTest
 import shiboken2
 
 from . import (
@@ -30,6 +30,7 @@ log = logging.getLogger("ragdoll")
 
 self = sys.modules[__name__]
 self._maya_window = None
+self._maya_viewport = None
 
 px = MQtUtil.dpiScale
 
@@ -137,6 +138,15 @@ def MayaWindow():
             return None
 
     return self._maya_window
+
+
+def MayaViewport():
+    if not self._maya_viewport:
+        m3d_view = omui.M3dView.active3dView()
+        self._maya_viewport = shiboken2.wrapInstance(
+            m3d_view.widget(), QtWidgets.QWidget
+        )
+    return self._maya_viewport
 
 
 class Player(QtWidgets.QWidget):
@@ -3576,3 +3586,59 @@ def base64_to_pixmap(base64):
     pixmap = QtGui.QPixmap()
     pixmap.loadFromData(data)
     return pixmap
+
+
+def qtest_mouse_press(button, modifier, x, y):
+    button = {
+        "": QtCore.Qt.NoButton,
+        "left": QtCore.Qt.LeftButton,
+        "right": QtCore.Qt.RightButton,
+        "middle": QtCore.Qt.MiddleButton,
+    }[button]
+
+    modifier = {
+        "": QtCore.Qt.NoModifier,
+        "ctrl": QtCore.Qt.ControlModifier,
+        "shift": QtCore.Qt.ShiftModifier,
+        "alt": QtCore.Qt.AltModifier,
+    }[modifier]
+
+    QtTest.QTest.mousePress(
+        self._maya_viewport,
+        button,
+        modifier,
+        QtCore.QPoint(x, y),
+        delay=10,
+    )
+
+
+def qtest_mouse_release(button, modifier, x, y):
+    button = {
+        "": QtCore.Qt.NoButton,
+        "left": QtCore.Qt.LeftButton,
+        "right": QtCore.Qt.RightButton,
+        "middle": QtCore.Qt.MiddleButton,
+    }[button]
+
+    modifier = {
+        "": QtCore.Qt.NoModifier,
+        "ctrl": QtCore.Qt.ControlModifier,
+        "shift": QtCore.Qt.ShiftModifier,
+        "alt": QtCore.Qt.AltModifier,
+    }[modifier]
+
+    QtTest.QTest.mouseRelease(
+        self._maya_viewport,
+        button,
+        modifier,
+        QtCore.QPoint(x, y),
+        delay=10,
+    )
+
+
+def qtest_mouse_move(x, y):
+    QtTest.QTest.mouseMove(
+        self._maya_viewport,
+        QtCore.QPoint(x, y),
+        delay=10,
+    )

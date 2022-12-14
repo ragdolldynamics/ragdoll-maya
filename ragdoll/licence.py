@@ -19,6 +19,7 @@ STATUS_FEATURES_CHANGED = 22    # Licence fields have changed
 STATUS_TRIAL_EXPIRED = 30       # Trial expired
 STATUS_NO_FREE_LEASES = 5       # Maximum number of leases reached
 STATUS_ALREADY_LEASED = 6       # Lease already attained
+STATUS_E_EXPIRED = 13           # Activation expired
 
 log = logging.getLogger("ragdoll")
 self = sys.modules[__name__]
@@ -226,6 +227,13 @@ def activate(key):
         log.error(
             "This serial cannot be used in a virtual machine, you'll need "
             "a floating licence for that."
+        )
+
+    elif status == STATUS_E_EXPIRED:
+        log.error(
+            "Computer time and/or date/timezone is incorrect, make sure "
+            "the current time is correct as Ragdoll uses this to validate "
+            "your licence."
         )
 
     elif status == STATUS_INUSE:

@@ -29,6 +29,7 @@ global proc AErdPlanTemplate(string $nodeName) {
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawTrajectories";
             editorTemplate -addControl "drawShape";
+            editorTemplate -addControl "drawTerrain";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Targets" -collapse true;
@@ -43,6 +44,8 @@ global proc AErdPlanTemplate(string $nodeName) {
             editorTemplate -addControl "optimizeBaseLinearVelocity";
             editorTemplate -addControl "optimizeBaseAngularVelocity";
             editorTemplate -addControl "optimizeBaseOrientation";
+            editorTemplate -addControl "optimizeFootTimings";
+            editorTemplate -addControl "fastTerrain";
         editorTemplate -endNoOptimize;
         editorTemplate -endLayout;
 

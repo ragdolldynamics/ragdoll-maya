@@ -689,7 +689,7 @@ class AssetCardItem(QtWidgets.QWidget):
         self.on_clicked()
 
 
-class AssetCardModel(QtGui.QStandardItemModel):
+class AssetCardModel(base.BaseItemModel):
     card_created = QtCore.Signal(QtCore.QModelIndex)
     card_updated = QtCore.Signal(QtCore.QModelIndex)
     load_finished = QtCore.Signal(int)
@@ -716,7 +716,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
 
     def clear(self):
         self._row_map.clear()
-        super(AssetCardModel, self).clear()
+        super(AssetCardModel, self).reset()
 
     def terminate(self):
         if base.NO_WORKER_THREAD_QT or self._worker is None:

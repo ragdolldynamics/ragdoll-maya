@@ -719,18 +719,28 @@ class AssetCardModel(QtGui.QStandardItemModel):
         super(AssetCardModel, self).clear()
 
     def terminate(self):
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker.deleteLater()
+        if base.NO_WORKER_THREAD_QT or self._worker is None:
+            return
+        self._worker.wait()
+        self._worker.deleteLater()
 
     def start(self):
-        if self._worker is not None:
-            self._worker.start()
+        if base.NO_WORKER_THREAD_QT:
+            for job in asset_library._cache:
+                self._do(job)
+        else:
+            if self._worker is not None:
+                self._worker.start()
 
     def attach_library(self, queue):
         if self._worker is not None:
             return
-        self._worker = base.Thread(self._consume, args=[queue], parent=self)
+        if base.NO_WORKER_THREAD_QT:
+            self._worker = False  # just not None
+        else:
+            self._worker = base.Thread(
+                self._threaded_consume, args=[queue], parent=self
+            )
 
     def create_item(self, data):
         if data["path"] in self._row_map:
@@ -756,19 +766,23 @@ class AssetCardModel(QtGui.QStandardItemModel):
 
         self.card_updated.emit(index)
 
-    def _consume(self, queue):
+    def _do(self, job):
+        if job["type"] == "create":
+            self.create_item(job["payload"])
+        elif job["type"] == "update":
+            self.update_item(job["payload"])
+        elif job["type"] == "finish":
+            self.load_finished.emit(self.rowCount())
+
+    def _threaded_consume(self, queue):
         while True:
             job = queue.get()  # this guy blocks!
 
-            if job["type"] == "create":
-                self.create_item(job["payload"])
-            elif job["type"] == "update":
-                self.update_item(job["payload"])
-            elif job["type"] == "finish":
-                self.load_finished.emit(self.rowCount())
-            elif job["type"] == "terminate":
+            if job["type"] == "terminate":
                 queue.task_done()
                 break
+            else:
+                self._do(job)
 
             queue.task_done()
 
@@ -781,6 +795,7 @@ class AssetCardModel(QtGui.QStandardItemModel):
         asset_library.stop()
         self.clear()
         asset_library.reload()
+        self.start()
 
 
 class AssetCardProxyModel(QtCore.QSortFilterProxyModel):
@@ -1074,7 +1089,8 @@ class AssetListPage(QtWidgets.QWidget):
 
     def start_worker(self):
         self._models["Source"].start()
-        asset_library.rewind()
+        if not base.NO_WORKER_THREAD_QT:
+            asset_library.rewind()
 
     def terminate_worker(self):
         self._models["Source"].terminate()

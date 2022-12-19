@@ -32,7 +32,8 @@ RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
 RAGDOLL_DYNAMICS_RELEASES_URL = "https://learn.ragdolldynamics.com/news"
 WYDAY_URL = "https://wyday.com"
 
-NO_WORKER_THREAD = bool(os.getenv("RAGDOLL_SINGLE_THREADED"))
+NO_WORKER_THREAD_QT = bool(os.getenv("RAGDOLL_SINGLE_THREADED_QT"))
+NO_WORKER_THREAD_INTERNET = bool(os.getenv("RAGDOLL_SINGLE_THREADED_INTERNET"))
 
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
@@ -1267,7 +1268,7 @@ class InternetRequest(object):
         self._workers = dict()
 
     def _run(self, channel, job):
-        if NO_WORKER_THREAD:
+        if NO_WORKER_THREAD_INTERNET:
             self._default(channel, job())
 
         else:
@@ -1307,7 +1308,7 @@ class InternetRequest(object):
                 self._default("history", self._default_history())
                 log.debug("Internet blocked, local resource used.")
 
-        if NO_WORKER_THREAD:
+        if NO_WORKER_THREAD_INTERNET:
             _run()
         else:
             threading.Thread(target=_run).start()
@@ -1480,7 +1481,7 @@ class AssetLibrary(object):
         self._stop.clear()
         self._status.clear()
 
-        if NO_WORKER_THREAD:
+        if NO_WORKER_THREAD_QT:
             self._produce()
         else:
             self._worker = threading.Thread(target=self._produce)

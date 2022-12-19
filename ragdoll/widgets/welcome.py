@@ -767,7 +767,9 @@ class AssetCardModel(base.BaseItemModel):
         self.card_updated.emit(index)
 
     def _do(self, job):
-        if job["type"] == "create":
+        if job["type"] == "start":
+            self.clear()
+        elif job["type"] == "create":
             self.create_item(job["payload"])
         elif job["type"] == "update":
             self.update_item(job["payload"])
@@ -793,7 +795,6 @@ class AssetCardModel(base.BaseItemModel):
         if self._worker is None:
             return
         asset_library.stop()
-        self.clear()
         asset_library.reload()
         self.start()
 

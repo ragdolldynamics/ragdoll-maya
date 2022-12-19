@@ -1510,6 +1510,8 @@ class AssetLibrary(object):
 
     def _produce(self):
         rag_files = list()
+        self._send_job("start", None)
+
         for lib_path in self.search_paths():
             for rag_path in self._iter_rag_files(lib_path):
                 if self._stop.is_set():

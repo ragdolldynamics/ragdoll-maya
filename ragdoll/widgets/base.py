@@ -32,6 +32,8 @@ RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
 RAGDOLL_DYNAMICS_RELEASES_URL = "https://learn.ragdolldynamics.com/news"
 WYDAY_URL = "https://wyday.com"
 
+NO_WORKER_THREAD = bool(os.getenv("RAGDOLL_SINGLE_THREADED"))
+
 log = logging.getLogger("ragdoll")
 px = MQtUtil.dpiScale
 
@@ -1265,18 +1267,22 @@ class InternetRequest(object):
         self._workers = dict()
 
     def _run(self, channel, job):
-        worker = threading.Thread()
-        self._workers[channel] = worker
+        if NO_WORKER_THREAD:
+            self._default(channel, job())
 
-        def run():
-            result = job()
+        else:
+            worker = threading.Thread()
+            self._workers[channel] = worker
 
-            setattr(worker, "result", result)  # cache
-            for hook in self._hooks[channel]:
-                hook(result)
+            def run():
+                result = job()
 
-        worker.run = run
-        worker.start()
+                setattr(worker, "result", result)  # cache
+                for hook in self._hooks[channel]:
+                    hook(result)
+
+            worker.run = run
+            worker.start()
 
     def _default(self, channel, default):
         Worker = type("Worker", (), dict(result=default))
@@ -1301,7 +1307,10 @@ class InternetRequest(object):
                 self._default("history", self._default_history())
                 log.debug("Internet blocked, local resource used.")
 
-        threading.Thread(target=_run).start()
+        if NO_WORKER_THREAD:
+            _run()
+        else:
+            threading.Thread(target=_run).start()
 
     def subscribe_history(self, hook):
         self._subscribe("history", hook)
@@ -1470,12 +1479,16 @@ class AssetLibrary(object):
         self._cache = []
         self._stop.clear()
         self._status.clear()
-        self._worker = threading.Thread(target=self._produce)
-        self._worker.start()
+
+        if NO_WORKER_THREAD:
+            self._produce()
+        else:
+            self._worker = threading.Thread(target=self._produce)
+            self._worker.start()
 
     def stop(self):
+        self._stop.set()
         if self._worker is not None:
-            self._stop.set()
             self._worker.join()
         self._queue.queue.clear()
 

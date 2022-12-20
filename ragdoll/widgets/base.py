@@ -32,6 +32,7 @@ RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
 RAGDOLL_DYNAMICS_RELEASES_URL = "https://learn.ragdolldynamics.com/news"
 WYDAY_URL = "https://wyday.com"
 
+NO_INTERNET = bool(os.getenv("RAGDOLL_SKIP_UPDATE_CHECK"))
 NO_WORKER_THREAD_QT = bool(os.getenv("RAGDOLL_SINGLE_THREADED_QT"))
 NO_WORKER_THREAD_INTERNET = bool(os.getenv("RAGDOLL_SINGLE_THREADED_INTERNET"))
 
@@ -1294,7 +1295,8 @@ class InternetRequest(object):
 
     def process(self):
         def _preflight():
-            return (self.__is_ssl_cert_file_exists() and
+            return (not NO_INTERNET and
+                    self.__is_ssl_cert_file_exists() and
                     not self.__has_open_ssl_bug())
 
         def _run():

@@ -1738,6 +1738,7 @@ def _plan_to_startframe(plan):
 def animation_to_plan(plan, increment=10, preset=0):
     assert isinstance(plan, cmdx.Node), "%s was not a cmdx node" % plan
     assert plan.is_a("rdPlan"), "%s was not a rdPlan" % plan
+    increment = max(1, increment)
 
     duration = plan["duration"].read()
     assert duration > 10, "Can't parse less than 10 frames"
@@ -1798,7 +1799,10 @@ def animation_to_plan(plan, increment=10, preset=0):
         mod.set_attr(plan["targetsTime"], times)
         mod.set_attr(plan["targetsHard"], hards)
 
+        # Housework
         internal.shrink_array_attribute(plan["targets"], len(times))
+        internal.shrink_array_attribute(plan["targetsTime"], len(times))
+        internal.shrink_array_attribute(plan["targetsHard"], len(times))
 
 
 def assign_plan(body, feet, opts=None):

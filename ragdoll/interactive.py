@@ -2830,8 +2830,8 @@ def assign_plan(selection=None, **opts):
             cmds.modelEditor(panel, edit=True, handles=True)
 
     if opts["refinement"]:
-        dump.animation_to_plan(
-            plan, increment=10, fallback_preset=opts["preset"]
+        commands.animation_to_plan(
+            plan, increment=10, preset=opts["preset"]
         )
         plan["enabled"] = True  # ensure plan is enabled
 

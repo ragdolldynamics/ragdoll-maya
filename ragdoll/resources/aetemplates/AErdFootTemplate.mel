@@ -10,10 +10,10 @@ global proc AErdFootTemplate(string $nodeName) {
             editorTemplate -addControl "limitOffset";
             editorTemplate -addControl "maxFootDeviation";
             editorTemplate -addControl "minFootDeviation";
-            editorTemplate -addControl "nominalMatrix";
         editorTemplate -endLayout;
 
         editorTemplate -addControl "targets";
+        editorTemplate -addControl "nominalMatrix";
         editorTemplate -addControl "stepSequence";
 
         // Create an "Extras" section and also add controls for any

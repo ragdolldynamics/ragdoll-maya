@@ -1644,7 +1644,7 @@ def delete_all_physics(dry_run=False):
     return delete_physics(all_nodes, dry_run=dry_run)
 
 
-def generate_plan_sequences(preset, foot_count, duration):
+def _preset_stepsequence(preset, foot_count, duration):
     WalkPreset = 0
     HopPreset = 1
     JumpPreset = 2
@@ -1694,6 +1694,111 @@ def generate_plan_sequences(preset, foot_count, duration):
         sequences.append(sequence)
 
     return sequences
+
+
+def _positions_to_stepsequence(positions):
+    """Return array of True if `position` is moving, False otherwise
+
+    A position is deemed to be moving if it differs from the prior position.
+
+    """
+
+    assert isinstance(positions, (list, tuple)), (
+        "%r was not a list" % repr(positions)
+    )
+    assert len(positions) > 5, "%i is not enough positions" % len(positions)
+
+    moving = False
+    sequence = [moving]
+    last_position = positions[0]
+    for pos in positions[1:]:
+        moving = not pos.is_equivalent(last_position, 0.1)
+        sequence.append(moving)
+        last_position = pos
+
+    return sequence
+
+
+def _plan_to_startframe(plan):
+    start_time = plan["startTime"].read()
+
+    if start_time == constants.StartTimeRangeStart:
+        start = int(cmdx.min_time().value)
+
+    elif start_time == constants.StartTimeAnimationStart:
+        start = int(cmdx.animationStartTime().value)
+
+    else:
+        start = cmdx.frame(plan["startTimeCustom"].as_time())
+
+    return start
+
+
+@internal.with_undo_chunk
+def animation_to_plan(plan, increment=10, preset=0):
+    assert isinstance(plan, cmdx.Node), "%s was not a cmdx node" % plan
+    assert plan.is_a("rdPlan"), "%s was not a rdPlan" % plan
+
+    duration = plan["duration"].read()
+    assert duration > 10, "Can't parse less than 10 frames"
+
+    feet = list(el.input() for el in plan["inputStart"])
+    sequences = list()
+
+    start = _plan_to_startframe(plan)
+    end = start + duration
+
+    for foot in feet:
+        transform = foot["sourceTransform"].input()
+
+        positions = list()
+        for frame in range(start, end):
+            time = cmdx.time(frame)  # Frame -> Time
+            mtx = transform["worldMatrix"][0].as_matrix(time=time)
+            pos = cmdx.Tm(mtx).translation()
+            positions.append(pos)
+
+        sequence = _positions_to_stepsequence(positions)
+        sequences.append(sequence)
+
+    # Is there any animation?
+    any_animation = False
+    for sequence in sequences:
+        any_animation = any_animation or any(sequence)
+
+    if not any_animation:
+        sequences[:] = _preset_stepsequence(preset, len(feet), duration)
+
+    # Make the edge 5 bars static
+    #  __                          __
+    # |                              |
+    # |/////    ///   ////     //////|
+    # |__                          __|
+    #
+    for sequence in sequences:
+        sequence[-5:] = [False] * 5
+        sequence[:5] = [False] * 5
+
+    with cmdx.DagModifier() as mod:
+        for foot, sequence in zip(feet, sequences):
+            mod.set_attr(foot["stepSequence"], sequence[:duration])
+
+    # Targets
+    times = range(start, end, increment)
+    with cmdx.DagModifier() as mod:
+        for entity in [plan] + feet:
+            for index, frame in enumerate(times):
+                time = cmdx.time(frame)
+                transform = entity["sourceTransform"].input()
+                mtx = transform["worldMatrix"][0].as_matrix(time=time)
+                mod.set_attr(entity["targets"][index], mtx)
+
+        times = list(times)
+        hards = list(False for time in times)
+        mod.set_attr(plan["targetsTime"], times)
+        mod.set_attr(plan["targetsHard"], hards)
+
+        internal.shrink_array_attribute(plan["targets"], len(times))
 
 
 def assign_plan(body, feet, opts=None):
@@ -1799,7 +1904,7 @@ def assign_plan(body, feet, opts=None):
     duration = max(duration, 50)  # Minimum 2 seconds
 
     palette = internal.random_palette(len(feet) + 1)
-    sequences = [] if opts["refinement"] else generate_plan_sequences(
+    sequences = [] if opts["refinement"] else _preset_stepsequence(
         opts.get("preset", 0), len(feet), duration
     )
 
@@ -1938,60 +2043,6 @@ def assign_plan(body, feet, opts=None):
                 dgmod.set_attr(rdfoot["stepSequence"], sequences[index])
 
             outputs.append([rdfoot, foot])
-
-    # Generate outputs
-    with cmdx.DGModifier(interesting=False) as dgmod:
-        for rdoutput, output in outputs:
-            if opts["refinement"]:
-                continue
-
-            mult = dgmod.create_node("multMatrix")
-            decompose = dgmod.create_node("decomposeMatrix")
-            blend = dgmod.create_node("pairBlend")
-
-            dgmod.connect(rdoutput["outputMatrix"], mult["matrixIn"][0])
-            dgmod.connect(output["pim"][0], mult["matrixIn"][1])
-            dgmod.connect(mult["matrixSum"], decompose["inputMatrix"])
-            dgmod.connect(decompose["outputTranslate"], blend["inTranslate2"])
-            dgmod.connect(decompose["outputRotate"], blend["inRotate2"])
-
-            for axis in "XYZ":
-                rotate_out = output["rotate" + axis]
-                translate_out = output["translate" + axis]
-
-                rotate_in = blend["inRotate%s1" % axis]
-                translate_in = blend["inTranslate%s1" % axis]
-
-                existing = rotate_out.input(plug=True)
-                if existing is None:
-                    dgmod.set_attr(rotate_in, rotate_out.read())
-                else:
-                    dgmod.connect(existing, rotate_in)
-
-                existing = translate_out.input(plug=True)
-                if existing is None:
-                    dgmod.set_attr(translate_in, translate_out.read())
-                else:
-                    dgmod.connect(existing, translate_in)
-
-                dgmod.connect(blend["outTranslate" + axis],
-                              translate_out)
-
-                if rdoutput.is_a("rdPlan"):
-                    dgmod.connect(blend["outRotate" + axis],
-                                  rotate_out)
-
-            if not output.has_attr("blend"):
-                dgmod.add_attr(output, cmdx.Double(
-                    "blend", default=1, keyable=True, min=0, max=1
-                ))
-                dgmod.do_it()
-
-            dgmod.connect(output["blend"], blend["weight"])
-
-            _take_ownership(dgmod, rdoutput, mult)
-            _take_ownership(dgmod, rdoutput, blend)
-            _take_ownership(dgmod, rdoutput, decompose)
 
     return rdplan
 

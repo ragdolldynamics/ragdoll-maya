@@ -2831,7 +2831,7 @@ def assign_plan(selection=None, **opts):
 
     if opts["refinement"]:
         dump.animation_to_plan(
-            plan, increment=0, fallback_preset=opts["preset"]
+            plan, increment=10, fallback_preset=opts["preset"]
         )
         plan["enabled"] = True  # ensure plan is enabled
 
@@ -2872,7 +2872,7 @@ def animation_to_plan(selection=None, **opts):
         )
 
     for plan in plans:
-        dump.animation_to_plan(plan, opts["increment"])
+        commands.animation_to_plan(plan, opts["increment"])
 
     update_plan(plans, forceUpdate=True)
 

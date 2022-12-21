@@ -1649,7 +1649,7 @@ def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):
 
 
 @internal.with_undo_chunk
-def animation_to_plan(plan, increment=0, fallback_preset=None):
+def animation_to_plan2(plan, increment=4, fallback_preset=None):
     smart_sampling = increment <= 0
 
     feet = list(el.input() for el in plan["inputStart"])

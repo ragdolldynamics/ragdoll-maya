@@ -80,7 +80,9 @@ def _tint_color(pixmap, color):
 class _ProductStatus(base.ProductStatus):
 
     def get_gradient(self):
-        if self.is_expired():
+        if self.is_trial_errored():
+            return "#b53bed", "#652626"
+        elif self.is_expired():
             return "#ed3b4b", "#652626"
         elif self.is_floating() and not self.has_lease():
             return "#ff934c", "#fc686f"
@@ -1115,8 +1117,11 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
     def set_product(self):
         p_ = product_status
+        suffix = "Expired" if p_.is_expired() else ""
+        suffix = "Error" if p_.is_trial_errored() else suffix
         stop_0, stop_1 = p_.get_gradient()
-        self._widgets["Product"].setText(p_.name())
+        name = "%s %s" % (p_.name(), suffix)
+        self._widgets["Product"].setText(name)
         self._widgets["Product"].setStyleSheet("""
             max-height: %dpx;
             color: black;
@@ -1666,7 +1671,9 @@ class LicenceSetupPanel(QtWidgets.QWidget):
 
         else:
             if p_.is_trial():
-                if p_.is_expired():
+                if p_.is_trial_errored():
+                    log.error(p_.trial_error_msg())
+                elif p_.is_expired():
                     log.info("Ragdoll is expired")
                 else:
                     log.info("Ragdoll is in trial mode")
@@ -1983,6 +1990,14 @@ class WelcomeWindow(base.SingletonMainWindow):
         #   2. licence page resize
         #   after licence status updated.
         self.resize(self.size() + QtCore.QSize(0, 1))
+
+        if product_status.is_trial_errored():
+            QtWidgets.QApplication.instance().processEvents()
+            ui.notify("Error",
+                      product_status.trial_error_msg(),
+                      location="LicencePlate",
+                      persistent=True,
+                      parent=self)
 
     def on_node_activate_inet_returned(self, key):
         self._widgets["Licence"].input_widget().switch_to_offline_activate(key)

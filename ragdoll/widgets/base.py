@@ -1324,14 +1324,9 @@ class InternetRequestHandler(object):
                 log.error("Internal Error: Failed to complete request.")
 
     def process(self):
-        def _preflight():
-            return (not NO_INTERNET and
-                    self.__is_ssl_cert_file_exists() and
-                    not self.__has_open_ssl_bug())
-
         def _process():
             log.debug("Processing internet requests...")
-            if _preflight():
+            if self._preflight():
                 self._run()
             else:
                 self._default()
@@ -1340,6 +1335,11 @@ class InternetRequestHandler(object):
             _process()
         else:  # Run _preflight() in thread
             threading.Thread(target=_process).start()
+
+    def _preflight(self):
+        return (not NO_INTERNET
+                and self.__is_ssl_cert_file_exists()
+                and not self.__has_open_ssl_bug())
 
     def _run(self):
         if NO_WORKER_THREAD_INTERNET:
@@ -1517,12 +1517,24 @@ class RequestVersionHistory(RequestBaseCls):
 
 
 class RequestRagdollWebsite(RequestBaseCls):
+    """Check the connectivity with Ragdoll website
+
+    The result will ONLY be used as a condition for displaying update
+    checking ability on GUI. The result will NOT be used as a condition
+    of any kind of operation.
+
+    """
 
     def run(self):
-        return _ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+        return _ping(RAGDOLL_DYNAMICS_VERSIONS_URL)  # type: bool
 
     def default(self):
-        return False
+        # This fallback function gets used either because of OpenSSL bug or
+        # env var `RAGDOLL_SKIP_UPDATE_CHECK` is set.
+        # (see `InternetRequestHandler._preflight()`)
+        # We don't want to bother users about this on GUI if above case met,
+        # so just returning `True` here.
+        return True
 
 
 def text_to_color(text):

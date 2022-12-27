@@ -2325,8 +2325,6 @@ def _find_geometry_from_fork(root, children):
     )
 
     geometry = internal.Geometry()
-    geometry.radius = root["radius"].read()
-
     corner1, corner2 = cmdx.Point(), cmdx.Point()
 
     for child in children:
@@ -2350,17 +2348,13 @@ def _find_geometry_from_fork(root, children):
 
     bbox = cmdx.BoundingBox(corner1, corner2)
     offset = cmdx.Vector(bbox.center)
-    size = cmdx.Vector(
-        max([0.25, geometry.radius * 2, bbox.width]),
-        max([0.25, geometry.radius * 2, bbox.height]),
-        max([0.25, geometry.radius * 2, bbox.depth])
-    )
+    size = cmdx.Vector(bbox.width, bbox.height, bbox.depth)
 
     geometry.type = constants.BoxShape
     geometry.length = max(size)
     geometry.extents = size
     geometry.offset = offset
-    geometry.radius = max(geometry.radius, geometry.length * 0.1)
+    geometry.radius = geometry.length * 0.5
 
     return geometry
 

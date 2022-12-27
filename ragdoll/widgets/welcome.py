@@ -4,6 +4,7 @@ import math
 import types
 import logging
 import tempfile
+import shiboken2
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -95,7 +96,7 @@ class _ProductStatus(base.ProductStatus):
 
 
 product_status = _ProductStatus()
-internet_request = base.InternetRequest()
+internet_request = base.InternetRequestHandler()
 asset_library = base.AssetLibrary()
 
 
@@ -1836,6 +1837,8 @@ def _scaled_stylesheet(style):
 
 
 class WelcomeWindow(base.SingletonMainWindow):
+    """A GUI for welcoming user and as a Ragdoll asset library
+    """
     asset_opened = QtCore.Signal(str)
     licence_updated = QtCore.Signal()
     float_requested = QtCore.Signal()
@@ -1849,18 +1852,40 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     @staticmethod
     def preload():
-        # These run in a separate thread, on plugin load time.
-        #
-        # Be careful: This Welcome UI may get launched right after plugin
-        #   loaded as a "first launch" welcome, which means some thread
-        #   below may be still running when the UI ask for data.
-        #
+        """Launch heave load functions before GUI is up
+
+        These run in separate threads (if not `RAGDOLL_SINGLE_THREADED_*`),
+        on plugin load time.
+
+        """
+
+        def callback_website(*args):
+            if WelcomeWindow.instance_weak is not None:
+                self = WelcomeWindow.instance_weak()
+                if self is not None and shiboken2.isValid(self):
+                    _ = self._widgets["Greet"]
+                    _.status_widget().connection_checked.emit(*args)
+
+        req_website = base.RequestRagdollWebsite(callback_website)
+        internet_request.submit(req_website)
+
+        def callback_history(*args):
+            if WelcomeWindow.instance_weak is not None:
+                self = WelcomeWindow.instance_weak()
+                if self is not None and shiboken2.isValid(self):
+                    _ = self._widgets["Greet"]
+                    _.timeline_widget().history_fetched.emit(*args)
+
+        req_history = base.RequestVersionHistory(callback_history)
+        internet_request.submit(req_history)
+
         internet_request.process()
         asset_library.reload()
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
+
         _window_logo = "favicon-32x32.png"
         _sidebar_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
@@ -1978,12 +2003,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Greet"].status_widget().set_expiry()
 
-        # these will get result once thread finished.
-        # note: use signal so the result can be processed in main thread.
-        internet_request.subscribe_ragdoll(
-            self._widgets["Greet"].status_widget().connection_checked.emit)
-        internet_request.subscribe_history(
-            self._widgets["Greet"].timeline_widget().history_fetched.emit)
+        internet_request.fetch()
 
         # resize window a little bit just to trigger:
         #   1. anchor aligning and

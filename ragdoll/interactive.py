@@ -3500,9 +3500,11 @@ def welcome_user(*args):
             return True
 
         def on_node_activated(key_or_fname):
+            """If STATUS_INET returned, switch to offline mode"""
             is_file = os.path.isfile(key_or_fname)
             func = licence.activate_from_file if is_file else licence.activate
             status = func(key_or_fname)
+
             if status == licence.STATUS_INET:
                 key = key_or_fname  # should be key
                 win.node_activate_inet_returned.emit(key)
@@ -3511,7 +3513,9 @@ def welcome_user(*args):
                 win.licence_updated.emit()
 
         def on_node_deactivated():
+            """If STATUS_INET returned, switch to offline mode"""
             status = licence.deactivate()
+
             if status == licence.STATUS_INET:
                 win.node_deactivate_inet_returned.emit()
             else:

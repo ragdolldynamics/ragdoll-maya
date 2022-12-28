@@ -1101,6 +1101,8 @@ class AssetListPage(QtWidgets.QWidget):
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
+    """A little colorful badge that indicates current licencing status
+    """
 
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
@@ -1146,6 +1148,8 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
 
 class SecretToggle(QtWidgets.QWidget):
+    """A button that covers product key as password '******'
+    """
 
     def __init__(self, parent=None):
         super(SecretToggle, self).__init__(parent=parent)
@@ -1190,6 +1194,8 @@ def labeling(widget, label_text, vertical=False, **kwargs):
 
 
 class LicenceNodeLock(QtWidgets.QWidget):
+    """Node-Lock (Online) licencing page of `LicenceSetupPanel` class
+    """
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
 
@@ -1266,6 +1272,8 @@ class LicenceNodeLock(QtWidgets.QWidget):
 
 
 class LicenceNodeLockOffline(QtWidgets.QWidget):
+    """Node-Lock (Offline) licencing page of `LicenceSetupPanel` class
+    """
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
@@ -1518,6 +1526,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
 
 class LicenceFloating(QtWidgets.QWidget):
+    """Float licencing page of `LicenceSetupPanel` class
+    """
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
 
@@ -1583,7 +1593,7 @@ class LicenceFloating(QtWidgets.QWidget):
 
 
 class LicenceSetupPanel(QtWidgets.QWidget):
-    """Manage product licence
+    """The main widget that runs licencing
 
     A widget that enables users to activate/deactivate licence, node-lock
     or floating, and shows licencing status.
@@ -1720,6 +1730,12 @@ class SideBarAnchorLayout(QtWidgets.QVBoxLayout):
 
 
 class SideBar(QtWidgets.QFrame):
+    """Anchor bar on the left side
+
+    To show this, variable `ENABLE_SIDEBAR` (at the top of this file)
+    has to be `True`.
+
+    """
     anchor_clicked = QtCore.Signal(str)
 
     def __init__(self, parent=None):

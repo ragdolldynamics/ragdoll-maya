@@ -1193,18 +1193,50 @@ def labeling(widget, label_text, vertical=False, **kwargs):
     return c
 
 
+class LicenceKeyEdit(QtWidgets.QLineEdit):
+    switched = QtCore.Signal()
+
+    Offline = 0
+    Online = 1
+
+    def __init__(self, switch_to, parent=None):
+        super(LicenceKeyEdit, self).__init__(parent=parent)
+        self.setObjectName("LicenceKeyEdit")
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.on_menu_requested)
+        self._switch = switch_to
+
+    def on_menu_requested(self):
+        menu = self.createStandardContextMenu()
+
+        if not product_status.is_activated():
+            # For now, only for user who has trouble to activate
+            #
+            switch = QtWidgets.QAction(
+                "Online Mode" if self._switch else "Offline Mode", menu
+            )
+            switch.triggered.connect(self.switched.emit)
+
+            menu.addSeparator()
+            menu.addAction(switch)
+
+        menu.move(QtGui.QCursor.pos())
+        menu.show()
+
+
 class LicenceNodeLock(QtWidgets.QWidget):
     """Node-Lock (Online) licencing page of `LicenceSetupPanel` class
     """
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
+    switch_offline = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LicenceNodeLock, self).__init__(parent=parent)
 
         widgets = {
             "ProductName": LicenceStatusPlate(),
-            "ProductKey": QtWidgets.QLineEdit(),
+            "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Offline),
             "ProcessBtn": QtWidgets.QPushButton(),
             "Secret": SecretToggle(),
         }
@@ -1220,6 +1252,7 @@ class LicenceNodeLock(QtWidgets.QWidget):
         layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
+        widgets["ProductKey"].switched.connect(self.switch_offline.emit)
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
 
@@ -1278,6 +1311,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
     node_deactivated = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
+    switch_online = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LicenceNodeLockOffline, self).__init__(parent=parent)
@@ -1285,7 +1319,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         widgets = {
             "ProductName": LicenceStatusPlate(),
             "OfflineHint": QtWidgets.QLabel(),
-            "ProductKey": QtWidgets.QLineEdit(),
+            "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Online),
             "RequestRow": QtWidgets.QWidget(),
             "CopyRequest": QtWidgets.QPushButton(),
             "WebsiteURL": QtWidgets.QLabel(),
@@ -1394,6 +1428,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.addWidget(panel)
         layout.addWidget(widgets["ProcessBtn"], 0, QtCore.Qt.AlignBottom)
 
+        widgets["ProductKey"].switched.connect(self.switch_online.emit)
         widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
         widgets["Response"].textEdited.connect(self.on_response_edited)
@@ -1633,6 +1668,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         widgets["Floating"].float_dropped.connect(self.float_dropped)
         widgets["NodeLock"].node_activated.connect(self.node_activated)
         widgets["NodeLock"].node_deactivated.connect(self.node_deactivated)
+        widgets["NodeLock"].switch_offline.connect(
+            self.on_online_switch_to_offline)
         widgets["NodeLockOffline"].node_activated.connect(self.node_activated)
         widgets["NodeLockOffline"].node_deactivated.connect(
             self.on_offline_deactivated)
@@ -1640,6 +1677,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             self.offline_activate_requested)
         widgets["NodeLockOffline"].offline_deactivate_requested.connect(
             self.offline_deactivate_requested)
+        widgets["NodeLockOffline"].switch_online.connect(
+            self.on_offline_switch_to_online)
 
         self._widgets = widgets
 
@@ -1654,13 +1693,31 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         self._widgets["NodeLockOffline"].remove_temp_key()
         self.licence_updated.emit()
 
+    def on_online_switch_to_offline(self):
+        """For activation only
+        """
+        self._widgets["Pages"].setCurrentIndex(1)
+        w = self._widgets["NodeLockOffline"]
+        w.status_update()
+
+    def on_offline_switch_to_online(self):
+        """For activation only
+        """
+        self._widgets["Pages"].setCurrentIndex(0)
+        w = self._widgets["NodeLock"]
+        w.status_update()
+
     def switch_to_offline_activate(self, key):
+        """When online activation failed
+        """
         self._widgets["Pages"].setCurrentIndex(1)
         w = self._widgets["NodeLockOffline"]
         w.set_product_key(key)
         w.status_update()
 
     def switch_to_offline_deactivate(self):
+        """When online deactivation failed
+        """
         self._widgets["Pages"].setCurrentIndex(1)
         w = self._widgets["NodeLockOffline"]
         w.set_product_key(product_status.key())

@@ -1592,7 +1592,8 @@ class Loader(object):
 
                 # May be empty
                 if Meshes["vertices"]:
-                    mobj = meshes_to_mobj(Meshes)
+                    Scale = self._registry.get(entity, "ScaleComponent")
+                    mobj = meshes_to_mobj(Meshes, Scale["value"])
                     mod.set_attr(marker["inputGeometry"], mobj)
 
                     # Matrix is baked into the exported vertices

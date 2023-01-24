@@ -379,6 +379,9 @@ def data():
         # How many days until this trial expires?
         trialDays=cmds.ragdollLicence(trialDays=True, query=True),
 
+        # Trial activation error, if any
+        trialError=cmds.ragdollLicence(trialError=True, query=True),
+
         # It's either a Trial or Personal licence
         isNonCommercial=cmds.ragdollLicence(isNonCommercial=True, query=True),
 

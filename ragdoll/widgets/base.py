@@ -1216,7 +1216,7 @@ class ProductStatus(object):
         return self.data["isTrial"] or self.data["product"] == "trial"
 
     def is_trial_errored(self):
-        return self.is_trial() and self.data["trialDays"] < 0
+        return self.is_trial() and self.data["trialError"] != 0
 
     def is_expired(self):
         if self.is_trial():
@@ -1265,11 +1265,14 @@ class ProductStatus(object):
                 return datetime.now()
 
     def trial_error_msg(self):
-        if self.data["trialDays"] >= 0:
-            return
-        error = abs(self.data["trialDays"])
-        if error == 4:
+        error = self.data["trialError"]
+
+        if error == 0:
+            return ""
+
+        elif error == 4:
             return "Ragdoll requires internet to start trial."
+
         else:
             return "Ragdoll failed to start trial: Error %d" % error
 

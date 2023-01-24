@@ -3510,14 +3510,17 @@ class Notification(QtWidgets.QDialog):
         return super(Notification, self).mousePressEvent(event)
 
     def eventFilter(self, watched, event):
-        """
-        Args:
-            watched (QtCore.QObject):
-            event (QtCore.QEvent):
+        """Monitor pinned location
+
+        Arguments:
+            watched (QtCore.QObject): Object emitting the event
+            event (QtCore.QEvent): The event type
 
         Returns:
             bool
+
         """
+
         if watched == self._pin_on or watched == self.parent():
             if event.type() == event.Move:
                 self.move(self.pos() + event.pos() - event.oldPos())
@@ -3527,6 +3530,7 @@ class Notification(QtWidgets.QDialog):
                 self.hide()
             elif event.type() == event.Show:
                 self.show()
+
         return False
 
 
@@ -3548,6 +3552,7 @@ def notify(title,
             widget will be used to search that name and pin message on.
 
     """
+
     maya_win = MayaWindow()
 
     instance = Notification.instance

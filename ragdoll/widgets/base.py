@@ -1215,12 +1215,15 @@ class ProductStatus(object):
     def is_trial(self):
         return self.data["isTrial"] or self.data["product"] == "trial"
 
+    def is_trial_errored(self):
+        return self.is_trial() and self.data["trialDays"] < 0
+
     def is_expired(self):
         if self.is_trial():
-            return self.data["trialDays"] < 1
+            return self.data["trialDays"] == 0
         else:
             if self.data["expires"]:
-                return self.data["expiryDays"] < 1
+                return self.data["expiryDays"] == 0
             else:
                 return False
 
@@ -1260,6 +1263,15 @@ class ProductStatus(object):
                 # server is not available. Here we just return present
                 # time as expired to indicate something went wrong.
                 return datetime.now()
+
+    def trial_error_msg(self):
+        if self.data["trialDays"] >= 0:
+            return
+        error = abs(self.data["trialDays"])
+        if error == 4:
+            return "Ragdoll requires internet to start trial."
+        else:
+            return "Ragdoll failed to start trial: Error %d" % error
 
 
 class InternetRequest(object):

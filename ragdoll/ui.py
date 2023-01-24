@@ -3378,6 +3378,7 @@ class Notification(QtWidgets.QDialog):
         """)
 
         self._widgets = widgets
+        self._pin_on = None
         Notification.instance = self
         __.widgets[self.windowTitle()] = self
 
@@ -3413,6 +3414,18 @@ class Notification(QtWidgets.QDialog):
 
     def animate_fade_out(self):
         self._fade_out.start()
+
+    def pin_on(self, widget):
+        self.unpin()
+        self._pin_on = widget
+        self.destroyed.connect(self.unpin)
+        widget.installEventFilter(self)
+
+    def unpin(self):
+        if self._pin_on:
+            self.destroyed.disconnect(self.unpin)
+            self._pin_on.removeEventFilter(self)
+            self._pin_on = None
 
     def init(self, pos, title, message, persistent=False, shake=False):
         self._widgets["title"].setText(title)
@@ -3496,19 +3509,46 @@ class Notification(QtWidgets.QDialog):
         self.close()
         return super(Notification, self).mousePressEvent(event)
 
+    def eventFilter(self, watched, event):
+        """
+        Args:
+            watched (QtCore.QObject):
+            event (QtCore.QEvent):
 
-def notify(title, message, location="cursor", persistent=False, shake=False):
+        Returns:
+            bool
+        """
+        if watched == self._pin_on or watched == self.parent():
+            if event.type() == event.Move:
+                self.move(self.pos() + event.pos() - event.oldPos())
+            elif event.type() == event.Close:
+                self.close()
+            elif event.type() == event.Hide:
+                self.hide()
+            elif event.type() == event.Show:
+                self.show()
+        return False
+
+
+def notify(title,
+           message,
+           location="cursor",
+           persistent=False,
+           shake=False,
+           parent=None):
     """Produce a transient balloon popup with `title` and `message`
 
     Arguments:
         title (str): Header of the popup, a summary of the event
         message (str): Body of the popup, more details about the event
         location (str): Where on screen to display the notification
+        persistent (bool): Stay visible, default False
+        shake (bool): Shake the notification bubble, default False
+        parent (QtWidget.QWidget): If `location` is a QObjectName, this
+            widget will be used to search that name and pin message on.
 
     """
-
-    pointer = MQtUtil.mainWindow()
-    maya_win = shiboken2.wrapInstance(i__.long(pointer), QtWidgets.QMainWindow)
+    maya_win = MayaWindow()
 
     instance = Notification.instance
     if instance is not None and shiboken2.isValid(instance):
@@ -3517,8 +3557,10 @@ def notify(title, message, location="cursor", persistent=False, shake=False):
         note = Notification(parent=maya_win)
 
     pos = QtGui.QCursor.pos()
+    if location == "cursor":
+        pass
 
-    if location == "menu" and __.menu:
+    elif location == "menu" and __.menu:
         menu = maya_win.menuBar()
 
         def find_action(text):
@@ -3534,6 +3576,18 @@ def notify(title, message, location="cursor", persistent=False, shake=False):
             pos += QtCore.QPoint(geo.width() / 2, geo.height())
             pos = menu.mapToGlobal(pos)
 
+    elif location and parent:
+        typ = QtWidgets.QWidget
+        chd = (_ for _ in parent.findChildren(typ, location) if _.isVisible())
+        child = next(chd, None)
+
+        if child:
+            geo = child.geometry()
+            pos = geo.topLeft()
+            pos += QtCore.QPoint(geo.width() / 2, geo.height())
+            pos = child.mapToGlobal(pos)
+
+    note.pin_on(parent or maya_win)
     note.init(pos, title, message, persistent, shake=shake)
 
     return note

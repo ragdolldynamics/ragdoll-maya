@@ -1048,6 +1048,7 @@ def create_pin_constraint(child, parent=None, transform=None, opts=None):
         mod.set_attr(con["useScale"], True)
 
         mod.connect(child["ragdollId"], con["childMarker"])
+        mod.connect(transform["rotatePivot"], con["rotatePivot"])
 
         if parent:
             mod.connect(parent["ragdollId"], con["parentMarker"])

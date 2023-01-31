@@ -455,8 +455,8 @@ def _on_recording_limit(clientData=None):
 
     msg = (
         "A non-commercial licence is limited to 100 frames of recorded "
-        "simulation. To record more frames, consider purchasing "
-        "a Complete or Unlimited licence."
+        "and live simulation. To record or transfer more frames, consider "
+        "purchasing a Complete or Unlimited licence."
     )
 
     def deferred():

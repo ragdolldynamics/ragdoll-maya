@@ -112,6 +112,10 @@ Off = 0
 On = 1
 All = 2
 
+FieldForce = 0
+FieldImpulse = 1
+FieldVelocityChange = 2
+FieldAcceleration = 3
 
 #
 # Deprecated

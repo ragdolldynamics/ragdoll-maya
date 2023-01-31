@@ -57,9 +57,11 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "maxAngularDriveForce";
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
-            editorTemplate -addControl "enableGPU";
+            editorTemplate -addControl "forceMode";
+            editorTemplate -addControl "forcePerSubstep";
             editorTemplate -addControl "threadCount";
 
+            editorTemplate -addControl "enableGPU";
             editorTemplate -addControl "populationCount";
             editorTemplate -addControl "populationHorizon";
             editorTemplate -addControl "populationOffset";

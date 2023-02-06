@@ -455,8 +455,8 @@ def _on_recording_limit(clientData=None):
 
     msg = (
         "A non-commercial licence is limited to 100 frames of recorded "
-        "simulation. To record more frames, consider purchasing "
-        "a Complete or Unlimited licence."
+        "and live simulation. To record or transfer more frames, consider "
+        "purchasing a Complete or Unlimited licence."
     )
 
     def deferred():
@@ -2943,16 +2943,16 @@ def reset_foot(selection=None, **opts):
 
 def air_field(selection=None, **opts):
     _field("airField", opts={
-        "directionX": 1.0,
+        "directionX": 10.0,
         "speed": 0.1,
-        "magnitude": 100,
+        "magnitude": 1,
     })
     return kSuccess
 
 
 def drag_field(selection=None, **opts):
     _field("dragField", opts={
-        "magnitude": 10,
+        "magnitude": 0.1,
         "directionY": 1,
     })
     return kSuccess
@@ -2964,7 +2964,7 @@ def gravity_field(selection=None, **opts):
     _field("gravityField", {
         "directionY": up.y,
         "directionZ": up.z,
-        "magnitude": -98.2,
+        "magnitude": -0.982,
     })
 
     return kSuccess
@@ -2972,7 +2972,7 @@ def gravity_field(selection=None, **opts):
 
 def newton_field(selection=None, **opts):
     _field("newtonField", opts={
-        "magnitude": 100.0,
+        "magnitude": 1,
     })
 
     return kSuccess
@@ -2980,7 +2980,7 @@ def newton_field(selection=None, **opts):
 
 def radial_field(selection=None, **opts):
     _field("radialField", opts={
-        "magnitude": 200.0,
+        "magnitude": 1,
     })
 
     return kSuccess
@@ -2988,7 +2988,7 @@ def radial_field(selection=None, **opts):
 
 def turbulence_field(selection=None, **opts):
     _field("turbulenceField", opts={
-        "magnitude": 10.0,
+        "magnitude": 5,
         "frequency": 0.1,
     })
 
@@ -2998,7 +2998,7 @@ def turbulence_field(selection=None, **opts):
 def uniform_field(selection=None, **opts):
     _field("uniformField", opts={
         "directionX": 1.0,
-        "magnitude": 100.0,
+        "magnitude": 1,
     })
 
     return kSuccess
@@ -3010,7 +3010,7 @@ def vortex_field(selection=None, **opts):
     _field("vortexField", opts={
         "axisY": -up.y,
         "axisZ": -up.z,
-        "magnitude": 100.0,
+        "magnitude": 10,
         "attenuation": 1.0,
     })
 
@@ -3019,7 +3019,7 @@ def vortex_field(selection=None, **opts):
 
 def volume_axis(selection=None, **opts):
     _field("volumeAxisField", opts={
-        "magnitude": 10.0,
+        "magnitude": 1.0,
         "volumeShape": 1,  # Cube
     })
 
@@ -3029,7 +3029,7 @@ def volume_axis(selection=None, **opts):
 def volume_curve(selection=None, **opts):
     field = _field("volumeAxisField", opts={
         "volumeShape": 7,  # Curve
-        "magnitude": 10,
+        "magnitude": 1.0,
         "sectionRadius": 2,
         "awayFromAxis": 0,
         "alongAxis": 1,

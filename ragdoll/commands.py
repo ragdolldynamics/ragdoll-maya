@@ -333,7 +333,7 @@ def assign_environment(mesh, solver, opts=None):
             shading_group = mesh["instObjGroups"][0].output()
             shading_group.add(vis)
 
-            # # Delete these when solver is deleted
+            # Delete these when solver is deleted
             _take_ownership(mod, env, vis)
             _take_ownership(mod, env, mult)
             _take_ownership(mod, env, transform)
@@ -1048,6 +1048,7 @@ def create_pin_constraint(child, parent=None, transform=None, opts=None):
         mod.set_attr(con["useScale"], True)
 
         mod.connect(child["ragdollId"], con["childMarker"])
+        mod.connect(transform["rotatePivot"], con["rotatePivot"])
 
         if parent:
             mod.connect(parent["ragdollId"], con["parentMarker"])

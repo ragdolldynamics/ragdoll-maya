@@ -19,6 +19,10 @@ def create(typ, mod, name, parent=None):
         mod.set_attr(node["airDensity"], 0.1)
         mod.set_attr(node["frameskipMethod"], constants.FrameskipIgnore)
 
+        # Since 2023.02.xx
+        mod.set_attr(node["forceMode"], constants.FieldVelocityChange)
+        mod.set_attr(node["drawFieldScale"], 10)
+
         if up.y:
             mod.set_keyable(node["gravityY"])
         else:

@@ -819,6 +819,21 @@ def create_ground(solver, options=None):
     return marker
 
 
+def assign_collision_group(markers):
+    name = markers[0].name(namespace=False)
+    name += "CollisionGroup"
+    name = internal.unique_name(name)
+
+    with cmdx.DagModifier() as mod:
+        parent = mod.create_node("transform", name=name)
+        group = mod.create_node("rdCollisionGroup", name + "Shape", parent)
+
+        for marker in markers:
+            mod.connect(group["collisionGroup"], marker["collisionGroup"])
+
+    return group
+
+
 def _same_solver(a, b):
     a_scene = cmds.ragdollInfo(str(a), scene=True)
     b_scene = cmds.ragdollInfo(str(b), scene=True)

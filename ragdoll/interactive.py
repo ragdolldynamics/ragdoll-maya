@@ -855,6 +855,9 @@ def install_menu():
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
+    item("assignCollisionGroup",
+         assign_collision_group,
+         assign_collision_group_options)
 
     with submenu("Assign Locomotion", icon="locomotion.png"):
         divider("Locomotion")
@@ -1635,6 +1638,22 @@ def assign_environment(selection=None, **opts):
         commands.assign_environment(mesh, solver, opts={
             "visualise": opts["visualise"]
         })
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def assign_collision_group(selection=None, **opts):
+    selection = markers_from_selection(selection)
+
+    if not selection:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one or more markers to assign a collision group to."
+        )
+
+    commands.assign_collision_group(selection)
 
     return kSuccess
 
@@ -3719,6 +3738,10 @@ def assign_and_connect_options(*args):
 def assign_environment_options(*args):
     _update_solver_options()
     return _Window("assignEnvironment", assign_environment)
+
+
+def assign_collision_group_options(*args):
+    return _Window("assignCollisionGroup", assign_collision_group)
 
 
 def record_markers_options(*args):

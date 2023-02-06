@@ -273,6 +273,15 @@
         ]
     },
 
+    "assignCollisionGroup": {
+        "label": "Assign Collision Group",
+        "icon": "physics.png",
+        "summary": "Assign a collision group to selected Markers.",
+        "description": "Keep Markers from colliding by putting them in a common collision group.",
+        "options": [
+        ]
+    },
+
     "bakeTargets": {
         "label": "Animation to Plan",
         "icon": "bake.png",

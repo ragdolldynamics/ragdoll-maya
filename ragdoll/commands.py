@@ -838,7 +838,7 @@ def assign_collision_group(markers,
     )
 
     assert all(m.is_a("rdMarker") for m in markers), (
-        "%s should all be markers" % (", ".join(
+        "[%s] should all be markers" % (", ".join(
             str(m) for m in markers))
     )
 
@@ -880,7 +880,7 @@ def add_to_collision_group(markers, group, delete_orphans=True):
     )
 
     assert all(m.is_a("rdMarker") for m in markers), (
-        "%s should all be markers" % (", ".join(
+        "[%s] should all be markers" % (", ".join(
             str(m) for m in markers))
     )
 
@@ -924,7 +924,7 @@ def remove_from_collision_group(markers, group, delete_orphans=True):
     )
 
     assert all(m.is_a("rdMarker") for m in markers), (
-        "%s should all be markers" % (", ".join(
+        "[%s] should all be markers" % (", ".join(
             str(m) for m in markers))
     )
 

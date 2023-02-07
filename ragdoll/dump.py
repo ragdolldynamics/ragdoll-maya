@@ -103,53 +103,63 @@ class Entity(int):
     pass
 
 
+def _value_to_type(value):
+    if isinstance(value, (list, tuple)):
+        value = [_value_to_type(v) for v in value]
+
+    elif not isinstance(value, dict):
+        pass
+
+    elif value["type"] == "Entity":
+        value = Entity(value["value"])
+
+    elif value["type"] == "Vector3":
+        value = cmdx.Vector(value["values"])
+
+    elif value["type"] == "Color4":
+        value = cmdx.Color(value["values"])
+
+    elif value["type"] == "Matrix44":
+        value = cmdx.Matrix4(value["values"])
+
+    elif value["type"] == "Path":
+        value = value["value"]
+
+    elif value["type"] == "Quaternion":
+        value = cmdx.Quaternion(*value["values"])
+
+    elif value["type"] == "PointArray":
+        values = []
+
+        # Values are stored flat; every 3 values represent an Point
+        stride = 0
+        for _ in range(len(value["values"]) // 3):
+            values.append(cmdx.Point(
+                value["values"][stride + 0],
+                value["values"][stride + 1],
+                value["values"][stride + 2],
+            ))
+
+            stride += 3
+        value = values
+
+    elif value["type"] == "UintArray":
+        value = value["values"]
+
+    else:
+        raise TypeError("Unsupported type: %s" % value)
+
+    return value
+
+
 def Component(comp):
     """Simplified access to component members"""
 
     data = {}
 
     for key, value in comp["members"].items():
-        if not isinstance(value, dict):
-            pass
-
-        elif value["type"] == "Entity":
-            value = Entity(value["value"])
-
-        elif value["type"] == "Vector3":
-            value = cmdx.Vector(value["values"])
-
-        elif value["type"] == "Color4":
-            value = cmdx.Color(value["values"])
-
-        elif value["type"] == "Matrix44":
-            value = cmdx.Matrix4(value["values"])
-
-        elif value["type"] == "Path":
-            value = value["value"]
-
-        elif value["type"] == "Quaternion":
-            value = cmdx.Quaternion(*value["values"])
-
-        elif value["type"] == "PointArray":
-            values = []
-
-            # Values are stored flat; every 3 values represent an Point
-            stride = 0
-            for _ in range(len(value["values"]) // 3):
-                values.append(cmdx.Point(
-                    value["values"][stride + 0],
-                    value["values"][stride + 1],
-                    value["values"][stride + 2],
-                ))
-
-                stride += 3
-            value = values
-
-        elif value["type"] == "UintArray":
-            value = value["values"]
-
-        else:
-            raise TypeError("Unsupported type: %s" % value)
+        if isinstance(value, (dict, list, tuple)):
+            value = _value_to_type(value)
 
         data[key] = value
 
@@ -210,9 +220,8 @@ class Registry(object):
         """
 
         try:
-            return Component(
-                self._dump["entities"][entity]["components"][component]
-            )
+            components = self._dump["entities"][entity]["components"]
+            return Component(components[component])
 
         except KeyError as e:
             if self.has(entity, "NameComponent"):
@@ -221,7 +230,9 @@ class Registry(object):
             else:
                 name = "Entity: %d" % entity
 
-            raise KeyError("%s did not have '%s' (%s)" % (name, component, e))
+            raise KeyError("%s did not have '%s' (%s) {%s}" % (
+                name, component, e, ", ".join(components.keys()))
+            )
 
     def components(self, entity):
         """Return *all* components for `entity`"""
@@ -249,6 +260,9 @@ def DefaultState():
         # Series of group entities
         "groups": [],
 
+        # Series of collision group entities
+        "collisionGroups": [],
+
         # Series of markers entities
         "markers": [],
 
@@ -260,6 +274,9 @@ def DefaultState():
 
         # Map entity -> active Maya transform node
         "entityToTransform": {},
+
+        # Map entity -> active Marker node
+        "entityToMarker": {},
 
         # Markers without a transform
         "missing": [],
@@ -500,6 +517,7 @@ class Loader(object):
         self._find_solvers()
         self._find_groups()
         self._find_markers()
+        self._find_collision_groups()
 
         self.validate()
 
@@ -521,7 +539,8 @@ class Loader(object):
         solvers = self._state["solvers"]
         groups = self._state["groups"]
         constraints = self._state["constraints"]
-        markers = self._state["entityToTransform"]
+        colgroups = self._state["collisionGroups"]
+        markers = self._state["entityToMarker"]
 
         if solvers:
             log.info("Solvers:")
@@ -531,6 +550,11 @@ class Loader(object):
         if groups:
             log.info("Groups:")
             for entity in groups:
+                log.info("  %s.." % _name(entity))
+
+        if colgroups:
+            log.info("Collision Groups:")
+            for entity in colgroups:
                 log.info("  %s.." % _name(entity))
 
         if markers:
@@ -698,6 +722,7 @@ class Loader(object):
         rdsolvers = self._create_solvers()
         rdgroups = self._create_groups(rdsolvers)
         rdmarkers = self._create_markers(rdgroups, rdsolvers)
+        rdcolgroups = self._create_collision_groups(rdmarkers)
         rdconstraints = self._create_constraints(rdmarkers)
 
         self._dirty = True
@@ -708,6 +733,7 @@ class Loader(object):
             "groups": rdgroups.values(),
             "markers": rdmarkers.values(),
             "constraints": rdconstraints.values(),
+            "collisionGroups": rdcolgroups.values(),
         }
 
     def _create_missing_transforms(self):
@@ -887,6 +913,7 @@ class Loader(object):
 
         ordered_markers = []
         unoccupied_markers = list(self._state["markers"])
+        entity_to_marker = self._state["entityToMarker"]
 
         for marker in self._state["occupied"]:
             unoccupied_markers.remove(marker)
@@ -913,6 +940,7 @@ class Loader(object):
 
             rdmarker = commands.assign_marker(transform, rdsolver, opts=opts)
             rdmarkers[entity] = rdmarker
+            entity_to_marker[entity] = rdmarker
             ordered_markers.append((entity, rdmarker))
 
         if not rdmarkers:
@@ -981,6 +1009,36 @@ class Loader(object):
                     commands._take_ownership(mod, rdmarker, transform)
 
         return rdmarkers
+
+    def _create_collision_groups(self, rdmarkers):
+        log.info("Creating collision group(s)..")
+        rdcolgroups = {}
+
+        for entity in self._state["collisionGroups"]:
+            members = self._registry.get(entity, "MembersComponent")
+
+            markers = []
+            for member in members["entities"]:
+                if member not in rdmarkers:
+                    # E.g. it was part of this collision group,
+                    # but was not exported
+                    continue
+
+                markers.append(rdmarkers[member])
+
+            rdcolgroup = commands.assign_collision_group(markers)
+            rdcolgroups[entity] = rdcolgroup
+
+        if self._opts["preserveAttributes"]:
+            with cmdx.DagModifier() as mod:
+                for entity, rdcolgroup in rdcolgroups.items():
+                    try:
+                        self._apply_collision_group(mod, entity, rdcolgroup)
+                    except KeyError as e:
+                        log.warning("Could not restore attribute: %s.%s"
+                                    % (rdcolgroup, e))
+
+        return rdcolgroups
 
     def _create_constraints(self, rdmarkers):
         log.info("Creating constraint(s)..")
@@ -1097,6 +1155,13 @@ class Loader(object):
             return order["value"]
 
         groups[:] = sorted(groups, key=sort)
+
+    def _find_collision_groups(self):
+        colgroups = self._state["collisionGroups"]
+        colgroups[:] = []
+
+        for entity in self._registry.view("CollisionGroupComponent"):
+            colgroups.append(entity)
 
     def _find_markers(self):
         """Find and associate each entity with a Maya transform"""
@@ -1301,6 +1366,10 @@ class Loader(object):
 
         except KeyError:
             pass
+
+    def _apply_collision_group(self, mod, entity, col):
+        Color = self._registry.get(entity, "ColorComponent")
+        mod.set_attr(col["color"], Color["value"])
 
     def _apply_constraint(self, mod, entity, con):
         Joint = self._registry.get(entity, "JointComponent")

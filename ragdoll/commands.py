@@ -651,8 +651,8 @@ def link_solver(a, b, opts=None):
 
     """
 
-    assert a and a.isA("rdSolver"), "%s was not a solver" % a
-    assert b and b.isA("rdSolver"), "%s was not a solver" % b
+    assert a and a.is_a("rdSolver"), "%s was not a solver" % a
+    assert b and b.is_a("rdSolver"), "%s was not a solver" % b
 
     with cmdx.DagModifier() as mod:
         index = b["inputStart"].next_available_index()
@@ -676,7 +676,7 @@ def unlink_solver(solver, opts=None):
 
     """
 
-    assert solver and solver.isA("rdSolver"), "%s was not a solver" % solver
+    assert solver and solver.is_a("rdSolver"), "%s was not a solver" % solver
     linked_to = solver["startState"].output(type="rdSolver", plug="inputStart")
 
     assert linked_to, "%s was not linked" % solver
@@ -819,19 +819,140 @@ def create_ground(solver, options=None):
     return marker
 
 
-def assign_collision_group(markers):
-    name = markers[0].name(namespace=False)
-    name += "CollisionGroup"
-    name = internal.unique_name(name)
+@internal.with_undo_chunk
+def assign_collision_group(markers,
+                           group=None,
+                           delete_orphans=True):
+    """Assign `markers` to a new collision `group`
 
-    with cmdx.DagModifier() as mod:
-        parent = mod.create_node("transform", name=name)
-        group = mod.create_node("rdCollisionGroup", name + "Shape", parent)
+    Arguments:
+        markers (list): Markers to assign
+        group (rdCollisionGroup, optional): The group to add Markers to,
+            if none is given a new one is created.
+        delete_orphans (bool, optional): Delete any orphaned groups
 
-        for marker in markers:
-            mod.connect(group["collisionGroup"], marker["collisionGroup"])
+    """
+
+    assert markers and isinstance(markers, (list, tuple)), (
+        "%s should be a list of markers" % str(markers)
+    )
+
+    assert all(m.is_a("rdMarker") for m in markers), (
+        "%s should all be markers" % (", ".join(
+            str(m) for m in markers))
+    )
+
+    if group is None:
+        name = markers[0].name(namespace=False)
+        name += "CollisionGroup"
+        name = internal.unique_name(name)
+
+        with cmdx.DagModifier() as mod:
+            parent = mod.create_node("transform", name=name)
+            group = mod.create_node("rdCollisionGroup", name + "Shape", parent)
+
+            mod.set_attr(group["color"], internal.random_color())
+
+    add_to_collision_group(markers, group, delete_orphans)
 
     return group
+
+
+def add_to_collision_group(markers, group, delete_orphans=True):
+    """Add `markers` to collision `group`
+
+    Arguments:
+        group (rdCollisionGroup): The group to add to
+        markers (list): Markers to add
+
+    """
+
+    assert group and isinstance(group, cmdx.DagNode), (
+        "%s was not a dagnode" % str(group)
+    )
+
+    assert group.is_a("rdCollisionGroup"), (
+        "%s was not a collision group" % group
+    )
+
+    assert markers and isinstance(markers, (list, tuple)), (
+        "%s should be a list of markers" % str(markers)
+    )
+
+    assert all(m.is_a("rdMarker") for m in markers), (
+        "%s should all be markers" % (", ".join(
+            str(m) for m in markers))
+    )
+
+    old_groups = set()
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            old_group = marker["collisionGroup"].input(type="rdCollisionGroup")
+            old_groups.add(old_group)
+
+            mod.connect(group["collisionGroup"], marker["collisionGroup"])
+
+        if delete_orphans:
+            for group in filter(None, old_groups):
+                _clean_collision_group(mod, group)
+
+    return group
+
+
+def remove_from_collision_group(markers, group, delete_orphans=True):
+    """Remove `markers` from collision `group`
+
+    Arguments:
+        group (rdCollisionGroup): The group to remove from
+        markers (list): Markers to remove from group
+        delete_orphans (bool, optional): Whether to automatically delete
+            a group that no longer contributes to any Markers
+
+    """
+
+    assert group and isinstance(group, cmdx.DagNode), (
+        "%s was not a dagnode" % str(group)
+    )
+
+    assert group.is_a("rdCollisionGroup"), (
+        "%s was not a collision group" % group
+    )
+
+    assert markers and isinstance(markers, (list, tuple)), (
+        "%s should be a list of markers" % str(markers)
+    )
+
+    assert all(m.is_a("rdMarker") for m in markers), (
+        "%s should all be markers" % (", ".join(
+            str(m) for m in markers))
+    )
+
+    with cmdx.DagModifier() as mod:
+        for marker in markers:
+            existing = marker["collisionGroup"].input(type="rdCollisionGroup")
+
+            if existing is not group:
+                log.warning("%s was not part of %s" % (marker, group))
+                continue
+
+            mod.disconnect(group["collisionGroup"],
+                           marker["collisionGroup"])
+
+        if delete_orphans:
+            _clean_collision_group(mod, group)
+
+    return group
+
+
+def _clean_collision_group(mod, group):
+    print("Cleaning %s" % group)
+    mod.do_it()
+
+    outputs = list(group["collisionGroup"].outputs())
+
+    if len(outputs) == 0:
+        mod.delete(group.parent())
 
 
 def _same_solver(a, b):
@@ -843,14 +964,14 @@ def _same_solver(a, b):
 @internal.with_undo_chunk
 def create_distance_constraint(parent, child, opts=None):
     """Create a new distance constraint between `parent` and `child`"""
-    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
-    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent.is_a("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.is_a("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
         "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
-    assert solver and solver.isA("rdSolver"), (
+    assert solver and solver.is_a("rdSolver"), (
         "%s was not part of a solver" % parent
     )
 
@@ -900,14 +1021,14 @@ def create_distance_constraint(parent, child, opts=None):
 @internal.with_undo_chunk
 def create_fixed_constraint(parent, child, opts=None):
     """Create a new fixed constraint between `parent` and `child`"""
-    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
-    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent.is_a("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.is_a("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
         "%s and %s not part of the same solver" % (parent, child)
     )
 
     solver = _find_solver(parent)
-    assert solver and solver.isA("rdSolver"), (
+    assert solver and solver.is_a("rdSolver"), (
         "%s was not part of a solver" % parent
     )
 
@@ -935,14 +1056,14 @@ def create_fixed_constraint(parent, child, opts=None):
 
 @internal.with_undo_chunk
 def create_pose_constraint(parent, child, opts=None):
-    assert parent.isA("rdMarker"), "%s was not a marker" % parent.type()
-    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
+    assert parent.is_a("rdMarker"), "%s was not a marker" % parent.type()
+    assert child.is_a("rdMarker"), "%s was not a marker" % child.type()
     assert _same_solver(parent, child), (
         "%s and %s not part of the same solver"
     )
 
     solver = _find_solver(parent)
-    assert solver and solver.isA("rdSolver"), (
+    assert solver and solver.is_a("rdSolver"), (
         "%s was not part of a solver" % parent
     )
 
@@ -978,8 +1099,8 @@ def create_pose_constraint(parent, child, opts=None):
 @internal.with_undo_chunk
 def create_pin_constraint(child, parent=None, transform=None, opts=None):
     """Create a new pin constraint for `parent` and optionally `parent`"""
-    assert child.isA("rdMarker"), "%s was not a marker" % child.type()
-    assert not parent or parent.isA("rdMarker"), (
+    assert child.is_a("rdMarker"), "%s was not a marker" % child.type()
+    assert not parent or parent.is_a("rdMarker"), (
         "%s was not a marker" % parent.type()
     )
 
@@ -992,7 +1113,7 @@ def create_pin_constraint(child, parent=None, transform=None, opts=None):
     }, **(opts or {}))
 
     solver = _find_solver(child)
-    assert solver and solver.isA("rdSolver"), (
+    assert solver and solver.is_a("rdSolver"), (
         "%s was not part of a solver" % child
     )
 
@@ -1142,7 +1263,7 @@ def reset_constraint_frames(mod, marker, opts=None):
         "%s was not a cmdx instance" % marker
     )
 
-    if marker.isA("rdMarker"):
+    if marker.is_a("rdMarker"):
         parent = marker["parentMarker"].input(type="rdMarker")
         child = marker
 
@@ -1213,7 +1334,7 @@ def reset_constraint_frames(mod, marker, opts=None):
 
 @internal.with_undo_chunk
 def edit_constraint_frames(marker, opts=None):
-    assert marker and marker.isA("rdMarker"), "%s was not a marker" % marker
+    assert marker and marker.is_a("rdMarker"), "%s was not a marker" % marker
     opts = dict({
         "addUserAttributes": False,
     }, **(opts or {}))
@@ -1282,8 +1403,8 @@ def replace_mesh(marker, mesh, opts=None):
 
     assert isinstance(marker, cmdx.Node), "%s was not a cmdx.Node" % marker
     assert isinstance(mesh, cmdx.Node), "%s was not a cmdx.Node" % mesh
-    assert marker.isA("rdMarker"), "%s was not a 'rdMarker' node" % marker
-    assert mesh.isA(("mesh", "nurbsCurve", "nurbsSurface")), (
+    assert marker.is_a("rdMarker"), "%s was not a 'rdMarker' node" % marker
+    assert mesh.is_a(("mesh", "nurbsCurve", "nurbsSurface")), (
         "%s must be either 'mesh', 'nurbsSurface' or 'nurbsSurface'" % mesh
     )
 
@@ -1321,13 +1442,13 @@ def replace_mesh(marker, mesh, opts=None):
             mesh = copy
 
     with cmdx.DGModifier(interesting=False) as mod:
-        if mesh.isA("mesh"):
+        if mesh.is_a("mesh"):
             mod.connect(mesh["outMesh"], marker["inputGeometry"])
 
-        elif mesh.isA("nurbsCurve"):
+        elif mesh.is_a("nurbsCurve"):
             mod.connect(mesh["local"], marker["inputGeometry"])
 
-        elif mesh.isA("nurbsSurface"):
+        elif mesh.is_a("nurbsSurface"):
             mod.connect(mesh["local"], marker["inputGeometry"])
 
         if opts["maintainOffset"]:
@@ -1541,10 +1662,10 @@ def delete_physics(nodes, dry_run=False):
     for node in nodes:
 
         # Don't bother with underworld shapes
-        if node.isA(cmdx.kShape):
+        if node.is_a(cmdx.kShape):
             continue
 
-        if node.isA(cmdx.kDagNode):
+        if node.is_a(cmdx.kDagNode):
             shapes += node.shapes()
 
     # Include DG nodes too
@@ -1571,6 +1692,7 @@ def delete_physics(nodes, dry_run=False):
         "rdEnvironment",
         "rdFixedConstraint",
         "rdGroup",
+        "rdCollisionGroup",
         "rdMarker",
         "rdPinConstraint",
         "rdSolver",
@@ -1651,6 +1773,7 @@ def delete_all_physics(dry_run=False):
         "rdEnvironment",
         "rdFixedConstraint",
         "rdGroup",
+        "rdCollisionGroup",
         "rdMarker",
         "rdPinConstraint",
         "rdSolver",
@@ -2088,7 +2211,7 @@ def _find_solver(leaf):
 
     """
 
-    while leaf and not leaf.isA("rdSolver"):
+    while leaf and not leaf.is_a("rdSolver"):
         leaf = leaf["startState"].output(("rdGroup", "rdSolver"))
     return leaf
 
@@ -2745,10 +2868,10 @@ def extract_from_solver(markers):
 
     original = list(solvers)[0]
 
-    if original.isA("rdGroup"):
+    if original.is_a("rdGroup"):
         original = original["startState"].output(type="rdSolver")
 
-    assert original and original.isA("rdSolver"), "No solver was found"
+    assert original and original.is_a("rdSolver"), "No solver was found"
 
     name = original.name(namespace=False) + "_extracted"
     new = create_solver(name, opts={
@@ -3037,7 +3160,7 @@ def _interpret_shape(shape):
     """Translate `shape` into marker shape attributes"""
 
     assert isinstance(shape, cmdx.DagNode), "%s was not a cmdx.DagNode" % shape
-    assert shape.isA(cmdx.kShape), "%s was not a shape" % shape
+    assert shape.is_a(cmdx.kShape), "%s was not a shape" % shape
 
     bbox = shape.bounding_box
     extents = cmdx.Vector(bbox.width, bbox.height, bbox.depth)

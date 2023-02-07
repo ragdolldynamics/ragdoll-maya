@@ -2659,6 +2659,26 @@ class DumpWidget(QtWidgets.QWidget):
                 group_to_item[entity] = item
                 all_items[entity] = item
 
+        def _add_collision_groups(root_item):
+            for entity in analysis["collisionGroups"]:
+                Name = self._loader.registry.get(entity, "NameComponent")
+                label = Name["path"].rsplit("|", 1)[-1]
+                icon = _resource("icons", "physics.png")
+                icon = QtGui.QIcon(icon)
+
+                data = _default_data(entity)
+                data[QtCore.Qt.DecorationRole] += [icon]
+                data[QtCore.Qt.DisplayRole] += [label]
+                data[HintRole] += [
+                    label,
+                    "A new collision group will be created for the markers."
+                ]
+
+                item = qargparse.GenericTreeModelItem(data)
+                root_item.addChild(item)
+
+                all_items[entity] = item
+
         def _add_markers(root_item):
             registry = self._loader.registry
 
@@ -2770,6 +2790,7 @@ class DumpWidget(QtWidgets.QWidget):
         else:
             _add_solvers(root_item)
             _add_groups(root_item)
+            _add_collision_groups(root_item)
             _add_markers(root_item)
             _add_constraints(root_item)
 

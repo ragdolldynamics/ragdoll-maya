@@ -282,6 +282,24 @@
         ]
     },
 
+    "addToCollisionGroup": {
+        "label": "Add to Collision Group",
+        "icon": "physics_add.png",
+        "summary": "Add selected Markers to selected collision.",
+        "description": "Include the selected Markers in the already existing collision group, to avoid contacts between them as well.",
+        "options": [
+        ]
+    },
+
+    "removeFromCollisionGroup": {
+        "label": "Remove from Collision Group",
+        "icon": "physics_remove.png",
+        "summary": "Remove selected Markers from selected collision group.",
+        "description": "Exclude the selected Markers from this group, such that they may again collide.",
+        "options": [
+        ]
+    },
+
     "bakeTargets": {
         "label": "Animation to Plan",
         "icon": "bake.png",

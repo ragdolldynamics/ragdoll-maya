@@ -855,9 +855,6 @@ def install_menu():
     item("assignGroup", assign_and_connect, assign_and_connect_options)
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
-    item("assignCollisionGroup",
-         assign_collision_group,
-         assign_collision_group_options)
 
     with submenu("Assign Locomotion", icon="locomotion.png"):
         divider("Locomotion")
@@ -928,6 +925,15 @@ def install_menu():
         item("groupMarkers", group_markers)
         item("ungroupMarkers", ungroup_markers)
         item("moveToGroup", move_to_group)
+
+        divider("Collisions")
+
+        item("assignCollisionGroup",
+             assign_collision_group,
+             assign_collision_group_options)
+
+        item("addToCollisionGroup", add_to_collision_group)
+        item("removeFromCollisionGroup", remove_from_collision_group)
 
         divider()
 
@@ -1645,15 +1651,94 @@ def assign_environment(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def assign_collision_group(selection=None, **opts):
-    selection = markers_from_selection(selection)
+    groups = shapes_from_selection(selection, type="rdCollisionGroup")
+    markers = list(markers_from_selection(selection))
 
-    if not selection:
+    group = None
+
+    # Permit merging of collision groups
+    if groups and len(groups) == 1:
+        group = groups[0]
+
+    elif groups and len(groups) > 1:
+        for group in groups:
+            existing = group["collisionGroup"].outputs(type="rdMarker")
+
+            for marker in existing:
+                markers.append(marker)
+
+    if not markers:
         raise i__.UserWarning(
             "Bad Selection",
             "Select one or more markers to assign a collision group to."
         )
 
-    commands.assign_collision_group(selection)
+    group = commands.assign_collision_group(markers, group)
+    cmds.select(str(group.parent()))
+
+    log.info("Created collision group for %s" % (
+        ", ".join(str(m) for m in markers))
+    )
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def add_to_collision_group(selection=None, **opts):
+    groups = shapes_from_selection(selection, type="rdCollisionGroup")
+
+    if not groups or len(groups) > 1:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one collision group, along with one or more Markers"
+        )
+
+    group = groups[0]
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one or more markers to assign a collision group to."
+        )
+
+    commands.add_to_collision_group(markers, group)
+    cmds.select(str(group.parent()))
+
+    log.info("Added %s to %s" % (
+        ", ".join(str(m) for m in markers), group)
+    )
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def remove_from_collision_group(selection=None, **opts):
+    groups = shapes_from_selection(selection, type="rdCollisionGroup")
+
+    if not groups or len(groups) > 1:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one collision group, along with one or more Markers"
+        )
+
+    group = groups[0]
+    markers = markers_from_selection(selection)
+
+    if not markers:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select one or more markers to assign a collision group to."
+        )
+
+    commands.remove_from_collision_group(markers, group)
+    cmds.select(str(group.parent()))
+
+    log.info("Removed %s from %s" % (
+        ", ".join(str(m) for m in markers), group),
+    )
 
     return kSuccess
 
@@ -1797,6 +1882,24 @@ def plans_from_selection(selection=None):
             plans.append(selected)
 
     return tuple(plans)
+
+
+def shapes_from_selection(selection, type):
+    """Find shapes of type `type` from selection"""
+
+    shapes = list()
+
+    for selected in selection or cmdx.selection():
+        if selected.isA(cmdx.kDagNode):
+            selected = selected.shape(type=type)
+
+        if selected and selected.isA(type):
+            if selected in shapes:
+                continue
+
+            shapes.append(selected)
+
+    return tuple(shapes)
 
 
 @with_exception_handling

@@ -250,6 +250,8 @@ def install():
             options.write("firstLaunch3", False)
             options.write("firstLaunch2", first_launch2)
 
+    cmds.evalDeferred(licence.check_init_status)
+
 
 def uninstall():
     if not __.installed:
@@ -3494,10 +3496,7 @@ def welcome_user(*args):
             win.on_licence_data_requested(data)
 
         def _is_succeed(status):
-            if status != licence.STATUS_OK:
-                log.warning("Failed, see Script Editor")
-                return False
-            return True
+            return status == licence.STATUS_OK
 
         def on_node_activated(key_or_fname):
             """If STATUS_INET returned, switch to offline mode"""

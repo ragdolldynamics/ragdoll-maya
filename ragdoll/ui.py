@@ -3299,6 +3299,13 @@ class DragButton(QtWidgets.QPushButton):
 class Notification(QtWidgets.QDialog):
     instance = None
 
+    @classmethod
+    def clear_instance(cls):
+        if cls.instance is not None and shiboken2.isValid(cls.instance):
+            cls.instance.close()
+            cls.instance.deleteLater()
+            cls.instance = None
+
     def __init__(self, parent=None):
         super(Notification, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)

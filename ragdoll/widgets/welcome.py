@@ -1785,24 +1785,24 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             pages.setCurrentIndex(1)
 
         elif p_.is_floating():
-            log.info("Ragdoll is floating")
+            log.debug("Ragdoll is floating")
 
             pages.setCurrentIndex(2)
 
         else:
             if p_.is_trial():
                 if p_.is_trial_errored():
-                    log.error(p_.trial_error_msg())
+                    log.debug("Failed to start trial.")
                 elif p_.is_expired():
-                    log.info("Ragdoll is expired")
+                    log.debug("Ragdoll is in trial mode but trial expired.")
                 else:
-                    log.info("Ragdoll is in trial mode")
+                    log.debug("Ragdoll is in trial mode")
             else:
                 # node-lock
                 if p_.is_activated():
-                    log.info("Ragdoll is activated")
+                    log.debug("Ragdoll is activated")
                 else:
-                    log.info("Ragdoll is deactivated")
+                    log.debug("Ragdoll is deactivated")
 
             pages.setCurrentIndex(0)
 
@@ -2135,14 +2135,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         #   2. licence page resize
         #   after licence status updated.
         self.resize(self.size() + QtCore.QSize(0, 1))
-
-        if product_status.is_trial_errored():
-            QtWidgets.QApplication.instance().processEvents()
-            ui.notify("Error",
-                      product_status.trial_error_msg(),
-                      location="LicencePlate",
-                      persistent=True,
-                      parent=self)
 
     def on_node_activate_inet_returned(self, key):
         self._widgets["Licence"].input_widget().switch_to_offline_activate(key)

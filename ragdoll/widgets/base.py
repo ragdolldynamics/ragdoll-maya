@@ -1261,18 +1261,6 @@ class ProductStatus(object):
                 # time as expired to indicate something went wrong.
                 return datetime.now()
 
-    def trial_error_msg(self):
-        error = self.data["trialError"]
-
-        if error == 0:
-            return ""
-
-        elif error == 4:
-            return "Ragdoll requires internet to start trial."
-
-        else:
-            return "Ragdoll failed to start trial: Error %d" % error
-
 
 class InternetRequestHandler(object):
     """A class for processing internet connection required requests

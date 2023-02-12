@@ -3483,7 +3483,7 @@ def welcome_user(*args):
             data = licence.data()
             data["currentVersion"] = ".".join(__.version_str.split(".")[:3])
             try:
-                data["ip"], port = licence._parse_environment()
+                data["ip"], port = licence._parse_server_from_environment()
                 data["port"] = str(port)
             except AttributeError:
                 data["ip"], data["port"] = "", ""  # env not set

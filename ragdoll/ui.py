@@ -1824,7 +1824,7 @@ class SplashScreen(QtWidgets.QDialog):
         self._hide_all()
 
         try:
-            ip, port = licence._parse_environment()
+            ip, port = licence._parse_server_from_environment()
         except (ValueError, RuntimeError):
             ip, port = "unknown", 0
 

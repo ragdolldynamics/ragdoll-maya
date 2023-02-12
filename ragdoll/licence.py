@@ -58,24 +58,37 @@ def uninstall():
     self._installed = False
 
 
-def _parse_environment():
-    floating = os.getenv("RAGDOLL_FLOATING")
-
-    ip, port = (floating.rsplit(":") + ["13"])[:2]
+def _parse_ip_port(server):
+    ip, port = (server.rsplit(":") + ["13"])[:2]
 
     try:
         port = int(port)
     except ValueError:
         raise ValueError(
             "RAGDOLL_FLOATING misformatted '%s', should be <ip>:<port>, "
-            "e.g. 127.0.0.1:13" % floating
+            "e.g. 127.0.0.1:13" % server
         )
 
     return ip, port
 
 
+def _parse_server_from_environment():
+    floating = os.getenv("RAGDOLL_FLOATING", "")
+    ip, port = _parse_ip_port(floating)
+
+    constants.RAGDOLL_FLOATING = floating  # update constant
+    return ip, port
+
+
+def _parse_server_from_constant():
+    floating = constants.RAGDOLL_FLOATING or ""
+    ip, port = _parse_ip_port(floating)
+
+    return ip, port
+
+
 def _install_floating():
-    ip, port = _parse_environment()
+    ip, port = _parse_server_from_environment()
     status = cmds.ragdollLicence(initFloating=True)
 
     if status == STATUS_OK:
@@ -142,24 +155,12 @@ def current_key():
 
 def request_lease(ip=None, port=None):
     """Request a licence from `ip` on `port`"""
-
-    assert constants.RAGDOLL_FLOATING, (
-        "Lease only relevant for floating licences"
-    )
-
     if not self._installed:
         # Lease is automatically attained during install
         return self.install()
 
     if not (ip and port):
-        try:
-            ip, port = constants.RAGDOLL_FLOATING.split(":")
-            port = int(port)
-        except Exception:
-            raise ValueError(
-                "Malformatted RAGDOLL_FLOATING environment variable: "
-                % constants.RAGDOLL_FLOATING
-            )
+        ip, port = _parse_server_from_constant()
 
     status = cmds.ragdollLicence(requestLease=(ip, port))
 

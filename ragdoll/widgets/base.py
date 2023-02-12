@@ -667,6 +667,7 @@ class ProductTimelineModel(QtCore.QObject):
         released_versions = sorted(released_versions)
         released_dates = [
             datetime(*map(int, v.split("."))) for v in released_versions
+            if int(v[:4]) < 2077  # internal dev version
         ]
         # merge release if the distance between them gets too close
         merged_releases = defaultdict(list)
@@ -682,22 +683,21 @@ class ProductTimelineModel(QtCore.QObject):
                 offset = _days_after_v0 - previous - self.max_gap
                 self.correction[_days_after_v0] = offset
 
-        for date in released_dates:
-            if date.year >= 2077:  # current internal version is 2077
-                continue
+        incidents = [datetime.today(), expiry_date]
 
+        for date in sorted(released_dates + incidents):
             days_after_v0 = (date - first_date).days
-            if previous and unit * (days_after_v0 - previous) > threshold:
-                index += 1
 
-            merged_releases[index].append(date)
+            if date not in incidents:
+                if previous and unit * (days_after_v0 - previous) > threshold:
+                    index += 1
+                merged_releases[index].append(date)
+
             avoid_gap(days_after_v0)
             previous = days_after_v0
 
             if date < expiry_date:
                 self.latest_update = date
-
-        avoid_gap((datetime.today() - first_date).days)
 
         self.expiry_date = expiry_date
         self.current = current_ver
@@ -841,7 +841,7 @@ class ProductTimelineView(ProductTimelineBase):
 
         if self._expiry_shown:
             x = 0
-            w = self._expiry_days * self.DayWidth
+            w = self.compute_x(self._expiry_date)
             self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#445442")
 
             x = w

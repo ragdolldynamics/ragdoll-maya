@@ -1193,8 +1193,25 @@ def labeling(widget, label_text, vertical=False, **kwargs):
     return c
 
 
+class LicenceKeyValidator(QtGui.QRegExpValidator):
+    validated = QtCore.Signal(QtGui.QValidator.State)
+
+    def __init__(self, parent=None):
+        super(LicenceKeyValidator, self).__init__(
+            QtCore.QRegExp("^" + "-".join(["[0-9A-Z]{4}"] * 7) + "$"),
+            parent=parent
+        )
+
+    def validate(self, text, pos):
+        text = text.strip(" \n\t")
+        state, t, c = super(LicenceKeyValidator, self).validate(text, pos)
+        self.validated.emit(state)
+        return state, t, c
+
+
 class LicenceKeyEdit(QtWidgets.QLineEdit):
     switched = QtCore.Signal()
+    accepted = QtCore.Signal(bool)
 
     Offline = 0
     Online = 1
@@ -1203,8 +1220,51 @@ class LicenceKeyEdit(QtWidgets.QLineEdit):
         super(LicenceKeyEdit, self).__init__(parent=parent)
         self.setObjectName("LicenceKeyEdit")
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+        validator = LicenceKeyValidator()
+        self.setValidator(validator)
+        self.setToolTip("Enter 7 sets of 4 characters, upper case "
+                        "letters/digits only, separated by hyphens (-).\n"
+                        "E.g. A123-B456-C789-000X-000Y-000Z-0000")
+
+        interval = 1000
+        anim = QtCore.QPropertyAnimation()
+        anim.setEasingCurve(QtCore.QEasingCurve.InCubic)
+        anim.setDuration(interval)
+
+        validator.validated.connect(self.on_validator_validated)
         self.customContextMenuRequested.connect(self.on_menu_requested)
+
         self._switch = switch_to
+        self._anim = anim
+        self._color = None
+        self._color_invalid = QtGui.QColor("#eb4034")
+        self._color_ready = QtGui.QColor("#4d4d4d")
+
+        anim.setTargetObject(self)
+        anim.setPropertyName(QtCore.QByteArray(b"_qproperty_color"))
+
+    def _setup_anim_colors(self):
+        self._anim.setStartValue(self._color_invalid)
+        self._anim.setEndValue(self._color_ready)
+        self._color = self._color_ready
+
+    def _get_color(self):
+        return self._color or QtGui.QColor()
+
+    def _set_color(self, color):
+        self._color = color
+        self.setStyleSheet("border-color: %s;" % color.name())
+
+    _qproperty_color = QtCore.Property(QtGui.QColor, _get_color, _set_color)
+
+    def on_validator_validated(self, state):
+        if state == QtGui.QValidator.Invalid:
+            self._anim.stop()
+            self._setup_anim_colors()
+            self._anim.start()
+
+        self.accepted.emit(state == QtGui.QValidator.Acceptable)
 
     def on_menu_requested(self):
         menu = self.createStandardContextMenu()
@@ -1244,6 +1304,7 @@ class LicenceNodeLock(QtWidgets.QWidget):
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
         widgets["Secret"].layout().addWidget(widgets["ProductKey"])
+        proc_btn = widgets["ProcessBtn"]
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1253,18 +1314,10 @@ class LicenceNodeLock(QtWidgets.QWidget):
         layout.addWidget(widgets["ProcessBtn"])
 
         widgets["ProductKey"].switched.connect(self.switch_offline.emit)
-        widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
+        widgets["ProductKey"].accepted.connect(proc_btn.setEnabled)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
 
         self._widgets = widgets
-
-    def on_product_key_edited(self, text):
-        codes = text.split("-")
-        is_key = (
-            len(codes) == 7 and
-            all(len(c) == 4 and c.isalnum() for c in codes)
-        )
-        self._widgets["ProcessBtn"].setEnabled(is_key)
 
     def on_process_clicked(self):
         action = self._widgets["ProcessBtn"].text()
@@ -1429,7 +1482,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.addWidget(widgets["ProcessBtn"], 0, QtCore.Qt.AlignBottom)
 
         widgets["ProductKey"].switched.connect(self.switch_online.emit)
-        widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
+        widgets["ProductKey"].accepted.connect(self.on_product_key_edited)
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
         widgets["Response"].textEdited.connect(self.on_response_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
@@ -1445,21 +1498,16 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         self._effects = effects
         self._animations = animations
 
-    def on_product_key_edited(self, text):
-        codes = text.split("-")
-        is_key = (
-            len(codes) == 7 and
-            all(len(c) == 4 and c.isalnum() for c in codes)
-        )
+    def on_product_key_edited(self, accepted):
         # Temporarily save user input key for offline activation
-        if is_key:
+        if accepted:
             # key format validated, save it for now until activated offline
             self.write_temp_key()
-        elif not text:
+        elif not self._widgets["ProductKey"].text():
             self.remove_temp_key()
 
-        self._widgets["RequestWidget"].setEnabled(is_key)
-        self._widgets["ResponseWidget"].setEnabled(is_key)
+        self._widgets["RequestWidget"].setEnabled(accepted)
+        self._widgets["ResponseWidget"].setEnabled(accepted)
 
     def on_copy_request_clicked(self):
         key = self._widgets["ProductKey"].text()
@@ -1486,7 +1534,6 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
     def set_product_key(self, key):
         self._widgets["ProductKey"].setText(key)
-        self.on_product_key_edited(key)
 
     def set_activation_request(self):
         try:
@@ -1728,8 +1775,13 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         pages = self._widgets["Pages"]
 
         if self._widgets["NodeLockOffline"].is_deactivation_requested():
-            log.info("Ragdoll is offline deactivated")
+            log.info("Ragdoll has been offline deactivated.")
             # ensure user completed the process before dumping request code
+            pages.setCurrentIndex(1)
+
+        elif (self._widgets["NodeLockOffline"].read_temp_key()
+              and not p_.is_activated()):
+            log.info("Resume offline activation.")
             pages.setCurrentIndex(1)
 
         elif p_.is_floating():

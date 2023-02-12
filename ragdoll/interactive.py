@@ -3506,6 +3506,7 @@ def welcome_user(*args):
             status = func(key_or_fname)
 
             if status == licence.STATUS_INET:
+                log.info("Switching to offline activation mode.")
                 key = key_or_fname  # should be key
                 win.node_activate_inet_returned.emit(key)
             else:
@@ -3517,6 +3518,7 @@ def welcome_user(*args):
             status = licence.deactivate()
 
             if status == licence.STATUS_INET:
+                log.info("Switching to offline deactivation mode.")
                 win.node_deactivate_inet_returned.emit()
             else:
                 _is_succeed(status)

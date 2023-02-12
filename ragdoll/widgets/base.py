@@ -1237,13 +1237,6 @@ class ProductStatus(object):
         else:
             return self.aup_date() > datetime.now()
 
-    def start_date(self):
-        if self.is_trial():
-            return datetime.now() - timedelta(days=30 - self.data["trialDays"])
-        else:
-            aup = self.aup_date()
-            return aup.replace(year=aup.year - 1)
-
     def expiry_date(self):
         if self.is_trial():
             return datetime.now() + timedelta(days=self.data["trialDays"])

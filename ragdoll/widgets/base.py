@@ -13,7 +13,7 @@ import subprocess
 import webbrowser
 from functools import partial
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
@@ -1224,7 +1224,10 @@ class ProductStatus(object):
             return self.data["trialDays"] == 0
         else:
             if self.data["expires"]:
-                return self.data["expiryDays"] == 0
+                # The exact way how internal licencing module computed
+                dt = self.expiry_date()
+                expiry_date = date_.fromordinal(dt.toordinal())
+                return expiry_date < date_.today()
             else:
                 return False
 

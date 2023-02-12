@@ -3476,7 +3476,7 @@ def welcome_user(*args):
         parent = ui.MayaWindow()
         win = widgets.WelcomeWindow(parent)
 
-        def on_licence_updated():
+        def on_licence_data_requested():
             licence.uninstall()
             licence.install()
 
@@ -3491,7 +3491,7 @@ def welcome_user(*args):
                 data["ip"], data["port"] = "", ""
                 log.error(e)
 
-            win.on_licence_updated(data)
+            win.on_licence_data_requested(data)
 
         def _is_succeed(status):
             if status != licence.STATUS_OK:
@@ -3511,7 +3511,7 @@ def welcome_user(*args):
                 win.node_activate_inet_returned.emit(key)
             else:
                 _is_succeed(status)
-                win.licence_updated.emit()
+                win.licence_data_requested.emit()
 
         def on_node_deactivated():
             """If STATUS_INET returned, switch to offline mode"""
@@ -3522,15 +3522,15 @@ def welcome_user(*args):
                 win.node_deactivate_inet_returned.emit()
             else:
                 _is_succeed(status)
-                win.licence_updated.emit()
+                win.licence_data_requested.emit()
 
         def on_float_requested():
             _is_succeed(licence.request_lease())
-            win.licence_updated.emit()
+            win.licence_data_requested.emit()
 
         def on_float_dropped():
             _is_succeed(licence.drop_lease())
-            win.licence_updated.emit()
+            win.licence_data_requested.emit()
 
         def on_offline_activate_requested(key, fname):
             if _is_succeed(licence.activation_request_to_file(key, fname)):
@@ -3546,7 +3546,7 @@ def welcome_user(*args):
             # Let the UI disappear first
             cmds.evalDeferred(lambda: _open_physics(file_path))
 
-        win.licence_updated.connect(on_licence_updated)
+        win.licence_data_requested.connect(on_licence_data_requested)
         win.node_activated.connect(on_node_activated)
         win.node_deactivated.connect(on_node_deactivated)
         win.float_requested.connect(on_float_requested)

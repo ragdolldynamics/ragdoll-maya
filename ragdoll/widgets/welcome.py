@@ -1965,7 +1965,6 @@ class WelcomeWindow(base.SingletonMainWindow):
     """A GUI for welcoming user and as a Ragdoll asset library
     """
     asset_opened = QtCore.Signal(str)
-    licence_updated = QtCore.Signal()
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
     node_activated = QtCore.Signal(str)
@@ -1974,6 +1973,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     node_deactivate_inet_returned = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
+    licence_data_requested = QtCore.Signal()
 
     @staticmethod
     def preload():
@@ -2062,7 +2062,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
         widgets["Assets"].asset_opened.connect(self.asset_opened)
         lic = widgets["Licence"].input_widget()
-        lic.licence_updated.connect(self.licence_updated)
+        lic.licence_updated.connect(self.licence_data_requested)
         lic.float_requested.connect(self.float_requested)
         lic.float_dropped.connect(self.float_dropped)
         lic.node_activated.connect(self.node_activated)
@@ -2105,7 +2105,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         else:
             self.__hidden = False
 
-        self.licence_updated.emit()
+        self.licence_data_requested.emit()
 
     def closeEvent(self, event):
         asset_library.terminate()
@@ -2122,7 +2122,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).resizeEvent(event)
         self._align_anchors()
 
-    def on_licence_updated(self, data):
+    def on_licence_data_requested(self, data):
         product_status.data = data
 
         self._widgets["Licence"].input_widget().status_update()
@@ -2163,7 +2163,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def on_offline_deactivate_requested(self):
         w = self._widgets["Licence"].input_widget()
         w.on_offline_deactivate_requested()
-        self.licence_updated.emit()
+        self.licence_data_requested.emit()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)

@@ -238,7 +238,13 @@ def status_callback(action, status, server, fname):
 
     if action == "requestLease":
         if status == STATUS_OK:
-            log.info("Successfully acquired a lease")
+            if cmds.ragdollLicence(hasLease=True):
+                log.info("Successfully acquired a lease")
+            else:
+                _prompt_error(
+                    "Failed to acquire a lease",
+                    status_code_explained(STATUS_EXPIRED).format(server=server)
+                )
         else:
             _prompt_error(
                 "Failed to acquire a lease",
@@ -722,6 +728,15 @@ def _status_code_floating(status):
             "because your username has not been added to the whitelist of "
             "approved usernames.\n"
             "Connecting server: {server}"
+        )
+
+    elif status == STATUS_EXPIRED:
+        message = (
+            "Licence expired\n"
+
+            "The floating server's activation has expired or, the server "
+            "system time and/or date/timezone is incorrect.\n"
+            "Please contact your floating server admin."
         )
 
     return message

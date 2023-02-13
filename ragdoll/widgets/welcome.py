@@ -1120,10 +1120,15 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
     def set_product(self):
         p_ = product_status
-        suffix = "Expired" if p_.is_expired() else ""
-        suffix = "Error" if p_.is_trial_errored() else suffix
+
+        if p_.is_floating() and not p_.has_lease():
+            name = "No lease"
+        else:
+            suffix = "Expired" if p_.is_expired() else ""
+            suffix = "Error" if p_.is_trial_errored() else suffix
+            name = "%s %s" % (p_.name(), suffix)
+
         stop_0, stop_1 = p_.get_gradient()
-        name = "%s %s" % (p_.name(), suffix)
         self._widgets["Product"].setText(name)
         self._widgets["Product"].setStyleSheet("""
             max-height: %dpx;

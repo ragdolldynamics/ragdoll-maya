@@ -1786,7 +1786,7 @@ class LicenceSetupPanel(QtWidgets.QWidget):
 
         elif (self._widgets["NodeLockOffline"].read_temp_key()
               and not p_.is_activated()):
-            log.info("Resume offline activation.")
+            log.debug("Resume offline activation.")
             pages.setCurrentIndex(1)
 
         elif p_.is_floating():
@@ -1806,6 +1806,11 @@ class LicenceSetupPanel(QtWidgets.QWidget):
                 # node-lock
                 if p_.is_activated():
                     log.debug("Ragdoll is activated")
+
+                    # Cleanup. Activated from offline mode.
+                    if self._widgets["NodeLockOffline"].read_temp_key():
+                        self._widgets["NodeLockOffline"].remove_temp_key()
+
                 else:
                     log.debug("Ragdoll is deactivated")
 

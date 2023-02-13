@@ -152,22 +152,21 @@ def _is_interactive():
     return not is_standalone
 
 
-def _get_welcome_window(force=False):
+def _get_welcome_window(ensure_shown=False):
     from . import widgets, ui, interactive
 
-    if _is_interactive():
+    if _is_interactive() and not os.getenv("RAGDOLL_LEGACY_GREETS"):
         ref = widgets.WelcomeWindow.instance_weak
         if ref and ui.isValid(ref()):
             welcome_window = ref()
             if welcome_window.isVisible():
                 return welcome_window
 
-        if force:
-            interactive.welcome_user()
-            return _get_welcome_window(force=False)
+        if ensure_shown:
+            return interactive.welcome_user()
 
 
-def _prompt_error(context, message):
+def _prompt_error(context, message, ensure_welcome=False):
     title = message.split("\n")[0]
     message = "  " + "\n  ".join(message.split("\n")[1:])
 
@@ -184,8 +183,7 @@ def _prompt_error(context, message):
     if not _is_interactive():
         return
 
-    welcome_window = _get_welcome_window()
-    if welcome_window:
+    def notify():
         from . import ui
         from PySide2 import QtWidgets
 
@@ -198,43 +196,46 @@ def _prompt_error(context, message):
                   persistent=True,
                   parent=welcome_window)
 
+    welcome_window = _get_welcome_window(ensure_shown=ensure_welcome)
+    if welcome_window:
+        notify()
+
 
 def check_init_status():
     trial_err = cmds.ragdollLicence(trialError=True, query=True)
     init_err = cmds.ragdollLicence(initError=True, query=True)
 
     if trial_err != STATUS_OK:
-        _get_welcome_window(force=True)
 
         if trial_err == STATUS_INET:
             _prompt_error(
                 "Requires internet to start trial",
                 "Failed to connect to the Ragdoll server over internet for "
-                "trial activation."
+                "trial activation.",
+                ensure_welcome=True
             )
         else:
             _prompt_error(
                 "Failed to start trial",
-                status_code_explained(trial_err)
+                status_code_explained(trial_err),
+                ensure_welcome=True
             )
 
     elif init_err != STATUS_OK:
-        _get_welcome_window(force=True)
-
         _prompt_error(
             "Licence failed to initialise",
-            status_code_explained(init_err)
+            status_code_explained(init_err),
+            ensure_welcome=True
         )
 
 
 def status_callback(action, status, server, fname):
     if _is_interactive():
-        floating = cmds.ragdollLicence(isFloating=True, query=True)
-        if (status == STATUS_OK
-                or (not floating and status == STATUS_FEATURES_CHANGED)):
-
+        welcome_window = _get_welcome_window()
+        if welcome_window:
             from . import ui
             ui.Notification.clear_instance()
+            welcome_window.show()  # trigger licence data update
 
     if action == "requestLease":
         if status == STATUS_OK:

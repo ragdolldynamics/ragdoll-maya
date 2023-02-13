@@ -183,22 +183,12 @@ def _prompt_error(context, message, ensure_welcome=False):
     if not _is_interactive():
         return
 
-    def notify():
-        from . import ui
-        from PySide2 import QtWidgets
-
-        QtWidgets.QApplication.instance().processEvents()
-
-        ui.Notification.clear_instance()
-        ui.notify("Error",
-                  title + ". See Script Editor.",
-                  location="LicencePlate",
-                  persistent=True,
-                  parent=welcome_window)
-
     welcome_window = _get_welcome_window(ensure_shown=ensure_welcome)
     if welcome_window:
-        notify()
+        welcome_window.notify("Error",
+                              title + ". See Script Editor.",
+                              location="LicencePlate",
+                              persistent=True)
 
 
 def check_init_status():

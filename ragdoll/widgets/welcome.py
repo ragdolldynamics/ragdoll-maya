@@ -2084,6 +2084,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets = widgets
         self._anchor_list = anchor_list
         self.__hidden = False
+        self.__is_layout_done = False
+        self.__pending_notification = None
 
         if not ENABLE_SIDEBAR:
             panels["SideBar"].setVisible(False)
@@ -2099,6 +2101,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).hide()
 
     def show(self):
+        self.__is_layout_done = False
         super(WelcomeWindow, self).show()
 
         # Scroll to top, to make sure users always know where they are at
@@ -2141,6 +2144,8 @@ class WelcomeWindow(base.SingletonMainWindow):
         #   after licence status updated.
         self.resize(self.size() + QtCore.QSize(0, 1))
 
+        self._layout_done()
+
     def on_node_activate_inet_returned(self, key):
         self._widgets["Licence"].input_widget().switch_to_offline_activate(key)
         # don't forget our sidebar anchors after licence widget size changed!
@@ -2181,3 +2186,23 @@ class WelcomeWindow(base.SingletonMainWindow):
             self._widgets[name].y() for name in self._anchor_list
         ]
         self._panels["SideBar"].slide_anchors(pos, slider_pos)
+
+    def notify(self, title, text, location, persistent=True):
+        if not self.__is_layout_done:
+            self.__pending_notification = (title, text, location, persistent)
+            return
+
+        ui.Notification.clear_instance()
+        ui.notify(title,
+                  text,
+                  location=location,
+                  persistent=persistent,
+                  parent=self)
+
+        self.__pending_notification = None
+
+    def _layout_done(self):
+        QtWidgets.QApplication.instance().processEvents()  # wait resized
+        self.__is_layout_done = True
+        if self.__pending_notification:
+            self.notify(*self.__pending_notification)

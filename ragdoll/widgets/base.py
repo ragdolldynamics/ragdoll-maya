@@ -651,6 +651,7 @@ class ProductTimelineGraphicsView(QtWidgets.QGraphicsView):
 
 
 class ProductTimelineModel(QtCore.QObject):
+    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineModel, self).__init__(parent)
@@ -683,9 +684,15 @@ class ProductTimelineModel(QtCore.QObject):
                 offset = _days_after_v0 - previous - self.max_gap
                 self.correction[_days_after_v0] = offset
 
+        view_min = first_date - timedelta(days=self.DayPadding)
+        view_max = datetime.today() + timedelta(days=self.DayPadding)
+
         incidents = [datetime.today(), expiry_date]
 
         for date in sorted(released_dates + incidents):
+            if not view_min < date < view_max:
+                continue
+
             days_after_v0 = (date - first_date).days
 
             if date not in incidents:
@@ -707,9 +714,7 @@ class ProductTimelineModel(QtCore.QObject):
 
 class ProductTimelineBase(QtWidgets.QWidget):
     message_sent = QtCore.Signal(str)
-
     DayWidth = px(3)
-    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
@@ -738,6 +743,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self.view = view
         self.scene = scene
         self._today = datetime.now()
+        self._day_padding = 0
         self._days = 0
         self._expiry_days = 0
         self._expiry_date = None
@@ -757,12 +763,14 @@ class ProductTimelineBase(QtWidgets.QWidget):
         current_ver = model.current
         first_date = model.first
         expiry_date = model.expiry_date
+        day_padding = model.DayPadding
 
-        self._days = self.DayPadding + (self._today - first_date).days
-        self._expiry_days = self.DayPadding + (expiry_date - first_date).days
-        self._expiry_shown = self._expiry_days - self._days < self.DayPadding
+        self._day_padding = day_padding
+        self._days = day_padding + (self._today - first_date).days
+        self._expiry_days = day_padding + (expiry_date - first_date).days
+        self._expiry_shown = self._expiry_days - self._days < day_padding
         self._expiry_date = expiry_date
-        self._view_len = (self._days + self.DayPadding) * self.DayWidth
+        self._view_len = (self._days + day_padding) * self.DayWidth
         self._current = current_ver
         self._first = first_date
         self._versions = model.versions
@@ -780,7 +788,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
                 total_offset += offset
         days_after_v0 -= total_offset
 
-        days_after_v0 += self.DayPadding
+        days_after_v0 += self._day_padding
         return days_after_v0 * self.DayWidth
 
     def draw_item(self, x, y, w, h, r, color, text=None, z=0):

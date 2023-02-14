@@ -170,12 +170,13 @@ def _prompt_error(context, message, ensure_welcome=False):
     title = message.split("\n")[0]
     message = "  " + "\n  ".join(message.split("\n")[1:])
 
-    print("\n!!! Ragdoll Licencing Error: " + title)
-    print(message + "\n")
-    print(
-        "If you have trouble resolving this, please contact us "
-        "with the error messages\n"
-        "and the step you took to:  licencing@ragdolldynamics.com\n"
+    log.warning("\nRagdoll Licence Error: " + title)
+    log.warning(message + "\n")
+    log.warning(
+        "If you have trouble resolving this, please contact us at:\n"
+        "licencing@ragdolldynamics.com\n"
+        "Please include any error messages and with\n"
+        "any steps required to reproduce the error.\n"
     )
     # The last single line error to display in Maya Command Line
     log.error("%s. Please see Script Editor." % context)
@@ -297,8 +298,9 @@ def status_callback(action, status, server, fname):
         else:
             _prompt_error(
                 "Failed to activate from file",
-                status_code_explained(status) + "\n"
-                + "Activation file path: %s" % fname
+                "%s\nActivation file path: %s" % (
+                    status_code_explained(status), fname
+                )
             )
 
     elif action == "activationRequestToFile":
@@ -320,8 +322,9 @@ def status_callback(action, status, server, fname):
         else:
             _prompt_error(
                 "Failed to create activation request file",
-                status_code_explained(status) + "\n"
-                + "Request file path: %s" % fname
+                "%s\nRequest file path: %s" % (
+                    status_code_explained(status), fname
+                )
             )
 
     elif action == "deactivationRequestToFile":
@@ -333,8 +336,9 @@ def status_callback(action, status, server, fname):
         else:
             _prompt_error(
                 "Failed to create deactivation request file",
-                status_code_explained(status) + "\n"
-                + "Request file path: %s" % fname
+                "%s\nRequest file path: %s" % (
+                    status_code_explained(status), fname
+                )
             )
 
     elif action == "deactivate":
@@ -498,41 +502,50 @@ def early_bird():
 
 def status_code_explained(status):
     """Translate licencing error code into English
+
     Note: First line of message will be used as dialog title in GUI.
+
     """
+
     floating = cmds.ragdollLicence(isFloating=True, query=True)
 
-    if (status == STATUS_OK
-            or (not floating and status == STATUS_FEATURES_CHANGED)):
+    ok = status == STATUS_OK or (
+        not floating and status == STATUS_FEATURES_CHANGED
+    )
+
+    if ok:
         # Not an error
         return
 
     elif status == STATUS_COM:
-        message = (
-            "Windows COM setup problem\n"
-            
-            "The hardware id couldn't be generated due to an error in the "
-            "COM setup.\n"
-            "Re-enable Windows Management Instrumentation (WMI) in your group "
-            "policy editor or reset the local group policy to the default "
-            "values.\n"
-            "Please contact your system admin for more information."
-        )
+        message = """
+Windows COM setup problem"
+
+The hardware id couldn't be generated due to an error in the COM setup
+Re-enable Windows Management Instrumentation (WMI) in your group
+policy editor or reset the local group policy to the default values
+Please contact your system admin for more information
+"""
 
     elif status == STATUS_NETWORK_ADAPTERS:
-        message = (
-            "All network adapters need to be enabled\n"
-            
-            "There are network adapters on the system that are disabled and "
-            "was not able to generate hardware properties for licencing.\n"
-            "Please look into your network adapter settings or contact us."
-        )
+        message = """
+There are network adapters on the system that are disabled and
+TurboActivate couldn't read their hardware properties (even after trying
+and failing to enable the adapters automatically). Enable the network adapters,
+re-run the function, and TurboActivate will be able to "remember" the adapters
+even if the adapters are disabled in the future.
+
+Note: The network adapters do not need an active Internet connections.
+      They just need to not be disabled. Whether they are or are not
+      connected to the internet/intranet is not important and does not
+      affect this error code at all.
+"""
         # See: https://wyday.com/limelm/help/faq/#disabled-adapters
 
     elif status == STATUS_INET_TLS:
         message = (
             "Cannot establish secure connection\n"
-            
+
             "The secure connection to the activation servers failed due to "
             "a TLS or certificate error."
         )
@@ -600,13 +613,15 @@ def _status_code_nodelocked(status):
         )
 
     elif status == STATUS_IN_VM:
-        message = (
-            "Running in a virtual machine\n"
+        message = """
+Running in a virtual machine
 
-            "This serial cannot be used in a virtual machine, you'll need "
-            "a floating licence for that.\n"
-            "Feel free to contact us to resolve this issue when needed."
-        )
+Ragdoll believes your machine is a 'virtual machine' which
+is not supported by your serial number.
+
+If you believe this is a mistake, please reach out to us
+at licencing@ragdolldynamics.com
+"""
 
     elif status == STATUS_KEY_FOR_TURBOFLOAT:
         message = (
@@ -672,6 +687,9 @@ def _status_code_nodelocked(status):
             "of time elapsed since the last data was sent or received."
         )
 
+    else:
+        message = "Unknown status code: %s" % str(status)
+
     return message
 
 
@@ -696,7 +714,7 @@ def _status_code_floating(status):
     elif status == STATUS_F_ALREADY_LEASED:
         message = (
             "Already leased\n"
-            
+
             "You already have a licence leased from server.\n"
             "Connecting server: {server}"
         )

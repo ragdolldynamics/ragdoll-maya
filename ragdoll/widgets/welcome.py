@@ -217,7 +217,7 @@ class GreetingTopRight(QtWidgets.QWidget):
 
         self._widgets = widgets
 
-        self.connection_checked.connect(self.set_offline_hint)
+        self.connection_checked.connect(self.on_connection_checked)
 
     def set_expiry(self):
         p_ = product_status
@@ -246,7 +246,7 @@ class GreetingTopRight(QtWidgets.QWidget):
         self._widgets["ExpiryIcon"].setStyleSheet(
             "background: transparent; image: url(%s);" % icon)
 
-    def set_offline_hint(self, can_connect):
+    def on_connection_checked(self, can_connect):
         is_offline = not can_connect
         self._widgets["NoInternet"].setVisible(is_offline)
 
@@ -1987,7 +1987,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
     @staticmethod
     def preload():
-        """Launch heave load functions before GUI is up
+        """Pre-load heavy functions before GUI is visible
 
         These run in separate threads (if not `RAGDOLL_SINGLE_THREADED_*`),
         on plugin load time.
@@ -1995,21 +1995,35 @@ class WelcomeWindow(base.SingletonMainWindow):
         """
 
         def callback_website(*args):
-            if WelcomeWindow.instance_weak is not None:
-                self = WelcomeWindow.instance_weak()
-                if self is not None and shiboken2.isValid(self):
-                    _ = self._widgets["Greet"]
-                    _.status_widget().connection_checked.emit(*args)
+            if WelcomeWindow.instance_weak is None:
+                return
+
+            self = WelcomeWindow.instance_weak()
+            if self is None:
+                return
+
+            if not shiboken2.isValid(self):
+                return
+
+            greet = self._widgets["Greet"]
+            greet.status_widget().connection_checked.emit(*args)
 
         req_website = base.RequestRagdollWebsite(callback_website)
         internet_request.submit(req_website)
 
         def callback_history(*args):
-            if WelcomeWindow.instance_weak is not None:
-                self = WelcomeWindow.instance_weak()
-                if self is not None and shiboken2.isValid(self):
-                    _ = self._widgets["Greet"]
-                    _.timeline_widget().history_fetched.emit(*args)
+            if WelcomeWindow.instance_weak is None:
+                return
+
+            self = WelcomeWindow.instance_weak()
+            if self is None:
+                return
+
+            if not shiboken2.isValid(self):
+                return
+
+            _ = self._widgets["Greet"]
+            _.timeline_widget().history_fetched.emit(*args)
 
         req_history = base.RequestVersionHistory(callback_history)
         internet_request.submit(req_history)

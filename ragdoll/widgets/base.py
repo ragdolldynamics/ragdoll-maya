@@ -1,7 +1,7 @@
 
 import os
 import re
-import sys
+import time
 import json
 import logging
 import weakref
@@ -1325,8 +1325,7 @@ class InternetRequestHandler(object):
 
     def _preflight(self):
         return (not NO_INTERNET
-                and self.__is_ssl_cert_file_exists()
-                and not self.__has_open_ssl_bug())
+                and self.__is_open_ssl_working())
 
     def _run(self):
         if NO_WORKER_THREAD_INTERNET:
@@ -1370,66 +1369,41 @@ class InternetRequestHandler(object):
                 self._promise.remove(request_obj)
                 request_obj.callback(worker.cache)
 
-    def __has_open_ssl_bug(self):
-        """Return True if OpenSSL bug found
-        https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
-        """
-        if os.name != "nt":
+    def __is_open_ssl_working(self):
+        """Return True if OpenSSL works"""
+        # If ssl is working, this should not take over than 1 sec.
+        timeout = 1.2
+
+        exe = "mayapy.exe" if os.name == "nt" else "mayapy"
+        exe = os.path.join(os.getenv("MAYA_LOCATION", ""), "bin", exe)
+        if not os.access(exe, os.X_OK):
+            log.debug("Unable to find interpreter to test OpenSSL: %s" % exe)
             return False
 
-        try:
-            OPENSSL_VERSION_INFO = __import__("ssl").OPENSSL_VERSION_INFO
-        except ImportError:
-            return True  # no ssl, proceed as bugged and without internet.
-
-        has_ssl_bug = (1, 0, 2, 7) <= OPENSSL_VERSION_INFO < (1, 0, 2, 9)
-        has_workaround = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
-        cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
-        is_intel = "GenuineIntel" in cpu_ident
-
-        if not (is_intel and has_ssl_bug and not has_workaround):
-            return False
-
-        # a way to bypass subprocess checking.
-        manual_over = os.getenv("RAGDOLL_OVER_OPENSSL_CHECK", "").lower()
-        if manual_over.isdigit():
-            return int(manual_over)
-        elif manual_over in ["y", "yes"]:
-            return False  # yes, proceed as no-bug.
-        elif manual_over in ["n", "no"]:
-            return True  # no, proceed as bugged and without internet.
-
-        exe = sys.executable
-        if exe.endswith("maya.exe"):
-            exe = os.path.join(os.path.dirname(exe), "mayapy.exe")
+        log.debug("Testing OpenSSL with: %s" % exe)
 
         cmd = "import ssl;ssl.get_server_certificate(('www.google.com',443))"
         p = subprocess.Popen(
             [exe, "-c", cmd],
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             creationflags=0x08000000  # no window
         )
-        _, _ = p.communicate()
-        unsafe = p.wait() != 0
-        if unsafe:
-            log.debug("OpenSSL connection issue detected, "
-                      "please refer to this article for detail: "
-                      "https://support.foundry.com/hc/en-us/articles/"
-                      "360012750300-Q100573")
-        return unsafe
+        while p.poll() is None and timeout > 0:  # py2 compatible timeout
+            time.sleep(0.1)
+            timeout -= 0.1
 
-    def __is_ssl_cert_file_exists(self):
-        ssl_cert_file = os.getenv("SSL_CERT_FILE")
-        if ssl_cert_file:
-            if os.path.isfile(ssl_cert_file):
-                return True
-            else:
-                log.debug('Invalid SSL certificate file: Environment variable'
-                          '"SSL_CERT_FILE" is set but file path not exists: '
-                          '%s' % ssl_cert_file)
-                return False
+        if p.poll() is None:  # process still running
+            working = False   # timeout as bugged, should not take this long
         else:
-            return True  # Env not set, take it as valid setup
+            _, _ = p.communicate()
+            working = p.wait() == 0
+        # If the result is `unsafe == True`, and the client is on Maya
+        # 2019/2020, may reference this article.
+        # https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+        if not working:
+            log.debug("The OpenSSL test has failed.")
+        return working
 
 
 def _ping(url):

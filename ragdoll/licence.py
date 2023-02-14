@@ -183,22 +183,12 @@ def _prompt_error(context, message, ensure_welcome=False):
     if not _is_interactive():
         return
 
-    def notify():
-        from . import ui
-        from PySide2 import QtWidgets
-
-        QtWidgets.QApplication.instance().processEvents()
-
-        ui.Notification.clear_instance()
-        ui.notify("Error",
-                  title + ". See Script Editor.",
-                  location="LicencePlate",
-                  persistent=True,
-                  parent=welcome_window)
-
     welcome_window = _get_welcome_window(ensure_shown=ensure_welcome)
     if welcome_window:
-        notify()
+        welcome_window.notify("Error",
+                              title + ". See Script Editor.",
+                              location="LicencePlate",
+                              persistent=True)
 
 
 def check_init_status():
@@ -264,6 +254,10 @@ def status_callback(action, status, server, fname):
     elif action == "activate":
         if status == STATUS_OK:
             log.info("Successfully activated your Ragdoll licence.")
+
+        elif status == STATUS_INET:
+            log.info("No internet, use offline activation.")
+
         else:
             _prompt_error(
                 "Failed to activate licence, please check product key",
@@ -275,15 +269,36 @@ def status_callback(action, status, server, fname):
             log.info("Successfully activated Ragdoll!")
 
         elif not os.path.exists(fname):
-            log.error("Failed to activate from file.")
-            log.error("%s does not appear to exist!" % fname)
+            message = (
+                "Activation file not exist\n"
 
-        else:
-            log.error("There was a problem with activation file.")
-            log.error("File path: %s" % fname)
+                "Activation file does not exists, please check if you have "
+                "right permission to save file in that location.\n"
+                "Activation file path: %s" % fname
+            )
             _prompt_error(
                 "Failed to activate from file",
-                status_code_explained(status)
+                message
+            )
+
+        elif status == STATUS_FAIL:
+            message = (
+                "There was a problem with activation file\n"
+
+                "Please make sure that you have got activation "
+                "respond code right and try again.\n"
+                "Activation file path: %s" % fname
+            )
+            _prompt_error(
+                "Failed to activate from file",
+                message
+            )
+
+        else:
+            _prompt_error(
+                "Failed to activate from file",
+                status_code_explained(status) + "\n"
+                + "Activation file path: %s" % fname
             )
 
     elif action == "activationRequestToFile":
@@ -291,15 +306,22 @@ def status_callback(action, status, server, fname):
             log.info("Successfully generated '%s'\n" % fname)
 
         elif not os.path.exists(os.path.dirname(fname)):
-            log.error("Failed to save activation request to file.")
-            log.error("The directory at '%s' does not appear to exist" % fname)
+            message = (
+                "Failed to save activation request to file\n"
+
+                "The directory at '%s' does not appear to exist.\n"
+                "Request file path: %s" % (os.path.dirname(fname), fname)
+            )
+            _prompt_error(
+                "Failed to save activation request",
+                message
+            )
 
         else:
-            log.error("There was a problem with activation request file.")
-            log.error("File path: %s" % fname)
             _prompt_error(
                 "Failed to create activation request file",
-                status_code_explained(status)
+                status_code_explained(status) + "\n"
+                + "Request file path: %s" % fname
             )
 
     elif action == "deactivationRequestToFile":
@@ -309,16 +331,18 @@ def status_callback(action, status, server, fname):
             )
 
         else:
-            log.error("There was a problem with deactivation request file.")
-            log.error("File path: %s" % fname)
             _prompt_error(
                 "Failed to create deactivation request file",
-                status_code_explained(status)
+                status_code_explained(status) + "\n"
+                + "Request file path: %s" % fname
             )
 
     elif action == "deactivate":
         if status == STATUS_OK:
             log.info("Successfully deactivated Ragdoll licence.")
+
+        elif status == STATUS_INET:
+            log.info("No internet, use offline deactivation.")
 
         elif status == STATUS_TRIAL_EXPIRED:
             log.warning("Successfully deactivated Ragdoll licence, "

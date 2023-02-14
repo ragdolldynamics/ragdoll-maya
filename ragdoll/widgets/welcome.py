@@ -2155,6 +2155,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Greet"].status_widget().set_expiry()
 
+        # Updating version timeline and stuff.
         internet_request.fetch()
 
         # resize window a little bit just to trigger:

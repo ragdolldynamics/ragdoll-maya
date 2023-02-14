@@ -664,6 +664,8 @@ class ProductTimelineModel(QtCore.QObject):
         self.max_gap = 7 * 4  # don't visualize release gap over 4 weeks
 
     def set_data(self, released_versions, current_ver, expiry_date):
+        self.correction = dict()
+
         current_ver = datetime(*map(int, current_ver.split(".")))
         released_versions = sorted(released_versions)
         released_dates = [

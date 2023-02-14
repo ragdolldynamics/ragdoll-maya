@@ -1824,7 +1824,7 @@ class SplashScreen(QtWidgets.QDialog):
         self._hide_all()
 
         try:
-            ip, port = licence._parse_environment()
+            ip, port = licence._parse_server_from_environment()
         except (ValueError, RuntimeError):
             ip, port = "unknown", 0
 
@@ -3319,6 +3319,13 @@ class DragButton(QtWidgets.QPushButton):
 
 class Notification(QtWidgets.QDialog):
     instance = None
+
+    @classmethod
+    def clear_instance(cls):
+        if cls.instance is not None and shiboken2.isValid(cls.instance):
+            cls.instance.close()
+            cls.instance.deleteLater()
+            cls.instance = None
 
     def __init__(self, parent=None):
         super(Notification, self).__init__(parent)

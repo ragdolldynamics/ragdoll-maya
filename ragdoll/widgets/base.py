@@ -11,8 +11,9 @@ import threading
 import shiboken2
 import subprocess
 import webbrowser
+from functools import partial
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_
 from PySide2 import QtCore, QtWidgets, QtGui
 from maya.OpenMayaUI import MQtUtil
 
@@ -666,6 +667,7 @@ class ProductTimelineModel(QtCore.QObject):
         released_versions = sorted(released_versions)
         released_dates = [
             datetime(*map(int, v.split("."))) for v in released_versions
+            if int(v[:4]) < 2077  # internal dev version
         ]
         # merge release if the distance between them gets too close
         merged_releases = defaultdict(list)
@@ -681,22 +683,21 @@ class ProductTimelineModel(QtCore.QObject):
                 offset = _days_after_v0 - previous - self.max_gap
                 self.correction[_days_after_v0] = offset
 
-        for date in released_dates:
-            if date.year >= 2077:  # current internal version is 2077
-                continue
+        incidents = [datetime.today(), expiry_date]
 
+        for date in sorted(released_dates + incidents):
             days_after_v0 = (date - first_date).days
-            if previous and unit * (days_after_v0 - previous) > threshold:
-                index += 1
 
-            merged_releases[index].append(date)
+            if date not in incidents:
+                if previous and unit * (days_after_v0 - previous) > threshold:
+                    index += 1
+                merged_releases[index].append(date)
+
             avoid_gap(days_after_v0)
             previous = days_after_v0
 
             if date < expiry_date:
                 self.latest_update = date
-
-        avoid_gap((datetime.today() - first_date).days)
 
         self.expiry_date = expiry_date
         self.current = current_ver
@@ -840,7 +841,7 @@ class ProductTimelineView(ProductTimelineBase):
 
         if self._expiry_shown:
             x = 0
-            w = self._expiry_days * self.DayWidth
+            w = self.compute_x(self._expiry_date)
             self.draw_item(x=x, y=y, z=1, w=w, h=h, r=r, color="#445442")
 
             x = w
@@ -1223,7 +1224,10 @@ class ProductStatus(object):
             return self.data["trialDays"] == 0
         else:
             if self.data["expires"]:
-                return self.data["expiryDays"] == 0
+                # The exact way how internal licencing module computed
+                dt = self.expiry_date()
+                expiry_date = date_.fromordinal(dt.toordinal())
+                return expiry_date < date_.today()
             else:
                 return False
 
@@ -1232,13 +1236,6 @@ class ProductStatus(object):
             return not self.is_expired()
         else:
             return self.aup_date() > datetime.now()
-
-    def start_date(self):
-        if self.is_trial():
-            return datetime.now() - timedelta(days=30 - self.data["trialDays"])
-        else:
-            aup = self.aup_date()
-            return aup.replace(year=aup.year - 1)
 
     def expiry_date(self):
         if self.is_trial():
@@ -1264,131 +1261,114 @@ class ProductStatus(object):
                 # time as expired to indicate something went wrong.
                 return datetime.now()
 
-    def trial_error_msg(self):
-        error = self.data["trialError"]
 
-        if error == 0:
-            return ""
+class InternetRequestHandler(object):
+    """A class for processing internet connection required requests
 
-        elif error == 4:
-            return "Ragdoll requires internet to start trial."
+    All request object should be an instance of `RequestBaseCls` subclass
+    and submit by calling `submit()`.
 
-        else:
-            return "Ragdoll failed to start trial: Error %d" % error
+    After submission, call `process()` to run all requests. All request
+    function will run in worker thread, unless env var
+    `RAGDOLL_SINGLE_THREADED_INTERNET` is set.
 
+    Finally, call `fetch()` to pass the results to callbacks. If the job
+    is still running, then the results will be passed once done.
 
-class InternetRequest(object):
+    If env var `RAGDOLL_SKIP_UPDATE_CHECK` is set, no internet connection
+    should be made and `RequestBaseCls.default()` will be called instead
+    even if the internet is actually available.
+
+    IMPORTANT:
+        Remember to check the request receiver, e.g. Qt widgets, is still
+        alive or not when the callback is being called.
+
+    """
 
     def __init__(self):
-        self._hooks = defaultdict(set)
-        self._workers = dict()
+        self._requests = set()
+        self._workers = weakref.WeakKeyDictionary()
+        self._promise = weakref.WeakSet()
 
-    def _run(self, channel, job):
-        if NO_WORKER_THREAD_INTERNET:
-            self._default(channel, job())
+    def submit(self, request_obj):
+        assert isinstance(request_obj, RequestBaseCls), (
+            "Must be an instance of 'RequestBaseCls' subclass."
+        )
+        self._requests.add(request_obj)
 
-        else:
-            worker = threading.Thread()
-            self._workers[channel] = worker
+    def fetch(self):
+        for request_obj in self._requests:
+            worker = self._workers.get(request_obj)
 
-            def run():
-                result = job()
+            if worker and hasattr(worker, "cache"):
+                # Already completed.
+                request_obj.callback(worker.cache)
 
-                setattr(worker, "result", result)  # cache
-                for hook in self._hooks[channel]:
-                    hook(result)
+            elif not NO_WORKER_THREAD_INTERNET:
+                self._promise.add(request_obj)
 
-            worker.run = run
-            worker.start()
-
-    def _default(self, channel, default):
-        Worker = type("Worker", (), dict(result=default))
-        self._workers[channel] = Worker()
-
-        for hook in self._hooks[channel]:
-            hook(default)
+            else:  # Should not happen in single thread mode.
+                log.error("Internal Error: Failed to complete request.")
 
     def process(self):
-        def _preflight():
-            return (not NO_INTERNET and
-                    self.__is_ssl_cert_file_exists() and
-                    not self.__has_open_ssl_bug())
-
-        def _run():
+        def _process():
             log.debug("Processing internet requests...")
-            if _preflight():
-                self._run("ragdoll", self._run_ragdoll)
-                self._run("history", self._run_history)
-                log.debug("Internet requests completed.")
+            if self._preflight():
+                self._run()
             else:
-                self._default("ragdoll", False)
-                self._default("history", self._default_history())
-                log.debug("Internet blocked, local resource used.")
+                self._default()
 
         if NO_WORKER_THREAD_INTERNET:
-            _run()
+            _process()
+        else:  # Run _preflight() in thread
+            threading.Thread(target=_process).start()
+
+    def _preflight(self):
+        return (not NO_INTERNET
+                and self.__is_ssl_cert_file_exists()
+                and not self.__has_open_ssl_bug())
+
+    def _run(self):
+        if NO_WORKER_THREAD_INTERNET:
+            for request_obj in self._requests:
+                result = request_obj.run()
+
+                worker = type("Worker", (), dict(cache=result))()
+                self._workers[request_obj] = worker
+
         else:
-            threading.Thread(target=_run).start()
+            for request_obj in self._requests:
 
-    def subscribe_history(self, hook):
-        self._subscribe("history", hook)
+                worker = threading.Thread()
+                self._workers[request_obj] = worker
 
-    def subscribe_ragdoll(self, hook):
-        self._subscribe("ragdoll", hook)
+                def run(request_obj_, worker_):
+                    setattr(worker_, "cache", request_obj_.run())
+                    self._on_promised(request_obj_)
 
-    def _subscribe(self, channel, hook):
-        self._hooks[channel].add(hook)
+                worker.run = partial(run, request_obj, worker)
+                worker.start()
 
-        worker = self._workers.get(channel)
-        if worker and hasattr(worker, "result"):
-            hook(worker.result)
+        log.debug("Internet requests completed.")
 
-    def _run_ragdoll(self):
-        return self.__ping(RAGDOLL_DYNAMICS_VERSIONS_URL)
+    def _default(self):
+        # The `default()` runs without internet and should be fast, so
+        # no worker thread for each of them.
+        for request_obj in self._requests:
+            result = request_obj.default()
 
-    def _run_history(self):
-        released = []
+            worker = type("Worker", (), dict(cache=result))()
+            self._workers[request_obj] = worker
+            self._on_promised(request_obj)
 
-        def parsed_versions(lines):
-            p = r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
-            p = re.compile(p.encode())
-            return [
-                matched.group(1).decode()
-                for matched in [p.match(ln) for ln in lines] if matched
-            ]
+        log.debug("Internet blocked, local resource used.")
 
-        url = RAGDOLL_DYNAMICS_RELEASES_URL
-        try:
-            response = request.urlopen(url)
-            if response.code == 200:
-                released = parsed_versions(response.readlines())
-            else:
-                raise Exception("%s returned: %d" % (url, response.code))
-
-        except Exception as e:
-            log.debug(e)
-        else:
-            log.debug("Release history fetched from %s" % url)
-
-        return released or self._default_history()
-
-    def _default_history(self):
-        released = []
-        root = os.path.dirname(constants.__file__)
-        cache = os.path.join(root, "resources", "versioninfo.json")
-        if os.path.isfile(cache):
-            with open(cache) as f:
-                released = json.load(f)
-                log.debug("Release history loaded from %s" % cache)
-        return released
-
-    def __ping(self, url):
-        try:
-            response = request.urlopen(url)
-            return response.code == 200
-        except Exception as e:
-            log.debug(e)
-            return False
+    def _on_promised(self, request_obj):
+        if request_obj in self._promise:
+            worker = self._workers.get(request_obj)
+            if worker and hasattr(worker, "cache"):
+                self._promise.remove(request_obj)
+                request_obj.callback(worker.cache)
 
     def __has_open_ssl_bug(self):
         """Return True if OpenSSL bug found
@@ -1450,6 +1430,98 @@ class InternetRequest(object):
                 return False
         else:
             return True  # Env not set, take it as valid setup
+
+
+def _ping(url):
+    try:
+        response = request.urlopen(url)
+        return response.code == 200
+    except Exception as e:
+        log.debug(e)
+        return False
+
+
+class RequestBaseCls(object):
+    """Base class of internet request
+    Args:
+        callback (func): A function that gets called by the
+            `InternetRequestHandler.fetch()` when the job function
+            is finished. The argument(s) of the callback will be the
+            return value(s) of the job function, `run()` or `default()`.
+    """
+
+    def __init__(self, callback):
+        self.callback = callback
+
+    def run(self):
+        """The job function that runs on internet"""
+        raise NotImplementedError
+
+    def default(self):
+        """The other job function when there is no internet, as fallback"""
+        raise NotImplementedError
+
+
+class RequestVersionHistory(RequestBaseCls):
+
+    def run(self):
+        released = []
+
+        def parsed_versions(lines):
+            p = r'.*<a href="/releases/(\d{4}\.\d{2}\.\d{2}).*">'
+            p = re.compile(p.encode())
+            return [
+                matched.group(1).decode()
+                for matched in [p.match(ln) for ln in lines] if matched
+            ]
+
+        url = RAGDOLL_DYNAMICS_RELEASES_URL
+        try:
+            response = request.urlopen(url)
+            if response.code == 200:
+                released = parsed_versions(response.readlines())
+            else:
+                raise Exception("%s returned: %d" % (url, response.code))
+
+        except Exception as e:
+            log.debug(e)
+        else:
+            log.debug("Release history fetched from %s" % url)
+
+        return released or self.default()
+
+    def default(self):
+        released = []
+
+        root = os.path.dirname(constants.__file__)
+        cache = os.path.join(root, "resources", "versioninfo.json")
+        if os.path.isfile(cache):
+            with open(cache) as f:
+                released = json.load(f)
+                log.debug("Release history loaded from %s" % cache)
+
+        return released
+
+
+class RequestRagdollWebsite(RequestBaseCls):
+    """Check the connectivity with Ragdoll website
+
+    The result will ONLY be used as a condition for displaying update
+    checking ability on GUI. The result will NOT be used as a condition
+    of any kind of operation.
+
+    """
+
+    def run(self):
+        return _ping(RAGDOLL_DYNAMICS_VERSIONS_URL)  # type: bool
+
+    def default(self):
+        # This fallback function gets used either because of OpenSSL bug or
+        # env var `RAGDOLL_SKIP_UPDATE_CHECK` is set.
+        # (see `InternetRequestHandler._preflight()`)
+        # We don't want to bother users about this on GUI if above case met,
+        # so just returning `True` here.
+        return True
 
 
 def text_to_color(text):

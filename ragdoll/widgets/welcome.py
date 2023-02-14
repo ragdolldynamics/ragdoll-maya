@@ -4,6 +4,7 @@ import math
 import types
 import logging
 import tempfile
+import shiboken2
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -95,7 +96,7 @@ class _ProductStatus(base.ProductStatus):
 
 
 product_status = _ProductStatus()
-internet_request = base.InternetRequest()
+internet_request = base.InternetRequestHandler()
 asset_library = base.AssetLibrary()
 
 
@@ -1100,6 +1101,8 @@ class AssetListPage(QtWidgets.QWidget):
 
 
 class LicenceStatusPlate(QtWidgets.QWidget):
+    """A little colorful badge that indicates current licencing status
+    """
 
     def __init__(self, parent=None):
         super(LicenceStatusPlate, self).__init__(parent=parent)
@@ -1117,10 +1120,15 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
     def set_product(self):
         p_ = product_status
-        suffix = "Expired" if p_.is_expired() else ""
-        suffix = "Error" if p_.is_trial_errored() else suffix
+
+        if p_.is_floating() and not p_.has_lease():
+            name = "No lease"
+        else:
+            suffix = "Expired" if p_.is_expired() else ""
+            suffix = "Error" if p_.is_trial_errored() else suffix
+            name = "%s %s" % (p_.name(), suffix)
+
         stop_0, stop_1 = p_.get_gradient()
-        name = "%s %s" % (p_.name(), suffix)
         self._widgets["Product"].setText(name)
         self._widgets["Product"].setStyleSheet("""
             max-height: %dpx;
@@ -1145,6 +1153,8 @@ class LicenceStatusPlate(QtWidgets.QWidget):
 
 
 class SecretToggle(QtWidgets.QWidget):
+    """A button that covers product key as password '******'
+    """
 
     def __init__(self, parent=None):
         super(SecretToggle, self).__init__(parent=parent)
@@ -1188,16 +1198,110 @@ def labeling(widget, label_text, vertical=False, **kwargs):
     return c
 
 
+class LicenceKeyValidator(QtGui.QRegExpValidator):
+    validated = QtCore.Signal(QtGui.QValidator.State)
+
+    def __init__(self, parent=None):
+        super(LicenceKeyValidator, self).__init__(
+            QtCore.QRegExp("^" + "-".join(["[0-9A-Z]{4}"] * 7) + "$"),
+            parent=parent
+        )
+
+    def validate(self, text, pos):
+        text = text.strip(" \n\t")
+        state, t, c = super(LicenceKeyValidator, self).validate(text, pos)
+        self.validated.emit(state)
+        return state, t, c
+
+
+class LicenceKeyEdit(QtWidgets.QLineEdit):
+    switched = QtCore.Signal()
+    accepted = QtCore.Signal(bool)
+
+    Offline = 0
+    Online = 1
+
+    def __init__(self, switch_to, parent=None):
+        super(LicenceKeyEdit, self).__init__(parent=parent)
+        self.setObjectName("LicenceKeyEdit")
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+        validator = LicenceKeyValidator()
+        self.setValidator(validator)
+        self.setToolTip("Enter 7 sets of 4 characters, upper case "
+                        "letters/digits only, separated by hyphens (-).\n"
+                        "E.g. A123-B456-C789-000X-000Y-000Z-0000")
+
+        interval = 1000
+        anim = QtCore.QPropertyAnimation()
+        anim.setEasingCurve(QtCore.QEasingCurve.InCubic)
+        anim.setDuration(interval)
+
+        validator.validated.connect(self.on_validator_validated)
+        self.customContextMenuRequested.connect(self.on_menu_requested)
+
+        self._switch = switch_to
+        self._anim = anim
+        self._color = None
+        self._color_invalid = QtGui.QColor("#eb4034")
+        self._color_ready = QtGui.QColor("#4d4d4d")
+
+        anim.setTargetObject(self)
+        anim.setPropertyName(QtCore.QByteArray(b"_qproperty_color"))
+
+    def _setup_anim_colors(self):
+        self._anim.setStartValue(self._color_invalid)
+        self._anim.setEndValue(self._color_ready)
+        self._color = self._color_ready
+
+    def _get_color(self):
+        return self._color or QtGui.QColor()
+
+    def _set_color(self, color):
+        self._color = color
+        self.setStyleSheet("border-color: %s;" % color.name())
+
+    _qproperty_color = QtCore.Property(QtGui.QColor, _get_color, _set_color)
+
+    def on_validator_validated(self, state):
+        if state == QtGui.QValidator.Invalid:
+            self._anim.stop()
+            self._setup_anim_colors()
+            self._anim.start()
+
+        self.accepted.emit(state == QtGui.QValidator.Acceptable)
+
+    def on_menu_requested(self):
+        menu = self.createStandardContextMenu()
+
+        if not product_status.is_activated():
+            # For now, only for user who has trouble to activate
+            #
+            switch = QtWidgets.QAction(
+                "Online Mode" if self._switch else "Offline Mode", menu
+            )
+            switch.triggered.connect(self.switched.emit)
+
+            menu.addSeparator()
+            menu.addAction(switch)
+
+        menu.move(QtGui.QCursor.pos())
+        menu.show()
+
+
 class LicenceNodeLock(QtWidgets.QWidget):
+    """Node-Lock (Online) licencing page of `LicenceSetupPanel` class
+    """
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
+    switch_offline = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LicenceNodeLock, self).__init__(parent=parent)
 
         widgets = {
             "ProductName": LicenceStatusPlate(),
-            "ProductKey": QtWidgets.QLineEdit(),
+            "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Offline),
             "ProcessBtn": QtWidgets.QPushButton(),
             "Secret": SecretToggle(),
         }
@@ -1205,6 +1309,7 @@ class LicenceNodeLock(QtWidgets.QWidget):
         _ = "Your key, e.g. 0000-0000-0000-0000-0000-0000-0000"
         widgets["ProductKey"].setPlaceholderText(_)
         widgets["Secret"].layout().addWidget(widgets["ProductKey"])
+        proc_btn = widgets["ProcessBtn"]
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1213,18 +1318,11 @@ class LicenceNodeLock(QtWidgets.QWidget):
         layout.addWidget(widgets["Secret"], stretch=1)
         layout.addWidget(widgets["ProcessBtn"])
 
-        widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
+        widgets["ProductKey"].switched.connect(self.switch_offline.emit)
+        widgets["ProductKey"].accepted.connect(proc_btn.setEnabled)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
 
         self._widgets = widgets
-
-    def on_product_key_edited(self, text):
-        codes = text.split("-")
-        is_key = (
-            len(codes) == 7 and
-            all(len(c) == 4 and c.isalnum() for c in codes)
-        )
-        self._widgets["ProcessBtn"].setEnabled(is_key)
 
     def on_process_clicked(self):
         action = self._widgets["ProcessBtn"].text()
@@ -1265,10 +1363,13 @@ class LicenceNodeLock(QtWidgets.QWidget):
 
 
 class LicenceNodeLockOffline(QtWidgets.QWidget):
+    """Node-Lock (Offline) licencing page of `LicenceSetupPanel` class
+    """
     node_activated = QtCore.Signal(str)
     node_deactivated = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
+    switch_online = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LicenceNodeLockOffline, self).__init__(parent=parent)
@@ -1276,7 +1377,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         widgets = {
             "ProductName": LicenceStatusPlate(),
             "OfflineHint": QtWidgets.QLabel(),
-            "ProductKey": QtWidgets.QLineEdit(),
+            "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Online),
             "RequestRow": QtWidgets.QWidget(),
             "CopyRequest": QtWidgets.QPushButton(),
             "WebsiteURL": QtWidgets.QLabel(),
@@ -1385,7 +1486,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.addWidget(panel)
         layout.addWidget(widgets["ProcessBtn"], 0, QtCore.Qt.AlignBottom)
 
-        widgets["ProductKey"].textEdited.connect(self.on_product_key_edited)
+        widgets["ProductKey"].switched.connect(self.switch_online.emit)
+        widgets["ProductKey"].accepted.connect(self.on_product_key_edited)
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
         widgets["Response"].textEdited.connect(self.on_response_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
@@ -1401,21 +1503,16 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         self._effects = effects
         self._animations = animations
 
-    def on_product_key_edited(self, text):
-        codes = text.split("-")
-        is_key = (
-            len(codes) == 7 and
-            all(len(c) == 4 and c.isalnum() for c in codes)
-        )
+    def on_product_key_edited(self, accepted):
         # Temporarily save user input key for offline activation
-        if is_key:
+        if accepted:
             # key format validated, save it for now until activated offline
             self.write_temp_key()
-        elif not text:
+        elif not self._widgets["ProductKey"].text():
             self.remove_temp_key()
 
-        self._widgets["RequestWidget"].setEnabled(is_key)
-        self._widgets["ResponseWidget"].setEnabled(is_key)
+        self._widgets["RequestWidget"].setEnabled(accepted)
+        self._widgets["ResponseWidget"].setEnabled(accepted)
 
     def on_copy_request_clicked(self):
         key = self._widgets["ProductKey"].text()
@@ -1442,7 +1539,6 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
     def set_product_key(self, key):
         self._widgets["ProductKey"].setText(key)
-        self.on_product_key_edited(key)
 
     def set_activation_request(self):
         try:
@@ -1517,6 +1613,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
 
 class LicenceFloating(QtWidgets.QWidget):
+    """Float licencing page of `LicenceSetupPanel` class
+    """
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
 
@@ -1582,7 +1680,7 @@ class LicenceFloating(QtWidgets.QWidget):
 
 
 class LicenceSetupPanel(QtWidgets.QWidget):
-    """Manage product licence
+    """The main widget that runs licencing
 
     A widget that enables users to activate/deactivate licence, node-lock
     or floating, and shows licencing status.
@@ -1622,6 +1720,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         widgets["Floating"].float_dropped.connect(self.float_dropped)
         widgets["NodeLock"].node_activated.connect(self.node_activated)
         widgets["NodeLock"].node_deactivated.connect(self.node_deactivated)
+        widgets["NodeLock"].switch_offline.connect(
+            self.on_online_switch_to_offline)
         widgets["NodeLockOffline"].node_activated.connect(self.node_activated)
         widgets["NodeLockOffline"].node_deactivated.connect(
             self.on_offline_deactivated)
@@ -1629,6 +1729,8 @@ class LicenceSetupPanel(QtWidgets.QWidget):
             self.offline_activate_requested)
         widgets["NodeLockOffline"].offline_deactivate_requested.connect(
             self.offline_deactivate_requested)
+        widgets["NodeLockOffline"].switch_online.connect(
+            self.on_offline_switch_to_online)
 
         self._widgets = widgets
 
@@ -1643,13 +1745,31 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         self._widgets["NodeLockOffline"].remove_temp_key()
         self.licence_updated.emit()
 
+    def on_online_switch_to_offline(self):
+        """For activation only
+        """
+        self._widgets["Pages"].setCurrentIndex(1)
+        w = self._widgets["NodeLockOffline"]
+        w.status_update()
+
+    def on_offline_switch_to_online(self):
+        """For activation only
+        """
+        self._widgets["Pages"].setCurrentIndex(0)
+        w = self._widgets["NodeLock"]
+        w.status_update()
+
     def switch_to_offline_activate(self, key):
+        """When online activation failed
+        """
         self._widgets["Pages"].setCurrentIndex(1)
         w = self._widgets["NodeLockOffline"]
         w.set_product_key(key)
         w.status_update()
 
     def switch_to_offline_deactivate(self):
+        """When online deactivation failed
+        """
         self._widgets["Pages"].setCurrentIndex(1)
         w = self._widgets["NodeLockOffline"]
         w.set_product_key(product_status.key())
@@ -1660,29 +1780,34 @@ class LicenceSetupPanel(QtWidgets.QWidget):
         pages = self._widgets["Pages"]
 
         if self._widgets["NodeLockOffline"].is_deactivation_requested():
-            log.info("Ragdoll is offline deactivated")
+            log.info("Ragdoll has been offline deactivated.")
             # ensure user completed the process before dumping request code
             pages.setCurrentIndex(1)
 
+        elif (self._widgets["NodeLockOffline"].read_temp_key()
+              and not p_.is_activated()):
+            log.info("Resume offline activation.")
+            pages.setCurrentIndex(1)
+
         elif p_.is_floating():
-            log.info("Ragdoll is floating")
+            log.debug("Ragdoll is floating")
 
             pages.setCurrentIndex(2)
 
         else:
             if p_.is_trial():
                 if p_.is_trial_errored():
-                    log.error(p_.trial_error_msg())
+                    log.debug("Failed to start trial.")
                 elif p_.is_expired():
-                    log.info("Ragdoll is expired")
+                    log.debug("Ragdoll is in trial mode but trial expired.")
                 else:
-                    log.info("Ragdoll is in trial mode")
+                    log.debug("Ragdoll is in trial mode")
             else:
                 # node-lock
                 if p_.is_activated():
-                    log.info("Ragdoll is activated")
+                    log.debug("Ragdoll is activated")
                 else:
-                    log.info("Ragdoll is deactivated")
+                    log.debug("Ragdoll is deactivated")
 
             pages.setCurrentIndex(0)
 
@@ -1719,6 +1844,12 @@ class SideBarAnchorLayout(QtWidgets.QVBoxLayout):
 
 
 class SideBar(QtWidgets.QFrame):
+    """Anchor bar on the left side
+
+    To show this, variable `ENABLE_SIDEBAR` (at the top of this file)
+    has to be `True`.
+
+    """
     anchor_clicked = QtCore.Signal(str)
 
     def __init__(self, parent=None):
@@ -1836,8 +1967,9 @@ def _scaled_stylesheet(style):
 
 
 class WelcomeWindow(base.SingletonMainWindow):
+    """A GUI for welcoming user and as a Ragdoll asset library
+    """
     asset_opened = QtCore.Signal(str)
-    licence_updated = QtCore.Signal()
     float_requested = QtCore.Signal()
     float_dropped = QtCore.Signal()
     node_activated = QtCore.Signal(str)
@@ -1846,21 +1978,44 @@ class WelcomeWindow(base.SingletonMainWindow):
     node_deactivate_inet_returned = QtCore.Signal()
     offline_activate_requested = QtCore.Signal(str, str)
     offline_deactivate_requested = QtCore.Signal(str)
+    licence_data_requested = QtCore.Signal()
 
     @staticmethod
     def preload():
-        # These run in a separate thread, on plugin load time.
-        #
-        # Be careful: This Welcome UI may get launched right after plugin
-        #   loaded as a "first launch" welcome, which means some thread
-        #   below may be still running when the UI ask for data.
-        #
+        """Launch heave load functions before GUI is up
+
+        These run in separate threads (if not `RAGDOLL_SINGLE_THREADED_*`),
+        on plugin load time.
+
+        """
+
+        def callback_website(*args):
+            if WelcomeWindow.instance_weak is not None:
+                self = WelcomeWindow.instance_weak()
+                if self is not None and shiboken2.isValid(self):
+                    _ = self._widgets["Greet"]
+                    _.status_widget().connection_checked.emit(*args)
+
+        req_website = base.RequestRagdollWebsite(callback_website)
+        internet_request.submit(req_website)
+
+        def callback_history(*args):
+            if WelcomeWindow.instance_weak is not None:
+                self = WelcomeWindow.instance_weak()
+                if self is not None and shiboken2.isValid(self):
+                    _ = self._widgets["Greet"]
+                    _.timeline_widget().history_fetched.emit(*args)
+
+        req_history = base.RequestVersionHistory(callback_history)
+        internet_request.submit(req_history)
+
         internet_request.process()
         asset_library.reload()
 
     def __init__(self, parent=None):
         super(WelcomeWindow, self).__init__(parent=parent)
         self.protected = True
+
         _window_logo = "favicon-32x32.png"
         _sidebar_logo = "ragdoll_silhouette_white_128.png"
         self.setWindowTitle("Ragdoll Dynamics")
@@ -1912,7 +2067,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         panels["SideBar"].anchor_clicked.connect(self.on_anchor_clicked)
         widgets["Assets"].asset_opened.connect(self.asset_opened)
         lic = widgets["Licence"].input_widget()
-        lic.licence_updated.connect(self.licence_updated)
+        lic.licence_updated.connect(self.licence_data_requested)
         lic.float_requested.connect(self.float_requested)
         lic.float_dropped.connect(self.float_dropped)
         lic.node_activated.connect(self.node_activated)
@@ -1955,7 +2110,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         else:
             self.__hidden = False
 
-        self.licence_updated.emit()
+        self.licence_data_requested.emit()
 
     def closeEvent(self, event):
         asset_library.terminate()
@@ -1972,32 +2127,19 @@ class WelcomeWindow(base.SingletonMainWindow):
         super(WelcomeWindow, self).resizeEvent(event)
         self._align_anchors()
 
-    def on_licence_updated(self, data):
+    def on_licence_data_requested(self, data):
         product_status.data = data
 
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Greet"].status_widget().set_expiry()
 
-        # these will get result once thread finished.
-        # note: use signal so the result can be processed in main thread.
-        internet_request.subscribe_ragdoll(
-            self._widgets["Greet"].status_widget().connection_checked.emit)
-        internet_request.subscribe_history(
-            self._widgets["Greet"].timeline_widget().history_fetched.emit)
+        internet_request.fetch()
 
         # resize window a little bit just to trigger:
         #   1. anchor aligning and
         #   2. licence page resize
         #   after licence status updated.
         self.resize(self.size() + QtCore.QSize(0, 1))
-
-        if product_status.is_trial_errored():
-            QtWidgets.QApplication.instance().processEvents()
-            ui.notify("Error",
-                      product_status.trial_error_msg(),
-                      location="LicencePlate",
-                      persistent=True,
-                      parent=self)
 
     def on_node_activate_inet_returned(self, key):
         self._widgets["Licence"].input_widget().switch_to_offline_activate(key)
@@ -2018,7 +2160,7 @@ class WelcomeWindow(base.SingletonMainWindow):
     def on_offline_deactivate_requested(self):
         w = self._widgets["Licence"].input_widget()
         w.on_offline_deactivate_requested()
-        self.licence_updated.emit()
+        self.licence_data_requested.emit()
 
     def on_anchor_clicked(self, name):
         widget = self._widgets.get(name)

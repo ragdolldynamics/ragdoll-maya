@@ -162,41 +162,23 @@ class GreetingSplash(QtWidgets.QLabel):
         painter.drawPixmap(0, 0, self._image)
 
 
-class GreetingTopRight(QtWidgets.QWidget):
-    connection_checked = QtCore.Signal(bool)
+class GreetingTopOverlay(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingTopRight, self).__init__(parent)
+        super(GreetingTopOverlay, self).__init__(parent)
 
         widgets = {
-            "NoInternet": QtWidgets.QWidget(),
-            "NoInternetIcon": QtWidgets.QLabel(),
-            "NoInternetText": QtWidgets.QLabel(),
+            "Footer": QtWidgets.QWidget(),
             "Expiry": QtWidgets.QWidget(),
             "ExpiryIcon": QtWidgets.QLabel(),
             "ExpiryDate": QtWidgets.QLabel(),
         }
 
-        widgets["NoInternetIcon"].setFixedSize(px(12), px(12))
-        _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
-        widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
-        widgets["NoInternetText"].setText("No internet for checking update")
-        widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
-        widgets["NoInternet"].setStyleSheet("background: transparent;")
-        widgets["NoInternet"].setVisible(False)
-
+        widgets["Footer"].setStyleSheet("background: transparent;")
         widgets["Expiry"].setFixedHeight(base.ProductReleasedView.ButtonHeight)
         widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["ExpiryIcon"].setFixedSize(px(12), px(12))
         widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
-
-        layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
-        layout.setContentsMargins(0, 0, px(2), 0)
-        layout.setSpacing(0)
-        layout.addStretch(1)
-        layout.addWidget(widgets["NoInternetIcon"])
-        layout.addSpacing(px(4))
-        layout.addWidget(widgets["NoInternetText"])
 
         layout = QtWidgets.QHBoxLayout(widgets["Expiry"])
         layout.setContentsMargins(px(4), 0, px(8), 0)
@@ -206,18 +188,21 @@ class GreetingTopRight(QtWidgets.QWidget):
         layout.addSpacing(px(6))
         layout.addWidget(widgets["ExpiryDate"])
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, px(4), PD4, PD4 + px(3))
+        layout = QtWidgets.QHBoxLayout(widgets["Footer"])
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
-        layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(widgets["Expiry"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(PD4 + px(3), px(4), PD4, PD4 + px(3))
+        layout.setSpacing(0)
+        layout.addStretch(1)
+        layout.addWidget(widgets["Footer"])
 
         self.setFixedHeight(SPLASH_HEIGHT)
 
         self._widgets = widgets
-
-        self.connection_checked.connect(self.on_connection_checked)
 
     def set_expiry(self):
         p_ = product_status
@@ -246,19 +231,15 @@ class GreetingTopRight(QtWidgets.QWidget):
         self._widgets["ExpiryIcon"].setStyleSheet(
             "background: transparent; image: url(%s);" % icon)
 
-    def on_connection_checked(self, can_connect):
-        is_offline = not can_connect
-        self._widgets["NoInternet"].setVisible(is_offline)
-
 
 class GreetingInteract(QtWidgets.QWidget):
-    history_fetched = QtCore.Signal(list)
+    history_fetched = QtCore.Signal(tuple)
 
     def __init__(self, parent=None):
         super(GreetingInteract, self).__init__(parent)
 
         widgets = {
-            "TopRight": GreetingTopRight(),
+            "TopOverlay": GreetingTopOverlay(),
             "Timeline": base.ProductTimelineWidget(),
         }
 
@@ -267,7 +248,7 @@ class GreetingInteract(QtWidgets.QWidget):
         overlay = base.OverlayWidget(self)
         layout = QtWidgets.QVBoxLayout(overlay)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(widgets["TopRight"])
+        layout.addWidget(widgets["TopOverlay"])
         layout.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -284,13 +265,15 @@ class GreetingInteract(QtWidgets.QWidget):
         self.history_fetched.connect(self.set_timeline)
 
     def status_widget(self):
-        return self._widgets["TopRight"]
+        return self._widgets["TopOverlay"]
 
     def timeline_widget(self):
         return self
 
-    def set_timeline(self, release_history):
-        versions = set(release_history)
+    def set_timeline(self, result):
+        from_internet, released_versions = result
+
+        versions = set(released_versions)
         current = product_status.current_version()
         versions.add(current)
         expiry_date = (product_status.aup_date()
@@ -301,6 +284,7 @@ class GreetingInteract(QtWidgets.QWidget):
             released_versions=versions,
             current_ver=current,
             expiry_date=expiry_date,
+            from_internet=from_internet,
         )
         self._widgets["Timeline"].draw()
 
@@ -1993,24 +1977,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         on plugin load time.
 
         """
-
-        def callback_website(*args):
-            if WelcomeWindow.instance_weak is None:
-                return
-
-            self = WelcomeWindow.instance_weak()
-            if self is None:
-                return
-
-            if not shiboken2.isValid(self):
-                return
-
-            greet = self._widgets["Greet"]
-            greet.status_widget().connection_checked.emit(*args)
-
-        req_website = base.RequestRagdollWebsite(callback_website)
-        internet_request.submit(req_website)
-
         def callback_history(*args):
             if WelcomeWindow.instance_weak is None:
                 return

@@ -1081,6 +1081,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         self._model = model
         self._widgets = widgets
         self._overlays = overlays
+        self._from_internet = None
         # init
         self.on_message_sent("")
 
@@ -1095,17 +1096,30 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         )
 
     def on_message_sent(self, text):
-        text = text or "Drag to navigate, or scroll with Alt key pressed"
+        default = "Drag to navigate, or scroll with Alt key pressed  "
+        if self._from_internet:
+            default += "(Timeline fetched from ragdolldynamics.com)"
+        else:
+            default += "(Timeline parsed from local cache)"
+
+        text = text or default
         self._widgets["Message"].setText(text)
 
-    def set_data(self, released_versions, current_ver, expiry_date):
+    def set_data(self,
+                 released_versions,
+                 current_ver,
+                 expiry_date,
+                 from_internet):
         self._model.set_data(released_versions, current_ver, expiry_date)
+        self._from_internet = from_internet
 
         self._widgets["Timeline"].set_data_from_model(self._model)
         self._widgets["Released"].set_data_from_model(self._model)
         self._update_button(self._model)
         # to trigger indicator region masking...
         self.adjustSize()
+        # refresh text
+        self.on_message_sent("")
 
     def draw(self):
         self._widgets["Timeline"].draw()
@@ -1434,18 +1448,8 @@ class InternetRequestHandler(object):
             _, _ = p.communicate()
             working = p.wait() == 0
 
-        if not working:
-            log.debug("The OpenSSL test has failed.")
+        log.debug("OpenSSL test %s" % ("passed." if working else "failed!"))
         return working
-
-
-def _ping(url):
-    try:
-        response = request.urlopen(url)
-        return response.code == 200
-    except Exception as e:
-        log.debug(e)
-        return False
 
 
 class RequestBaseCls(object):
@@ -1470,6 +1474,15 @@ class RequestBaseCls(object):
 
 
 class RequestVersionHistory(RequestBaseCls):
+    """
+    Callback returns:
+        from_internet (bool): Was release history parsed from ragdoll website?
+        released_versions (list): Versions that has been released so far.
+
+    If `from_internet` is false, `released_versions` is read from a cache
+    that shipped with plugin.
+
+    """
 
     def run(self):
         released = []
@@ -1495,7 +1508,10 @@ class RequestVersionHistory(RequestBaseCls):
         else:
             log.debug("Release history fetched from %s" % url)
 
-        return released or self.default()
+        if released:
+            return True, released
+        else:
+            return False, self.default()
 
     def default(self):
         released = []
@@ -1507,28 +1523,7 @@ class RequestVersionHistory(RequestBaseCls):
                 released = json.load(f)
                 log.debug("Release history loaded from %s" % cache)
 
-        return released
-
-
-class RequestRagdollWebsite(RequestBaseCls):
-    """Check the connectivity with Ragdoll website
-
-    The result will ONLY be used as a condition for displaying update
-    checking ability on GUI. The result will NOT be used as a condition
-    of any kind of operation.
-
-    """
-
-    def run(self):
-        return _ping(RAGDOLL_DYNAMICS_VERSIONS_URL)  # type: bool
-
-    def default(self):
-        # This fallback function gets used either because of OpenSSL bug or
-        # env var `RAGDOLL_SKIP_UPDATE_CHECK` is set.
-        # (see `InternetRequestHandler._preflight()`)
-        # We don't want to bother users about this on GUI if above case met,
-        # so just returning `True` here.
-        return True
+        return False, released
 
 
 def text_to_color(text):

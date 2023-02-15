@@ -954,8 +954,9 @@ class ProductReleasedView(ProductTimelineBase):
         return prev_items
 
     def _draw_button(self, date, y_base):
+        _n = self._latest_update > self._current
         cl = ("#1953be" if date == self._current else
-              "#f8d803" if date == self._latest_update else "#101010")
+              "#f8d803" if date == self._latest_update and _n else "#101010")
         ver = date.strftime("%Y.%m.%d")
         tx = ver + " "  # a trailing space for better width
         w, h = self.ButtonWidth, self.ButtonHeight
@@ -1139,11 +1140,17 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
     def _update_button(self, model):
         btn = self._widgets["Update"]
-        up_to_date = model.latest_update == model.current
-        btn.setText(
-            "Current Version: %s" % model.current.strftime("%Y.%m.%d")
-            if up_to_date else "Download Latest"
-        )
+        up_to_date = model.latest_update <= model.current
+
+        if up_to_date:
+            text = "%s Installed" % model.current.strftime("%Y.%m.%d")
+            if self._from_internet:
+                btn.setText(text)
+            else:
+                btn.setText(text + " (Check Latest)")
+        else:
+            btn.setText("Download Latest")
+
         fg = "#ffffff" if up_to_date else "#000000"
         bg = "#1953be" if up_to_date else "#f8d803"
 
@@ -1165,7 +1172,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
             """ % (px(2), px(8), px(9.5), bg, fg,
                    bgc.lighter().name(), bgc.darker().name())
         )
-        btn.setEnabled(not up_to_date)
+        btn.setEnabled(not (self._from_internet and up_to_date))
 
 
 class ProductStatus(object):

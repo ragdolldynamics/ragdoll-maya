@@ -80209,6 +80209,7 @@
     "info": {
         "entitiesCount": 201,
         "mayaVersion": "20200200",
+        "upAxis": "y",
         "ragdollVersion": "2077.07.07",
         "registryAlive": 433,
         "registrySize": 433,

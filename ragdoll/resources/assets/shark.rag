@@ -44482,6 +44482,7 @@
     "info": {
         "entitiesCount": 99,
         "mayaVersion": "20200200",
+        "upAxis": "y",
         "ragdollVersion": "2077.07.07",
         "registryAlive": 99,
         "registrySize": 474,

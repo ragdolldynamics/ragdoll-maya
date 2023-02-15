@@ -1381,6 +1381,22 @@ class InternetRequestHandler(object):
 
     def __is_open_ssl_working(self):
         """Return True if OpenSSL works"""
+        try:
+            OPENSSL_VERSION_INFO = __import__("ssl").OPENSSL_VERSION_INFO
+        except ImportError:
+            return False  # no ssl, proceed as bugged and without internet.
+
+        # Windows, Intel CPU, Maya 2019/2020
+        # https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+        if os.name == "nt":
+            has_ssl_bug = (1, 0, 2, 7) <= OPENSSL_VERSION_INFO < (1, 0, 2, 9)
+            has_fix = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
+            cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
+            is_intel = "GenuineIntel" in cpu_ident
+
+            if is_intel and has_ssl_bug and not has_fix:
+                return False
+
         # If ssl is working, this should not take over than 1 sec.
         timeout = 1.2
 
@@ -1392,7 +1408,10 @@ class InternetRequestHandler(object):
 
         log.debug("Testing OpenSSL with: %s" % exe)
 
-        cmd = "import ssl;ssl.get_server_certificate(('www.google.com',443))"
+        cmd = ("import ssl;"
+               "c = ssl.create_default_context();"  # crash if OpenSSL bugged
+               "assert len(c.get_ca_certs());")     # check installed cert
+
         p = subprocess.Popen(
             [exe, "-c", cmd],
             stdout=subprocess.PIPE,
@@ -1408,9 +1427,7 @@ class InternetRequestHandler(object):
         else:
             _, _ = p.communicate()
             working = p.wait() == 0
-        # If the result is `unsafe == True`, and the client is on Maya
-        # 2019/2020, may reference this article.
-        # https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+
         if not working:
             log.debug("The OpenSSL test has failed.")
         return working

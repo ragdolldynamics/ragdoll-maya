@@ -1412,11 +1412,17 @@ class InternetRequestHandler(object):
                "c = ssl.create_default_context();"  # crash if OpenSSL bugged
                "assert len(c.get_ca_certs());")     # check installed cert
 
+        arg = dict(
+            creationflags=0x08000000,  # no window
+        )
+        if os.name != "nt":
+            arg.pop("creationflags")
+
         p = subprocess.Popen(
             [exe, "-c", cmd],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=0x08000000  # no window
+            **arg
         )
         while p.poll() is None and timeout > 0:  # py2 compatible timeout
             time.sleep(0.1)

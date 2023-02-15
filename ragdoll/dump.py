@@ -649,6 +649,9 @@ class Loader(object):
             mod.create_node("transform", "geometry_grp", assembly)
             mod.create_node("transform", "skeleton_grp", assembly)
 
+            if cmdx.is_z_axis_up():
+                mod.set_attr(assembly["rotateX"], cmdx.radians(90))
+
         try:
             created = self.create(assembly)
             out = self.reinterpret()

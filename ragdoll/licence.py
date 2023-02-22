@@ -518,7 +518,7 @@ def status_code_explained(status):
         return
 
     elif status == STATUS_COM:
-        message = """
+        message = """\
 Windows COM setup problem"
 
 The hardware id couldn't be generated due to an error in the COM setup
@@ -528,7 +528,9 @@ Please contact your system admin for more information
 """
 
     elif status == STATUS_NETWORK_ADAPTERS:
-        message = """
+        message = """\
+Disabled network adapters
+
 There are network adapters on the system that are disabled and
 TurboActivate couldn't read their hardware properties (even after trying
 and failing to enable the adapters automatically). Enable the network adapters,
@@ -613,7 +615,7 @@ def _status_code_nodelocked(status):
         )
 
     elif status == STATUS_IN_VM:
-        message = """
+        message = """\
 Running in a virtual machine
 
 Ragdoll believes your machine is a 'virtual machine' which

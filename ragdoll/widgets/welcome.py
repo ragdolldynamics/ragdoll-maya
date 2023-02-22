@@ -1407,18 +1407,16 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
-            "Cannot reach Ragdoll licencing server.\n"
-            "Require another internet accessible device to complete "
-            "following process."
+            "Use another internet-connected device to complete activation."
         )
         widgets["DeactivateText"].setObjectName("HintMessage")
         widgets["DeactivateText"].setText(
-            'Only after you have completed the process, press "Dismiss" '
-            'button down right below\nto remove this message.'
-            "\n\n"
-            "If you deactivate Maya without deactivating"
-            "online,\nyour licence will still be considered active "
-            "and cannot be reactivated.\n"
+            'After deactivation, press the "Dismiss" button '
+            'below to remove this message.\n'
+            "\n"
+            "If you lose access to Maya without deactivating Ragdoll, "
+            "your licence will be considered active\n"
+            "and cannot be activated elsewhere. "
             "If this happens, contact support@ragdolldynamics.com"
         )
 

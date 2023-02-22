@@ -1391,7 +1391,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
-            "Use another internet-connected device to complete activation."
+            "Use another internet-connected device to complete the process."
         )
         widgets["DeactivateText"].setObjectName("HintMessage")
         widgets["DeactivateText"].setText(
@@ -1451,6 +1451,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.setSpacing(PD3)
         layout.addWidget(widgets["OfflineHint"])
         layout.addWidget(widgets["DeactivateHint"])
+        layout.addSpacing(PD3)
         layout.addWidget(widgets["RequestWidget"], 0, QtCore.Qt.AlignLeft)
         layout.addWidget(widgets["ResponseWidget"])
         layout.addWidget(widgets["ConfirmWidget"])

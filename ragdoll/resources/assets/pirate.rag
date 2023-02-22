@@ -101723,6 +101723,7 @@
     "info": {
         "entitiesCount": 206,
         "mayaVersion": "20230000",
+        "upAxis": "y",
         "ragdollVersion": "2077.07.07",
         "registryAlive": 206,
         "registrySize": 295,

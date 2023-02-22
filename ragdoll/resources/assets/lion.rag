@@ -91011,6 +91011,7 @@
     "info": {
         "entitiesCount": 280,
         "mayaVersion": "20200200",
+        "upAxis": "y",
         "ragdollVersion": "2077.07.07",
         "registryAlive": 761,
         "registrySize": 761,

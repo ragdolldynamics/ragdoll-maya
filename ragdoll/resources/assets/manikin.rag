@@ -35711,6 +35711,7 @@
     "info": {
         "entitiesCount": 50,
         "mayaVersion": "20230000",
+        "upAxis": "y",
         "ragdollVersion": "2077.07.07",
         "registryAlive": 50,
         "registrySize": 50,

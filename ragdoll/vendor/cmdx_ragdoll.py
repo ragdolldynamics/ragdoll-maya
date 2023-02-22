@@ -7378,6 +7378,14 @@ def upAxis():
             return Vector(0, 0, 1)
 
 
+if __maya_version__ >= 2019:
+    isYAxisUp = om.MGlobal.isYAxisUp
+    isZAxisUp = om.MGlobal.isZAxisUp
+
+    is_y_axis_up = om.MGlobal.isYAxisUp
+    is_z_axis_up = om.MGlobal.isZAxisUp
+
+
 def setUpAxis(axis=Y):
     """Set the current up-axis as Y or Z
 

@@ -1518,7 +1518,7 @@ class RequestVersionHistory(RequestBaseCls):
         if released:
             return True, released
         else:
-            return False, self.default()
+            return self.default()
 
     def default(self):
         released = []

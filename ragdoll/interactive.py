@@ -867,9 +867,6 @@ def install_menu():
 
         divider("Refinement")
 
-        item("assignRefinePlan",
-             assign_refine_plan,
-             assign_refine_plan_options)
         item("bakeTargets", animation_to_plan, animation_to_plan_options)
         item("bakePlan", plan_to_animation)
 

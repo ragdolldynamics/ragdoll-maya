@@ -1263,7 +1263,9 @@ def plan_to_animation(plan):
         for el in node["destinationTransforms"]:
             dst = el.input()
             destinations += [dst]
-            constraints += cmds.parentConstraint(str(out), str(dst))
+            constraints += cmds.parentConstraint(
+                str(out), str(dst), maintainOffset=True
+            )
 
     # Bake it
     kwargs = {

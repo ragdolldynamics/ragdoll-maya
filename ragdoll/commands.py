@@ -1984,14 +1984,122 @@ def assign_plan(body, feet, opts=None):
         all(foot.is_a(cmdx.kTransform) for foot in feet)
     ), "`feet` was not a tuple of transforms"
 
-    # Determine the direction and distance to offset the end target
-    body_pos = _position_incl_pivot(body)
-    relative_positions = []
-    for foot in feet:
-        foot_pos = _position_incl_pivot(foot)
-        relative_positions.append(foot_pos - body_pos)
+    duration = opts["duration"]
+    duration = max(duration, 50)  # Minimum 2 seconds
 
-    # Make sure each foot is below the character
+    palette = internal.random_palette(len(feet) + 1)
+
+    time = cmdx.encode("time1")
+
+    with cmdx.DagModifier() as mod:
+        name = "rPlan_%s" % body.name()
+        plan_parent = mod.create_node("transform", name=name)
+        rdplan = mod.createNode("rdPlan",
+                                name=name + "Shape",
+                                parent=plan_parent)
+
+        for channel in ("rotate", "translate", "scale"):
+            for axis in "XYZ":
+                mod.set_keyable(plan_parent[channel + axis], False)
+                mod.set_locked(plan_parent[channel + axis], False)
+
+        mod.connect(time["outTime"], rdplan["currentTime"])
+        mod.connect(plan_parent["worldMatrix"][0], rdplan["inputMatrix"])
+
+        mod.set_attr(rdplan["gravity"], cmdx.up_axis() * -982)
+        mod.set_attr(rdplan["duration"], duration)
+
+        pivot = cmdx.Vector()
+
+        if body.has_attr("rotatePivot"):
+            pivot = body["rotatePivot"].read()
+
+        mod.set_attr(rdplan["drawOffset"], pivot)
+
+        space_multiplier = 1.0
+
+        body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
+        body_tm.setScale(cmdx.Vector(1, 1, 1))
+
+        # Guesstimate based on body height off the ground
+        # NOTE: This won't work for any character not actually on the ground
+        body_pos = body_tm.translation()
+
+        if body_pos.y > 500:
+            space_multiplier = 10
+
+        elif body_pos.y < 50:
+            space_multiplier = 0.1
+
+        mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
+        mod.set_attr(rdplan["color"], palette.pop(0))
+        mod.set_attr(rdplan["version"], internal.version())
+
+        mod.connect(body["message"], rdplan["sourceTransform"])
+        mod.connect(body["message"], rdplan["destinationTransforms"][0])
+
+        # Figure out defaults extents from body and feet positions
+        bbox = cmdx.BoundingBox()
+        bbox.expand(body_pos)
+        for foot in feet:
+            bbox.expand(_position_incl_pivot(foot))
+
+        extents = [bbox.width, bbox.height, bbox.depth]
+
+        # For 2 feet, we have no thickness!
+        if min(extents) < max(extents) / 4:
+            extents[extents.index(min(extents))] = max(extents) / 4
+
+        # For 1 foot, we have no depth!
+        if min(extents) < max(extents) / 4:
+            extents[extents.index(min(extents))] = max(extents) / 4
+
+        mod.set_attr(rdplan["extents"], extents)
+
+    with cmdx.DGModifier() as dgmod:
+        for index, foot in enumerate(feet):
+            rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
+
+            pivot = cmdx.Vector()
+
+            if foot.has_attr("rotatePivot"):
+                pivot = foot["rotatePivot"].read()
+
+            mod.set_attr(rdfoot["drawOffset"], pivot)
+
+            idx = rdplan["inputStart"].next_available_index()
+            dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
+            dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
+
+            dgmod.connect(foot["message"], rdfoot["sourceTransform"])
+            dgmod.connect(foot["message"], rdfoot["destinationTransforms"][0])
+
+            dgmod.connect(time["outTime"], rdfoot["currentTime"])
+
+            dgmod.set_attr(rdfoot["color"], palette.pop(0))
+            dgmod.set_attr(rdfoot["version"], internal.version())
+
+    reset_step_sequence(rdplan, opts)
+    reset_plan_targets(rdplan, opts)
+
+    return rdplan
+
+
+def reset_plan_targets(rdplan, opts=None):
+    body = rdplan["sourceTransform"].input(type=cmdx.kDagNode)
+    assert body, "%s had no sourceTransform" % rdplan
+
+    rdfeet = [el.input(type="rdFoot") for el in rdplan["inputStart"]]
+    assert rdfeet, "%s had no feet" % rdplan
+
+    feet = [f["sourceTransform"].input() for f in rdfeet]
+    assert feet, "%s had no feet" % rdplan
+
+    body_pos = _position_incl_pivot(body)
+    relative_positions = [
+        _position_incl_pivot(foot) - body_pos for foot in feet
+    ]
+
     up = cmdx.up_axis()
     if up.y:
         up_index = 1
@@ -2034,8 +2142,6 @@ def assign_plan(body, feet, opts=None):
     end_offset = cmdx.Vector(0, 0, 0)
     end_offset[walking_axis] = walking_distance
 
-    outputs = []
-
     if up.y:
         limits_scale = abs(relative_positions[0].y)
     else:
@@ -2065,63 +2171,14 @@ def assign_plan(body, feet, opts=None):
         elif limits[axis] > 1:
             limits[axis] = int(limits[axis] * 10) * 0.1
 
-    duration = opts["duration"]
-    duration = max(duration, 50)  # Minimum 2 seconds
+    body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
+    body_tm.setScale(cmdx.Vector(1, 1, 1))
 
-    palette = internal.random_palette(len(feet) + 1)
-    sequences = [] if opts["refinement"] else _preset_stepsequence(
-        opts.get("preset", 0), len(feet), duration
-    )
-
-    time = cmdx.encode("time1")
+    # Guesstimate based on body height off the ground
+    # NOTE: This won't work for any character not actually on the ground
+    body_pos = body_tm.translation()
 
     with cmdx.DagModifier() as mod:
-        name = "rPlan_%s" % body.name()
-        plan_parent = mod.create_node("transform", name=name)
-        rdplan = mod.createNode("rdPlan",
-                                name=name + "Shape",
-                                parent=plan_parent)
-
-        for channel in ("rotate", "translate", "scale"):
-            for axis in "XYZ":
-                mod.set_keyable(plan_parent[channel + axis], False)
-                mod.set_locked(plan_parent[channel + axis], False)
-
-        mod.connect(time["outTime"], rdplan["currentTime"])
-        mod.connect(plan_parent["worldMatrix"][0], rdplan["inputMatrix"])
-
-        mod.set_attr(rdplan["gravity"], up * -982)
-        mod.set_attr(rdplan["duration"], duration)
-
-        pivot = cmdx.Vector()
-
-        if body.has_attr("rotatePivot"):
-            pivot = body["rotatePivot"].read()
-
-        mod.set_attr(rdplan["drawOffset"], pivot)
-
-        space_multiplier = 1.0
-
-        body_tm = cmdx.Tm(body["worldMatrix"][0].as_matrix())
-        body_tm.setScale(cmdx.Vector(1, 1, 1))
-
-        # Guesstimate based on body height off the ground
-        # NOTE: This won't work for any character not actually on the ground
-        body_pos = body_tm.translation()
-
-        if body_pos.y > 500:
-            space_multiplier = 10
-
-        elif body_pos.y < 50:
-            space_multiplier = 0.1
-
-        mod.set_attr(rdplan["spaceMultiplier"], space_multiplier)
-        mod.set_attr(rdplan["color"], palette.pop(0))
-        mod.set_attr(rdplan["version"], internal.version())
-
-        mod.connect(body["message"], rdplan["sourceTransform"])
-        mod.connect(body["message"], rdplan["destinationTransforms"][0])
-
         mod.set_attr(rdplan["targets"][0], body_tm.as_matrix())
         mod.do_it()
         body_tm.translateBy(end_offset, cmdx.sTransform)
@@ -2130,41 +2187,15 @@ def assign_plan(body, feet, opts=None):
 
         mod.set_attr(rdplan["targetsTime"][0], 0)
         mod.set_attr(rdplan["targetsHard"][0], 1)
-        mod.set_attr(rdplan["targetsTime"][1], duration - 1)
+        mod.set_attr(rdplan["targetsTime"][1], rdplan["duration"].read() - 1)
         mod.set_attr(rdplan["targetsHard"][1], 1)
         mod.do_it()
 
-        outputs.append([rdplan, body])
-
-        # Figure out defaults extents from body and feet positions
-        bbox = cmdx.BoundingBox()
-        bbox.expand(body_pos)
-        for foot in feet:
-            bbox.expand(_position_incl_pivot(foot))
-
-        extents = [bbox.width, bbox.height, bbox.depth]
-
-        # For 2 feet, we have no thickness!
-        if min(extents) < max(extents) / 4:
-            extents[extents.index(min(extents))] = max(extents) / 4
-
-        # For 1 foot, we have no depth!
-        if min(extents) < max(extents) / 4:
-            extents[extents.index(min(extents))] = max(extents) / 4
-
-        mod.set_attr(rdplan["extents"], extents)
-
     with cmdx.DGModifier() as dgmod:
-        for index, foot in enumerate(feet):
-            rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
+        for rdfoot in rdfeet:
+            dgmod.set_attr(rdfoot["linearLimit"], limits)
 
-            pivot = cmdx.Vector()
-
-            if foot.has_attr("rotatePivot"):
-                pivot = foot["rotatePivot"].read()
-
-            mod.set_attr(rdfoot["drawOffset"], pivot)
-
+            foot = rdfoot["sourceTransform"].input(type=cmdx.kDagNode)
             foot_tm = cmdx.Tm(foot["worldMatrix"][0].as_matrix())
             foot_pos = foot_tm.translation()
 
@@ -2191,25 +2222,27 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["targets"][0], start_mtx)
             dgmod.set_attr(rdfoot["targets"][1], end_mtx)
 
-            idx = rdplan["inputStart"].next_available_index()
-            dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
-            dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
 
-            dgmod.connect(foot["message"], rdfoot["sourceTransform"])
-            dgmod.connect(foot["message"], rdfoot["destinationTransforms"][0])
+def reset_step_sequence(rdplan, opts=None):
+    opts = dict({
+        "preset": 0,
+    }, **(opts or {}))
 
-            dgmod.set_attr(rdfoot["linearLimit"], limits)
-            dgmod.connect(time["outTime"], rdfoot["currentTime"])
+    assert rdplan and rdplan.is_a("rdPlan"), "%s was not a rdPlan" % rdplan
 
-            dgmod.set_attr(rdfoot["color"], palette.pop(0))
-            dgmod.set_attr(rdfoot["version"], internal.version())
+    feet = [el.input(type="rdFoot") for el in rdplan["inputStart"]]
+    assert feet, "%s had no feet" % rdplan
 
-            if len(sequences) > index:
-                dgmod.set_attr(rdfoot["stepSequence"], sequences[index])
+    duration = rdplan["duration"].read()
+    duration = max(duration, 50)  # Minimum 2 seconds
 
-            outputs.append([rdfoot, foot])
+    sequences = _preset_stepsequence(
+        opts.get("preset", 0), len(feet), duration
+    )
 
-    return rdplan
+    with cmdx.DGModifier() as dgmod:
+        for index, rdfoot in enumerate(feet):
+            dgmod.set_attr(rdfoot["stepSequence"], sequences[index])
 
 
 """

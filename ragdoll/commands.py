@@ -1879,14 +1879,14 @@ def animation_to_plan(plan, increment=10, preset=0):
     assert plan.is_a("rdPlan"), "%s was not a rdPlan" % plan
     increment = max(1, increment)
 
-    duration = plan["duration"].read()
-    assert duration > 10, "Can't parse less than 10 frames"
+    frame_range = cmdx.frame(cmdx.max_time() - cmdx.min_time())
+    assert frame_range > 10, "Can't parse less than 10 frames"
 
     feet = list(el.input() for el in plan["inputStart"])
     sequences = list()
 
     start = _plan_to_startframe(plan)
-    end = start + duration
+    end = start + frame_range
 
     for foot in feet:
         transform = foot["sourceTransform"].input()
@@ -1907,25 +1907,47 @@ def animation_to_plan(plan, increment=10, preset=0):
         any_animation = any_animation or any(sequence)
 
     if not any_animation:
-        sequences[:] = _preset_stepsequence(preset, len(feet), duration)
+        sequences[:] = _preset_stepsequence(preset, len(feet), frame_range)
 
-    # Make the edge 5 bars static
+    # Make the edge 0.5 seconds of bars static
     #  __                          __
     # |                              |
     # |/////    ///   ////     //////|
     # |__                          __|
     #
+    padding = int(0.25 / cmdx.time(1).asUnits(cmdx.om.MTime.kSeconds))
+
     for sequence in sequences:
-        sequence[-5:] = [False] * 5
-        sequence[:5] = [False] * 5
+        sequence[-padding:] = [False] * padding
+        sequence[:padding] = [False] * padding
 
     with cmdx.DagModifier() as mod:
         for foot, sequence in zip(feet, sequences):
-            mod.set_attr(foot["stepSequence"], sequence[:duration])
+            mod.set_attr(foot["stepSequence"], sequence[:frame_range])
+
+    # Find last lift
+    #  _                    _
+    # |                      |
+    # |///   //// /// //     |
+    # |_                    _|
+    #  0 1 2 3 4 5 6 7 8 9
+    #                  ^
+    #                  | last lift
+    last_lift = 0
+    for sequence in sequences:
+        for index in reversed(range(len(sequence))):
+            if sequence[index]:
+                if index > last_lift:
+                    last_lift = index
+                break
+
+    duration = min(last_lift, frame_range) + padding
 
     # Targets
     times = range(start, end, increment)
     with cmdx.DagModifier() as mod:
+        mod.set_attr(plan["duration"], duration)
+
         for entity in [plan] + feet:
             for index, frame in enumerate(times):
                 time = cmdx.time(frame)

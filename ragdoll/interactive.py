@@ -872,6 +872,9 @@ def install_menu():
 
         divider("Edit")
 
+        item("resetPlan", reset_plan)
+        item("resetPlanTargets", reset_targets)
+        item("resetPlanStepSequence", reset_step_sequence)
         item("resetFoot", reset_foot)
 
         divider("System")
@@ -3058,6 +3061,53 @@ def reset_foot(selection=None, **opts):
 
     # Trigger a draw refresh
     cmds.select(str(plan))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_plan(selection=None, **opts):
+    reset_step_sequence(selection, **opts)
+    return reset_targets(selection, **opts)
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_step_sequence(selection=None, **opts):
+    plans = shapes_from_selection(selection, type="rdPlan")
+
+    if len(plans) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    for plan in plans:
+        commands.reset_step_sequence(plan)
+
+    # Trigger a draw refresh
+    cmds.select(" ".join(str(plan) for plan in plans))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_targets(selection=None, **opts):
+    plans = shapes_from_selection(selection, type="rdPlan")
+
+    if len(plans) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    for plan in plans:
+        commands.reset_plan_targets(plan)
+
+    # Trigger a draw refresh
+    cmds.select(" ".join(str(plan) for plan in plans))
 
     return kSuccess
 

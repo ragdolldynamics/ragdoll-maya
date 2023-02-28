@@ -254,6 +254,42 @@
         ]
     },
 
+    "resetPlan": {
+        "label": "Reset Plan",
+        "icon": "locomotion.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "resetPlanStepSequence": {
+        "label": "Reset Step Sequence",
+        "icon": "locomotion.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "resetPlanTargets": {
+        "label": "Reset Targets",
+        "icon": "locomotion.png",
+        "summary": "",
+        "description": "",
+        "options": [
+        ]
+    },
+
+    "resetFoot": {
+        "label": "Reset Nominal Matrix",
+        "icon": "locomotion.png",
+        "summary": "Reset the reference position of the selected foot or feet.",
+        "description": "The reference position will be reset to wherever the feet are located at the time of running this command.",
+        "options": [
+        ]
+    },
+
     "assignTerrain": {
         "label": "Assign Terrain",
         "icon": "environment.png",
@@ -358,15 +394,6 @@
         "description": "Remove anything related to locomotion.",
         "options": [
             "planAutoClean"
-        ]
-    },
-
-    "resetFoot": {
-        "label": "Reset Foot",
-        "icon": "locomotion.png",
-        "summary": "Reset the reference position of the selected foot or feet.",
-        "description": "The reference position will be reset to wherever the feet are located at the time of running this command.",
-        "options": [
         ]
     },
 

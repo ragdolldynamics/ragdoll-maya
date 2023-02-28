@@ -1992,10 +1992,11 @@ def assign_plan(body, feet, opts=None):
     time = cmdx.encode("time1")
 
     with cmdx.DagModifier() as mod:
-        name = "rPlan_%s" % body.name()
+        name = internal.unique_name("rPlan_%s" % body.name())
+        shape_name = internal.shape_name(name)
         plan_parent = mod.create_node("transform", name=name)
         rdplan = mod.createNode("rdPlan",
-                                name=name + "Shape",
+                                name=shape_name,
                                 parent=plan_parent)
 
         for channel in ("rotate", "translate", "scale"):

@@ -1999,10 +1999,10 @@ def assign_plan(body, feet, opts=None):
                                 name=shape_name,
                                 parent=plan_parent)
 
-        for channel in ("rotate", "translate", "scale"):
+        for channel in ("rotate", "scale"):
             for axis in "XYZ":
                 mod.set_keyable(plan_parent[channel + axis], False)
-                mod.set_locked(plan_parent[channel + axis], False)
+                mod.set_locked(plan_parent[channel + axis], True)
 
         mod.connect(time["outTime"], rdplan["currentTime"])
         mod.connect(plan_parent["worldMatrix"][0], rdplan["inputMatrix"])

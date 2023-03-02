@@ -336,22 +336,22 @@
         ]
     },
 
+    "bakePlan": {
+        "label": "Plan ⟶ Animation",
+        "icon": "record.png",
+        "summary": "Convert plan into animation",
+        "description": "",
+        "options": [
+        ]
+    },
+
     "bakeTargets": {
-        "label": "Animation to Plan",
-        "icon": "bake.png",
+        "label": "Animation ⟶ Plan",
+        "icon": "snap.png",
         "summary": "Convert animation into targets for a plan",
         "description": "",
         "options": [
             "planFromAnimIncrementalSampling"
-        ]
-    },
-
-    "bakePlan": {
-        "label": "Plan to Animation",
-        "icon": "bake.png",
-        "summary": "Convert plan into animation",
-        "description": "",
-        "options": [
         ]
     },
 

@@ -865,16 +865,16 @@ def install_menu():
         item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
 
-        divider("Refinement")
+        divider("Transfer")
 
-        item("bakeTargets", animation_to_plan, animation_to_plan_options)
         item("bakePlan", plan_to_animation)
+        item("bakeTargets", animation_to_plan, animation_to_plan_options)
 
         divider("Edit")
 
         item("resetPlan", reset_plan)
-        item("resetPlanTargets", reset_targets)
         item("resetPlanStepSequence", reset_step_sequence)
+        item("resetPlanTargets", reset_targets)
         item("resetFoot", reset_foot)
 
         divider("System")

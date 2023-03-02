@@ -2975,8 +2975,7 @@ def plan_to_animation(selection=None, **opts):
             "Found no plans to bake"
         )
 
-    for plan in plans:
-        recording.plan_to_animation(plan)
+    recording.plans_to_animation(plans)
 
     return kSuccess
 

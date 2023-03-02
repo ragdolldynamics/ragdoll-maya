@@ -1,3 +1,4 @@
+import json
 import logging
 import traceback
 
@@ -1214,60 +1215,131 @@ def _find_destinations(markers, opts=None):
 
 
 @internal.with_undo_chunk
-def plan_to_animation(plan):
-    import json
+def plans_to_animation(plans, layer=None):
+    assert plans and all(plan.is_a("rdPlan") for plan in plans), (
+        "%s was not a list of plans" % str(plans))
 
-    plan = cmds.ragdollDump(str(plan), plan=True)
-    plan = json.loads(plan)
-    duration = plan["duration"]
-    start_frame = plan["startFrame"]
-    end_frame = start_frame + duration - 1
+    # Order plans by start frame
+    plans = sorted(plans, key=lambda plan: plan["_startTime"].asTime().value)
 
-    constraints = []
-    outputs = []
+    # Combine trajectories from all plans into one
+    #
+    #  _________________   ______________________________
+    # |                 | |                              |
+    # |                 | |                              |
+    # |     rPlan1      | |            rPlan2            |
+    # |                 | |                              |
+    # |_________________| |______________________________|
+    #
+    # \___|____|____|____|____|____|____|____|____|____|____|____/
+    #
+    #     5   10   15   20   25   30   35   40   45   50   55
+    #
+    #
+
+    # Convert matrix timeseries into rotate and translate channels
+    trajectories = {}
+
+    # Compute based on *all* plans
+    start_frame = None
+    end_frame = None
+
+    for plan in plans:
+        plan = cmds.ragdollDump(str(plan), plan=True)
+        plan = json.loads(plan)
+
+        start = plan["startFrame"]
+        end = start + plan["duration"]
+
+        # Figure out the first start frame
+        if start_frame is None:
+            start_frame = start
+
+        elif start < start_frame:
+            start_frame = start
+
+        # Figure out the total duration
+        if end_frame is None:
+            end_frame = end
+
+        elif end > end_frame:
+            end_frame = end
+
+        for foot, trajectory in plan["trajectories"].items():
+            node = cmdx.encode(foot)
+
+            for el in node["destinationTransforms"]:
+                dst = el.input()
+                name = dst.path()
+
+                if name not in trajectories:
+                    trajectories[name] = {
+                        "tx": {}, "ty": {}, "tz": {},
+                        "rx": {}, "ry": {}, "rz": {},
+                    }
+
+                # Add shorthand for readability
+                tx = trajectories[name]["tx"]
+                ty = trajectories[name]["ty"]
+                tz = trajectories[name]["tz"]
+                rx = trajectories[name]["rx"]
+                ry = trajectories[name]["ry"]
+                rz = trajectories[name]["rz"]
+
+                for frame, mtx in enumerate(trajectory):
+                    tm = cmdx.Tm(cmdx.Mat4(mtx))
+                    translate = tm.translation()
+                    rotate = tm.rotation()
+
+                    tx[start + frame] = translate.x
+                    ty[start + frame] = translate.y
+                    tz[start + frame] = translate.z
+                    rx[start + frame] = rotate.x
+                    ry[start + frame] = rotate.y
+                    rz[start + frame] = rotate.z
+
     destinations = []
+    temporaries = []
 
-    for name, trajectory in plan["trajectories"].items():
-
-        # Convert matrix timeseries into rotate and translate channels
-        tx, ty, tz = {}, {}, {}
-        rx, ry, rz = {}, {}, {}
-
-        for frame, mtx in enumerate(trajectory):
-            tm = cmdx.Tm(cmdx.Mat4(mtx))
-            translate = tm.translation()
-            rotate = tm.rotation()
-
-            tx[start_frame + frame] = translate.x
-            ty[start_frame + frame] = translate.y
-            tz[start_frame + frame] = translate.z
-            rx[start_frame + frame] = rotate.x
-            ry[start_frame + frame] = rotate.y
-            rz[start_frame + frame] = rotate.z
-
-        # Generate output transforms..
+    # Store our worldspace plan in temporary Maya worldspace transforms,
+    # and then rely on Maya's constraint evalutaion to figure out the
+    # relative transforms for any destination transform.
+    #  ______       ___________       ____________       _____________
+    # |      |     |           |     |            |     |             |
+    # | Plan |---->o transform |---->o constraint |---->o bakeResults |
+    # |______|     |___________|     |____________|     |_____________|
+    #
+    # This way, we won't have to compute this relative transform ourselves,
+    # and will comply with any evaluation Maya can throw at us, so long as
+    # they are supported by Maya's native constraints.
+    #
+    for dst, trajectory in trajectories.items():
         with cmdx.DagModifier() as mod:
-            out = mod.create_node("transform", name=name + "_out")
+            out = mod.create_node("transform", name=dst + "_out")
 
             # ..with plan as keyframes
-            mod.set_attr(out["tx"], tx)
-            mod.set_attr(out["ty"], ty)
-            mod.set_attr(out["tz"], tz)
-            mod.set_attr(out["rx"], rx)
-            mod.set_attr(out["ry"], ry)
-            mod.set_attr(out["rz"], rz)
+            mod.set_attr(out["tx"], trajectories[dst]["tx"])
+            mod.set_attr(out["ty"], trajectories[dst]["ty"])
+            mod.set_attr(out["tz"], trajectories[dst]["tz"])
+            mod.set_attr(out["rx"], trajectories[dst]["rx"])
+            mod.set_attr(out["ry"], trajectories[dst]["ry"])
+            mod.set_attr(out["rz"], trajectories[dst]["rz"])
 
-        node = cmdx.encode(name)
-        outputs += [out]
+            dst = cmdx.encode(dst)
+            temporaries += [out]
 
-        for el in node["destinationTransforms"]:
-            dst = el.input()
+            # Evaluate new animation above
+            mod.do_it()
+
             destinations += [dst]
-            constraints += cmds.parentConstraint(
-                str(out), str(dst), maintainOffset=True
-            )
+            cmds.parentConstraint(str(out), str(dst), maintainOffset=True)
 
-    # Bake it
+    destinations = list(str(dst) for dst in destinations)
+
+    if layer is None:
+        layer = plans[0].name() + "Layer"
+        layer = cmds.animLayer(layer, override=True)
+
     kwargs = {
         "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
         "simulation": True,
@@ -1275,16 +1347,15 @@ def plan_to_animation(plan):
         "sampleBy": 1,
         "oversamplingRate": 1,
         "disableImplicitControl": True,
-        "preserveOutsideKeys": False,
+        "preserveOutsideKeys": True,
         "sparseAnimCurveBake": False,
         "removeBakedAttributeFromLayer": False,
-        "removeBakedAnimFromLayer": False,
-        "minimizeRotation": False,
+        "removeBakedAnimFromLayer": True,
+        "minimizeRotation": True,
         "bakeOnOverrideLayer": True,
+        "destinationLayer": layer
     }
 
-    # The cheeky little bakeResults changes our selection
     with internal.maintained_selection():
-        destinations = list(str(dst) for dst in destinations)
         cmds.bakeResults(*destinations, **kwargs)
-        cmds.delete(list(str(out) for out in outputs))
+        cmds.delete(list(str(out) for out in temporaries))

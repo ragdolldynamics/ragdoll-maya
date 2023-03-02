@@ -707,7 +707,7 @@ def _status_code_floating(status):
 
     elif status == STATUS_F_NO_FREE_LEASES:
         message = (
-            "No more licence\n"
+            "All leases are occupied\n"
 
             "All available licences are occupied.\n"
             "Connecting server: {server}"

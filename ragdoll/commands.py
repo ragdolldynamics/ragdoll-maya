@@ -2086,6 +2086,59 @@ def assign_plan(body, feet, opts=None):
     return rdplan
 
 
+def align_plans(plans, auto_order=False):
+    r"""Align end of plan A with beginning of plan B
+
+          Plan A                  Plan B
+                         o------------------------o
+    o---.              .
+         \           .  start
+          `--------o
+                  end
+
+    Arguments:
+        auto_order (bool, optional): Order plans by their start time
+            defaults to preserving the order in which plans are provided
+
+    """
+
+    assert plans and all(plan.is_a("rdPlan") for plan in plans), (
+        "'%s' was not rdPlan nodes" % str(plans)
+    )
+
+    if auto_order:
+        plans = sorted(
+            plans, key=lambda plan: plan["_startTime"].asTime().value
+        )
+
+    prev = plans[0]
+
+    with cmdx.DagModifier() as mod:
+        for plan in plans[1:]:
+            # Align start time
+            prev_end = prev["_startTime"].as_time()
+            prev_end += cmdx.time(prev["duration"].read() - 1)
+
+            mod.set_attr(plan["startTime"], constants.StartTimeCustom)
+            mod.set_attr(plan["startTimeCustom"], prev_end)
+
+            # Align body
+            end_index = prev["targets"].count() - 1
+            end = prev["targets"][end_index].as_matrix()
+            mod.set_attr(plan["targets"][0], end)
+
+            # Align feet too
+            for index, el in enumerate(plan["inputStart"]):
+                prev_foot = prev["inputStart"][index].input()
+                foot = el.input()
+
+                end_index = prev_foot["targets"].count() - 1
+                end = prev_foot["targets"][end_index].as_matrix()
+                mod.set_attr(foot["targets"][0], end)
+
+            prev = plan
+
+
 def reset_plan_targets(rdplan, opts=None):
     body = rdplan["sourceTransform"].input(type=cmdx.kDagNode)
     assert body, "%s had no sourceTransform" % rdplan

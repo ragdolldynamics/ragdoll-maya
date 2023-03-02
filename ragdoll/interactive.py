@@ -872,6 +872,7 @@ def install_menu():
 
         divider("Edit")
 
+        item("alignPlans", align_plans)
         item("resetPlan", reset_plan)
         item("resetPlanStepSequence", reset_step_sequence)
         item("resetPlanTargets", reset_targets)
@@ -2980,6 +2981,22 @@ def plan_to_animation(selection=None, **opts):
     return kSuccess
 
 
+@with_exception_handling
+def align_plans(selection=None, **opts):
+    plans = plans_from_selection(selection) or cmdx.ls(type="rdPlan")
+
+    if not plans:
+        raise i__.UserWarning(
+            "No plans",
+            "Found no plans to bake"
+        )
+
+    commands.align_plans(plans)
+    update_plan(plans, forceUpdate=True)
+
+    return kSuccess
+
+
 @i__.with_undo_chunk
 def animation_to_plan(selection=None, **opts):
     opts = dict({
@@ -3059,7 +3076,7 @@ def reset_foot(selection=None, **opts):
             mod.set_attr(foot["nominalMatrix"], mtx)
 
     # Trigger a draw refresh
-    cmds.select(str(plan))
+    cmds.select(cmds.ls(selection=True))
 
     return kSuccess
 

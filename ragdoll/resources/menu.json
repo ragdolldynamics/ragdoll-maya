@@ -254,29 +254,38 @@
         ]
     },
 
+    "alignPlans": {
+        "label": "Align Plans",
+        "icon": "animation.png",
+        "summary": "Align the end of plan A with the beginning of plan B",
+        "description": "Use this to chain multiple plans together, such that one plan starts after another has finished.",
+        "options": [
+        ]
+    },
+
     "resetPlan": {
         "label": "Reset Plan",
-        "icon": "locomotion.png",
-        "summary": "",
-        "description": "",
+        "icon": "foot.png",
+        "summary": "Reset the entire plan",
+        "description": "This resets both the step sequence and targets, as though you assigned a plan from scratch.",
         "options": [
         ]
     },
 
     "resetPlanStepSequence": {
         "label": "Reset Step Sequence",
-        "icon": "locomotion.png",
-        "summary": "",
-        "description": "",
+        "icon": "pause.png",
+        "summary": "Reset the step sequence for a plan",
+        "description": "Use this when wanting a clean slate, or when changing the duration of your plan.",
         "options": [
         ]
     },
 
     "resetPlanTargets": {
         "label": "Reset Targets",
-        "icon": "locomotion.png",
-        "summary": "",
-        "description": "",
+        "icon": "softpin.png",
+        "summary": "Reset the targets of a plan",
+        "description": "Use this to regain a clean slate when there are too many targets involved.",
         "options": [
         ]
     },

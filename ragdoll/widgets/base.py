@@ -1055,7 +1055,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         r_bar.rangeChanged.connect(
             lambda m, x: t_w.view.horizontalScrollBar().setMaximum(x))
 
-        def cleanup(obj):
+        def cleanup(obj=None):
             t_w.view.horizontalScrollBar().valueChanged.disconnect()
             r_w.view.horizontalScrollBar().valueChanged.disconnect()
             r_w.view.horizontalScrollBar().rangeChanged.disconnect()

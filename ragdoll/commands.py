@@ -1411,7 +1411,7 @@ def replace_mesh(marker, mesh, opts=None):
     # Setup default values
     opts = dict({
         "maintainOffset": True,
-        "maintainHistory": True,
+        "maintainHistory": False,
     }, **(opts or {}))
 
     # Clone input mesh. We aren't able to simply connect to the
@@ -1454,6 +1454,76 @@ def replace_mesh(marker, mesh, opts=None):
         if opts["maintainOffset"]:
             mesh_matrix = mesh["worldMatrix"][0].as_matrix()
             mesh_matrix *= marker["inputMatrix"].as_matrix().inverse()
+            mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
+
+        # Display the newly replaced mesh
+        mod.set_attr(marker["shapeType"], constants.MeshShape)
+
+
+def replace_meshes(marker, meshes, opts=None):
+    """Replace the 'Mesh' shape type in `marker` with `meshes`.
+
+    Arguments:
+        marker (cmdx.Node): Rigid whose mesh to replace
+        meshes (list): List of meshes to replace with, meshes will be combined
+        clean (bool, optional): Remove other inputs, such as curve
+            or surface node. Multiple inputs are supported, so this
+            is optional. Defaults to True.
+
+    Returns:
+        Nothing
+
+    """
+
+    assert isinstance(marker, cmdx.Node), "%s was not a cmdx.Node" % marker
+    assert all(isinstance(mesh, cmdx.Node) for mesh in meshes), (
+        "%s was not all cmdx.Node" % str(meshes))
+    assert marker.is_a("rdMarker"), "%s was not a 'rdMarker' node" % marker
+    assert all(mesh.is_a("mesh") for mesh in meshes), (
+        "%s must all be of 'mesh' type" % str(meshes)
+    )
+
+    # Setup default values
+    opts = dict({
+        "maintainOffset": True,
+        "maintainHistory": False,
+    }, **(opts or {}))
+
+    # Combine meshes
+    with cmdx.DGModifier(interesting=False) as mod:
+        unite = mod.create_node("polyUnite")
+
+        for index, mesh in enumerate(meshes):
+            mod.connect(mesh["worldMatrix"][0], unite["inputMat"][index])
+            mod.connect(mesh["outMesh"], unite["inputPoly"][index])
+
+    # Clone input mesh. We aren't able to simply connect to the
+    # transformGeometry and disconnect it, because it appears
+    # to flush its data on disconnect. So we need a dedicated
+    # mesh for this.
+    if not opts["maintainHistory"]:
+        with cmdx.DagModifier(interesting=False) as mod:
+            copy = mod.create_node("mesh",
+                                   name=mesh.name() + "Orig",
+                                   parent=mesh.parent())
+
+            mod.connect(unite["output"], copy["inMesh"])
+            mod.do_it()
+            cmds.refresh(force=True)
+            mod.disconnect(copy["inMesh"])
+            mod.set_attr(copy["intermediateObject"], True)
+
+            unite = copy
+
+    with cmdx.DGModifier(interesting=False) as mod:
+        if unite.is_a("polyUnite"):
+            mod.connect(unite["output"], marker["inputGeometry"])
+        else:
+            mod.connect(unite["outMesh"], marker["inputGeometry"])
+
+        if opts["maintainOffset"]:
+            # mesh_matrix = mesh["worldMatrix"][0].as_matrix()
+            mesh_matrix = marker["inputMatrix"].as_matrix().inverse()
             mod.set_attr(marker["inputGeometryMatrix"], mesh_matrix)
 
         # Display the newly replaced mesh

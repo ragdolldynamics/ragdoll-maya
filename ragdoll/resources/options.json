@@ -459,7 +459,7 @@
         "name": "replaceMeshMaintainHistory",
         "label": "Maintain History",
         "type": "Boolean",
-        "default": true,
+        "default": false,
         "help": "Allow changes to be made to the original mesh."
     },
 

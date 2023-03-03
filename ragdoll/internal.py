@@ -380,6 +380,38 @@ def with_timing(func):
     return wrapper
 
 
+def affects_initial_state(func):
+    """Recipients of this decorator affect the initial state in some way
+
+    Initial state can only be modified when on (or before) the start frame
+    and without the use of any cache.
+
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        current_time = cmdx.current_time()
+        first_start_time = current_time
+
+        with cmdx.DagModifier() as mod:
+            for solver in cmdx.ls(type="rdSolver"):
+                start_time = solver["_startTime"].as_time()
+
+                if start_time.value < first_start_time.value:
+                    first_start_time = start_time
+
+                if solver["cache"]:
+                    mod.set_attr(solver["cache"], 0)
+
+        # Don't bother if we're already there
+        if first_start_time.value < current_time.value:
+            cmds.currentTime(first_start_time.value, update=True)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class Timer(object):
     def __init__(self, name="", verbose=False):
         self._name = name

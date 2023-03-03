@@ -1421,9 +1421,12 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
-    selection = markers_from_selection(selection)
+    selection = _markers_from_selection(selection)
     if selection:
-        solvers = i__.promote_linked_solvers(solvers_from_selection(selection))
+        solvers = i__.promote_linked_solvers(
+            _solvers_from_selection(selection)
+        )
+
         if len(solvers) == 1:
             # all markers in selection belong to a single solver, take one
             #   to manipulate.
@@ -1432,7 +1435,7 @@ def markers_manipulator(selection=None, **opts):
             selection = solvers
     else:
         selection = i__.promote_linked_solvers(
-            solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
+            _solvers_from_selection(selection) or cmdx.ls(type="rdSolver")
         )
 
     if len(selection) < 1:
@@ -1474,6 +1477,7 @@ def markers_manipulator(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def assign_marker(selection=None, **opts):
     selection = selection or cmdx.selection()
@@ -1619,6 +1623,7 @@ def assign_and_connect(selection=None, **opts):
     }, **opts))
 
 
+@i__.affects_initial_state
 def assign_environment(selection=None, **opts):
     opts = dict({
         "solver": _opt("markersAssignSolver", opts),
@@ -1652,10 +1657,11 @@ def assign_environment(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def assign_collision_group(selection=None, **opts):
     groups = shapes_from_selection(selection, type="rdCollisionGroup")
-    markers = list(markers_from_selection(selection))
+    markers = list(_markers_from_selection(selection))
 
     group = None
 
@@ -1687,6 +1693,7 @@ def assign_collision_group(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def add_to_collision_group(selection=None, **opts):
     groups = shapes_from_selection(selection, type="rdCollisionGroup")
@@ -1698,7 +1705,7 @@ def add_to_collision_group(selection=None, **opts):
         )
 
     group = groups[0]
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -1717,6 +1724,7 @@ def add_to_collision_group(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def remove_from_collision_group(selection=None, **opts):
     groups = shapes_from_selection(selection, type="rdCollisionGroup")
@@ -1728,7 +1736,7 @@ def remove_from_collision_group(selection=None, **opts):
         )
 
     group = groups[0]
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -1746,7 +1754,7 @@ def remove_from_collision_group(selection=None, **opts):
     return kSuccess
 
 
-def solvers_from_selection(selection=None):
+def _solvers_from_selection(selection=None):
     """Find solvers from selection
 
     Examples:
@@ -1760,38 +1768,38 @@ def solvers_from_selection(selection=None):
 
         # Select transform
         >>> cmds.select(ctrl)
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select marker
         >>> cmds.select(cmds.ls(type="rdMarker"))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select group
         >>> _ = group_markers()
         >>> cmds.select(cmds.ls(type="rdGroup"))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select group transform
         >>> cmds.select(str(cmdx.ls(type="rdGroup")[0].parent()))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select solver transform
         >>> cmds.select(str(cmdx.ls(type="rdSolver")[0].parent()))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select grouped marker
         >>> cmds.select(cmds.ls(type="rdMarker"))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
         # Select multiple
         >>> cmds.select(cmds.ls(type=("rdMarker", "rdGroup", "rdSolver")))
-        >>> len(solvers_from_selection())
+        >>> len(_solvers_from_selection())
         1
 
     """
@@ -1833,7 +1841,7 @@ def solvers_from_selection(selection=None):
     return tuple(solvers)
 
 
-def markers_from_selection(selection=None):
+def _markers_from_selection(selection=None):
     """Find markers from selection
 
     Examples:
@@ -1844,12 +1852,12 @@ def markers_from_selection(selection=None):
 
         # Select transform
         >>> cmds.select(ctrl1)
-        >>> len(markers_from_selection())
+        >>> len(_markers_from_selection())
         1
 
         # Select markers, including ground
         >>> cmds.select(cmds.ls(type="rdMarker"))
-        >>> len(markers_from_selection())
+        >>> len(_markers_from_selection())
         3
 
     """
@@ -1930,7 +1938,7 @@ def merge_solvers(selection=None, **opts):
 @with_exception_handling
 @i__.with_undo_chunk
 def extract_from_solver(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -1963,7 +1971,7 @@ def group_markers(selection=None, **opts):
             if marker:
                 markers.append(marker)
 
-    markers += markers_from_selection(selection)
+    markers += _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -1980,7 +1988,7 @@ def group_markers(selection=None, **opts):
 @with_exception_handling
 @i__.with_undo_chunk
 def move_to_group(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2009,7 +2017,7 @@ def move_to_group(selection=None, **opts):
 @with_exception_handling
 @i__.with_undo_chunk
 def move_to_solver(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2038,7 +2046,7 @@ def move_to_solver(selection=None, **opts):
 @with_exception_handling
 @i__.with_undo_chunk
 def ungroup_markers(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2052,10 +2060,11 @@ def ungroup_markers(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def create_distance_constraint(selection=None, **opts):
     try:
-        a, b = markers_from_selection(selection)
+        a, b = _markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
@@ -2069,10 +2078,11 @@ def create_distance_constraint(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def create_fixed_constraint(selection=None, **opts):
     try:
-        a, b = markers_from_selection(selection)
+        a, b = _markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
@@ -2086,13 +2096,14 @@ def create_fixed_constraint(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def create_pin_constraint(selection=None, **opts):
     opts = dict({
         "location": _opt("pinLocation", opts),
     })
 
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2111,12 +2122,13 @@ def create_pin_constraint(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def create_attach_constraint(selection=None, **opts):
     selection = selection or cmdx.sl()
 
     try:
-        a, b = markers_from_selection(selection)
+        a, b = _markers_from_selection(selection)
     except ValueError:
         raise i__.UserWarning(
             "Selection Problem",
@@ -2495,9 +2507,10 @@ def retarget_marker(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def reparent_marker(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     try:
         children, parent = markers[:-1], markers[-1]
@@ -2516,9 +2529,10 @@ def reparent_marker(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def unparent_marker(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2536,7 +2550,7 @@ def unparent_marker(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def untarget_marker(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if not markers:
         raise i__.UserWarning(
@@ -2551,6 +2565,7 @@ def untarget_marker(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def reassign_marker(selection=None, **opts):
     try:
@@ -2625,6 +2640,7 @@ def toggle_channel_box_attributes(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def reset_marker_constraint_frames(selection=None, **opts):
     for node in _selection(selection):
@@ -2643,9 +2659,10 @@ def reset_marker_constraint_frames(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def reset_shape(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     for marker in markers:
         commands.reset_shape(marker)
@@ -2746,6 +2763,7 @@ def create_lollipops(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def auto_limit(selection=None, **opts):
     selection = selection or cmdx.sl()
@@ -2819,24 +2837,19 @@ def cache_all(selection=None, **opts):
     return True
 
 
+@i__.affects_initial_state
 def uncache(selection=None, **opts):
     solvers = _filtered_selection("rdSolver", selection)
     solvers = solvers or cmdx.ls(type="rdSolver")
     solvers = [s for s in solvers if s["startState"].output() is None]
 
-    start_time = cmdx.min_time()
     with cmdx.DagModifier() as mod:
         for solver in solvers:
             mod.set_attr(solver["cache"], 0)
 
-            solver_start = solver["_startTime"].as_time()
-            if solver_start < start_time:
-                start_time = solver_start
-
-    cmdx.current_time(start_time)
-
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def link_solver(selection=None, **opts):
     try:
@@ -2871,9 +2884,10 @@ def link_solver(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def unlink_solver(selection=None, **opts):
-    solvers = solvers_from_selection(selection)
+    solvers = _solvers_from_selection(selection)
 
     for solver in solvers:
         commands.unlink_solver(solver)
@@ -3239,6 +3253,7 @@ def volume_curve(selection=None, **opts):
 
 
 @i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def _field(typ, opts=None):
     field = commands.create_field(typ, opts)
@@ -3254,7 +3269,7 @@ def _field(typ, opts=None):
 @i__.with_undo_chunk
 @with_exception_handling
 def use_selected_as_source(selection=None, **opts):
-    markers = markers_from_selection()
+    markers = _markers_from_selection()
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3309,7 +3324,7 @@ def disconnect_source(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def field_com_centroid(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3327,7 +3342,7 @@ def field_com_centroid(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def field_volumetric_centroid(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3373,7 +3388,7 @@ def isolate_select(nodes):
 
 @with_exception_handling
 def bake_mesh(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     for marker in markers:
         commands.bake_mesh(marker)
@@ -3388,7 +3403,7 @@ def bake_mesh_options(selection=None, **opts):
 
 @with_exception_handling
 def convert_to_mesh(selection=None, **opts):
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     meshes = []
     for marker in markers:
@@ -3404,6 +3419,8 @@ def convert_to_mesh_options(selection=None, **opts):
     pass
 
 
+@i__.with_undo_chunk
+@i__.affects_initial_state
 @with_exception_handling
 def replace_marker_mesh(selection=None, **opts):
     opts = {
@@ -3418,7 +3435,7 @@ def replace_marker_mesh(selection=None, **opts):
         _filtered_selection("nurbsSurface", selection)
     )
 
-    markers = markers_from_selection(selection)
+    markers = _markers_from_selection(selection)
 
     if len(markers) < 1:
         raise i__.UserWarning(
@@ -3444,8 +3461,12 @@ def replace_marker_mesh(selection=None, **opts):
         if existing_geo in meshes:
             meshes.remove(existing_geo)
 
-        # Still got more?
-        if len(meshes) > 1:
+    # Still got more?
+    if len(meshes) > 1:
+        if all(mesh.is_a("mesh") for mesh in meshes):
+            commands.replace_meshes(markers[0], meshes, opts=opts)
+
+        else:
             log.warning(
                 "%s are all selected"
                 % ", ".join(str(m) for m in meshes)
@@ -3453,10 +3474,11 @@ def replace_marker_mesh(selection=None, **opts):
 
             raise i__.UserWarning(
                 "Selection Problem",
-                "2 or more meshes selected, pick one."
+                "2 or more geometries were selected, but not "
+                "all of them were polygonal meshes."
             )
-
-    commands.replace_mesh(markers[0], meshes[0], opts=opts)
+    else:
+        commands.replace_mesh(markers[0], meshes[0], opts=opts)
 
     return kSuccess
 

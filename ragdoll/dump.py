@@ -1545,7 +1545,8 @@ class Loader(object):
         mod.set_attr(marker["limitRangeX"], max(min1, Limit["twist"]))
         mod.set_attr(marker["limitRangeY"], max(min1, Limit["swing1"]))
         mod.set_attr(marker["limitRangeZ"], max(min1, Limit["swing2"]))
-        mod.set_attr(marker["collideWithParent"], Joint["disableCollision"])
+        mod.set_attr(marker["collideWithParent"],
+                     not Joint["disableCollision"])
 
         shape_type = {
             "Box": constants.BoxShape,

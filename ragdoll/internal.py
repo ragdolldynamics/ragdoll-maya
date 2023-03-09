@@ -490,6 +490,18 @@ def maintain_selection(func):
     return _maintain_selection
 
 
+def maintain_time(func):
+    @functools.wraps(func)
+    def _maintain_time(*args, **kwargs):
+        try:
+            time = cmds.currentTime(query=True)
+            return func(*args, **kwargs)
+        finally:
+            cmds.currentTime(time)
+
+    return _maintain_time
+
+
 @contextlib.contextmanager
 def maintained_selection():
     try:
@@ -497,6 +509,16 @@ def maintained_selection():
         yield
     finally:
         cmds.select(selection)
+
+
+@contextlib.contextmanager
+def with_time(time):
+    try:
+        previous_time = cmds.currentTime(query=True)
+        cmds.currentTime(time)
+        yield
+    finally:
+        cmds.currentTime(previous_time)
 
 
 def sort_filenames(fnames, suffix=".rag"):

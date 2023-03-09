@@ -1313,26 +1313,27 @@ def plans_to_animation(plans, layer=None):
     # and will comply with any evaluation Maya can throw at us, so long as
     # they are supported by Maya's native constraints.
     #
-    for dst, trajectory in trajectories.items():
-        with cmdx.DagModifier() as mod:
-            out = mod.create_node("transform", name=dst + "_out")
+    with internal.with_time(start_frame):
+        for dst, trajectory in trajectories.items():
+            with cmdx.DagModifier() as mod:
+                out = mod.create_node("transform", name=dst + "_out")
 
-            # ..with plan as keyframes
-            mod.set_attr(out["tx"], trajectories[dst]["tx"])
-            mod.set_attr(out["ty"], trajectories[dst]["ty"])
-            mod.set_attr(out["tz"], trajectories[dst]["tz"])
-            mod.set_attr(out["rx"], trajectories[dst]["rx"])
-            mod.set_attr(out["ry"], trajectories[dst]["ry"])
-            mod.set_attr(out["rz"], trajectories[dst]["rz"])
+                # ..with plan as keyframes
+                mod.set_attr(out["tx"], trajectories[dst]["tx"])
+                mod.set_attr(out["ty"], trajectories[dst]["ty"])
+                mod.set_attr(out["tz"], trajectories[dst]["tz"])
+                mod.set_attr(out["rx"], trajectories[dst]["rx"])
+                mod.set_attr(out["ry"], trajectories[dst]["ry"])
+                mod.set_attr(out["rz"], trajectories[dst]["rz"])
 
-            dst = cmdx.encode(dst)
-            temporaries += [out]
+                dst = cmdx.encode(dst)
+                temporaries += [out]
 
-            # Evaluate new animation above
-            mod.do_it()
+                # Evaluate new animation above
+                mod.do_it()
 
-            destinations += [dst]
-            cmds.parentConstraint(str(out), str(dst), maintainOffset=True)
+                destinations += [dst]
+                cmds.parentConstraint(str(out), str(dst), maintainOffset=True)
 
     destinations = list(str(dst) for dst in destinations)
 

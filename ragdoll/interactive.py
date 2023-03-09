@@ -843,12 +843,6 @@ def install_menu():
     def divider(label=None):
         cmds.menuItem(divider=True, dividerLabel=label)
 
-    item("showMessages",
-         command=show_messageboard,
-
-         # Programatically displayed during logging
-         visible=False)
-
     item("markersManipulator", markers_manipulator)
 
     divider("Markers")
@@ -858,12 +852,14 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
-    with submenu("Assign Locomotion", icon="locomotion.png"):
-        divider("Locomotion")
+    divider("Locomotion")
 
+    item("assignPlan", assign_plan, assign_plan_options)
+
+    with submenu("More", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
-        item("updatePlan", update_plan, update_plan_options)
         item("assignTerrain", assign_terrain)
+        item("updatePlan", update_plan, update_plan_options)
 
         divider("Transfer")
 
@@ -872,11 +868,12 @@ def install_menu():
 
         divider("Edit")
 
-        item("alignPlans", align_plans)
-        item("resetPlan", reset_plan)
-        item("resetPlanStepSequence", reset_step_sequence)
-        item("resetPlanTargets", reset_targets)
-        item("resetFoot", reset_foot)
+        item("alignPlans", align_plans, align_plans_options)
+        item("resetPlan", reset_plan, reset_plan_options)
+        item("resetPlanStepSequence", reset_step_sequence,
+             reset_step_sequence_options)
+        item("resetPlanTargets", reset_targets, reset_targets_options)
+        item("resetFoot", reset_foot, reset_foot_options)
 
         divider("System")
 
@@ -1046,6 +1043,12 @@ def install_menu():
     divider()
 
     label = "Ragdoll %s" % __.version_str
+
+    item("showMessages",
+         command=show_messageboard,
+
+         # Programatically displayed during logging
+         visible=False)
 
     item("ragdoll", welcome_user, label=label)
 
@@ -3891,6 +3894,26 @@ def extract_markers_options(*args):
 
 def create_lollipops_options(*args):
     return _Window("createLollipop", create_lollipops)
+
+
+def align_plans_options(*args):
+    return _Window("alignPlans", align_plans)
+
+
+def reset_plan_options(*args):
+    return _Window("resetPlan", reset_plan)
+
+
+def reset_step_sequence_options(*args):
+    return _Window("resetPlanStepSequence", reset_step_sequence)
+
+
+def reset_targets_options(*args):
+    return _Window("resetPlanTargets", reset_targets)
+
+
+def reset_foot_options(*args):
+    return _Window("resetFoot", reset_foot)
 
 
 def _update_solver_options():

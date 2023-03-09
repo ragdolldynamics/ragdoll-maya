@@ -56,6 +56,7 @@ def upgrade_all():
         ("rdGroup", group),
         ("rdSolver", solver),
         ("rdCanvas", canvas),
+        ("rdPlan", plan),
     )
 
     upgraded_count = 0
@@ -119,6 +120,9 @@ def has_upgrade(node, from_version):
 
     if node.type() == "rdGroup":
         return from_version < 20211007
+
+    if node.type() == "rdPlan":
+        return from_version < 20230323
 
     # The node has been deprecated and is ready to be purged!
     if node.type() == "rdCanvas":
@@ -189,6 +193,17 @@ def canvas(node, from_version, to_version):
     except RuntimeError:
         # Referenced or locked, it's OK
         pass
+
+    return upgraded
+
+
+def plan(node, from_version, to_version):
+    upgraded = False
+
+    print("Plan %s -> %s" % (from_version, to_version))
+    if from_version < 20230320:
+        _plan_from_2022_2023(node)
+        upgraded = True
 
     return upgraded
 
@@ -338,3 +353,34 @@ def _marker_20220629_20220709(marker):
     with cmdx.DagModifier() as mod:
         mod.set_attr(marker["densityType"], constants.DensityCustom)
         mod.set_attr(marker["densityCustom"], density)
+
+
+@try_it
+def _plan_from_2022_2023(plan):
+    log.info("Upgrading %s to 2023.03.23" % plan)
+
+    with cmdx.DagModifier() as mod:
+        duration = plan["duration"].read()
+
+        mod.set_attr(plan["targetsTime"][0], 0)
+        mod.set_attr(plan["targetsTime"][1], duration)
+
+        mod.set_attr(plan["targetsHard"][0], 1)
+        mod.set_attr(plan["targetsHard"][1], 1)
+
+        # It'll disable itself on scene open, due to broken targets
+        mod.set_attr(plan["enabled"], True)
+
+        # It'll be connected to a physical Maya rig
+        mod.set_attr(plan["drawShape"], False)
+
+        mod.disconnect(plan["targets"])
+
+        for el in plan["inputStart"]:
+            foot = el.input()
+
+            for target in foot["targets"]:
+                mod.disconnect(target)
+
+        for target in plan["targets"]:
+            mod.disconnect(target)

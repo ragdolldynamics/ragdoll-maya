@@ -2181,32 +2181,63 @@ def align_plans(plans, auto_order=False):
             plans, key=lambda plan: plan["_startTime"].asTime().value
         )
 
-    prev = plans[0]
+    plan_a = plans[0]
 
     with cmdx.DagModifier() as mod:
-        for plan in plans[1:]:
+        for plan_b in plans[1:]:
             # Align start time
-            prev_end = prev["_startTime"].as_time()
-            prev_end += cmdx.time(prev["duration"].read() - 1)
+            prev_end = plan_a["_startTime"].as_time()
+            prev_end += cmdx.time(plan_a["duration"].read() - 1)
 
-            mod.set_attr(plan["startTime"], constants.StartTimeCustom)
-            mod.set_attr(plan["startTimeCustom"], prev_end)
+            mod.set_attr(plan_b["startTime"], constants.StartTimeCustom)
+            mod.set_attr(plan_b["startTimeCustom"], prev_end)
+
+            # Align attributes
+            for attr in ("extentsX",
+                         "extentsY",
+                         "extentsZ",
+                         "gravityX",
+                         "gravityY",
+                         "gravityZ",
+                         "spaceMultiplier",
+                         "mass"):
+                mod.set_attr(plan_b[attr], plan_a[attr].read())
 
             # Align body
-            end_index = prev["targets"].count() - 1
-            end = prev["targets"][end_index].as_matrix()
-            mod.set_attr(plan["targets"][0], end)
+            end_index = plan_a["targets"].count() - 1
+            end = plan_a["targets"][end_index].as_matrix()
+            mod.set_attr(plan_b["targets"][0], end)
 
             # Align feet too
-            for index, el in enumerate(plan["inputStart"]):
-                prev_foot = prev["inputStart"][index].input()
-                foot = el.input()
+            src_to_foot_a = {}
 
-                end_index = prev_foot["targets"].count() - 1
-                end = prev_foot["targets"][end_index].as_matrix()
-                mod.set_attr(foot["targets"][0], end)
+            for el in plan_a["inputStart"]:
+                rdfoot_a = el.input()
+                src = rdfoot_a["sourceTransform"].input()
+                src_to_foot_a[src] = rdfoot_a
 
-            prev = plan
+            for index, el in enumerate(plan_b["inputStart"]):
+                rdfoot_b = el.input()
+                src = rdfoot_b["sourceTransform"].input()
+                rdfoot_a = src_to_foot_a.get(src)
+
+                if not rdfoot_a:
+                    # Destination plan_b didn't have this foot, and that's OK
+                    continue
+
+                for attr in ("linearLimitX",
+                             "linearLimitY",
+                             "linearLimitZ",
+                             "limitOffsetX",
+                             "limitOffsetY",
+                             "limitOffsetZ"):
+                    mod.set_attr(rdfoot_b[attr], rdfoot_a[attr].read())
+
+                end_index = rdfoot_a["targets"].count() - 1
+                end = rdfoot_a["targets"][end_index].as_matrix()
+                mod.set_attr(rdfoot_b["targets"][0], end)
+
+            plan_a = plan_b
 
 
 def reset_plan_targets(rdplan, opts=None):

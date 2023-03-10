@@ -1177,7 +1177,7 @@ def labeling(widget, label_text, vertical=False, **kwargs):
     _layout = _Layout(c)
     _layout.setContentsMargins(0, 0, 0, 0)
     _layout.setSpacing(PD3)
-    _layout.addWidget(label)
+    _layout.addWidget(label, alignment=QtCore.Qt.AlignTop)
     _layout.addWidget(widget, **kwargs)
     return c
 
@@ -1364,6 +1364,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Online),
             "RequestRow": QtWidgets.QWidget(),
             "CopyRequest": QtWidgets.QPushButton(),
+            "MakeRequest": QtWidgets.QWidget(),
+            "ShowRequest": QtWidgets.QLineEdit(),
             "WebsiteURL": QtWidgets.QLabel(),
             "Response": QtWidgets.QLineEdit(),
             "DeactivateText": QtWidgets.QLabel(),
@@ -1405,38 +1407,79 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         )
 
         widgets["CopyRequest"].setObjectName("IconTextPushButton")
-        widgets["CopyRequest"].setText(" Copy Request Code")
-        widgets["CopyRequest"].setIcon(
-            QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
+        widgets["ShowRequest"].setReadOnly(True)
+        widgets["ShowRequest"].setPlaceholderText(
+            'Click button to generate request code for copy-pasting.'
         )
 
-        effects["Hint"].setOpacity(0)
         animations["Hint"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
         animations["Hint"].setDuration(500)
-        animations["Hint"].setStartValue(0)
-        animations["Hint"].setEndValue(1)
         widgets["WebsiteURL"].setGraphicsEffect(effects["Hint"])
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
             QtCore.Qt.TextBrowserInteraction)
-        widgets["WebsiteURL"].setText(
-            """
-            <style> p {color: #acacac;} a:link {color: #80e5cc;}</style>
-            <p>Copied! Now paste it to
-            <a href=\"https://ragdolldynamics.com/offline\">
-            ragdolldynamics.com/offline</a> (internet required)
-            </p>
-            """
-        )
         widgets["Response"].setPlaceholderText(
             "Paste response code from https://ragdolldynamics.com/offline"
         )
 
-        layout = QtWidgets.QHBoxLayout(widgets["RequestRow"])
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(PD3)
-        layout.addWidget(widgets["CopyRequest"])
-        layout.addWidget(widgets["WebsiteURL"])
+        if self._has_clipboard():
+            widgets["CopyRequest"].setText(" Copy Request Code")
+            widgets["CopyRequest"].setIcon(
+                QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
+            )
+            widgets["WebsiteURL"].setText(
+                """
+                <style> p {color: #acacac;} a:link {color: #80e5cc;}</style>
+                <p>Copied! Now paste it to
+                <a href=\"https://ragdolldynamics.com/offline\">
+                ragdolldynamics.com/offline</a> (internet required)
+                </p>
+                """
+            )
+            effects["Hint"].setOpacity(0)
+            animations["Hint"].setStartValue(0)
+            animations["Hint"].setEndValue(1)
+            widgets["ShowRequest"].setVisible(False)
+
+            layout = QtWidgets.QHBoxLayout(widgets["RequestRow"])
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(PD3)
+            layout.addWidget(widgets["CopyRequest"])
+            layout.addWidget(widgets["WebsiteURL"])
+            layout.addStretch(1)
+
+        else:
+            widgets["CopyRequest"].setText(" Make Request Code")
+            widgets["CopyRequest"].setIcon(
+                QtGui.QIcon(ui._resource("ui", "stars.svg"))
+            )
+            widgets["WebsiteURL"].setText(
+                """
+                <style> p {color: #acacac;} a:link {color: #80e5cc;}</style>
+                <p>&nbsp;
+                Click to generate request code and copy-paste to
+                <a href=\"https://ragdolldynamics.com/offline\">
+                ragdolldynamics.com/offline</a> (internet required)
+                </p>
+                """
+            )
+            effects["Hint"].setOpacity(1)
+            animations["Hint"].setStartValue(1)
+            animations["Hint"].setKeyValueAt(0.5, 0)
+            animations["Hint"].setEndValue(1)
+            widgets["ShowRequest"].setVisible(True)
+
+            layout = QtWidgets.QHBoxLayout(widgets["MakeRequest"])
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(PD3)
+            layout.addWidget(widgets["CopyRequest"])
+            layout.addWidget(widgets["ShowRequest"])
+
+            layout = QtWidgets.QVBoxLayout(widgets["RequestRow"])
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(PD4)
+            layout.addWidget(widgets["WebsiteURL"])
+            layout.addWidget(widgets["MakeRequest"])
 
         head = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(head)
@@ -1452,7 +1495,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.addWidget(widgets["OfflineHint"])
         layout.addWidget(widgets["DeactivateHint"])
         layout.addSpacing(PD3)
-        layout.addWidget(widgets["RequestWidget"], 0, QtCore.Qt.AlignLeft)
+        layout.addWidget(widgets["RequestWidget"])
         layout.addWidget(widgets["ResponseWidget"])
         layout.addWidget(widgets["ConfirmWidget"])
 
@@ -1485,6 +1528,10 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         self._widgets = widgets
         self._effects = effects
         self._animations = animations
+
+    def _has_clipboard(self):
+        app = QtWidgets.QApplication.instance()
+        return hasattr(app, "clipboard")
 
     def on_product_key_edited(self, accepted):
         # Temporarily save user input key for offline activation
@@ -1530,7 +1577,10 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         except Exception:
             self._widgets["ResponseWidget"].setEnabled(False)
         else:
-            base.write_clipboard(request_code)
+            if self._has_clipboard():
+                base.write_clipboard(request_code)
+            else:
+                self._widgets["ShowRequest"].setText(request_code)
             self._widgets["ResponseWidget"].setEnabled(True)
 
     def is_deactivation_requested(self):

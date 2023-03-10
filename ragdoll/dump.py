@@ -1548,6 +1548,10 @@ class Loader(object):
         mod.set_attr(marker["collideWithParent"],
                      not Joint["disableCollision"])
 
+        if "ignoreMass" in Joint:
+            # Added in 2023.03.23
+            mod.set_attr(marker["ignoreMass"], Joint["ignoreMass"])
+
         shape_type = {
             "Box": constants.BoxShape,
             "Sphere": constants.SphereShape,

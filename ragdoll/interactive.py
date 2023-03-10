@@ -865,6 +865,7 @@ def install_menu():
 
         item("bakePlan", plan_to_animation)
         item("bakeTargets", animation_to_plan, animation_to_plan_options)
+        item("extractPlan", extract_plan, extract_plan_options),
 
         divider("Edit")
 
@@ -873,6 +874,7 @@ def install_menu():
         item("resetPlanStepSequence", reset_step_sequence,
              reset_step_sequence_options)
         item("resetPlanTargets", reset_targets, reset_targets_options)
+        item("resetPlanOrigin", reset_plan_origin, reset_plan_origin_options)
         item("resetFoot", reset_foot, reset_foot_options)
 
         divider("System")
@@ -2993,13 +2995,28 @@ def plan_to_animation(selection=None, **opts):
             "Found no plans to bake"
         )
 
-    recording.plans_to_animation(plans)
+    with i__.Timer("planToAnimation") as duration:
+        start, end, dsts = recording.plans_to_animation(plans)
+
+    stats = (duration.s, (end - start) / max(0.00001, duration.s))
+    log.info("Recorded plan in %.2fs (%d fps)" % stats)
+
+    cmds.inViewMessage(
+        amg="Recorded plan in <hl>%.2fs</hl> (%d fps)" % stats,
+        pos="bottomCenter",
+        fade=True
+    )
 
     return kSuccess
 
 
 @with_exception_handling
 def align_plans(selection=None, **opts):
+    opts = dict({
+        "includePlanAttributes": _opt("planAlignPlanAttributes", opts),
+        "includeFootAttributes": _opt("planAlignFootAttributes", opts),
+    }, **(opts or {}))
+
     plans = plans_from_selection(selection) or cmdx.ls(type="rdPlan")
 
     if not plans:
@@ -3008,8 +3025,16 @@ def align_plans(selection=None, **opts):
             "Found no plans to bake"
         )
 
-    commands.align_plans(plans)
+    if len(plans) != 2:
+        raise i__.UserWarning(
+            "Bad Selection",
+            "Select two plans, a starting plan and one to follow it."
+        )
+
+    commands.align_plans(plans, opts)
     update_plan(plans, forceUpdate=True)
+
+    log.info("Aligned %s -> %s" % (str(plan) for plan in plans))
 
     return kSuccess
 
@@ -3032,6 +3057,24 @@ def animation_to_plan(selection=None, **opts):
         commands.animation_to_plan(plan, opts["increment"])
 
     update_plan(plans, forceUpdate=True)
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+def extract_plan(selection=None, **opts):
+    plans = plans_from_selection(selection) or cmdx.ls(type="rdPlan")
+
+    if not plans:
+        raise i__.UserWarning(
+            "No plan selected",
+            "Select one or more plans to extract"
+        )
+
+    result = recording.extract_plans(plans)
+
+    print(result)
+    log.info("Successfully extracted %s plans" % len(plans))
 
     return kSuccess
 
@@ -3119,8 +3162,7 @@ def reset_step_sequence(selection=None, **opts):
     for plan in plans:
         commands.reset_step_sequence(plan)
 
-    # Trigger a draw refresh
-    cmds.select(" ".join(str(plan) for plan in plans))
+    log.info("Successfully reset %d step sequences" % len(plans))
 
     return kSuccess
 
@@ -3139,8 +3181,28 @@ def reset_targets(selection=None, **opts):
     for plan in plans:
         commands.reset_plan_targets(plan)
 
-    # Trigger a draw refresh
-    cmds.select(" ".join(str(plan) for plan in plans))
+    log.info("Successfully reset %d targets" % len(plans))
+
+    return kSuccess
+
+
+@i__.with_undo_chunk
+@with_exception_handling
+def reset_plan_origin(selection=None, **opts):
+    plans = shapes_from_selection(selection, type="rdPlan")
+
+    if len(plans) < 1:
+        raise i__.UserWarning(
+            "Bad selection",
+            "Select one body and 1 or more feet"
+        )
+
+    for plan in plans:
+        commands.reset_plan_origin(plan)
+
+    update_plan()
+
+    log.info("Successfully reset %d target origins" % len(plans))
 
     return kSuccess
 
@@ -3872,6 +3934,10 @@ def assign_plan_options(*args):
     return _Window("assignPlan", assign_plan)
 
 
+def extract_plan_options(*args):
+    return _Window("extractPlan", extract_plan)
+
+
 def update_plan_options(*args):
     return _Window("updatePlan", update_plan)
 
@@ -3906,6 +3972,10 @@ def reset_plan_options(*args):
 
 def reset_step_sequence_options(*args):
     return _Window("resetPlanStepSequence", reset_step_sequence)
+
+
+def reset_plan_origin_options(*args):
+    return _Window("resetPlanOrigin", reset_plan_origin)
 
 
 def reset_targets_options(*args):

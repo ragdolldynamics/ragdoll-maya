@@ -519,6 +519,22 @@
         "help": "Always keep plan up to date."
     },
 
+    "planAlignPlanAttributes": {
+        "name": "planAlignPlanAttributes",
+        "label": "Include Plan Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Include plan attributes in alignment, including mass and gravity."
+    },
+
+    "planAlignFootAttributes": {
+        "name": "planAlignFootAttributes",
+        "label": "Include Foot Attributes",
+        "type": "Boolean",
+        "default": true,
+        "help": "Include feet attributes in alignment, including limits."
+    },
+
     "planAutoClean": {
         "name": "planAutoClean",
         "label": "Auto Clean",

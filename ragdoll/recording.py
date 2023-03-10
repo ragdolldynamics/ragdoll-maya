@@ -1215,12 +1215,18 @@ def _find_destinations(markers, opts=None):
 
 
 @internal.with_undo_chunk
-def plans_to_animation(plans, layer=None):
-    assert plans and all(plan.is_a("rdPlan") for plan in plans), (
-        "%s was not a list of plans" % str(plans))
+def extract_plans(plans, opts=None):
 
-    # Order plans by start frame
-    plans = sorted(plans, key=lambda plan: plan["_startTime"].asTime().value)
+    opts = dict({
+        "sorted": False,
+    }, **(opts or {}))
+
+    if opts["sorted"]:
+        # Order plans by start frame
+        plans = sorted(
+            plans,
+            key=lambda plan: plan["_startTime"].asTime().value
+        )
 
     # Combine trajectories from all plans into one
     #
@@ -1274,8 +1280,12 @@ def plans_to_animation(plans, layer=None):
 
                 if name not in trajectories:
                     trajectories[name] = {
-                        "tx": {}, "ty": {}, "tz": {},
-                        "rx": {}, "ry": {}, "rz": {},
+                        "tx": {},
+                        "ty": {},
+                        "tz": {},
+                        "rx": {},
+                        "ry": {},
+                        "rz": {},
                     }
 
                 # Add shorthand for readability
@@ -1298,9 +1308,6 @@ def plans_to_animation(plans, layer=None):
                     ry[start + frame] = rotate.y
                     rz[start + frame] = rotate.z
 
-    destinations = []
-    temporaries = []
-
     # Store our worldspace plan in temporary Maya worldspace transforms,
     # and then rely on Maya's constraint evalutaion to figure out the
     # relative transforms for any destination transform.
@@ -1313,33 +1320,63 @@ def plans_to_animation(plans, layer=None):
     # and will comply with any evaluation Maya can throw at us, so long as
     # they are supported by Maya's native constraints.
     #
+
+    dst_to_out = {}
+    for dst, trajectory in trajectories.items():
+        with cmdx.DagModifier() as mod:
+            out = mod.create_node("transform", name=dst + "_out")
+
+            mod.set_attr(out["tx"], trajectory["tx"])
+            mod.set_attr(out["ty"], trajectory["ty"])
+            mod.set_attr(out["tz"], trajectory["tz"])
+            mod.set_attr(out["rx"], trajectory["rx"])
+            mod.set_attr(out["ry"], trajectory["ry"])
+            mod.set_attr(out["rz"], trajectory["rz"])
+
+            dst_to_out[dst] = out
+
+    return start_frame, end_frame, dst_to_out
+
+
+@internal.with_undo_chunk
+def plans_to_animation(plans, opts=None):
+    assert plans and all(plan.is_a("rdPlan") for plan in plans), (
+        "%s was not a list of plans" % str(plans))
+
+    opts = dict({
+        "layer": None,
+    }, **(opts or {}))
+
+    start_frame, end_frame, dst_to_out = extract_plans(plans)
+
+    # Sort out orientations between plans, e.g.
+    # plan A at 50 and plan B starting at 100
+    _quat_filter(dst_to_out.values())
+
+    # Set initial key
     with internal.with_time(start_frame):
-        for dst, trajectory in trajectories.items():
-            with cmdx.DagModifier() as mod:
-                out = mod.create_node("transform", name=dst + "_out")
+        for dst in dst_to_out:
+            for channel in ("tx", "ty", "tz", "rx", "ry", "rz"):
+                attr = cmdx.encode(dst)[channel]
 
-                # ..with plan as keyframes
-                mod.set_attr(out["tx"], trajectories[dst]["tx"])
-                mod.set_attr(out["ty"], trajectories[dst]["ty"])
-                mod.set_attr(out["tz"], trajectories[dst]["tz"])
-                mod.set_attr(out["rx"], trajectories[dst]["rx"])
-                mod.set_attr(out["ry"], trajectories[dst]["ry"])
-                mod.set_attr(out["rz"], trajectories[dst]["rz"])
+                # If it's got an input connection,
+                # the original value is already safe
+                if attr.connected:
+                    continue
 
-                dst = cmdx.encode(dst)
-                temporaries += [out]
+                if attr.editable:
+                    cmds.setKeyframe(dst,
+                                     attribute=channel,
+                                     insertBlend=False)
 
-                # Evaluate new animation above
-                mod.do_it()
+    with internal.with_time(start_frame):
+        for dst, out in dst_to_out.items():
+            cmds.parentConstraint(str(out), str(dst),
+                                  maintainOffset=True)
 
-                destinations += [dst]
-                cmds.parentConstraint(str(out), str(dst), maintainOffset=True)
-
-    destinations = list(str(dst) for dst in destinations)
-
-    if layer is None:
-        layer = plans[0].name() + "Layer"
-        layer = cmds.animLayer(layer, override=True)
+    if opts["layer"] is None:
+        opts["layer"] = plans[0].name() + "Layer"
+        opts["layer"] = cmds.animLayer(opts["layer"], override=True)
 
     kwargs = {
         "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),
@@ -1351,12 +1388,15 @@ def plans_to_animation(plans, layer=None):
         "preserveOutsideKeys": True,
         "sparseAnimCurveBake": False,
         "removeBakedAttributeFromLayer": False,
-        "removeBakedAnimFromLayer": True,
+        "removeBakedAnimFromLayer": False,
         "minimizeRotation": True,
         "bakeOnOverrideLayer": True,
-        "destinationLayer": layer
+        "destinationLayer": opts["layer"]
     }
 
     with internal.maintained_selection():
+        destinations = list(dst_to_out.keys())
         cmds.bakeResults(*destinations, **kwargs)
-        cmds.delete(list(str(out) for out in temporaries))
+        cmds.delete(list(str(out) for out in dst_to_out.values()))
+
+    return start_frame, end_frame, list(dst_to_out.keys())

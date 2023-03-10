@@ -260,6 +260,8 @@
         "summary": "Align the end of plan A with the beginning of plan B",
         "description": "Use this to chain multiple plans together, such that one plan starts after another has finished.",
         "options": [
+            "planAlignPlanAttributes",
+            "planAlignFootAttributes"
         ]
     },
 
@@ -286,6 +288,15 @@
         "icon": "softpin.png",
         "summary": "Reset the targets of a plan",
         "description": "Use this to regain a clean slate when there are too many targets involved.",
+        "options": [
+        ]
+    },
+
+    "resetPlanOrigin": {
+        "label": "Reset Origin",
+        "icon": "back.png",
+        "summary": "Snap first target to animation",
+        "description": "If you change the starting position of your character after having assigned a plan, use this to realign the two.",
         "options": [
         ]
     },
@@ -379,10 +390,18 @@
         "summary": "Recompute locomotion for all or selected plans.",
         "description": "Compute a new locomotion.",
         "options": [
-            "planDuration",
             "planForceUpdate",
             "planAutoUpdate",
             "planParallelUpdate"
+        ]
+    },
+
+    "extractPlan": {
+        "label": "Extract Plan",
+        "icon": "exoskeleton2.png",
+        "summary": "Extract keyframes from plan.",
+        "description": "Export keyframes from plan onto locators that you may constrain manually to your character.",
+        "options": [
         ]
     },
 

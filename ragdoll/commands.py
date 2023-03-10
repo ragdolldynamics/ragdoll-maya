@@ -2079,13 +2079,8 @@ def assign_plan(body, feet, opts=None):
 
         mod.set_attr(rdplan["gravity"], cmdx.up_axis() * -982)
         mod.set_attr(rdplan["duration"], duration)
-
-        pivot = cmdx.Vector()
-
-        if body.has_attr("rotatePivot"):
-            pivot = body["rotatePivot"].read()
-
-        mod.set_attr(rdplan["drawOffset"], pivot)
+        mod.set_attr(rdplan["originMatrix"],
+                     body["worldMatrix"][0].as_matrix())
 
         space_multiplier = 1.0
 
@@ -2118,10 +2113,24 @@ def assign_plan(body, feet, opts=None):
         extents = [bbox.width, bbox.height, bbox.depth]
 
         # For 2 feet, we have no thickness!
+        #
+        #       o
+        #      / \
+        #     /   \
+        #    /     \
+        #   o       o
+        #
         if min(extents) < max(extents) / 4:
             extents[extents.index(min(extents))] = max(extents) / 4
 
         # For 1 foot, we have no depth!
+        #
+        #       o
+        #       |
+        #       |
+        #       |
+        #       o
+        #
         if min(extents) < max(extents) / 4:
             extents[extents.index(min(extents))] = max(extents) / 4
 
@@ -2130,13 +2139,6 @@ def assign_plan(body, feet, opts=None):
     with cmdx.DGModifier() as dgmod:
         for index, foot in enumerate(feet):
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
-
-            pivot = cmdx.Vector()
-
-            if foot.has_attr("rotatePivot"):
-                pivot = foot["rotatePivot"].read()
-
-            mod.set_attr(rdfoot["drawOffset"], pivot)
 
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
@@ -2149,6 +2151,8 @@ def assign_plan(body, feet, opts=None):
 
             dgmod.set_attr(rdfoot["color"], palette.pop(0))
             dgmod.set_attr(rdfoot["version"], internal.version())
+            dgmod.set_attr(rdfoot["originMatrix"],
+                           foot["worldMatrix"][0].as_matrix())
 
     reset_step_sequence(rdplan, opts)
     reset_plan_targets(rdplan, opts)
@@ -2156,7 +2160,7 @@ def assign_plan(body, feet, opts=None):
     return rdplan
 
 
-def align_plans(plans, auto_order=False):
+def align_plans(plans, opts=None):
     r"""Align end of plan A with beginning of plan B
 
           Plan A                  Plan B
@@ -2176,7 +2180,13 @@ def align_plans(plans, auto_order=False):
         "'%s' was not rdPlan nodes" % str(plans)
     )
 
-    if auto_order:
+    opts = dict({
+        "autoOrder": False,
+        "includePlanAttributes": True,
+        "includeFootAttributes": True,
+    }, **(opts or {}))
+
+    if opts["autoOrder"]:
         plans = sorted(
             plans, key=lambda plan: plan["_startTime"].asTime().value
         )
@@ -2192,16 +2202,16 @@ def align_plans(plans, auto_order=False):
             mod.set_attr(plan_b["startTime"], constants.StartTimeCustom)
             mod.set_attr(plan_b["startTimeCustom"], prev_end)
 
-            # Align attributes
-            for attr in ("extentsX",
-                         "extentsY",
-                         "extentsZ",
-                         "gravityX",
-                         "gravityY",
-                         "gravityZ",
-                         "spaceMultiplier",
-                         "mass"):
-                mod.set_attr(plan_b[attr], plan_a[attr].read())
+            if opts["includePlanAttributes"]:
+                for attr in ("extentsX",
+                             "extentsY",
+                             "extentsZ",
+                             "gravityX",
+                             "gravityY",
+                             "gravityZ",
+                             "spaceMultiplier",
+                             "mass"):
+                    mod.set_attr(plan_b[attr], plan_a[attr].read())
 
             # Align body
             end_index = plan_a["targets"].count() - 1
@@ -2225,19 +2235,39 @@ def align_plans(plans, auto_order=False):
                     # Destination plan_b didn't have this foot, and that's OK
                     continue
 
-                for attr in ("linearLimitX",
-                             "linearLimitY",
-                             "linearLimitZ",
-                             "limitOffsetX",
-                             "limitOffsetY",
-                             "limitOffsetZ"):
-                    mod.set_attr(rdfoot_b[attr], rdfoot_a[attr].read())
+                if opts["includeFootAttributes"]:
+                    for attr in ("linearLimitX",
+                                 "linearLimitY",
+                                 "linearLimitZ",
+                                 "limitOffsetX",
+                                 "limitOffsetY",
+                                 "limitOffsetZ"):
+                        mod.set_attr(rdfoot_b[attr], rdfoot_a[attr].read())
 
                 end_index = rdfoot_a["targets"].count() - 1
                 end = rdfoot_a["targets"][end_index].as_matrix()
                 mod.set_attr(rdfoot_b["targets"][0], end)
 
             plan_a = plan_b
+
+
+def reset_plan_origin(rdplan, opts=None):
+    body = rdplan["sourceTransform"].input(type=cmdx.kDagNode)
+    assert body, "%s had no sourceTransform" % rdplan
+
+    rdfeet = [el.input(type="rdFoot") for el in rdplan["inputStart"]]
+    assert rdfeet, "%s had no feet" % rdplan
+
+    feet = [f["sourceTransform"].input() for f in rdfeet]
+    assert feet, "%s had no feet" % rdplan
+
+    with cmdx.DagModifier() as mod:
+        mod.set_attr(rdplan["targets"][0], body["worldMatrix"][0].as_matrix())
+
+    with cmdx.DGModifier() as dgmod:
+        for foot, rdfoot in zip(feet, rdfeet):
+            dgmod.set_attr(rdfoot["targets"][0],
+                           foot["worldMatrix"][0].as_matrix())
 
 
 def reset_plan_targets(rdplan, opts=None):
@@ -2249,6 +2279,11 @@ def reset_plan_targets(rdplan, opts=None):
 
     feet = [f["sourceTransform"].input() for f in rdfeet]
     assert feet, "%s had no feet" % rdplan
+
+    # Housework
+    internal.shrink_array_attribute(rdplan["targets"], 2)
+    internal.shrink_array_attribute(rdplan["targetsTime"], 2)
+    internal.shrink_array_attribute(rdplan["targetsHard"], 2)
 
     body_pos = _position_incl_pivot(body)
     relative_positions = [

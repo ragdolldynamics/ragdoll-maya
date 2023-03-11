@@ -171,7 +171,7 @@ def create_pin_constraint(child, parent=None, opts=None):
 
     child = _cmdx.encode(child)
     return _return(
-        _commands.create_pin_constraint(_child, parent, opts)
+        _commands.create_pin_constraint(child, parent, opts)
     )
 
 
@@ -258,6 +258,32 @@ def unparent_marker(child, opts=None):
 
     child = _cmdx.encode(child)
     _commands.unparent_marker(child, opts=opts)
+
+
+@_wraps(_commands.assign_collision_group)
+def assign_collision_group(markers, group=None, delete_orphans=True):
+    markers = [_cmdx.encode(marker) for marker in markers]
+    assert all(marker.is_a("rdMarker") for marker in markers)
+
+    _commands.assign_collision_group(markers, group, delete_orphans)
+
+
+@_wraps(_commands.assign_collision_group)
+def add_to_collision_group(markers, group, delete_orphans=True):
+    markers = [_cmdx.encode(marker) for marker in markers]
+    assert all(marker.is_a("rdMarker") for marker in markers)
+    _assert_is_a(group, "rdCollisionGroup")
+
+    _commands.add_to_collision_group(markers, group, delete_orphans)
+
+
+@_wraps(_commands.assign_collision_group)
+def remove_from_collision_group(markers, group, delete_orphans=True):
+    markers = [_cmdx.encode(marker) for marker in markers]
+    assert all(marker.is_a("rdMarker") for marker in markers)
+    _assert_is_a(group, "rdCollisionGroup")
+
+    _commands.remove_from_collision_group(markers, group, delete_orphans)
 
 
 @_wraps(_commands.delete_physics)
@@ -368,7 +394,9 @@ recordPhysics = record_physics
 reinterpretPhysics = reinterpret_physics
 deletePhysics = delete_physics
 deleteAllPhysics = delete_all_physics
-
+assignCollisionGroup = assign_collision_group
+addToCollisionGroup = add_to_collision_group
+removeFromCollisionGroup = remove_from_collision_group
 
 # Members are repeated here in __all__ for two reasons:
 # 1. Linting picks up any member in here that isn't present above,
@@ -433,6 +461,9 @@ __all__ = [
     "reparentMarker",
     "unparentMarker",
     "replaceMesh",
+    "assignCollisionGroup",
+    "addToCollisionGroup",
+    "removeFromCollisionGroup",
 
     "exportPhysics",
     "recordPhysics",

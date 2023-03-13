@@ -185,3 +185,20 @@ QMenu::item:selected {
 QMenu::item:disabled {
     color: #616161;
 }
+#OfflineRequestText {
+    color: #606060;
+    border: 1px solid #4d4d4d;
+    border-radius: 10px;
+    padding-left: 10px;
+}
+#OfflineRequestText QScrollBar:vertical {
+    background: transparent;
+}
+#OfflineResponseText {
+    border: 1px solid #4d4d4d;
+    border-radius: 10px;
+    padding-left: 10px;
+}
+#OfflineResponseText QScrollBar:vertical {
+    background: transparent;
+}

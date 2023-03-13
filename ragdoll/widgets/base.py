@@ -84,8 +84,8 @@ def qt_wrap_instance(ptr, base=None):
 
 
 def write_clipboard(text):
-    app = QtWidgets.QApplication.instance()
-    app.clipboard().setText(text)
+    clip = QtWidgets.QApplication.clipboard()
+    clip.setText(text)
 
 
 class ToggleButton(QtWidgets.QPushButton):

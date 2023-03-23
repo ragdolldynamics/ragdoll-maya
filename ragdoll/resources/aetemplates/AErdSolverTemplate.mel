@@ -48,6 +48,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -addControl "solverType";
             editorTemplate -addControl "collisionDetectionType";
             editorTemplate -addControl "frameskipMethod";
+            editorTemplate -addControl "timeMethod";
             // editorTemplate -addControl "maxMassRatio";
             // editorTemplate -addControl "enableStabilisation";
             // editorTemplate -addControl "enableEnhancedFriction";

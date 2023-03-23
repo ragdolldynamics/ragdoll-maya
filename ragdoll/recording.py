@@ -377,7 +377,7 @@ class _Recorder(object):
         # Channels without keyframes can still get recorded onto a layer,
         # but when such a layer is deleted Maya will forget the original
         # value of said channel, resulting in data loss for the animator.
-        # This protects against that, but storing the original value
+        # This protects against that by storing the original value.
         if self._opts["setInitialKey"]:
             destinations = self._find_destinations()
             for dst in destinations:

@@ -3154,6 +3154,42 @@ def merge_solvers(a, b):
     return True
 
 
+def simulate_on(solver, increment=2):
+    """Simlate on 2's or 3's
+
+    Emulate a stop-motion look by simulating every 2 or 3 frames.
+
+    """
+
+    # Can't simulate any more often than once per frame (no fractions)
+    increment = max(1, increment)
+
+    transform = solver.parent()
+
+    with cmdx.DGModifier() as dgmod:
+        if not transform.has_attr("animatedTime"):
+            dgmod.add_attr(transform, cmdx.Time("animatedTime", keyable=True))
+            dgmod.do_it()
+
+        start = int(cmdx.min_time().value)
+        end = cmdx.time(increment).as_units(cmdx.Seconds)
+        end *= cmdx.ticks_per_second()
+
+        dgmod.set_attr(transform["animatedTime", cmdx.Stepped], {
+            start: 0,
+            start + increment: end
+        })
+
+        dgmod.connect(transform["animatedTime"], solver["currentTime"])
+        dgmod.set_attr(solver["timeMethod"], constants.RealisticTime)
+
+        curve = transform["animatedTime"].input(type="animCurveTT")
+        dgmod.set_attr(curve["preInfinity"], 4)  # Cycle with offset
+        dgmod.set_attr(curve["postInfinity"], 4)
+
+    return curve
+
+
 def _polycube(parent, width=1, height=1, depth=1, offset=None):
     name = parent.name(namespace=False)
 

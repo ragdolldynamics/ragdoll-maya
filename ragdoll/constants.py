@@ -117,6 +117,10 @@ FieldImpulse = 1
 FieldVelocityChange = 2
 FieldAcceleration = 3
 
+# rdSolver.timeMethod enums
+ConsistentTime = 0
+RealisticTime = 1
+
 #
 # Deprecated
 #

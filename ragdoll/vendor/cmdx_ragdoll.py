@@ -5578,7 +5578,7 @@ sqrt = math.sqrt
 
 def time(frame):
     assert isinstance(frame, int), "%s was not an int" % frame
-    return om.MTime(frame, TimeUiUnit())
+    return HashableTime(om.MTime(frame, TimeUiUnit()))
 
 
 def frame(time):
@@ -6878,6 +6878,10 @@ class HashableTime(om.MTime):
     def __hash__(self):
         return hash(self.value)
 
+    if ENABLE_PEP8:
+        def as_units(self, unit):
+            return self.asUnits(unit)
+
 
 # Convenience functions
 def connect(a, b):
@@ -6909,6 +6913,9 @@ def currentFrame(frame=None):
             frame = int(frame.value)
 
         cmds.currentTime(frame)
+
+
+ticksPerSecond = om.MTime.ticksPerSecond
 
 
 def selectedTime():
@@ -7427,6 +7434,8 @@ if ENABLE_PEP8:
     selected_time = selectedTime
     up_axis = upAxis
     set_up_axis = setUpAxis
+    ticks_per_second = ticksPerSecond
+
 
 
 # Special-purpose functions

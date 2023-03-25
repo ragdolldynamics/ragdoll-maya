@@ -561,16 +561,17 @@ def _install_fit_to_view():
 
 
 def _uninstall_fit_to_view():
-    try:
-        # Just deleting this thing is not enough, apparently
-        __.shortcut.setEnabled(False)
-        __.shortcut.setKey(None)
-        __.shortcut.activated.disconnect(_fit_to_view)
-        del(__.shortcut)
+    if __.shortcut is not None:
+        try:
+            # Just deleting this thing is not enough, apparently
+            __.shortcut.setEnabled(False)
+            __.shortcut.setKey(None)
+            __.shortcut.activated.disconnect(_fit_to_view)
+            del(__.shortcut)
 
-    except Exception as e:
-        log.debug("Had trouble uninstalling the View to Fit hotkey")
-        log.debug(str(e))
+        except Exception as e:
+            log.debug("Had trouble uninstalling the Fit to View hotkey")
+            log.debug(str(e))
 
 
 def _on_manipulator_entered(clientData=None):

@@ -8,6 +8,7 @@ __.optionvars = {}
 __.xbmlangpath = "xbmlangpath"
 __.aetemplates = "aetemplates"
 __.callbacks = []
+__.shortcut = None  # Fit to View hotkey
 __.version = 0
 __.version_str = "0"
 __.previousvars = {}

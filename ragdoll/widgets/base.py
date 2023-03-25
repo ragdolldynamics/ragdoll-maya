@@ -1,7 +1,7 @@
 
 import os
 import re
-import sys
+import time
 import json
 import logging
 import weakref
@@ -84,8 +84,8 @@ def qt_wrap_instance(ptr, base=None):
 
 
 def write_clipboard(text):
-    app = QtWidgets.QApplication.instance()
-    app.clipboard().setText(text)
+    clip = QtWidgets.QApplication.clipboard()
+    clip.setText(text)
 
 
 class ToggleButton(QtWidgets.QPushButton):
@@ -651,6 +651,7 @@ class ProductTimelineGraphicsView(QtWidgets.QGraphicsView):
 
 
 class ProductTimelineModel(QtCore.QObject):
+    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineModel, self).__init__(parent)
@@ -663,6 +664,8 @@ class ProductTimelineModel(QtCore.QObject):
         self.max_gap = 7 * 4  # don't visualize release gap over 4 weeks
 
     def set_data(self, released_versions, current_ver, expiry_date):
+        self.correction = dict()
+
         current_ver = datetime(*map(int, current_ver.split(".")))
         released_versions = sorted(released_versions)
         released_dates = [
@@ -683,9 +686,15 @@ class ProductTimelineModel(QtCore.QObject):
                 offset = _days_after_v0 - previous - self.max_gap
                 self.correction[_days_after_v0] = offset
 
+        view_min = first_date - timedelta(days=self.DayPadding)
+        view_max = datetime.today() + timedelta(days=self.DayPadding)
+
         incidents = [datetime.today(), expiry_date]
 
         for date in sorted(released_dates + incidents):
+            if not view_min < date < view_max:
+                continue
+
             days_after_v0 = (date - first_date).days
 
             if date not in incidents:
@@ -707,9 +716,7 @@ class ProductTimelineModel(QtCore.QObject):
 
 class ProductTimelineBase(QtWidgets.QWidget):
     message_sent = QtCore.Signal(str)
-
     DayWidth = px(3)
-    DayPadding = 45  # how many days before first release and after today
 
     def __init__(self, parent=None):
         super(ProductTimelineBase, self).__init__(parent)
@@ -738,6 +745,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
         self.view = view
         self.scene = scene
         self._today = datetime.now()
+        self._day_padding = 0
         self._days = 0
         self._expiry_days = 0
         self._expiry_date = None
@@ -757,12 +765,14 @@ class ProductTimelineBase(QtWidgets.QWidget):
         current_ver = model.current
         first_date = model.first
         expiry_date = model.expiry_date
+        day_padding = model.DayPadding
 
-        self._days = self.DayPadding + (self._today - first_date).days
-        self._expiry_days = self.DayPadding + (expiry_date - first_date).days
-        self._expiry_shown = self._expiry_days - self._days < self.DayPadding
+        self._day_padding = day_padding
+        self._days = day_padding + (self._today - first_date).days
+        self._expiry_days = day_padding + (expiry_date - first_date).days
+        self._expiry_shown = self._expiry_days - self._days < day_padding
         self._expiry_date = expiry_date
-        self._view_len = (self._days + self.DayPadding) * self.DayWidth
+        self._view_len = (self._days + day_padding) * self.DayWidth
         self._current = current_ver
         self._first = first_date
         self._versions = model.versions
@@ -780,7 +790,7 @@ class ProductTimelineBase(QtWidgets.QWidget):
                 total_offset += offset
         days_after_v0 -= total_offset
 
-        days_after_v0 += self.DayPadding
+        days_after_v0 += self._day_padding
         return days_after_v0 * self.DayWidth
 
     def draw_item(self, x, y, w, h, r, color, text=None, z=0):
@@ -944,8 +954,9 @@ class ProductReleasedView(ProductTimelineBase):
         return prev_items
 
     def _draw_button(self, date, y_base):
+        _n = self._latest_update > self._current
         cl = ("#1953be" if date == self._current else
-              "#f8d803" if date == self._latest_update else "#101010")
+              "#f8d803" if date == self._latest_update and _n else "#101010")
         ver = date.strftime("%Y.%m.%d")
         tx = ver + " "  # a trailing space for better width
         w, h = self.ButtonWidth, self.ButtonHeight
@@ -1071,6 +1082,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         self._model = model
         self._widgets = widgets
         self._overlays = overlays
+        self._from_internet = None
         # init
         self.on_message_sent("")
 
@@ -1085,17 +1097,30 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         )
 
     def on_message_sent(self, text):
-        text = text or "Drag to navigate, or scroll with Alt key pressed"
+        default = "Drag to navigate, or scroll with Alt key pressed  "
+        if self._from_internet:
+            default += "(Timeline fetched from ragdolldynamics.com)"
+        else:
+            default += "(Timeline parsed from local cache)"
+
+        text = text or default
         self._widgets["Message"].setText(text)
 
-    def set_data(self, released_versions, current_ver, expiry_date):
+    def set_data(self,
+                 released_versions,
+                 current_ver,
+                 expiry_date,
+                 from_internet):
         self._model.set_data(released_versions, current_ver, expiry_date)
+        self._from_internet = from_internet
 
         self._widgets["Timeline"].set_data_from_model(self._model)
         self._widgets["Released"].set_data_from_model(self._model)
         self._update_button(self._model)
         # to trigger indicator region masking...
         self.adjustSize()
+        # refresh text
+        self.on_message_sent("")
 
     def draw(self):
         self._widgets["Timeline"].draw()
@@ -1115,11 +1140,17 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
     def _update_button(self, model):
         btn = self._widgets["Update"]
-        up_to_date = model.latest_update == model.current
-        btn.setText(
-            "Current Version: %s" % model.current.strftime("%Y.%m.%d")
-            if up_to_date else "Download Latest"
-        )
+        up_to_date = model.latest_update <= model.current
+
+        if up_to_date:
+            text = "%s Installed" % model.current.strftime("%Y.%m.%d")
+            if self._from_internet:
+                btn.setText(text)
+            else:
+                btn.setText(text + " (Check Latest)")
+        else:
+            btn.setText("Download Latest")
+
         fg = "#ffffff" if up_to_date else "#000000"
         bg = "#1953be" if up_to_date else "#f8d803"
 
@@ -1141,7 +1172,7 @@ class ProductTimelineWidget(QtWidgets.QWidget):
             """ % (px(2), px(8), px(9.5), bg, fg,
                    bgc.lighter().name(), bgc.darker().name())
         )
-        btn.setEnabled(not up_to_date)
+        btn.setEnabled(not (self._from_internet and up_to_date))
 
 
 class ProductStatus(object):
@@ -1325,8 +1356,7 @@ class InternetRequestHandler(object):
 
     def _preflight(self):
         return (not NO_INTERNET
-                and self.__is_ssl_cert_file_exists()
-                and not self.__has_open_ssl_bug())
+                and self.__is_open_ssl_working())
 
     def _run(self):
         if NO_WORKER_THREAD_INTERNET:
@@ -1370,75 +1400,63 @@ class InternetRequestHandler(object):
                 self._promise.remove(request_obj)
                 request_obj.callback(worker.cache)
 
-    def __has_open_ssl_bug(self):
-        """Return True if OpenSSL bug found
-        https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
-        """
-        if os.name != "nt":
-            return False
-
+    def __is_open_ssl_working(self):
+        """Return True if OpenSSL works"""
         try:
             OPENSSL_VERSION_INFO = __import__("ssl").OPENSSL_VERSION_INFO
         except ImportError:
-            return True  # no ssl, proceed as bugged and without internet.
+            return False  # no ssl, proceed as bugged and without internet.
 
-        has_ssl_bug = (1, 0, 2, 7) <= OPENSSL_VERSION_INFO < (1, 0, 2, 9)
-        has_workaround = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
-        cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
-        is_intel = "GenuineIntel" in cpu_ident
+        # Windows, Intel CPU, Maya 2019/2020
+        # https://support.foundry.com/hc/en-us/articles/360012750300-Q100573
+        if os.name == "nt":
+            has_ssl_bug = (1, 0, 2, 7) <= OPENSSL_VERSION_INFO < (1, 0, 2, 9)
+            has_fix = os.getenv("OPENSSL_ia32cap") == "~0x200000200000000"
+            cpu_ident = os.getenv("PROCESSOR_IDENTIFIER", "")
+            is_intel = "GenuineIntel" in cpu_ident
 
-        if not (is_intel and has_ssl_bug and not has_workaround):
+            if is_intel and has_ssl_bug and not has_fix:
+                return False
+
+        # If ssl is working, this should not take over than 1 sec.
+        timeout = 1.2
+
+        exe = "mayapy.exe" if os.name == "nt" else "mayapy"
+        exe = os.path.join(os.getenv("MAYA_LOCATION", ""), "bin", exe)
+        if not os.access(exe, os.X_OK):
+            log.debug("Unable to find interpreter to test OpenSSL: %s" % exe)
             return False
 
-        # a way to bypass subprocess checking.
-        manual_over = os.getenv("RAGDOLL_OVER_OPENSSL_CHECK", "").lower()
-        if manual_over.isdigit():
-            return int(manual_over)
-        elif manual_over in ["y", "yes"]:
-            return False  # yes, proceed as no-bug.
-        elif manual_over in ["n", "no"]:
-            return True  # no, proceed as bugged and without internet.
+        log.debug("Testing OpenSSL with: %s" % exe)
 
-        exe = sys.executable
-        if exe.endswith("maya.exe"):
-            exe = os.path.join(os.path.dirname(exe), "mayapy.exe")
+        cmd = ("import ssl;"
+               "c = ssl.create_default_context();"  # crash if OpenSSL bugged
+               "assert len(c.get_ca_certs());")     # check installed cert
 
-        cmd = "import ssl;ssl.get_server_certificate(('www.google.com',443))"
+        arg = dict(
+            creationflags=0x08000000,  # no window
+        )
+        if os.name != "nt":
+            arg.pop("creationflags")
+
         p = subprocess.Popen(
             [exe, "-c", cmd],
             stdout=subprocess.PIPE,
-            creationflags=0x08000000  # no window
+            stderr=subprocess.PIPE,
+            **arg
         )
-        _, _ = p.communicate()
-        unsafe = p.wait() != 0
-        if unsafe:
-            log.debug("OpenSSL connection issue detected, "
-                      "please refer to this article for detail: "
-                      "https://support.foundry.com/hc/en-us/articles/"
-                      "360012750300-Q100573")
-        return unsafe
+        while p.poll() is None and timeout > 0:  # py2 compatible timeout
+            time.sleep(0.1)
+            timeout -= 0.1
 
-    def __is_ssl_cert_file_exists(self):
-        ssl_cert_file = os.getenv("SSL_CERT_FILE")
-        if ssl_cert_file:
-            if os.path.isfile(ssl_cert_file):
-                return True
-            else:
-                log.debug('Invalid SSL certificate file: Environment variable'
-                          '"SSL_CERT_FILE" is set but file path not exists: '
-                          '%s' % ssl_cert_file)
-                return False
+        if p.poll() is None:  # process still running
+            working = False   # timeout as bugged, should not take this long
         else:
-            return True  # Env not set, take it as valid setup
+            _, _ = p.communicate()
+            working = p.wait() == 0
 
-
-def _ping(url):
-    try:
-        response = request.urlopen(url)
-        return response.code == 200
-    except Exception as e:
-        log.debug(e)
-        return False
+        log.debug("OpenSSL test %s" % ("passed." if working else "failed!"))
+        return working
 
 
 class RequestBaseCls(object):
@@ -1463,6 +1481,15 @@ class RequestBaseCls(object):
 
 
 class RequestVersionHistory(RequestBaseCls):
+    """
+    Callback returns:
+        from_internet (bool): Was release history parsed from ragdoll website?
+        released_versions (list): Versions that has been released so far.
+
+    If `from_internet` is false, `released_versions` is read from a cache
+    that shipped with plugin.
+
+    """
 
     def run(self):
         released = []
@@ -1488,7 +1515,10 @@ class RequestVersionHistory(RequestBaseCls):
         else:
             log.debug("Release history fetched from %s" % url)
 
-        return released or self.default()
+        if released:
+            return True, released
+        else:
+            return self.default()
 
     def default(self):
         released = []
@@ -1500,28 +1530,7 @@ class RequestVersionHistory(RequestBaseCls):
                 released = json.load(f)
                 log.debug("Release history loaded from %s" % cache)
 
-        return released
-
-
-class RequestRagdollWebsite(RequestBaseCls):
-    """Check the connectivity with Ragdoll website
-
-    The result will ONLY be used as a condition for displaying update
-    checking ability on GUI. The result will NOT be used as a condition
-    of any kind of operation.
-
-    """
-
-    def run(self):
-        return _ping(RAGDOLL_DYNAMICS_VERSIONS_URL)  # type: bool
-
-    def default(self):
-        # This fallback function gets used either because of OpenSSL bug or
-        # env var `RAGDOLL_SKIP_UPDATE_CHECK` is set.
-        # (see `InternetRequestHandler._preflight()`)
-        # We don't want to bother users about this on GUI if above case met,
-        # so just returning `True` here.
-        return True
+        return False, released
 
 
 def text_to_color(text):

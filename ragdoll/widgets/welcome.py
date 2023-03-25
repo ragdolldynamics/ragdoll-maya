@@ -162,41 +162,23 @@ class GreetingSplash(QtWidgets.QLabel):
         painter.drawPixmap(0, 0, self._image)
 
 
-class GreetingTopRight(QtWidgets.QWidget):
-    connection_checked = QtCore.Signal(bool)
+class GreetingTopOverlay(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(GreetingTopRight, self).__init__(parent)
+        super(GreetingTopOverlay, self).__init__(parent)
 
         widgets = {
-            "NoInternet": QtWidgets.QWidget(),
-            "NoInternetIcon": QtWidgets.QLabel(),
-            "NoInternetText": QtWidgets.QLabel(),
+            "Footer": QtWidgets.QWidget(),
             "Expiry": QtWidgets.QWidget(),
             "ExpiryIcon": QtWidgets.QLabel(),
             "ExpiryDate": QtWidgets.QLabel(),
         }
 
-        widgets["NoInternetIcon"].setFixedSize(px(12), px(12))
-        _icon = ui._resource("ui", "cloud-slash.svg").replace("\\", "/")
-        widgets["NoInternetIcon"].setStyleSheet("image: url(%s);" % _icon)
-        widgets["NoInternetText"].setText("No internet for checking update")
-        widgets["NoInternetText"].setStyleSheet("color: #b0b0b0;")
-        widgets["NoInternet"].setStyleSheet("background: transparent;")
-        widgets["NoInternet"].setVisible(False)
-
+        widgets["Footer"].setStyleSheet("background: transparent;")
         widgets["Expiry"].setFixedHeight(base.ProductReleasedView.ButtonHeight)
         widgets["ExpiryDate"].setAttribute(QtCore.Qt.WA_NoSystemBackground)
         widgets["ExpiryIcon"].setFixedSize(px(12), px(12))
         widgets["ExpiryDate"].setStyleSheet("color: #d3d3d3;")
-
-        layout = QtWidgets.QHBoxLayout(widgets["NoInternet"])
-        layout.setContentsMargins(0, 0, px(2), 0)
-        layout.setSpacing(0)
-        layout.addStretch(1)
-        layout.addWidget(widgets["NoInternetIcon"])
-        layout.addSpacing(px(4))
-        layout.addWidget(widgets["NoInternetText"])
 
         layout = QtWidgets.QHBoxLayout(widgets["Expiry"])
         layout.setContentsMargins(px(4), 0, px(8), 0)
@@ -206,18 +188,21 @@ class GreetingTopRight(QtWidgets.QWidget):
         layout.addSpacing(px(6))
         layout.addWidget(widgets["ExpiryDate"])
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, px(4), PD4, PD4 + px(3))
+        layout = QtWidgets.QHBoxLayout(widgets["Footer"])
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(widgets["NoInternet"])
         layout.addStretch(1)
-        layout.addWidget(widgets["Expiry"], alignment=QtCore.Qt.AlignRight)
+        layout.addWidget(widgets["Expiry"])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(PD4 + px(3), px(4), PD4, PD4 + px(3))
+        layout.setSpacing(0)
+        layout.addStretch(1)
+        layout.addWidget(widgets["Footer"])
 
         self.setFixedHeight(SPLASH_HEIGHT)
 
         self._widgets = widgets
-
-        self.connection_checked.connect(self.on_connection_checked)
 
     def set_expiry(self):
         p_ = product_status
@@ -246,19 +231,15 @@ class GreetingTopRight(QtWidgets.QWidget):
         self._widgets["ExpiryIcon"].setStyleSheet(
             "background: transparent; image: url(%s);" % icon)
 
-    def on_connection_checked(self, can_connect):
-        is_offline = not can_connect
-        self._widgets["NoInternet"].setVisible(is_offline)
-
 
 class GreetingInteract(QtWidgets.QWidget):
-    history_fetched = QtCore.Signal(list)
+    history_fetched = QtCore.Signal(tuple)
 
     def __init__(self, parent=None):
         super(GreetingInteract, self).__init__(parent)
 
         widgets = {
-            "TopRight": GreetingTopRight(),
+            "TopOverlay": GreetingTopOverlay(),
             "Timeline": base.ProductTimelineWidget(),
         }
 
@@ -267,7 +248,7 @@ class GreetingInteract(QtWidgets.QWidget):
         overlay = base.OverlayWidget(self)
         layout = QtWidgets.QVBoxLayout(overlay)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(widgets["TopRight"])
+        layout.addWidget(widgets["TopOverlay"])
         layout.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -284,13 +265,15 @@ class GreetingInteract(QtWidgets.QWidget):
         self.history_fetched.connect(self.set_timeline)
 
     def status_widget(self):
-        return self._widgets["TopRight"]
+        return self._widgets["TopOverlay"]
 
     def timeline_widget(self):
         return self
 
-    def set_timeline(self, release_history):
-        versions = set(release_history)
+    def set_timeline(self, result):
+        from_internet, released_versions = result
+
+        versions = set(released_versions)
         current = product_status.current_version()
         versions.add(current)
         expiry_date = (product_status.aup_date()
@@ -301,6 +284,7 @@ class GreetingInteract(QtWidgets.QWidget):
             released_versions=versions,
             current_ver=current,
             expiry_date=expiry_date,
+            from_internet=from_internet,
         )
         self._widgets["Timeline"].draw()
 
@@ -1193,7 +1177,7 @@ def labeling(widget, label_text, vertical=False, **kwargs):
     _layout = _Layout(c)
     _layout.setContentsMargins(0, 0, 0, 0)
     _layout.setSpacing(PD3)
-    _layout.addWidget(label)
+    _layout.addWidget(label, alignment=QtCore.Qt.AlignTop)
     _layout.addWidget(widget, **kwargs)
     return c
 
@@ -1380,8 +1364,10 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             "ProductKey": LicenceKeyEdit(LicenceKeyEdit.Online),
             "RequestRow": QtWidgets.QWidget(),
             "CopyRequest": QtWidgets.QPushButton(),
+            "MakeRequest": QtWidgets.QWidget(),
+            "ShowRequest": QtWidgets.QTextEdit(),
             "WebsiteURL": QtWidgets.QLabel(),
-            "Response": QtWidgets.QLineEdit(),
+            "Response": QtWidgets.QTextEdit(),
             "DeactivateText": QtWidgets.QLabel(),
             "ConfirmText": QtWidgets.QLabel(" Confirm Deactivated"),
             "ProcessBtn": QtWidgets.QPushButton(),
@@ -1407,7 +1393,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
 
         widgets["OfflineHint"].setObjectName("HintMessage")
         widgets["OfflineHint"].setText(
-            "Use another internet-connected device to complete activation."
+            "Use another internet-connected device to complete the process."
         )
         widgets["DeactivateText"].setObjectName("HintMessage")
         widgets["DeactivateText"].setText(
@@ -1421,38 +1407,52 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         )
 
         widgets["CopyRequest"].setObjectName("IconTextPushButton")
-        widgets["CopyRequest"].setText(" Copy Request Code")
-        widgets["CopyRequest"].setIcon(
-            QtGui.QIcon(ui._resource("ui", "clipboard.svg"))
-        )
+        widgets["ShowRequest"].setObjectName("OfflineRequestText")
+        widgets["ShowRequest"].setReadOnly(True)
+        widgets["ShowRequest"].setFixedHeight(px(60))
 
-        effects["Hint"].setOpacity(0)
         animations["Hint"].setEasingCurve(QtCore.QEasingCurve.OutCubic)
         animations["Hint"].setDuration(500)
-        animations["Hint"].setStartValue(0)
-        animations["Hint"].setEndValue(1)
         widgets["WebsiteURL"].setGraphicsEffect(effects["Hint"])
         widgets["WebsiteURL"].setOpenExternalLinks(True)
         widgets["WebsiteURL"].setTextInteractionFlags(
             QtCore.Qt.TextBrowserInteraction)
+
+        widgets["Response"].setObjectName("OfflineResponseText")
+        widgets["Response"].setFixedHeight(px(80))
+        widgets["Response"].setPlaceholderText(
+            "Paste response code from https://ragdolldynamics.com/offline"
+        )
+
+        widgets["CopyRequest"].setText(" Make Request Code")
+        widgets["CopyRequest"].setIcon(
+            QtGui.QIcon(ui._resource("ui", "stars.svg"))
+        )
         widgets["WebsiteURL"].setText(
             """
-            <style> p {color: #acacac;} a:link {color: #80e5cc;}</style>
+            <style> p {color: #dfdfdf;} a:link {color: #80e5cc;}</style>
             <p>Copied! Now paste it to
             <a href=\"https://ragdolldynamics.com/offline\">
             ragdolldynamics.com/offline</a> (internet required)
             </p>
             """
         )
-        widgets["Response"].setPlaceholderText(
-            "Paste response code from https://ragdolldynamics.com/offline"
-        )
+        effects["Hint"].setOpacity(0)
+        animations["Hint"].setStartValue(0)
+        animations["Hint"].setEndValue(1)
 
-        layout = QtWidgets.QHBoxLayout(widgets["RequestRow"])
+        layout = QtWidgets.QHBoxLayout(widgets["MakeRequest"])
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(PD3)
         layout.addWidget(widgets["CopyRequest"])
         layout.addWidget(widgets["WebsiteURL"])
+        layout.addStretch(1)
+
+        layout = QtWidgets.QVBoxLayout(widgets["RequestRow"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(PD3)
+        layout.addWidget(widgets["MakeRequest"])
+        layout.addWidget(widgets["ShowRequest"])
 
         head = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(head)
@@ -1467,7 +1467,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         layout.setSpacing(PD3)
         layout.addWidget(widgets["OfflineHint"])
         layout.addWidget(widgets["DeactivateHint"])
-        layout.addWidget(widgets["RequestWidget"], 0, QtCore.Qt.AlignLeft)
+        layout.addSpacing(PD3)
+        layout.addWidget(widgets["RequestWidget"])
         layout.addWidget(widgets["ResponseWidget"])
         layout.addWidget(widgets["ConfirmWidget"])
 
@@ -1487,7 +1488,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         widgets["ProductKey"].switched.connect(self.switch_online.emit)
         widgets["ProductKey"].accepted.connect(self.on_product_key_edited)
         widgets["CopyRequest"].clicked.connect(self.on_copy_request_clicked)
-        widgets["Response"].textEdited.connect(self.on_response_edited)
+        widgets["Response"].textChanged.connect(self.on_response_edited)
         widgets["ProcessBtn"].clicked.connect(self.on_process_clicked)
         animations["Hint"].finished.connect(
             lambda: effects["Hint"].setEnabled(False))
@@ -1519,7 +1520,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         self._effects["Hint"].setEnabled(True)
         self._animations["Hint"].start()
 
-    def on_response_edited(self, text):
+    def on_response_edited(self):
+        text = self._widgets["Response"].toPlainText()
         is_response = text.strip().endswith("</Response>")
         self._widgets["ProcessBtn"].setEnabled(is_response)
 
@@ -1527,7 +1529,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
         action = self._widgets["ProcessBtn"].text()
         if action == "Activate":
             with open(self._resfname, "w") as _f:
-                _f.write(self._widgets["Response"].text())
+                _f.write(self._widgets["Response"].toPlainText())
             self.node_activated.emit(self._resfname)
         else:
             self.node_deactivated.emit()
@@ -1546,6 +1548,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             self._widgets["ResponseWidget"].setEnabled(False)
         else:
             base.write_clipboard(request_code)
+            self._widgets["ShowRequest"].setPlainText(request_code)
             self._widgets["ResponseWidget"].setEnabled(True)
 
     def is_deactivation_requested(self):
@@ -1590,6 +1593,7 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             self._widgets["Secret"].set_secret_shown(False)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(True)
+            self._widgets["DeactivateHint"].show()
             self._widgets["ProcessBtn"].setText("Dismiss")
             self._widgets["ProcessBtn"].setEnabled(True)
             self._widgets["RequestWidget"].setEnabled(True)
@@ -1601,7 +1605,8 @@ class LicenceNodeLockOffline(QtWidgets.QWidget):
             self._widgets["Secret"].set_secret_shown(True)
             self._widgets["ProductKey"].setText(_temp_key)
             self._widgets["ProductKey"].setReadOnly(False)
-            self._widgets["Response"].setText("")
+            self._widgets["DeactivateHint"].hide()
+            self._widgets["Response"].setPlainText("")
             self._widgets["ProcessBtn"].setText("Activate")
             self._widgets["ProcessBtn"].setEnabled(False)
             self._widgets["ResponseWidget"].show()
@@ -1991,24 +1996,6 @@ class WelcomeWindow(base.SingletonMainWindow):
         on plugin load time.
 
         """
-
-        def callback_website(*args):
-            if WelcomeWindow.instance_weak is None:
-                return
-
-            self = WelcomeWindow.instance_weak()
-            if self is None:
-                return
-
-            if not shiboken2.isValid(self):
-                return
-
-            greet = self._widgets["Greet"]
-            greet.status_widget().connection_checked.emit(*args)
-
-        req_website = base.RequestRagdollWebsite(callback_website)
-        internet_request.submit(req_website)
-
         def callback_history(*args):
             if WelcomeWindow.instance_weak is None:
                 return
@@ -2153,6 +2140,7 @@ class WelcomeWindow(base.SingletonMainWindow):
         self._widgets["Licence"].input_widget().status_update()
         self._widgets["Greet"].status_widget().set_expiry()
 
+        # Updating version timeline and stuff.
         internet_request.fetch()
 
         # resize window a little bit just to trigger:

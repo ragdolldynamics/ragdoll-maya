@@ -8,6 +8,8 @@ import shiboken2
 from datetime import datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 
+from .. import __
+
 try:
     from PySide2 import QtWebEngineWidgets
 except ImportError as e:
@@ -15,7 +17,8 @@ except ImportError as e:
     # on import because of missing libXss.so.1 object. And if that happens,
     # video playback feature will be disabled (for playing .webm file in
     # asset view).
-    def _raise_err(*_, **__): raise e
+    def _raise_err(*_, **__):
+        raise e
     QtWebEngineWidgets = types.ModuleType("QtWebEngineWidgets")
     setattr(QtWebEngineWidgets, "QWebEngineView", type(
         "QWebEngineView", (), dict(__init__=_raise_err)
@@ -2022,7 +2025,7 @@ class WelcomeWindow(base.SingletonMainWindow):
 
         _window_logo = "favicon-32x32.png"
         _sidebar_logo = "ragdoll_silhouette_white_128.png"
-        self.setWindowTitle("Ragdoll Dynamics")
+        self.setWindowTitle("Ragdoll %s" % __.version_str)
         self.setWindowIcon(QtGui.QIcon(ui._resource("ui", _window_logo)))
 
         panels = {

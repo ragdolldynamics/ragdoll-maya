@@ -33,6 +33,7 @@ RAGDOLL_DYNAMICS_VERSIONS_URL = "https://ragdolldynamics.com/version"
 RAGDOLL_DYNAMICS_RELEASES_URL = "https://learn.ragdolldynamics.com/news"
 WYDAY_URL = "https://wyday.com"
 
+RAGDOLL_DEVELOPER = bool(os.getenv("RAGDOLL_DEVELOPER"))
 NO_INTERNET = bool(os.getenv("RAGDOLL_SKIP_UPDATE_CHECK"))
 NO_WORKER_THREAD_QT = bool(os.getenv("RAGDOLL_SINGLE_THREADED_QT"))
 NO_WORKER_THREAD_INTERNET = bool(os.getenv("RAGDOLL_SINGLE_THREADED_INTERNET"))
@@ -1098,10 +1099,12 @@ class ProductTimelineWidget(QtWidgets.QWidget):
 
     def on_message_sent(self, text):
         default = "Drag to navigate, or scroll with Alt key pressed  "
-        if self._from_internet:
-            default += "(Timeline fetched from ragdolldynamics.com)"
-        else:
-            default += "(Timeline parsed from local cache)"
+
+        if RAGDOLL_DEVELOPER:
+            if self._from_internet:
+                default += "(Timeline fetched from ragdolldynamics.com)"
+            else:
+                default += "(Timeline parsed from local cache)"
 
         text = text or default
         self._widgets["Message"].setText(text)
@@ -1143,11 +1146,8 @@ class ProductTimelineWidget(QtWidgets.QWidget):
         up_to_date = model.latest_update <= model.current
 
         if up_to_date:
-            text = "%s Installed" % model.current.strftime("%Y.%m.%d")
-            if self._from_internet:
-                btn.setText(text)
-            else:
-                btn.setText(text + " (Check Latest)")
+            text = "%s installed" % model.current.strftime("%Y.%m.%d")
+            btn.setText(text)
         else:
             btn.setText("Download Latest")
 

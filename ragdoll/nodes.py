@@ -33,6 +33,8 @@ def create(typ, mod, name, parent=None):
 
         mod.connect(parent["worldMatrix"][0], node["inputMatrix"])
 
+        node["forceMode"].hide()
+
     elif typ == "rdMarker":
         assert isinstance(mod, cmdx.DGModifier), (
             "rdMarker requires a DGModifier"

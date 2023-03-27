@@ -23,6 +23,9 @@ def create(typ, mod, name, parent=None):
         mod.set_attr(node["forceMode"], constants.FieldVelocityChange)
         mod.set_attr(node["drawFieldScale"], 10)
 
+        # Since 2023.03.xx
+        mod.set_attr(node["forcePerSubstep"], False)
+
         if up.y:
             mod.set_keyable(node["gravityY"])
         else:

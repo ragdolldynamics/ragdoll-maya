@@ -1229,6 +1229,15 @@
         "help": "Whether to create a visualisation mesh for environments when the solver is offset."
     },
 
+    "warpTimeOn": {
+        "name": "warpTimeOn",
+        "label": "Simulate On",
+        "type": "Enum",
+        "default": 2,
+        "items": ["Selection", "Every frame", "Every 2 frames", "Every 3 frames", "Every 4 frames"],
+        "help": "Use an animation curve to control time, rather than Maya's global time."
+    },
+
     "#": "---------------------",
     "#": " Manipulator options ",
     "#": "---------------------",

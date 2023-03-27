@@ -567,7 +567,7 @@ def _uninstall_fit_to_view():
             __.shortcut.setEnabled(False)
             __.shortcut.setKey(None)
             __.shortcut.activated.disconnect(_fit_to_view)
-            del(__.shortcut)
+            __.shortcut = None
 
         except Exception as e:
             log.debug("Had trouble uninstalling the Fit to View hotkey")
@@ -938,7 +938,7 @@ def install_menu():
         item("addToCollisionGroup", add_to_collision_group)
         item("removeFromCollisionGroup", remove_from_collision_group)
 
-        divider()
+        divider("Solver")
 
         item("mergeSolvers", merge_solvers)
         item("extractFromSolver", extract_from_solver)
@@ -1008,6 +1008,11 @@ def install_menu():
         item("resetMarkerConstraintFrames", reset_marker_constraint_frames)
         item("editMarkerConstraintFrames", edit_marker_constraint_frames)
 
+        divider("Time")
+
+        item("warpTime", warp_time, warp_time_options)
+        item("restoreTime", restore_time)
+
     with submenu("Select", icon="select.png"):
         item("selectMarkers", select_markers)
         item("selectGroups", select_groups)
@@ -1049,6 +1054,7 @@ def install_menu():
 
     item("showMessages",
          command=show_messageboard,
+         option=show_messageboard_options,
 
          # Programatically displayed during logging
          visible=False)
@@ -1083,6 +1089,11 @@ def uninstall_menu():
 
 
 def show_messageboard():
+    RagdollGuiLogHandler.history[:] = []
+    update_menu()
+
+
+def show_messageboard_options():
     win = ui.MessageBoard(RagdollGuiLogHandler.history, parent=ui.MayaWindow())
     win.show()
 
@@ -1889,14 +1900,22 @@ def plans_from_selection(selection=None):
     plans = list()
 
     for selected in selection or cmdx.selection():
-        if selected.isA(cmdx.kDagNode):
-            selected = selected.shape(type="rdPlan")
+        plan = None
 
-        if selected and selected.isA("rdPlan"):
-            if selected in plans:
-                continue
+        if selected.is_a("rdFoot"):
+            plan = selected["startState"].output(type="rdPlan")
 
-            plans.append(selected)
+        if selected.is_a(cmdx.kDagNode):
+            plan = selected.shape(type="rdPlan")
+
+            if not plan:
+                plan = selected["message"].output(type="rdPlan")
+
+            if not plan:
+                plan = selected["message"].output(type="rdFoot")
+
+        if plan and plan.is_a("rdPlan") and plan not in plans:
+            plans.append(plan)
 
     return tuple(plans)
 
@@ -3072,9 +3091,8 @@ def extract_plan(selection=None, **opts):
             "Select one or more plans to extract"
         )
 
-    result = recording.extract_plans(plans)
+    recording.extract_plans(plans)
 
-    print(result)
     log.info("Successfully extracted %s plans" % len(plans))
 
     return kSuccess
@@ -3145,14 +3163,15 @@ def reset_foot(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_plan(selection=None, **opts):
-    reset_step_sequence(selection, **opts)
-    return reset_targets(selection, **opts)
+    if reset_step_sequence(selection, **opts):
+        return reset_targets(selection, **opts)
+    return kFailure
 
 
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_step_sequence(selection=None, **opts):
-    plans = shapes_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection, type="rdPlan")
 
     if len(plans) < 1:
         raise i__.UserWarning(
@@ -3171,7 +3190,7 @@ def reset_step_sequence(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_targets(selection=None, **opts):
-    plans = shapes_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection, type="rdPlan")
 
     if len(plans) < 1:
         raise i__.UserWarning(
@@ -3190,7 +3209,7 @@ def reset_targets(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_plan_origin(selection=None, **opts):
-    plans = shapes_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection, type="rdPlan")
 
     if len(plans) < 1:
         raise i__.UserWarning(
@@ -3463,9 +3482,6 @@ def bake_mesh(selection=None, **opts):
     return kSuccess
 
 
-def bake_mesh_options(selection=None, **opts):
-    pass
-
 
 @with_exception_handling
 def convert_to_mesh(selection=None, **opts):
@@ -3479,10 +3495,6 @@ def convert_to_mesh(selection=None, **opts):
     log.info("Successfully converted %d markers" % len(meshes))
 
     return kSuccess
-
-
-def convert_to_mesh_options(selection=None, **opts):
-    pass
 
 
 @i__.with_undo_chunk
@@ -3572,6 +3584,67 @@ def edit_marker_constraint_frames(selection=None):
 
     log.info("Created %d pivots" % len(frames))
     cmds.select(list(map(str, frames)))
+    return kSuccess
+
+
+@with_exception_handling
+def warp_time(selection=None, **opts):
+    opts = dict({
+        "on": _opt("warpTimeOn", opts),
+    }, **(opts or {}))
+
+    solvers = _solvers_from_selection(selection)
+
+    if not solvers:
+        raise i__.UserWarning(
+            "No solver",
+            "Select one or more solvers to animate the time of."
+        )
+
+    solver = solvers[0]
+
+    if opts["on"] == 0:
+        selection = selection or cmdx.selection()
+
+        if not selection or len(selection) > 1:
+            raise i__.UserWarning(
+                "Bad selection",
+                "Select 1 animated control, I'll simulate "
+                "alongside each keyframe on this control."
+            )
+
+        transform = selection[0]
+
+        try:
+            commands.simulate_based_on(solver, transform)
+        except AssertionError:
+            raise i__.UserWarning(
+                "Missing animation",
+                "I tried simulating based on '%s'\n"
+                "but it does not appear to be animated." % transform
+            )
+
+    else:
+        commands.simulate_on(solver, opts["on"])
+
+    cmds.select(str(solver.parent()))
+
+    log.info("%s is now animated in time." % solver)
+
+    return kSuccess
+
+
+def restore_time(selection=None, **opts):
+    solvers = _solvers_from_selection(selection)
+
+    if not solvers:
+        log.warning("No solvers to restore time for")
+
+    for solver in solvers:
+        commands.restore_time(solver)
+
+        log.info("Successfully restored time for %s" % solver)
+
     return kSuccess
 
 
@@ -3951,6 +4024,14 @@ def animation_to_plan_options(*args):
     return _Window("bakeTargets", animation_to_plan)
 
 
+def bake_mesh_options(selection=None, **opts):
+    return _Window("bakeMesh", bake_mesh)
+
+
+def convert_to_mesh_options(selection=None, **opts):
+    return _Window("convertMesh", convert_to_mesh)
+
+
 def replace_marker_mesh_options(*args):
     return _Window("markerReplaceMesh", replace_marker_mesh)
 
@@ -4056,6 +4137,10 @@ def record_markers_options(*args):
     record_range.changed.connect(update_start_end)
 
     return win
+
+
+def warp_time_options(*args):
+    return _Window("warpTime", warp_time)
 
 
 def snap_markers_options(*args):

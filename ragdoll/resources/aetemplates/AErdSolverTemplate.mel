@@ -9,13 +9,16 @@ global proc AErdSolverTemplate(string $nodeName) {
                 editorTemplate -addControl "export";
             editorTemplate -endNoOptimize;
 
+            editorTemplate -addControl "blend";
             editorTemplate -addControl "cache";
             editorTemplate -addControl "startTime";
             editorTemplate -addControl "startTimeCustom";
+            editorTemplate -addControl "simulateEvery";
             editorTemplate -addControl "substeps";
             editorTemplate -addControl "positionIterations";
             editorTemplate -addControl "airDensity";
             editorTemplate -addControl "gravity";
+            editorTemplate -addControl "lod";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Pose" -collapse true;

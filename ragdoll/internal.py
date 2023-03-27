@@ -503,6 +503,18 @@ def maintain_time(func):
 
 
 @contextlib.contextmanager
+def timing(name):
+    t0 = time.time()
+
+    try:
+        yield
+    finally:
+        t1 = time.time()
+        duration = t1 - t0
+        log.debug("%s in %.2fms" % (name, duration * 1000))
+
+
+@contextlib.contextmanager
 def maintained_selection():
     try:
         selection = cmds.ls(selection=True)
@@ -516,6 +528,15 @@ def with_time(time):
     try:
         previous_time = cmds.currentTime(query=True)
         cmds.currentTime(time)
+        yield
+    finally:
+        cmds.currentTime(previous_time)
+
+
+@contextlib.contextmanager
+def maintained_time():
+    try:
+        previous_time = cmds.currentTime(query=True)
         yield
     finally:
         cmds.currentTime(previous_time)

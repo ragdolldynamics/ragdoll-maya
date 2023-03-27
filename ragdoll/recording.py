@@ -432,6 +432,30 @@ class _Recorder(object):
             # prevent the artist from carrying on without filtering
             pass
 
+        increment = self._solver["simulateEvery"].read()
+        if increment > 1:
+            with internal.timing("key reduction"):
+                times_to_reduce = list()
+                time_range = range(self._solver_start_frame, self._end_frame)
+
+                for time in time_range:
+                    if (time - self._solver_start_frame) % increment != 0:
+                        times_to_reduce.append(time)
+
+                for transform in self._dst_to_marker:
+                    for time in times_to_reduce:
+                        cmds.cutKey(
+                            str(transform),
+                            time=(time, time),
+                            attribute=("tx", "ty", "tz",
+                                       "rx", "ry", "rz"),
+                            option="keys"
+                        )
+
+            # Since we are playing back at a lower framerate than Maya,
+            # the user likely intended for keys to be stepped.
+            _stepped_keys(self._dst_to_marker.keys())
+
         self.clean()
 
         cmdx.current_time(initial_time)
@@ -919,28 +943,27 @@ class _Recorder(object):
             "removeBakedAttributeFromLayer": False,
             "removeBakedAnimFromLayer": False,
             "minimizeRotation": False,
-            "bakeOnOverrideLayer": self._opts["toLayer"]
+            "bakeOnOverrideLayer": self._opts["toLayer"],
+            "destinationLayer": None,
         }
 
-        initial_time = cmdx.current_time()
+        if self._opts["toLayer"] and not kwargs["destinationLayer"]:
+            layer = self._solver.name() + "Layer"
+            layer = cmds.animLayer(layer, override=True)
+            kwargs["destinationLayer"] = layer
 
-        # The cheeky little bakeResults changes our selection
-        selection = cmds.ls(selection=True)
         destinations = list(str(dst) for dst in self._find_destinations())
 
-        if destinations:
-            cmds.bakeResults(*destinations, **kwargs)
-        else:
-            log.warning(
+        if not destinations:
+            return log.warning(
                 "Nothing was baked\n"
                 "Either everything was kinematic or markers were set "
                 "to recordTranslation=Off and recordRotation=Off"
             )
 
-        cmds.select(selection)
-
-        # Restore time
-        cmdx.current_time(initial_time)
+        # bakeResults likes to change both time and selection
+        with internal.maintained_selection():
+            cmds.bakeResults(*destinations, **kwargs)
 
     @internal.with_timing
     def _reset(self):
@@ -1056,6 +1079,13 @@ def _euler_filter(transforms):
             rotate_curves += [curve.name(namespace=True)]
 
     cmds.filterCurve(rotate_curves, filter="euler")
+
+
+@internal.with_undo_chunk
+@internal.with_timing
+def _stepped_keys(transforms):
+    """Make all keyframes of `transforms` stepped"""
+    cmds.keyTangent(list(str(t) for t in transforms), outTangentType="step")
 
 
 def _is_enabled(marker):

@@ -3155,11 +3155,16 @@ def merge_solvers(a, b):
 
 
 def simulate_on(solver, increment=2):
-    """Simlate on 2's or 3's
+    """Simulate on 2's or 3's
 
     Emulate a stop-motion look by simulating every 2 or 3 frames.
 
     """
+
+    assert solver and solver.is_a("rdSolver"), "Missing a solver"
+
+    if increment < 1:
+        log.warning("%s cannot be less than 1" % increment)
 
     # Can't simulate any more often than once per frame (no fractions)
     increment = max(1, increment)
@@ -3167,27 +3172,104 @@ def simulate_on(solver, increment=2):
     transform = solver.parent()
 
     with cmdx.DGModifier() as dgmod:
-        if not transform.has_attr("animatedTime"):
-            dgmod.add_attr(transform, cmdx.Time("animatedTime", keyable=True))
+        if not transform.has_attr("timeWarp"):
+            dgmod.add_attr(transform, cmdx.Time("timeWarp", keyable=True))
             dgmod.do_it()
+
+        existing = transform["timeWarp"].input(type="animCurveTT")
+        if existing is not None:
+            for index in range(existing._fna.numKeys):
+                existing._fna.remove(0)
 
         start = int(cmdx.min_time().value)
         end = cmdx.time(increment).as_units(cmdx.Seconds)
         end *= cmdx.ticks_per_second()
 
-        dgmod.set_attr(transform["animatedTime", cmdx.Stepped], {
+        dgmod.set_attr(transform["timeWarp", cmdx.Stepped], {
             start: 0,
             start + increment: end
         })
 
-        dgmod.connect(transform["animatedTime"], solver["currentTime"])
+        dgmod.connect(transform["timeWarp"], solver["currentTime"])
         dgmod.set_attr(solver["timeMethod"], constants.RealisticTime)
 
-        curve = transform["animatedTime"].input(type="animCurveTT")
+        curve = transform["timeWarp"].input(type="animCurveTT")
         dgmod.set_attr(curve["preInfinity"], 4)  # Cycle with offset
         dgmod.set_attr(curve["postInfinity"], 4)
 
     return curve
+
+
+def simulate_at(solver, keys):
+    """Simulate on `keys`
+
+    Emulate a stop-motion look by simulating every 2 or 3 frames.
+
+    """
+
+    assert solver and solver.is_a("rdSolver"), "Missing a solver"
+    assert keys, "Missing keys"
+
+    transform = solver.parent()
+
+    with cmdx.DGModifier() as dgmod:
+        if not transform.has_attr("timeWarp"):
+            dgmod.add_attr(transform, cmdx.Time("timeWarp", keyable=True))
+            dgmod.do_it()
+
+        existing = transform["timeWarp"].input(type="animCurveTT")
+        if existing is not None:
+            for index in range(existing._fna.numKeys):
+                existing._fna.remove(0)
+
+        dgmod.set_attr(transform["timeWarp", cmdx.Stepped], keys)
+
+        dgmod.connect(transform["timeWarp"], solver["currentTime"])
+        dgmod.set_attr(solver["timeMethod"], constants.RealisticTime)
+
+        curve = transform["timeWarp"].input(type="animCurveTT")
+        dgmod.set_attr(curve["preInfinity"], 0)  # Constant
+        dgmod.set_attr(curve["postInfinity"], 0)
+
+        start_time = cmdx.time(int(min(keys.keys())))
+        dgmod.set_attr(solver["startTime"], constants.StartTimeCustom)
+        dgmod.set_attr(solver["startTimeCustom"], start_time)
+
+    return transform["timeWarp"].input(type="animCurveTT")
+
+
+def simulate_based_on(solver, node):
+    # Get times from all animation on `node`
+    keys = {}
+    for ref in node.inputs():
+        if not ref.is_a(cmdx.om.MFn.kAnimCurve):
+            continue
+
+        for index in range(ref._fna.numKeys):
+            time = ref._fna.input(index)
+            value = time.asUnits(cmdx.Seconds) * cmdx.ticks_per_second()
+            keys[int(time.value)] = value
+
+    return simulate_at(solver, keys)
+
+
+def restore_time(solver):
+    """Solve in lockstep with Maya playback once more"""
+
+    with cmdx.DagModifier() as mod:
+        prior = solver["currentTime"].input(type="animCurveTT")
+
+        if prior is not None:
+            mod.delete(prior)
+
+        time = cmdx.encode("time1")
+        mod.connect(time["outTime"], solver["currentTime"])
+
+        parent = solver.parent()
+        if parent.has_attr("timeWarp"):
+            mod.delete_attr(parent["timeWarp"])
+
+        mod.set_attr(solver["startTime"], constants.StartTimeRangeStart)
 
 
 def _polycube(parent, width=1, height=1, depth=1, offset=None):

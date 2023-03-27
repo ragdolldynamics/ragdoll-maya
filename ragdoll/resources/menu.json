@@ -305,7 +305,7 @@
         "label": "Reset Nominal Matrix",
         "icon": "locomotion.png",
         "summary": "Reset the reference position of the selected foot or feet.",
-        "description": "The reference position will be reset to wherever the feet are located at the time of running this command.",
+        "description": "The reference position will be reset to wherever the feet are located at the time of running this command.\n\nThe reference position is the center of the min and max limits for each foot.",
         "options": [
         ]
     },
@@ -902,6 +902,22 @@
         "icon": "volume.png",
         "summary": "Apply forces throughout the volume of a Marker.",
         "description": "Forces are applied evenly distributed across the Marker volume, resulting in the most natural and realistic result.",
+        "options": []
+    },
+
+    "warpTime": {
+        "label": "Warp Time",
+        "icon": "plan.png",
+        "summary": "Animate the progression of time",
+        "description": "Control the simulation by animating when time changes, and by how much. This can be used to support stepped keyframes, common in anime or stopmotion-style animation.",
+        "options": ["warpTimeOn"]
+    },
+
+    "restoreTime": {
+        "label": "Restore Time",
+        "icon": "plan.png",
+        "summary": "",
+        "description": "",
         "options": []
     },
 

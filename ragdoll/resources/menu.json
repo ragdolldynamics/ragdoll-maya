@@ -525,6 +525,15 @@
         ]
     },
 
+    "resetTKey": {
+        "label": "Reset T Key",
+        "icon": "keyboard.png",
+        "summary": "Restore T as the hotkey to enter into the Manipulator",
+        "description": "Ragdoll uses Maya's native manipulator system to control markers and plans, this menu item restores this hotkey in case it got lost somewhere.",
+        "options": [
+        ]
+    },
+
     "recordMarkers": {
         "label": "Record Simulation",
         "icon": "record.png",
@@ -543,6 +552,7 @@
             "markersIgnoreJoints",
             "markersRecordClosedLoop",
             "markersRecordKinematic",
+            "markersRecordAccumulateByLayer",
             "markersRecordMode"
         ]
     },

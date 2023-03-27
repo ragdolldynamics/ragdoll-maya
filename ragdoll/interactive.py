@@ -1042,6 +1042,8 @@ def install_menu():
         item("savePreferences", save_preferences)
         item("resetPreferences", reset_preferences)
 
+        item("resetTKey", reset_t_key)
+
         with submenu("Logging Level", icon="logging.png"):
             item("loggingOff", logging_off)
             item("loggingInfo", logging_info)
@@ -1093,7 +1095,7 @@ def show_messageboard():
     update_menu()
 
 
-def show_messageboard_options():
+def show_messageboard_options(*args):
     win = ui.MessageBoard(RagdollGuiLogHandler.history, parent=ui.MayaWindow())
     win.show()
 
@@ -2231,6 +2233,7 @@ def record_markers(selection=None, **opts):
         "recordReset": _opt("markersRecordReset", opts),
         "recordSimplify": _opt("markersRecordSimplify", opts),
         "recordFilter": _opt("markersRecordFilter", opts),
+        "accumulateByLayer": _opt("markersRecordAccumulateByLayer", opts),
         "autoCache": _opt("markersRecordAutoCache", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
         "closedLoop": _opt("markersRecordClosedLoop", opts),
@@ -2305,6 +2308,7 @@ def record_markers(selection=None, **opts):
                 "endTime": end_time,
                 "include": include,
                 "exclude": exclude,
+                "accumulateByLayer": opts["accumulateByLayer"],
                 "includeKinematic": opts["recordKinematic"],
                 "maintainOffset": opts["recordMaintainOffset"],
                 "simplifyCurves": opts["recordSimplify"],
@@ -3784,6 +3788,10 @@ def select_group_members(selection=None, **opts):
 #
 # User Interface
 #
+
+
+def reset_t_key(selection=None):
+    print("Restoring hotkey")
 
 
 def show_explorer(selection=None):

@@ -1026,6 +1026,14 @@
         "help": "Include support for closed loops during the recording process. This can also help speed up recording and avoid cycles in cases where an e.g. upper arm is parented to the hand, but runs the risk of adding 180 or 360 degree rotations."
     },
 
+    "markersRecordAccumulateByLayer": {
+        "name": "markersRecordAccumulateByLayer",
+        "label": "Accumulate by Layer",
+        "type": "Boolean",
+        "default": true,
+        "help": "When adjusting the weight of a layer, blend rotations together as opposed to per-channel which can sometimes result in gimbal locks and awkward transitions."
+    },
+
     "markersShowPluginShapes": {
         "name": "markersShowPluginShapes",
         "label": "Show Plugin Shapes",

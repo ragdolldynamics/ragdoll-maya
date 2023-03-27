@@ -250,6 +250,7 @@ class _Recorder(object):
             "include": None,
             "exclude": None,
             "toLayer": True,
+            "layerName": "",
             "rotationFilter": constants.EulerFilter,
             "ignoreJoints": False,
             "resetMarkers": False,
@@ -260,6 +261,7 @@ class _Recorder(object):
             "protectOriginalInput": True,
             "setInitialKey": True,
             "closedLoop": False,
+            "accumulateByLayer": True,
             "mode": constants.RecordNiceAndSteady,
         }, **(opts or {}))
 
@@ -432,29 +434,24 @@ class _Recorder(object):
             # prevent the artist from carrying on without filtering
             pass
 
-        increment = self._solver["simulateEvery"].read()
-        if increment > 1:
-            with internal.timing("key reduction"):
-                times_to_reduce = list()
-                time_range = range(self._solver_start_frame, self._end_frame)
+        try:
+            # When time has been animated, we expect the user
+            # intends on stepped and few keys.
+            simulate_every = self._solver["simulateEvery"].read()
+            driven_by_time = self._solver["currentTime"].input(type="time")
+            transforms = self._dst_to_marker.keys()
 
-                for time in time_range:
-                    if (time - self._solver_start_frame) % increment != 0:
-                        times_to_reduce.append(time)
+            if not driven_by_time:
+                _reduce_to_time_changed(self._solver, transforms)
 
-                for transform in self._dst_to_marker:
-                    for time in times_to_reduce:
-                        cmds.cutKey(
-                            str(transform),
-                            time=(time, time),
-                            attribute=("tx", "ty", "tz",
-                                       "rx", "ry", "rz"),
-                            option="keys"
-                        )
+            elif simulate_every > 1:
+                simulate_every = self._solver["simulateEvery"].read()
+                _reduce_to_every(self._solver, transforms, simulate_every)
 
-            # Since we are playing back at a lower framerate than Maya,
-            # the user likely intended for keys to be stepped.
-            _stepped_keys(self._dst_to_marker.keys())
+        except Exception:
+            # Reduction is solid, but if it breaks it has little to no
+            # effect on the end result and shouldn't cause any harm
+            pass
 
         self.clean()
 
@@ -944,13 +941,15 @@ class _Recorder(object):
             "removeBakedAnimFromLayer": False,
             "minimizeRotation": False,
             "bakeOnOverrideLayer": self._opts["toLayer"],
-            "destinationLayer": None,
         }
 
-        if self._opts["toLayer"] and not kwargs["destinationLayer"]:
-            layer = self._solver.name() + "Layer"
+        if self._opts["toLayer"] and "destinationLayer" not in kwargs:
+            layer = self._opts["layerName"] or self._solver.name() + "Layer"
             layer = cmds.animLayer(layer, override=True)
             kwargs["destinationLayer"] = layer
+
+            if self._opts["accumulateByLayer"]:
+                cmds.setAttr(layer + ".rotationAccumulationMode", 1)
 
         destinations = list(str(dst) for dst in self._find_destinations())
 
@@ -961,7 +960,7 @@ class _Recorder(object):
                 "to recordTranslation=Off and recordRotation=Off"
             )
 
-        # bakeResults likes to change both time and selection
+        # bakeResults likes to change the selection
         with internal.maintained_selection():
             cmds.bakeResults(*destinations, **kwargs)
 
@@ -1083,9 +1082,98 @@ def _euler_filter(transforms):
 
 @internal.with_undo_chunk
 @internal.with_timing
+def _simplify_filter(transforms):
+    """Unroll rotations by applying a euler filter"""
+    rotate_curves = []
+
+    for transform in transforms:
+        for channel in ("tx", "ty", "tz", "rx", "ry", "rz"):
+            curve = transform[channel].input()
+            rotate_curves += [curve.name(namespace=True)]
+
+    cmds.filterCurve(rotate_curves, filter="simplify", timeTolerance=0.001)
+
+
+@internal.with_undo_chunk
+@internal.with_timing
 def _stepped_keys(transforms):
     """Make all keyframes of `transforms` stepped"""
     cmds.keyTangent(list(str(t) for t in transforms), outTangentType="step")
+
+
+def _reduce_to_time_changed(solver, transforms):
+    """Remove keys from `transforms` whenever currentTime is unchanged
+
+    When solver.currentTime is animated, there may be patches of time
+    that remains unchanged for several frames.
+                             ______________________________________
+                  __________|
+               __|
+        ______|
+    ___|
+
+    This function erases any keys happening when time isn't changing, as
+    we can be certain the animated values remain the same as well.
+
+    """
+
+    start_frame = int(solver["_startTime"].as_time().value)
+    end_frame = int(cmdx.max_time().value)
+
+    times_to_reduce = list()
+    time_range = list(range(start_frame, end_frame))
+
+    attr = solver["currentTime"]
+    last_time = time_range[0]
+    last_time_value = cmdx.time(last_time)
+    last_time_value = int(attr.as_time(time=last_time_value).value)
+
+    for time in time_range[1:]:
+        time_value = cmdx.time(time)
+        time_value = int(attr.as_time(time=time_value).value)
+
+        if time_value == last_time_value:
+            times_to_reduce.append(time)
+
+        last_time_value = time_value
+
+    for transform in transforms:
+        for time in times_to_reduce:
+            cmds.cutKey(
+                str(transform),
+                time=(time, time),
+                attribute=("tx", "ty", "tz",
+                           "rx", "ry", "rz"),
+                option="keys"
+            )
+
+    _stepped_keys(transforms)
+
+
+def _reduce_to_every(solver, transforms, n):
+    """Remove ever `nth` key from `transforms`"""
+
+    start_frame = int(solver["_startTime"].as_time().value)
+    end_frame = int(cmdx.max_time().value)
+
+    times_to_reduce = list()
+    time_range = range(start_frame, end_frame)
+
+    for time in time_range:
+        if (time - start_frame) % n != 0:
+            times_to_reduce.append(time)
+
+    for transform in transforms:
+        for time in times_to_reduce:
+            cmds.cutKey(
+                str(transform),
+                time=(time, time),
+                attribute=("tx", "ty", "tz",
+                           "rx", "ry", "rz"),
+                option="keys"
+            )
+
+    _stepped_keys(transforms)
 
 
 def _is_enabled(marker):

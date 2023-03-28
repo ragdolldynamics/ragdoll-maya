@@ -1440,6 +1440,11 @@ def _add_to_objset(markers):
 
 @with_exception_handling
 def markers_manipulator(selection=None, **opts):
+    selection = plans_from_selection(selection)
+
+    if selection:
+        return cmds.setToolTo("ShowManips")
+
     selection = _markers_from_selection(selection)
     if selection:
         solvers = i__.promote_linked_solvers(

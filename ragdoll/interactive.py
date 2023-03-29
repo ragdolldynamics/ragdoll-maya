@@ -853,11 +853,7 @@ def install_menu():
     item("assignHierarchy")
     item("assignEnvironment", assign_environment, assign_environment_options)
 
-    divider("Locomotion")
-
-    item("assignPlan", assign_plan, assign_plan_options)
-
-    with submenu("More", icon="locomotion.png"):
+    with submenu("Assign Locomotion", icon="locomotion.png"):
         item("assignPlan", assign_plan, assign_plan_options)
         item("assignTerrain", assign_terrain)
         item("updatePlan", update_plan, update_plan_options)

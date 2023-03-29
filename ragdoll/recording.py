@@ -1334,7 +1334,6 @@ def _find_destinations(markers, opts=None):
 
 @internal.with_undo_chunk
 def extract_plans(plans, opts=None):
-
     opts = dict({
         "sorted": False,
     }, **(opts or {}))
@@ -1443,6 +1442,7 @@ def extract_plans(plans, opts=None):
     for dst, trajectory in trajectories.items():
         with cmdx.DagModifier() as mod:
             out = mod.create_node("transform", name=dst + "_out")
+            mod.create_node("locator", name=dst + "_outShape", parent=out)
 
             mod.set_attr(out["tx"], trajectory["tx"])
             mod.set_attr(out["ty"], trajectory["ty"])

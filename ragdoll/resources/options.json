@@ -1246,6 +1246,14 @@
         "help": "Use an animation curve to control time, rather than Maya's global time."
     },
 
+    "manipulatorHotkey": {
+        "name": "manipulatorHotkey",
+        "label": "Hotkey",
+        "type": "String",
+        "default": "t",
+        "help": "Use this keyboard shortcut to activate the Manipulator."
+    },
+
     "#": "---------------------",
     "#": " Manipulator options ",
     "#": "---------------------",

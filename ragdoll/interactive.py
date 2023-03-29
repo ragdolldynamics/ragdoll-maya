@@ -1042,7 +1042,7 @@ def install_menu():
         item("savePreferences", save_preferences)
         item("resetPreferences", reset_preferences)
 
-        item("resetTKey", reset_t_key)
+        item("resetTKey", reset_t_key, reset_t_key_options)
 
         with submenu("Logging Level", icon="logging.png"):
             item("loggingOff", logging_off)
@@ -1919,7 +1919,10 @@ def plans_from_selection(selection=None):
                 plan = selected["message"].output(type="rdPlan")
 
             if not plan:
-                plan = selected["message"].output(type="rdFoot")
+                foot = selected["message"].output(type="rdFoot")
+
+                if foot:
+                    plan = foot["startState"].output(type="rdPlan")
 
         if plan and plan.is_a("rdPlan") and plan not in plans:
             plans.append(plan)
@@ -3180,16 +3183,18 @@ def reset_plan(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_step_sequence(selection=None, **opts):
-    plans = plans_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection)
 
     if len(plans) < 1:
         raise i__.UserWarning(
             "Bad selection",
-            "Select one body and 1 or more feet"
+            "Could not find a plan from the selection."
         )
 
     for plan in plans:
         commands.reset_step_sequence(plan)
+
+    update_plan()
 
     log.info("Successfully reset %d step sequences" % len(plans))
 
@@ -3199,16 +3204,18 @@ def reset_step_sequence(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_targets(selection=None, **opts):
-    plans = plans_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection)
 
     if len(plans) < 1:
         raise i__.UserWarning(
             "Bad selection",
-            "Select one body and 1 or more feet"
+            "Could not find a plan from the selection."
         )
 
     for plan in plans:
         commands.reset_plan_targets(plan)
+
+    update_plan()
 
     log.info("Successfully reset %d targets" % len(plans))
 
@@ -3218,7 +3225,7 @@ def reset_targets(selection=None, **opts):
 @i__.with_undo_chunk
 @with_exception_handling
 def reset_plan_origin(selection=None, **opts):
-    plans = plans_from_selection(selection, type="rdPlan")
+    plans = plans_from_selection(selection)
 
     if len(plans) < 1:
         raise i__.UserWarning(
@@ -3795,8 +3802,21 @@ def select_group_members(selection=None, **opts):
 #
 
 
-def reset_t_key(selection=None):
-    print("Restoring hotkey")
+def reset_t_key(selection=None, **opts):
+    opts = dict({
+        "hotkey": _opt("manipulatorHotkey", opts),
+    }, **(opts or {}))
+
+    cmds.hotkey(keyShortcut=opts["hotkey"], name="ShowManipulatorsNameCommand")
+    log.info(
+        "Success, use %s to activate the Manipulator" % opts["hotkey"].upper()
+    )
+
+    return kSuccess
+
+
+def reset_t_key_options(*args):
+    return _Window("resetTKey", reset_t_key)
 
 
 def show_explorer(selection=None):

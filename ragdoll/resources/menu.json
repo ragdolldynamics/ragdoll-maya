@@ -357,7 +357,7 @@
     },
 
     "bakePlan": {
-        "label": "Plan ⟶ Animation",
+        "label": "Plan to Animation",
         "icon": "record.png",
         "summary": "Convert plan into animation",
         "description": "",
@@ -366,7 +366,7 @@
     },
 
     "bakeTargets": {
-        "label": "Animation ⟶ Plan",
+        "label": "Animation to Plan",
         "icon": "snap.png",
         "summary": "Convert animation into targets for a plan",
         "description": "",
@@ -531,6 +531,7 @@
         "summary": "Restore T as the hotkey to enter into the Manipulator",
         "description": "Ragdoll uses Maya's native manipulator system to control markers and plans, this menu item restores this hotkey in case it got lost somewhere.",
         "options": [
+            "manipulatorHotkey"
         ]
     },
 

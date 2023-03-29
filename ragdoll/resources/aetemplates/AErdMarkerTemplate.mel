@@ -81,7 +81,6 @@ global proc AErdMarkerTemplate(string $nodeName) {
             editorTemplate -addControl "color";
             editorTemplate -addControl "drawScale";
             editorTemplate -addControl "drawLimit";
-            editorTemplate -addControl "drawDrive";
         editorTemplate -endLayout;
 
         editorTemplate -beginLayout "Advanced" -collapse true;

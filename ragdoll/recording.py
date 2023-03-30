@@ -1495,6 +1495,7 @@ def plans_to_animation(plans, opts=None):
     if opts["layer"] is None:
         opts["layer"] = plans[0].name() + "Layer"
         opts["layer"] = cmds.animLayer(opts["layer"], override=True)
+        cmds.setAttr(opts["layer"] + ".rotationAccumulationMode", 1)
 
     kwargs = {
         "attribute": ("tx", "ty", "tz", "rx", "ry", "rz"),

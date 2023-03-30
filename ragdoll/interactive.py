@@ -2976,7 +2976,9 @@ def assign_plan(selection=None, **opts):
         "useTransform": False,  # deprecated option
         "preset": _opt("planPreset", opts),
         "refinement": _opt("planRefinementMode", opts),
+        "increment": _opt("planFromAnimIncrementalSampling", opts),
         "duration": _opt("planDuration", opts),
+        "interactive": _opt("planInteractive", opts),
     }, **(opts or {}))
 
     sel = selection or cmdx.selection()
@@ -3003,7 +3005,7 @@ def assign_plan(selection=None, **opts):
 
     if opts["refinement"]:
         commands.animation_to_plan(
-            plan, increment=10, preset=opts["preset"]
+            plan, increment=opts["increment"], preset=opts["preset"]
         )
         plan["enabled"] = True  # ensure plan is enabled
 

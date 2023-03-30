@@ -250,7 +250,8 @@
         "summary": "Assign a plan to selected body and feet.",
         "description": "Create a new plan for the selected body and 1 or more feet, the plan will drive the translate and rotate channels.",
         "options": [
-            "planPreset"
+            "planPreset",
+            "planInteractive"
         ]
     },
 
@@ -293,7 +294,7 @@
     },
 
     "resetPlanOrigin": {
-        "label": "Reset Origin",
+        "label": "Reset Starting Position",
         "icon": "back.png",
         "summary": "Snap first target to animation",
         "description": "If you change the starting position of your character after having assigned a plan, use this to realign the two.",

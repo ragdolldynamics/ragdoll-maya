@@ -2040,6 +2040,7 @@ def assign_plan(body, feet, opts=None):
     opts = dict({
         "refinement": False,
         "duration": 100,
+        "interactive": True,
     }, **(opts or {}))
 
     assert (
@@ -2060,6 +2061,7 @@ def assign_plan(body, feet, opts=None):
     palette = internal.random_palette(len(feet) + 1)
 
     time = cmdx.encode("time1")
+    transform_to_rdnode = {}
 
     with cmdx.DagModifier() as mod:
         name = internal.unique_name("rPlan_%s" % body.name())
@@ -2068,6 +2070,8 @@ def assign_plan(body, feet, opts=None):
         rdplan = mod.createNode("rdPlan",
                                 name=shape_name,
                                 parent=plan_parent)
+
+        transform_to_rdnode[body] = rdplan
 
         for channel in ("rotate", "scale"):
             for axis in "XYZ":
@@ -2140,6 +2144,8 @@ def assign_plan(body, feet, opts=None):
         for index, foot in enumerate(feet):
             rdfoot = dgmod.create_node("rdFoot", name=foot.name() + "_rFoot")
 
+            transform_to_rdnode[foot] = rdfoot
+
             idx = rdplan["inputStart"].next_available_index()
             dgmod.connect(rdfoot["startState"], rdplan["inputStart"][idx])
             dgmod.connect(rdfoot["currentState"], rdplan["inputCurrent"][idx])
@@ -2156,6 +2162,35 @@ def assign_plan(body, feet, opts=None):
 
     reset_step_sequence(rdplan, opts)
     reset_plan_targets(rdplan, opts)
+
+    if opts["interactive"]:
+        driver_to_transform = {}
+        with cmdx.DagModifier() as mod:
+
+            # No need, since the original rig is drawn
+            mod.set_attr(rdplan["drawShape"], False)
+
+            for transform, rdnode in transform_to_rdnode.items():
+                with cmdx.DGModifier() as dgmod:
+                    decompose = dgmod.create_node("decomposeMatrix")
+
+                driver = mod.create_node("transform", name=rdnode.name())
+                mod.connect(rdnode["outputMatrix"], decompose["inputMatrix"])
+                mod.connect(decompose["outputTranslate"], driver["translate"])
+                mod.connect(decompose["outputRotate"], driver["rotate"])
+                driver_to_transform[driver] = transform
+
+                # Initialise trajectory and targets
+                rdnode["startState"].read()
+
+        for driver, transform in driver_to_transform.items():
+
+            # Trigger evaluation of the above decomposeMatrix
+            driver["tx"].read()
+
+            cmds.parentConstraint(str(driver),
+                                  str(transform),
+                                  maintainOffset=True)
 
     return rdplan
 

@@ -486,6 +486,14 @@
         "help": "Update a plan, even when nothing has changed."
     },
 
+    "planInteractive": {
+        "name": "planInteractive",
+        "label": "Interactive",
+        "type": "Boolean",
+        "default": false,
+        "help": "Drive selected controls directly."
+    },
+
     "planPreset": {
         "name": "planPreset",
         "label": "Preset",
@@ -505,8 +513,9 @@
 
     "planFromAnimIncrementalSampling": {
         "name": "planFromAnimIncrementalSampling",
-        "label": "Incremental Sampling",
+        "label": "Incremental Sampling Rate",
         "type": "Integer",
+        "min": 1,
         "default": 10,
         "help": "If the value is higher than 0, will create target on each frame increments."
     },

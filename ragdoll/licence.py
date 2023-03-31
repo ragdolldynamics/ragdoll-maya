@@ -175,8 +175,8 @@ def _prompt_error(context, message, ensure_welcome=False):
     log.warning(
         "If you have trouble resolving this, please contact us at:\n"
         "licencing@ragdolldynamics.com\n"
-        "Please include any error messages and with\n"
-        "any steps required to reproduce the error.\n"
+        "Please include any error messages and \n"
+        "steps involved in reproducing the error.\n"
     )
     # The last single line error to display in Maya Command Line
     log.error("%s. Please see Script Editor." % context)

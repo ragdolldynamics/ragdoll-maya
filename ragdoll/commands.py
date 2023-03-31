@@ -2160,9 +2160,6 @@ def assign_plan(body, feet, opts=None):
             dgmod.set_attr(rdfoot["originMatrix"],
                            foot["worldMatrix"][0].as_matrix())
 
-    reset_step_sequence(rdplan, opts)
-    reset_plan_targets(rdplan, opts)
-
     if opts["interactive"]:
         driver_to_transform = {}
         with cmdx.DagModifier() as mod:
@@ -2191,6 +2188,9 @@ def assign_plan(body, feet, opts=None):
             cmds.parentConstraint(str(driver),
                                   str(transform),
                                   maintainOffset=True)
+
+    reset_step_sequence(rdplan, opts)
+    reset_plan_targets(rdplan, opts)
 
     return rdplan
 

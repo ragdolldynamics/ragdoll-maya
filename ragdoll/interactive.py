@@ -2964,18 +2964,10 @@ def update_plan(selection=None, **opts):
 
 @i__.with_undo_chunk
 @with_exception_handling
-def assign_refine_plan(selection=None, **opts):
-    opts["refinement"] = True
-    return assign_plan(selection, **opts)
-
-
-@i__.with_undo_chunk
-@with_exception_handling
 def assign_plan(selection=None, **opts):
     opts = dict({
         "useTransform": False,  # deprecated option
         "preset": _opt("planPreset", opts),
-        "refinement": _opt("planRefinementMode", opts),
         "increment": _opt("planFromAnimIncrementalSampling", opts),
         "duration": _opt("planDuration", opts),
         "interactive": _opt("planInteractive", opts),
@@ -3002,12 +2994,6 @@ def assign_plan(selection=None, **opts):
                 continue
 
             cmds.modelEditor(panel, edit=True, handles=True)
-
-    if opts["refinement"]:
-        commands.animation_to_plan(
-            plan, increment=opts["increment"], preset=opts["preset"]
-        )
-        plan["enabled"] = True  # ensure plan is enabled
 
     # Compute initial plan
     update_plan([plan], forceUpdate=True)
@@ -4045,10 +4031,6 @@ def extract_plan_options(*args):
 
 def update_plan_options(*args):
     return _Window("updatePlan", update_plan)
-
-
-def assign_refine_plan_options(*args):
-    return _Window("assignRefinePlan", assign_refine_plan)
 
 
 def animation_to_plan_options(*args):

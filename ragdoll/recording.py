@@ -945,7 +945,7 @@ class _Recorder(object):
 
         if self._opts["toLayer"] and "destinationLayer" not in kwargs:
             layer = self._opts["layerName"]
-            layer = layer or self._solver.parent().name() + "Layer"
+            layer = layer or (self._solver.parent().name() + "Layer")
             layer = cmds.animLayer(layer, override=True)
             kwargs["destinationLayer"] = layer
 

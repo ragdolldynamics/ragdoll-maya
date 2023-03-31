@@ -656,10 +656,10 @@ class Loader(object):
             if file_y_up == scene_y_up:
                 pass
 
-            elif file_y_up:
+            elif file_y_up:  # Scene is Z-up
                 mod.set_attr(assembly["rotateX"], cmdx.radians(90))
 
-            else:
+            else:  # Scene is Y-up
                 mod.set_attr(assembly["rotateX"], cmdx.radians(-90))
 
         try:
@@ -694,6 +694,24 @@ class Loader(object):
                 mesh = joint_to_mesh[joint]
 
                 mod.connect(mesh["outMesh"], marker["inputGeometry"])
+
+        # Handle scene up-axis
+        with cmdx.DagModifier() as mod:
+            for solver in out["solvers"]:
+                if file_y_up == scene_y_up:
+                    pass
+
+                elif file_y_up:  # Scene is Z-up
+                    mod.set_keyable(solver["gravityY"], False)
+                    mod.set_keyable(solver["gravityZ"])
+                    mod.set_attr(solver["gravityZ"], solver["gravityY"].read())
+                    mod.set_attr(solver["gravityY"], 0)
+
+                else:  # Scene is Y-up
+                    mod.set_keyable(solver["gravityY"])
+                    mod.set_keyable(solver["gravityZ"], False)
+                    mod.set_attr(solver["gravityY"], solver["gravityZ"].read())
+                    mod.set_attr(solver["gravityZ"], 0)
 
         return out
 
@@ -1735,231 +1753,3 @@ def meshes_to_mobj(Meshes, scale=cmdx.Vector(1, 1, 1), parent=None):
                     [], [], mobj)
 
     return mobj if parent is None else out
-
-
-@internal.with_undo_chunk
-def animation_to_plan2(plan, increment=4, fallback_preset=None):
-    smart_sampling = increment <= 0
-
-    feet = list(el.input() for el in plan["inputStart"])
-    foot_count = len(feet)
-    step_sequences = [[] for _ in range(foot_count)]
-
-    sources = {
-        source: source["sourceTransform"].input()
-        for source in [plan] + feet
-    }
-
-    start_time = plan["startTime"].read()
-
-    if start_time == 0:
-        start = int(cmdx.min_time().value)
-
-    elif start_time == 1:
-        start = int(cmdx.animationStartTime().value)
-
-    else:
-        start = cmdx.frame(plan["startTimeCustom"].as_time())
-
-    duration = plan["duration"].read()
-    end = start + duration
-    last_frame = end - 1
-
-    up = cmdx.up_axis()
-    up_index = 1 if up.y else 2
-
-    body_tfm = plan["sourceTransform"].input()
-    feet_tfm = [foot["sourceTransform"].input() for foot in feet]
-    matrices = {
-        s: [] for s in sources.keys()
-    }
-    for frame in range(start, end):
-        cmds.currentTime(frame)
-
-        matrices[plan].append(body_tfm["worldMatrix"][0].as_matrix())
-        for i, foot_tfm in enumerate(feet_tfm):
-            matrices[feet[i]].append(foot_tfm["worldMatrix"][0].as_matrix())
-
-    def trend(a, b):
-        x = int(a * 1000) - int(b * 1000)  # mult by 1000 for rounding float
-        return 0 if x == 0 else 1 if x > 0 else -1
-
-    def trend3(a, b):
-        return trend(a[0], b[0]), trend(a[1], b[1]), trend(a[2], b[2])
-
-    def pos(key, ind):
-        return cmdx.Tm(matrices[key][ind]).translation()
-
-    def rot(key, ind):
-        return cmdx.Tm(matrices[key][ind]).rotation()
-
-    # Parse foot movement into step sequences
-
-    feet_trend = [[0] for _ in range(foot_count)]
-    for index, frame in enumerate(range(start + 1, end), 1):
-        for i, foot_trend in enumerate(feet_trend):
-            foot_trend.append(
-                trend(pos(feet[i], index)[up_index],
-                      pos(feet[i], index - 1)[up_index])
-            )
-
-    min_begin_stance = end
-    min_end_stance = end
-
-    for i in range(foot_count):
-        count = 0
-        begin = fly_phase = True
-
-        for trend_, _grouped in itertools.groupby(feet_trend[i]):
-            fly_phase = trend_ != 0
-            count = sum(1 for _ in _grouped)
-
-            step_sequences[i] += [fly_phase for _ in range(count)]
-
-            if begin:
-                if min_begin_stance > count:
-                    min_begin_stance = 0 if fly_phase else count
-                begin = False
-
-        if min_end_stance > count:
-            min_end_stance = 0 if fly_phase else count
-
-    # Check if the step sequences has any fly phases
-    if not any(any(s) for s in step_sequences) and fallback_preset is not None:
-        # No steps, no animation. Provide with preset
-        step_sequences = commands.generate_plan_sequences(
-            fallback_preset, foot_count, duration
-        )
-
-    # Check if the body has any movement
-    body_moved = False
-    for i in range(1, len(matrices[plan])):
-        if pos(plan, i) != pos(plan, i - 1):
-            body_moved = True
-            break
-
-    # Clear existing attributes
-    for attr in ("targets", "targetsTime", "targetsHard"):
-        for el in plan[attr]:
-            cmds.removeMultiInstance(el.path())
-
-    for foot in feet:
-        for el in foot["targets"]:
-            cmds.removeMultiInstance(el.path())
-
-    with cmdx.DagModifier() as mod:
-        min_stance = 5
-        # Ensure step sequences have enough stance phase at the beginning.
-        timing_offset = 0
-        if min_begin_stance < min_stance:
-            patch = min_stance - min_begin_stance
-            timing_offset = patch
-            mod.set_attr(plan["startTime"], 2)
-            mod.set_attr(plan["startTimeCustom"], cmdx.time(start - patch))
-            mod.set_attr(plan["duration"], duration + patch)
-            for i, foot in enumerate(feet):
-                step_sequences[i] = [0] * patch + step_sequences[i]
-        # Ensure step sequences have enough stance phase at the end.
-        if min_end_stance < min_stance:
-            patch = min_stance - min_end_stance
-            mod.set_attr(plan["duration"], duration + patch)
-            for i, foot in enumerate(feet):
-                step_sequences[i] += [0] * patch
-
-        if smart_sampling:
-            # Analyze body movement curves turning points and use as targets
-            body_targets = [start]
-            target_increment = 5
-            prev_pos_trend = (0, 0, 0)
-            prev_rot_trend = (0, 0, 0)
-            for index, frame in enumerate(range(start + 1, end), 1):
-                pos_trend = trend3(pos(plan, index), pos(plan, index - 1))
-                rot_trend = trend3(rot(plan, index), rot(plan, index - 1))
-
-                if pos_trend != prev_pos_trend or rot_trend != prev_rot_trend:
-                    if frame - body_targets[-1] > target_increment:
-                        body_targets.append(frame)
-
-                prev_pos_trend = pos_trend
-                prev_rot_trend = rot_trend
-
-            if last_frame - body_targets[-1] > target_increment:
-                body_targets.append(last_frame)
-            else:
-                body_targets[-1] = last_frame
-
-            for index, frame in enumerate(body_targets):
-                first_or_last = index == 0 or index == len(body_targets) - 1
-
-                for source, transform in sources.items():
-                    mtx = matrices[source][frame - start]
-                    mod.set_attr(source["targets"][index], mtx)
-
-                    if source.has_attr("targetsHard"):
-                        mod.set_attr(source["targetsHard"][index],
-                                     first_or_last)
-
-                    if source.has_attr("targetsTime"):
-                        mod.set_attr(source["targetsTime"][index],
-                                     timing_offset + frame - start + 1)
-
-            for i, foot in enumerate(feet):
-                for index, value in enumerate(step_sequences[i]):
-                    mod.set_attr(foot["stepSequence"][index], value)
-
-        else:
-            # Add target evey [increment] frames.
-            index = 0
-            for index, frame in enumerate(range(start, end)):
-
-                for source, transform in sources.items():
-                    mtx = matrices[source][frame - start]
-
-                    if index % increment == 0:
-                        i = int(index / increment)
-                        mod.set_attr(source["targets"][i], mtx)
-
-                        if source.has_attr("targetsHard"):
-                            mod.set_attr(source["targetsHard"][i], index == 0)
-                        if source.has_attr("targetsTime"):
-                            mod.set_attr(source["targetsTime"][i],
-                                         timing_offset + frame - start + 1)
-
-                    if source in feet:
-                        i = feet.index(source)
-                        for index_, value in enumerate(step_sequences[i]):
-                            mod.set_attr(source["stepSequence"][index_], value)
-
-            for source, transform in sources.items():
-                i = int(index / increment)
-
-                if source.has_attr("targetsHard"):
-                    mod.set_attr(source["targetsHard"][i], True)
-
-                if source.has_attr("targetsTime"):
-                    mod.set_attr(source["targetsTime"][i],
-                                 timing_offset + last_frame - start + 1)
-
-        if not body_moved:
-            # Walk a few body lengths per default
-            mod.do_it()
-
-            extents = plan["extents"].as_vector()
-            if cmdx.up_axis().y:
-                extents.y = 0
-            else:
-                extents.z = 0
-
-            longest_value = max(extents)
-            walking_axis = tuple(extents).index(longest_value)
-            walking_distance = longest_value * 3
-
-            end_offset = cmdx.Vector(0, 0, 0)
-            end_offset[walking_axis] = walking_distance
-
-            for source, transform in sources.items():
-                tm = cmdx.Tm(source["targets"][-1].as_matrix())
-                tm.translateBy(end_offset, cmdx.sTransform)
-                mod.set_attr(source["targets"][-1], tm.as_matrix())
-
-    cmds.currentTime(start)

@@ -62,6 +62,7 @@ global proc AErdSolverTemplate(string $nodeName) {
             editorTemplate -label "Position Iterations" -addControl "positionIterations";
             editorTemplate -addControl "velocityIterations";
             editorTemplate -addControl "forceMode";
+            editorTemplate -addControl "drivePerSubstep";
             editorTemplate -addControl "forcePerSubstep";
             editorTemplate -addControl "threadCount";
 

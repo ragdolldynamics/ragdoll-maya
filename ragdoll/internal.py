@@ -390,24 +390,30 @@ def affects_initial_state(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        current_time = cmdx.current_time()
-        first_start_time = current_time
+        result = func(*args, **kwargs)
 
-        with cmdx.DagModifier() as mod:
-            for solver in cmdx.ls(type="rdSolver"):
-                start_time = solver["_startTime"].as_time()
+        try:
+            # Rewind *after* performing the action, for e.g. Pin Constraint
+            # to evaluate the currently simulated position.
+            current_time = cmdx.current_time()
+            first_start_time = current_time
 
-                if start_time.value < first_start_time.value:
-                    first_start_time = start_time
+            with cmdx.DagModifier() as mod:
+                for solver in cmdx.ls(type="rdSolver"):
+                    start_time = solver["_startTime"].as_time()
 
-                if solver["cache"]:
-                    mod.set_attr(solver["cache"], 0)
+                    if start_time.value < first_start_time.value:
+                        first_start_time = start_time
 
-        # Don't bother if we're already there
-        if first_start_time.value < current_time.value:
-            cmds.currentTime(first_start_time.value, update=True)
+                    if solver["cache"]:
+                        mod.set_attr(solver["cache"], 0)
 
-        return func(*args, **kwargs)
+            # Don't bother if we're already there
+            if first_start_time.value < current_time.value:
+                cmds.currentTime(first_start_time.value, update=True)
+
+        finally:
+            return result
 
     return wrapper
 

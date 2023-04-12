@@ -816,72 +816,72 @@
     "dragField": {
         "label": "Drag",
         "icon": "transfer_attributes.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field that prevents anything from moving.",
+        "description": "It's a Maya Drag field",
         "options": []
     },
 
     "gravityField": {
         "label": "Gravity",
         "icon": "com.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create another source of gravity.",
+        "description": "It's a Maya Gravity field",
         "options": []
     },
 
     "newtonField": {
         "label": "Newton",
         "icon": "freeze.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field pushing or pulling Markers towards a point.",
+        "description": "It's a Maya Newton field",
         "options": []
     },
 
     "radialField": {
         "label": "Radial",
         "icon": "assign.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field pushing from a point.",
+        "description": "It's a Maya Radial field",
         "options": []
     },
 
     "turbulenceField": {
         "label": "Turbulence",
         "icon": "chaos.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Introduce turbulence into the simulation.",
+        "description": "It's a Maya Turbulence field",
         "options": []
     },
 
     "uniformField": {
         "label": "Uniform",
         "icon": "uniformforce.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field pushing Markers along an axis.",
+        "description": "It's a Maya Uniform field",
         "options": []
     },
 
     "vortexField": {
         "label": "Vortex",
         "icon": "swirl.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field pushing markers in a circle.",
+        "description": "It's a Maya Vortex field",
         "options": []
     },
 
     "volumeAxis": {
         "label": "Volume Axis",
         "icon": "box.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field affecting Markers within a volume.",
+        "description": "It's a Maya Volume Axis field",
         "options": []
     },
 
     "volumeCurve": {
         "label": "Volume Curve",
         "icon": "trajectory2.png",
-        "summary": "Create a field emulating air.",
-        "description": "It's a Maya Air field",
+        "summary": "Create a field affecting Markers along a curve.",
+        "description": "It's a Maya Volume Curve field",
         "options": []
     },
 

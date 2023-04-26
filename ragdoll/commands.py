@@ -1458,7 +1458,7 @@ def replace_mesh(marker, mesh, opts=None):
             mod.connect(mesh[a], copy[b])
             mod.do_it()
             cmds.refresh(force=True)
-            mod.disconnect(copy["inMesh"])
+            mod.disconnect(copy[b])
             mod.set_attr(copy["intermediateObject"], True)
 
             mesh = copy

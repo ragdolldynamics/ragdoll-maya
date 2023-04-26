@@ -771,6 +771,11 @@ def reparent_marker(child, new_parent, opts=None):
     """
 
     with cmdx.DGModifier() as mod:
+
+        # Avoid cyclic hierarchies
+        if new_parent["parentMarker"].input(type="rdMarker") == child:
+            mod.disconnect(new_parent["parentMarker"])
+
         mod.connect(new_parent["ragdollId"], child["parentMarker"])
 
 

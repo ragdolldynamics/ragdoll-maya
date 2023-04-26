@@ -2626,13 +2626,7 @@ def reassign_marker(selection=None, **opts):
             "'%s' was <b>not</b> a DAG node" % b
         )
 
-    with cmdx.DGModifier() as mod:
-        mod.connect(b["message"], a["src"])
-        mod.connect(b["worldMatrix"][0], a["inputMatrix"])
-
-        if b.has_attr("rotatePivot"):
-            mod.connect(b["rotatePivot"], a["rotatePivot"])
-            mod.connect(b["rotatePivotTranslate"], a["rotatePivotTranslate"])
+    commands.reassign_marker(a, b)
 
     return kSuccess
 

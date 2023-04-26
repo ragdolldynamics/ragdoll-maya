@@ -730,6 +730,28 @@ def retarget_marker(marker, transform, opts=None):
         mod.set_attr(marker["offsetMatrix"][index], offset)
 
 
+def reassign_marker(marker, transform):
+    assert isinstance(marker, cmdx.Node) and marker.is_a("rdMarker"), (
+        "%s was not a marker" % marker
+    )
+
+    assert (isinstance(transform, cmdx.Node) and
+            transform.is_a(cmdx.kTransform)), (
+        "%s was not a transform" % transform
+    )
+
+    with cmdx.DGModifier() as mod:
+        mod.connect(transform["message"], marker["src"])
+        mod.connect(transform["worldMatrix"][0], marker["inputMatrix"])
+
+        # E.g. joints have no pivot
+        if transform.has_attr("rotatePivot"):
+            mod.connect(transform["rotatePivot"],
+                        marker["rotatePivot"])
+            mod.connect(transform["rotatePivotTranslate"],
+                        marker["rotatePivotTranslate"])
+
+
 def untarget_marker(marker, opts=None):
     """Remove all recording targets from `marker`"""
 

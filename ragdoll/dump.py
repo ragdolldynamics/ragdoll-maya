@@ -1248,6 +1248,9 @@ class Loader(object):
     def _pre_process_path(self, path):
         """Apply search-and-replace rules along with namespace changes"""
 
+        if not path:
+            return ""
+
         search, replace = self._opts["searchAndReplace"]
         search_terms = search.split(" ")
         replace_terms = replace.split(" ")

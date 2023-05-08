@@ -687,10 +687,11 @@ class ProductTimelineModel(QtCore.QObject):
                 offset = _days_after_v0 - previous - self.max_gap
                 self.correction[_days_after_v0] = offset
 
+        today = datetime.today()
         view_min = first_date - timedelta(days=self.DayPadding)
-        view_max = datetime.today() + timedelta(days=self.DayPadding)
+        view_max = today + timedelta(days=self.DayPadding)
 
-        incidents = [datetime.today(), expiry_date]
+        incidents = [today, expiry_date]
 
         for date in sorted(released_dates + incidents):
             if not view_min < date < view_max:
@@ -703,11 +704,11 @@ class ProductTimelineModel(QtCore.QObject):
                     index += 1
                 merged_releases[index].append(date)
 
+                if date < expiry_date:
+                    self.latest_update = date
+
             avoid_gap(days_after_v0)
             previous = days_after_v0
-
-            if date < expiry_date:
-                self.latest_update = date
 
         self.expiry_date = expiry_date
         self.current = current_ver

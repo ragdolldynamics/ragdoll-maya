@@ -2523,7 +2523,13 @@ def repeatable(func):
 
 @repeatable
 def transfer_live(selection=None, **opts):
-    solver = _solver_from_manipulator()
+    manip = json.loads(cmds.ragdollDump(manipulator=True))
+
+    if not manip["solverPath"]:
+        return kFailure
+
+    solver = cmdx.encode(manip["solverPath"])
+    keyframe = opts.get("keyframe", False)
 
     if not solver:
         raise i__.UserWarning(

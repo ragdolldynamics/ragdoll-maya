@@ -42,6 +42,8 @@ DisplayContacts = 8
 Off = 0
 FromRetargeting = 1
 FromStart = 2
+RecordConstraintMethod = 0
+RecordMatchMethod = 1
 
 # Cache
 StaticCache = 1

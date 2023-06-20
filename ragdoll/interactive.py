@@ -52,6 +52,7 @@ from . import (
     options,
     dump,
     recording,
+    recording_match,
     licence,
     telemetry,
     widgets,
@@ -2226,12 +2227,13 @@ def snap_markers(selection=None, **opts):
 @with_exception_handling
 def record_markers(selection=None, **opts):
     opts = dict({
+        "method": _opt("markersRecordMethod", opts),
         "recordRange": _opt("markersRecordRange", opts),
         "recordCustomStartTime": _opt("markersRecordCustomStartTime", opts),
         "recordCustomEndTime": _opt("markersRecordCustomEndTime", opts),
         "recordKinematic": _opt("markersRecordKinematic", opts),
-        "recordToLayer": _opt("markersRecordToLayer", opts),
-        "recordInitialKey": _opt("markersRecordInitialKey", opts),
+        "toLayer": _opt("markersRecordToLayer", opts),
+        "setInitialKey": _opt("markersRecordInitialKey", opts),
         "useSelection": _opt("markersRecordUseSelection", opts),
         "ignoreJoints": _opt("markersIgnoreJoints", opts),
         "recordReset": _opt("markersRecordReset", opts),
@@ -2241,32 +2243,36 @@ def record_markers(selection=None, **opts):
         "autoCache": _opt("markersRecordAutoCache", opts),
         "recordMaintainOffset": _opt("markersRecordMaintainOffset2", opts),
         "closedLoop": _opt("markersRecordClosedLoop", opts),
+        "minIterationCount": _opt("markersSnapMinIterations", opts),
+        "maxIterationCount": _opt("markersSnapMaxIterations", opts),
+        "updateViewport": _opt("markersRecordUpdateViewport", opts),
+        "include": None,
+        "exclude": None,
         "mode": _opt("markersRecordMode", opts),
         "protectOriginalInput": _opt(
             "markersRecordProtectOriginalInput", opts),
     }, **(opts or {}))
 
-    solvers = _filtered_selection("rdSolver", selection)
-    include = []
-    exclude = []
+    solvers = _solvers_from_selection(selection)
 
-    if opts["useSelection"]:
-        include += _filtered_selection(cmdx.kDagNode, selection)
-
-    if len(solvers) < 1:
+    if not solvers:
         solvers = cmdx.ls(type="rdSolver")
 
-    if len(solvers) < 1:
+    if not solvers or len(solvers) > 1:
         raise i__.UserWarning(
-            "Nothing to record",
-            "Ensure there is at least 1 marker in the "
-            "scene along with a solver."
+            "No solver selected",
+            "Select a solver to record."
         )
 
+    solver = solvers[0]
+
     # Remove linked solvers, we'll record those from the main solver
-    for solver in solvers[:]:
-        if solver["startState"].output(type="rdSolver") is not None:
-            solvers.remove(solver)
+    if solver["startState"].output(type="rdSolver") is not None:
+        log.warning("Selected solver is linked")
+        return kFailure
+
+    if opts["useSelection"]:
+        opts["include"] = _filtered_selection(cmdx.kDagNode, selection)
 
     if opts["recordRange"] == 0:
         start_time = cmdx.animation_start_time()
@@ -2294,54 +2300,61 @@ def record_markers(selection=None, **opts):
         if (b.value - a.value) > 2:
             start_time, end_time = a, b
 
-    start_frame = int(start_time.value)
-    end_frame = int(end_time.value)
+    opts["startFrame"] = int(start_time.value)
+    opts["endFrame"] = int(end_time.value)
 
+    with refresh_suspended(not opts["updateViewport"]):
+        if opts["method"] == c.RecordConstraintMethod:
+            return _constraint_record_markers(solver, **opts)
+        else:
+            return _match_record_markers(solver, **opts)
+
+
+def _constraint_record_markers(solver, **opts):
     cached = {}
+
     with cmdx.DagModifier() as mod:
-        for solver in solvers:
-            cached[solver] = solver["cache"].read()
-            mod.try_set_attr(solver["cache"], c.StaticCache)
+        cached[solver] = solver["cache"].read()
+        mod.try_set_attr(solver["cache"], c.StaticCache)
 
     total_frames = 0
     timer = i__.Timer("record")
-    for solver in solvers:
-        with timer as duration, progressbar() as p:
-            op = {
-                "startTime": start_time,
-                "endTime": end_time,
-                "include": include,
-                "exclude": exclude,
-                "accumulateByLayer": opts["accumulateByLayer"],
-                "includeKinematic": opts["recordKinematic"],
-                "maintainOffset": opts["recordMaintainOffset"],
-                "simplifyCurves": opts["recordSimplify"],
-                "rotationFilter": opts["recordFilter"],
-                "toLayer": opts["recordToLayer"],
-                "setInitialKey": opts["recordInitialKey"],
-                "ignoreJoints": opts["ignoreJoints"],
-                "closedLoop": opts["closedLoop"],
-                "mode": opts["mode"],
-            }
+    with timer as duration, progressbar() as p:
+        op = {
+            "startTime": opts["startFrame"],
+            "endTime": opts["endFrame"],
+            "include": opts["include"],
+            "exclude": opts["exclude"],
+            "accumulateByLayer": opts["accumulateByLayer"],
+            "includeKinematic": opts["recordKinematic"],
+            "maintainOffset": opts["recordMaintainOffset"],
+            "simplifyCurves": opts["recordSimplify"],
+            "rotationFilter": opts["recordFilter"],
+            "toLayer": opts["toLayer"],
+            "setInitialKey": opts["setInitialKey"],
+            "ignoreJoints": opts["ignoreJoints"],
+            "closedLoop": opts["closedLoop"],
+            "mode": opts["mode"],
+        }
 
-            instance = recording._Recorder(solver, op)
+        instance = recording._Recorder(solver, op)
 
-            previous_progress = 0
-            for step, progress in instance.record():
-                progress = int(progress)
+        previous_progress = 0
+        for step, progress in instance.record():
+            progress = int(progress)
 
-                if progress % 5 == 0 and progress != previous_progress:
-                    log.info("%.1f%% (%s)" % (progress, step.title()))
-                    previous_progress = progress
+            if progress % 5 == 0 and progress != previous_progress:
+                log.info("%.1f%% (%s)" % (progress, step.title()))
+                previous_progress = progress
 
-                # Allow the user to cancel with the ESC key
-                if _is_interactive():
-                    if cmds.progressBar(p, query=True, isCancelled=True):
-                        break
+            # Allow the user to cancel with the ESC key
+            if _is_interactive():
+                if cmds.progressBar(p, query=True, isCancelled=True):
+                    break
 
-                    cmds.progressBar(p, edit=True, step=1)
+                cmds.progressBar(p, edit=True, step=1)
 
-            total_frames += end_frame - start_frame
+        total_frames = opts["endFrame"] - opts["startFrame"]
 
     stats = (duration.s, total_frames / max(0.00001, duration.s))
     log.info("Recorded markers in %.2fs (%d fps)" % stats)
@@ -2361,10 +2374,46 @@ def record_markers(selection=None, **opts):
     # to also not re-simulate during baking, that would be a waste.
     if not opts["autoCache"]:
         with cmdx.DagModifier() as mod:
-            for solver in solvers:
-                mod.set_attr(solver["cache"], cached[solver])
+            mod.set_attr(solver["cache"], cached[solver])
 
     return kSuccess
+
+
+def _match_record_markers(solver, **opts):
+    timer = i__.Timer("match_record")
+    with timer as duration, progressbar() as p:
+        it = recording_match.record_simulation(solver, opts)
+
+        previous_progress = 0
+        for step, progress in it:
+            progress = int(progress)
+
+            if progress % 5 == 0 and progress != previous_progress:
+                log.info("%.1f%% (%s)" % (progress, step.title()))
+                previous_progress = progress
+
+            # Allow the user to cancel with the ESC key
+            if _is_interactive():
+                if cmds.progressBar(p, query=True, isCancelled=True):
+                    break
+
+                cmds.progressBar(p, edit=True, step=1)
+
+    total_frames = opts["endFrame"] - opts["startFrame"]
+    stats = (duration.s, total_frames / max(0.00001, duration.s))
+    log.info("Recorded markers in %.2fs (%d fps)" % stats)
+
+    cmds.inViewMessage(
+        amg="Recorded markers in <hl>%.2fs</hl> (%d fps)" % stats,
+        pos="topCenter",
+        fade=True
+    )
+
+    # The native recorded nodes aren't updated for some reason
+    if _is_interactive():
+        cmds.currentTime(cmds.currentTime(query=True))
+
+    return True
 
 
 @i__.with_undo_chunk
@@ -2474,13 +2523,13 @@ def repeatable(func):
 
 @repeatable
 def transfer_live(selection=None, **opts):
-    manip = json.loads(cmds.ragdollDump(manipulator=True))
+    solver = _solver_from_manipulator()
 
-    if not manip["solverPath"]:
-        return kFailure
-
-    solver = cmdx.encode(manip["solverPath"])
-    keyframe = opts.get("keyframe", False)
+    if not solver:
+        raise i__.UserWarning(
+            "Internal Error",
+            "Could not find currently active solver, this is a bug."
+        )
 
     with i__.Timer("transfer") as duration:
         recording.transfer_live(solver, keyframe=keyframe, opts=opts)
@@ -3437,8 +3486,8 @@ def field_volumetric_centroid(selection=None, **opts):
 
 
 @contextlib.contextmanager
-def refresh_suspended():
-    cmds.refresh(suspend=True)
+def refresh_suspended(suspend=True):
+    cmds.refresh(suspend=suspend)
 
     try:
         yield
@@ -3474,7 +3523,6 @@ def bake_mesh(selection=None, **opts):
 
     log.info("Successfully baked %d markers" % len(markers))
     return kSuccess
-
 
 
 @with_exception_handling

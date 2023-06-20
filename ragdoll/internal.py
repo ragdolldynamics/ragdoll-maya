@@ -471,6 +471,33 @@ def with_refresh_suspended(func):
     return wrapper
 
 
+def with_no_autokeyframe(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        state = cmds.autoKeyframe(state=True, query=True)
+
+        try:
+            cmds.autoKeyframe(state=False)
+            return func(*args, **kwargs)
+
+        finally:
+            cmds.autoKeyframe(state=state)
+
+    return wrapper
+
+
+@contextlib.contextmanager
+def no_autokeyframe():
+    state = cmds.autoKeyframe(state=True, query=True)
+
+    try:
+        cmds.autoKeyframe(state=False)
+        yield
+
+    finally:
+        cmds.autoKeyframe(state=state)
+
+
 def with_undo_chunk(func):
     """Consider the entire function one big giant undo chunk"""
     @functools.wraps(func)

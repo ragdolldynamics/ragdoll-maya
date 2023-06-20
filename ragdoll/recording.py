@@ -63,7 +63,7 @@ def extract(solver, opts=None):
     for message, progress in recorder.extract():
         pass
 
-    return list(recorder._skeleton)
+    return recorder._skeleton
 
 
 def _reorderRotation(tm, node):
@@ -314,7 +314,7 @@ class _Recorder(object):
 
         self._solver = solver
         self._markers = markers
-        self._skeleton = []
+        self._skeleton = {}
 
         self._opts = opts
 
@@ -464,7 +464,7 @@ class _Recorder(object):
             yield ("simulating", progress * 0.50)
 
         marker_to_dagnode = _generate_kinematic_hierarchy(
-            self._solver, tips=True, visible=True)
+            self._solver, tips=True)
 
         for progress in self._cache_to_curves(marker_to_dagnode,
                                               _worldspace=False):
@@ -473,7 +473,11 @@ class _Recorder(object):
         if self._opts["extractAndAttach"]:
             self._attach(marker_to_dagnode)
 
-        self._skeleton = list(marker_to_dagnode.values())
+        with cmdx.DagModifier() as mod:
+            for marker, joint in marker_to_dagnode.items():
+                mod.set_attr(joint["visibility"], True)
+
+        self._skeleton = marker_to_dagnode
 
     def snap(self, _force=False):
         if self._opts["maintainOffset"] == constants.FromStart:

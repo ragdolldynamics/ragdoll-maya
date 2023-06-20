@@ -555,7 +555,9 @@
             "markersRecordClosedLoop",
             "markersRecordKinematic",
             "markersRecordAccumulateByLayer",
-            "markersRecordMode"
+            "markersRecordUpdateViewport",
+            "markersRecordMode",
+            "markersRecordMethod"
         ]
     },
 

@@ -961,6 +961,14 @@
         "help": "Should I record only to the selected controls?"
     },
 
+    "markersRecordUpdateViewport": {
+        "name": "markersRecordUpdateViewport",
+        "label": "Update Viewport",
+        "type": "Boolean",
+        "default": true,
+        "help": "Refresh the viewport while recording, may impact performance."
+    },
+
     "markersRecordUseSelection": {
         "name": "markersRecordUseSelection",
         "label": "Use Selection",
@@ -977,12 +985,41 @@
         "help": "Should I snap only to the selected controls?"
     },
 
+    "markersSnapMinIterations": {
+        "name": "markersSnapMinIterations",
+        "label": "Min Iterations",
+        "type": "Integer",
+        "default": 0,
+        "min": 0,
+        "max": 4,
+        "help": "Snap this many times *at least* (advanced)"
+    },
+
+    "markersSnapMaxIterations": {
+        "name": "markersSnapMaxIterations",
+        "label": "Max Iterations",
+        "type": "Integer",
+        "default": 4,
+        "min": 0,
+        "max": 4,
+        "help": "Snap *at most* this many times (advanced)"
+    },
+
     "markersRecordReset": {
         "name": "markersRecordReset",
         "label": "Reset Markers",
         "type": "Boolean",
         "default": false,
         "help": "Make all markers kinematic once recording is complete."
+    },
+
+    "markersRecordMethod": {
+        "name": "markersRecordMethod",
+        "label": "Method",
+        "type": "Enum",
+        "items": ["Constraints", "Match Transforms"],
+        "default": 0,
+        "help": "Constraints are faster, but require nodes and connections to be made to your character. Some of which cannot be cleaned up entirely upon completion."
     },
 
     "markersRecordMaintainOffset2": {

@@ -16,6 +16,7 @@ from .vendor import cmdx as _cmdx
 from . import (
     commands as _commands,
     recording as _recording,
+    recording_match as _recording_match,
     dump as _dump,
 )
 
@@ -79,6 +80,9 @@ from .constants import (
 
     MatchByName,
     MatchByHierarchy,
+
+    RecordConstraintMethod,
+    RecordMatchMethod,
 )
 
 #
@@ -303,7 +307,11 @@ def delete_all_physics():
 def record_physics(solver, opts=None):
     _assert_is_a(solver, "rdSolver")
     solver = _cmdx.encode(solver)
-    _recording.record(solver, opts)
+
+    if (opts or {}).get("method") == RecordMatchMethod:
+        _recording_match.record(solver, opts)
+    else:
+        _recording.record(solver, opts)
 
 
 @_wraps(_dump.export)
@@ -320,7 +328,7 @@ def reinterpret_physics(fname, opts=None):
 def extract_physics(solver, opts=None):
     _assert_is_a(solver, "rdSolver")
     solver = _cmdx.encode(solver)
-    return list(map(str, _recording.extract(solver, opts)))
+    return list(map(str, _recording.extract(solver, opts).values()))
 
 
 #
@@ -444,6 +452,8 @@ __all__ = [
     "LodCustom",
     "MatchByName",
     "MatchByHierarchy",
+    "RecordConstraintMethod",
+    "RecordMatchMethod",
 
     # Main
     "createSolver",
